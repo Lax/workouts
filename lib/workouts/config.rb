@@ -21,10 +21,12 @@ module Workouts
     }.freeze
 
     ENV_SEPARATOR = "__"
+    DEFAULT_PATH = "config/config.yml"
 
     def initialize(path = nil)
       @data = deep_dup(DEFAULTS)
-      load_file(path) if path && File.exist?(path)
+      load_file(path) if path
+      load_file(DEFAULT_PATH) if !path && File.exist?(DEFAULT_PATH)
       load_env
     end
 

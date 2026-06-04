@@ -1,4 +1,5 @@
 require_relative "base"
+require "base64"
 require "oauth"
 require "oauth/request_proxy/net_http"
 require "json"
@@ -24,6 +25,7 @@ module Workouts
         @domain = "garmin.com"
         @email = @config["email"]
         @password = @config["password"]
+        @secret = @config["secret"]
       end
 
       def call
@@ -36,6 +38,8 @@ module Workouts
 
       def authenticate
         @oauth_consumer = fetch_oauth_consumer
+
+        return true if @secret && parse_secret_string(@secret)
         return true if load_tokens && access_token_valid?
         return true if load_tokens && refresh_oauth2_via_oauth1
 
@@ -56,6 +60,25 @@ module Workouts
 
         expires_at = @access_token["expires_at"] || @saved_expires_at
         expires_at.nil? || Time.now.to_i < expires_at - 60
+      end
+
+      def parse_secret_string(secret)
+        decoded = JSON.parse(Base64.strict_decode64(secret))
+        o1 = decoded[0]
+        o2 = decoded[1]
+
+        @oauth1_token = OpenStruct.new(
+          oauth_token: o1["oauth_token"],
+          oauth_token_secret: o1["oauth_token_secret"],
+          mfa_token: o1["mfa_token"],
+          domain: o1["domain"] || @domain
+        )
+        @access_token = o2
+        save_tokens
+        true
+      rescue => e
+        puts "Invalid garth secret: #{e.message}"
+        false
       end
 
       def refresh_oauth2_via_oauth1
@@ -164,10 +187,13 @@ module Workouts
           scheme: :header, signature_method: "HMAC-SHA1"
         )
 
+        sleep(3)
+
         req = Net::HTTP::Get.new(URI(url))
+        req["User-Agent"] = "com.garmin.android.apps.connectmobile"
         oauth_consumer.sign!(req, nil)
 
-        resp = send_http(URI(url), req)
+        resp = retry_on_429(3, 5) { send_http(URI(url), req) }
         raise "OAuth1 error: #{resp.code}" unless resp.code.to_i == 200
 
         parsed = CGI.parse(resp.body).transform_keys(&:to_s).transform_values(&:first)
@@ -191,13 +217,14 @@ module Workouts
 
         token = OAuth::Token.new(@oauth1_token.oauth_token, @oauth1_token.oauth_token_secret)
         req = Net::HTTP::Post.new(URI(url))
+        req["User-Agent"] = "com.garmin.android.apps.connectmobile"
         req["Content-Type"] = "application/x-www-form-urlencoded"
         body_params = { audience: "GARMIN_CONNECT_MOBILE_ANDROID_DI" }
         body_params[:mfa_token] = @oauth1_token.mfa_token if @oauth1_token.mfa_token
         req.body = URI.encode_www_form(body_params)
         oauth_consumer.sign!(req, token)
 
-        resp = send_http(URI(url), req)
+        resp = retry_on_429 { send_http(URI(url), req) }
         raise "OAuth2 exchange error: #{resp.code}" unless resp.code.to_i == 200
 
         result = JSON.parse(resp.body)
@@ -245,7 +272,7 @@ module Workouts
         req = Net::HTTP::Get.new(uri)
         req["Authorization"] = "Bearer #{@access_token["access_token"]}"
         req["User-Agent"] = "GCM-iOS-5.22.1.4"
-        resp = send_http(uri, req)
+        resp = retry_on_429 { send_http(uri, req) }
         return nil unless resp.code.to_i == 200
         JSON.parse(resp.body)
       end
@@ -260,6 +287,17 @@ module Workouts
         http.open_timeout = 30
         http.read_timeout = 60
         http.start { |h| h.request(request) }
+      end
+
+      def retry_on_429(max_retries = 3, base_delay = 2)
+        retries = 0
+        loop do
+          resp = yield
+          return resp unless resp.code.to_i == 429 && retries < max_retries
+
+          retries += 1
+          sleep(base_delay * (2 ** retries))
+        end
       end
 
       def build_attrs(detail, activity_id, type)
