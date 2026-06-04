@@ -6,7 +6,16 @@ module Workouts
       BASE_URL = "https://prod.zh.igpsport.com/service"
       LOGIN_URL = "#{BASE_URL}/auth/account/login"
       QUERY_URL = "#{BASE_URL}/web-gateway/web-analyze/activity/queryMyActivity"
-      DOWNLOAD_INFO_URL = "#{BASE_URL}/web-gateway/web-analyze/activity/getDownloadUrl"
+
+      EXERCISE_MAP = {
+        0 => "ride",
+        1 => "run",
+        2 => "hike",
+        3 => "walk",
+        4 => "swim",
+        5 => "ski",
+        6 => "workout"
+      }.freeze
 
       def initialize(...)
         super
@@ -52,7 +61,11 @@ module Workouts
             ride_id = act["rideId"].to_s
             next if existing.include?(ride_id)
 
-            count += 1 if process_activity(ride_id)
+            attrs = build_attrs(act, ride_id)
+            next unless attrs
+
+            upsert_activity(attrs)
+            count += 1
           end
 
           page += 1
@@ -63,7 +76,7 @@ module Workouts
 
       def fetch_page(page)
         resp = Faraday.get(QUERY_URL,
-          { pageNo: page, pageSize: 20, sort: 1, reqType: 2 },
+          { pageNo: page, pageSize: 20, sort: 1, reqType: 0 },
           @auth_headers
         )
         return nil unless resp.status == 200
@@ -71,34 +84,42 @@ module Workouts
         JSON.parse(resp.body).dig("data", "rows")
       end
 
-      def process_activity(ride_id)
-        tcx_content = download_tcx(ride_id)
-        return false unless tcx_content
+      def build_attrs(act, ride_id)
+        type = map_sport(act["exerciseType"])
+        start_t = parse_date(act["startTime"])
 
-        parser = Parser::TCX.new(source: "igpsport")
-        activities = parser.call(tcx_content)
-        return false if activities.empty?
+        distance = act["rideDistance"].to_f
+        moving_time = (act["totalMovingTime"] || act["recordTime"]).to_i
+        avg_speed = act["avgSpeed"].to_f
 
-        activities.each do |act|
-          act[:run_id] = "igpsport_#{ride_id}"
-          act[:source] = "igpsport"
-          upsert_activity(act)
-        end
-
-        true
+        {
+          run_id: "igpsport_#{ride_id}",
+          name: act["title"] || "iGPSPORT Activity",
+          distance: distance,
+          moving_time: moving_time > 0 ? moving_time : nil,
+          elapsed_time: moving_time > 0 ? moving_time : nil,
+          sport_category: type,
+          sport_type: EXERCISE_MAP[act["exerciseType"]] || "ride",
+          start_date: start_t,
+          start_date_local: start_t,
+          location_country: nil,
+          average_heartrate: nil,
+          average_speed: avg_speed > 0 ? avg_speed : nil,
+          elevation_gain: act["totalAscent"].to_f.nonzero?,
+          source: "igpsport"
+        }
       end
 
-      def download_tcx(ride_id)
-        resp = Faraday.get("#{DOWNLOAD_INFO_URL}/#{ride_id}", {}, @auth_headers)
-        return nil unless resp.status == 200
+      def map_sport(exercise_type)
+        EXERCISE_MAP[exercise_type] || "other"
+      end
 
-        download_url = JSON.parse(resp.body)["data"]
-        return nil unless download_url
-
-        file_resp = Faraday.get(download_url)
-        return nil unless file_resp.status == 200
-
-        file_resp.body
+      def parse_date(str)
+        return nil unless str
+        normalized = str.to_s.tr(".", "-")
+        Time.parse(normalized)
+      rescue
+        nil
       end
 
       def existing_run_ids
