@@ -11,3 +11,9 @@ require "nokogiri"
 module Workouts
   class Error < StandardError; end
 end
+
+require_relative "workouts/version"
+require_relative "workouts/config"
+require_relative "workouts/config_template"
+require_relative "workouts/db/connection"
+require_relative "workouts/db/activity"
