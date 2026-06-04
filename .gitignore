@@ -1,0 +1,7 @@
+.bundle/
+vendor/
+data/*.db
+data/*.json
+data/*.csv
+data/svg/
+*.gem
