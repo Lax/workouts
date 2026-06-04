@@ -1,13 +1,11 @@
-require_relative "base"
+require_relative "garmin_base"
 
 module Workouts
   module Sync
-    class GarminCN < Base
-      BASE_URL = "https://connect.garmin.cn"
-
-      def call
-        return 0 if @config.empty?
-        0
+    class GarminCN < GarminBase
+      def initialize(...)
+        super
+        @domain = "garmin.cn"
       end
     end
   end
