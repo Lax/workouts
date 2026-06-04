@@ -47,6 +47,10 @@ module Workouts
     class_option :config, type: :string, desc: "Path to config file", aliases: "-c"
     class_option :db, type: :string, desc: "Database path override"
 
+    def self.exit_on_failure?
+      true
+    end
+
     no_commands do
       def workouts_config
         @workouts_config ||= begin
@@ -89,13 +93,13 @@ module Workouts
     desc "export SUBCOMMAND", "Export activities to various formats"
     subcommand "export", ExportCLI
 
-    desc "db migrate", "Run database migrations"
+    desc "migrate", "Run database migrations"
     def migrate
       connect_db
       say_status :done, "Migrations up to date", :green
     end
 
-    desc "config init", "Generate default config.yml"
+    desc "init", "Generate default config.yml"
     def init
       path = options[:output] || "config/config.yml"
       File.write(path, ConfigTemplate.generate)

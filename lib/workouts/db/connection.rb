@@ -1,3 +1,5 @@
+require "fileutils"
+
 module Workouts
   module DB
     class Connection
@@ -5,7 +7,6 @@ module Workouts
         FileUtils.mkdir_p(File.dirname(db_path)) if db_path.include?("/")
         @db = Sequel.sqlite(db_path)
         run_migrations
-        @db
       end
 
       def db
@@ -16,7 +17,7 @@ module Workouts
 
       def run_migrations
         Sequel.extension :migration
-        Sequel::Migrator.run(@db, File.expand_path("../../db/migrations", __dir__))
+        Sequel::Migrator.run(@db, File.expand_path("../../../db/migrations", __dir__))
       end
     end
   end

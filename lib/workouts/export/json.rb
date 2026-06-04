@@ -14,7 +14,7 @@ module Workouts
         dataset = dataset.where(sport_category: @activity_filter) if @activity_filter
 
         activities = dataset.all.map { |a| format_activity(a) }
-        File.write(@output, JSON.pretty_generate(activities))
+        File.write(@output, ::JSON.pretty_generate(activities))
         activities.size
       end
 
