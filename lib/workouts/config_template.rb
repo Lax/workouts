@@ -12,11 +12,11 @@ module Workouts
           #   client_secret: ""
           #   refresh_token: ""
 
-          # garmin:
+          # garmin:                               # Garmin International (garmin.com)
           #   email: ""
           #   password: ""
 
-          # garmin_cn:
+          # garmin_cn:                            # Garmin China (garmin.cn)
           #   email: ""
           #   password: ""
 
