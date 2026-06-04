@@ -3,17 +3,17 @@ require_relative "base"
 module Workouts
   module Sync
     class XOSS < Base
-      BASE_URL = "https://www.imxingzhe.com"
-      LOGIN_URL = "#{BASE_URL}/api/v1/user/login/"
-      ACTIVITIES_URL = "#{BASE_URL}/api/activities/"
+      BASE_URL = "https://backend.xoss.co/api"
+      LOGIN_PATH = "/api/v1/jwt-token/"
+      ACTIVITIES_PATH = "/api/v3/activity/"
 
       SPORT_MAP = {
-        1 => "ride",
-        2 => "run",
-        3 => "walk",
-        4 => "swim",
-        5 => "hike",
-        6 => "ski"
+        1 => "run",
+        2 => "ride",
+        3 => "other",
+        4 => "workout",
+        5 => "swim",
+        11 => "walk"
       }.freeze
 
       def initialize(...)
@@ -32,84 +32,101 @@ module Workouts
 
       private
 
+      def http_request(method, path, body: nil, params: nil, headers: {})
+        uri = URI("https://backend.xoss.co#{path}")
+        uri.query = URI.encode_www_form(params) if params
+
+        req = case method
+              when :get then Net::HTTP::Get.new(uri)
+              when :post then Net::HTTP::Post.new(uri)
+              end
+
+        headers.each { |k, v| req[k] = v }
+        req.body = body if body
+
+        http = Net::HTTP.new(uri.host, uri.port, nil, nil, nil, nil)
+        http.use_ssl = true
+        http.open_timeout = 30
+        http.read_timeout = 60
+        resp = http.start { |h| h.request(req) }
+        resp
+      end
+
       def login
-        resp = Faraday.post(LOGIN_URL,
-          JSON.generate({ account: @email, password: @password }),
-          { "Content-Type" => "application/json", "Accept" => "application/json" }
+        resp = http_request(:post, LOGIN_PATH,
+          body: JSON.generate({ email: @email, password: @password }),
+          headers: { "Content-Type" => "application/json", "Origin" => "xoss" }
         )
-        return false unless resp.status == 200
+        return false unless resp.code.to_i == 200
 
         data = JSON.parse(resp.body)
         return false unless data["code"] == 0
 
-        token = data.dig("data", "token")
-        if token
-          @headers = {
-            "Authorization" => "Token #{token}",
-            "Accept" => "application/json"
-          }
-        else
-          @headers = { "Accept" => "application/json" }
-          set_cookies(resp)
-        end
+        @access_token = data.dig("data", "access")
+        return false unless @access_token
+
+        @auth_headers = { "Authorization" => "Bearer #{@access_token}", "Origin" => "xoss" }
         true
       end
 
       def sync_activities
         existing = existing_run_ids
-        page = 1
+        offset = 1
+        limit = 50
         count = 0
 
         loop do
-          activities = fetch_page(page)
+          activities = fetch_page(offset, limit)
           break if activities.nil? || activities.empty?
 
           activities.each do |act|
             act_id = act["id"].to_s
             next if existing.include?(act_id)
 
-            count += 1 if process_activity(act, act_id)
+            count += 1 if process_activity(act)
           end
 
-          page += 1
+          offset += limit
         end
 
         count
       end
 
-      def fetch_page(page)
-        resp = Faraday.get(ACTIVITIES_URL,
-          { page: page, page_size: 50 },
-          @headers
+      def fetch_page(offset, limit)
+        resp = http_request(:get, ACTIVITIES_PATH,
+          params: { offset: offset, limit: limit },
+          headers: @auth_headers
         )
-        return nil unless resp.status == 200
+        return nil unless resp.code.to_i == 200
 
-        data = JSON.parse(resp.body)
-        data["results"] || data["data"] || []
+        JSON.parse(resp.body).dig("data", "results")
       end
 
-      def process_activity(act, act_id)
-        type = map_sport(act["sport_type"] || act["type"])
+      def process_activity(act)
+        act_id = act["id"].to_s
+        type = map_sport(act["sport"])
 
-        start_t = parse_xoss_time(act["start_time"] || act["start_date"] || act["created_at"])
-        distance = (act["distance"] || act["total_distance"] || 0).to_f
-        moving_time = (act["moving_time"] || act["elapsed_time"] || act["duration"] || 0).to_i
-        elapsed_time = (act["elapsed_time"] || act["duration"] || moving_time).to_i
+        start_t = Time.at(act["start_timestamp"]).utc rescue nil
+        return false unless start_t
+
+        distance = act["distance"].to_f
+        moving_time = act["duration"].to_i
+        avg_speed = distance > 0 && moving_time > 0 ? (distance / moving_time).round(2) : nil
 
         attrs = {
           run_id: "xoss_#{act_id}",
-          name: act["name"] || act["title"] || "XOSS Activity",
+          name: act["title"] || "XOSS Activity",
           distance: distance,
-          moving_time: moving_time,
-          elapsed_time: elapsed_time,
+          moving_time: moving_time > 0 ? moving_time : nil,
+          elapsed_time: moving_time > 0 ? moving_time : nil,
           sport_category: type,
-          sport_type: act["sport_type"] || act["type"],
-          start_date: start_t&.strftime("%Y-%m-%d %H:%M:%S"),
-          start_date_local: start_t&.strftime("%Y-%m-%d %H:%M:%S"),
-          location_country: act["location"] || act["city"],
-          average_heartrate: (act["avg_hr"] || act["average_heartrate"] || 0).to_f.nonzero?,
-          average_speed: (act["avg_speed"] || act["average_speed"] || 0).to_f.nonzero?,
-          elevation_gain: (act["total_elevation"] || act["elevation"] || act["elevation_gain"] || 0).to_f.nonzero?,
+          sport_type: act["sub_sport"].to_s,
+          start_date: start_t.strftime("%Y-%m-%d %H:%M:%S"),
+          start_date_local: start_t.strftime("%Y-%m-%d %H:%M:%S"),
+          location_country: nil,
+          average_heartrate: nil,
+          average_speed: avg_speed,
+          elevation_gain: act["elevation_gain"].to_f.nonzero?,
           source: "xoss"
         }
 
@@ -118,35 +135,7 @@ module Workouts
       end
 
       def map_sport(sport)
-        return "other" unless sport
-
-        if sport.is_a?(Integer)
-          SPORT_MAP[sport] || "other"
-        else
-          case sport.to_s.downcase
-          when /riding|cycling|bike|ride|1/ then "ride"
-          when /running|run|2/ then "run"
-          when /walking|walk|3/ then "walk"
-          when /swimming|swim|4/ then "swim"
-          when /hiking|hike|5/ then "hike"
-          when /skiing|ski|6/ then "ski"
-          when /workout/ then "workout"
-          else "other"
-          end
-        end
-      end
-
-      def parse_xoss_time(str)
-        return nil unless str
-        Time.parse(str.to_s)
-      rescue
-        nil
-      end
-
-      def set_cookies(resp)
-        cookie_str = resp.headers["set-cookie"]
-        return unless cookie_str
-        @headers["Cookie"] = cookie_str.split(";").first
+        SPORT_MAP[sport] || "other"
       end
 
       def existing_run_ids
