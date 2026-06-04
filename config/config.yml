@@ -1,0 +1,21 @@
+---
+database:
+  path: data/workouts.db
+
+sync: {}
+
+export:
+  json:
+    path: data/activities.json
+  svg:
+    dir: data/svg
+  csv:
+    path: data/workouts.csv
+
+privacy:
+  start_end_range: 200
+
+system:
+  units: metric
+  log_level: info
+  timezone: UTC
