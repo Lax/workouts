@@ -43,7 +43,8 @@ module Workouts
     def svg
       config = Workouts::Config.new
       db = Workouts::DB::Connection.new(config.db_path).db
-      path = options[:output] || config.export_config.dig("svg", "dir") || "data/svg/#{options[:style]}.svg"
+      svg_dir = config.export_config.dig("svg", "dir") || "data/svg"
+      path = options[:output] || "#{svg_dir}/#{options[:style]}.svg"
 
       style = options[:style]
       unless Workouts::Export::SVG::STYLES.include?(style)
