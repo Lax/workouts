@@ -12,30 +12,38 @@ module Workouts
           #   client_secret: ""
           #   refresh_token: ""
 
-          # garmin:                               # Garmin International (garmin.com)
-          #   email: ""
-          #   password: ""
+          # --- Garmin International (garmin.com) ---
+          # Use either email+password OR secret (garth token string).
+          # SSO login is currently blocked by Cloudflare 429 globally.
+          # Workaround: generate token from reachable network via:
+          #   python3 -c "import garth; garth.login('email','pw'); print(garth.client.dumps())"
+          # garmin:
+          #   email: "your@email.com"          # placeholder
+          #   password: "your_password"        # placeholder
+          #   # secret: "base64_garth_token"   # alternative to email+password
 
-          # garmin_cn:                            # Garmin China (garmin.cn)
-          #   email: ""
-          #   password: ""
+          # --- Garmin China (garmin.cn) ---
+          # garmin_cn:
+          #   email: "13800138000"             # placeholder
+          #   password: "your_password"        # placeholder
 
           # keep:
-          #   phone: ""        # or env: SYNC__KEEP__PHONE
-          #   password: ""     # or env: SYNC__KEEP__PASSWORD
+          #   phone: "13800138000"      # placeholder
+          #   password: "your_password"  # placeholder
+          #   # or via env: SYNC__KEEP__PHONE / SYNC__KEEP__PASSWORD
           #   # Keep data uses GCJ-02 coordinates (auto-converted to WGS84)
 
           # igpsport:
-          #   phone: ""
-          #   password: ""
+          #   phone: "13800138000"      # placeholder
+          #   password: "your_password"  # placeholder
 
-          # xoss:
-          #   email: ""            # XOSS international (xoss.co)
-          #   password: ""
+          # xoss:                        # XOSS international (xoss.co)
+          #   email: "your@email.com"    # placeholder
+          #   password: "your_password"  # placeholder
 
-          # xingzhe:
-          #   email: ""            # 行者国内版 (imxingzhe.com)
-          #   password: ""
+          # xingzhe:                     # 行者国内版 (imxingzhe.com)
+          #   email: "13800138000"       # placeholder
+          #   password: "your_password"  # placeholder
 
         export:
           json:
