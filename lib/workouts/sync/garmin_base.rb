@@ -1,4 +1,5 @@
 require_relative "base"
+require "ostruct"
 require "base64"
 require "oauth"
 require "oauth/request_proxy/net_http"
