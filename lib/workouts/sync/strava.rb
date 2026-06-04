@@ -6,9 +6,11 @@ module Workouts
       BASE_URL = "https://www.strava.com/api/v3"
 
       def call
-        return 0 if @config.empty?
+        return 0 unless credentials_present?
 
         access_token = refresh_access_token
+        return 0 unless access_token
+
         page = 1
         count = 0
 
@@ -31,6 +33,12 @@ module Workouts
       end
 
       private
+
+      def credentials_present?
+        @config["client_id"].to_s != "" &&
+        @config["client_secret"].to_s != "" &&
+        @config["refresh_token"].to_s != ""
+      end
 
       def refresh_access_token
         resp = Faraday.post("https://www.strava.com/oauth/token") do |req|
