@@ -123,7 +123,7 @@ module Workouts
       sources = if options[:source]
                   [options[:source]]
                 else
-                  %w[strava garmin keep igpsport xoss].select do |s|
+                  %w[strava garmin keep igpsport xoss xingzhe].select do |s|
                     !workouts_config.sync_config(s).empty?
                   end
                 end
@@ -204,7 +204,7 @@ module Workouts
 
     desc "auth SOURCE", "Authenticate with a sync source (garmin, garmin_cn)"
     def auth(source)
-      sources = %w[garmin garmin_cn]
+      sources = %w[garmin garmin_cn xoss xingzhe]
       unless sources.include?(source)
         say_status :error, "Supported: #{sources.join(', ')}", :red
         return
@@ -253,6 +253,7 @@ module Workouts
               when "keep" then Sync::Keep
               when "igpsport" then Sync::IGPSPORT
               when "xoss" then Sync::XOSS
+              when "xingzhe" then Sync::XingZhe
               else
                 say_status :error, "Unknown source: #{source}", :red
                 return nil

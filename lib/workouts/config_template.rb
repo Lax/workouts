@@ -30,7 +30,11 @@ module Workouts
           #   password: ""
 
           # xoss:
-          #   email: ""
+          #   email: ""            # XOSS international (xoss.co)
+          #   password: ""
+
+          # xingzhe:
+          #   email: ""            # 行者国内版 (imxingzhe.com)
           #   password: ""
 
         export:
