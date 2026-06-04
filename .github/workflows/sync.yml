@@ -1,0 +1,104 @@
+name: Sync Workouts
+on:
+  schedule:
+    - cron: '0 2 */3 * *'
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.4'
+          bundler-cache: true
+
+      - uses: actions/cache@v4
+        id: db-cache
+        with:
+          path: data/workouts.db
+          key: workouts-db
+
+      - name: Sync
+        env:
+          SYNC__KEEP__PHONE: ${{ secrets.SYNC_KEEP_PHONE }}
+          SYNC__KEEP__PASSWORD: ${{ secrets.SYNC_KEEP_PASSWORD }}
+          SYNC__IGPSPORT__PHONE: ${{ secrets.SYNC_IGPSPORT_PHONE }}
+          SYNC__IGPSPORT__PASSWORD: ${{ secrets.SYNC_IGPSPORT_PASSWORD }}
+          SYNC__XOSS__EMAIL: ${{ secrets.SYNC_XOSS_EMAIL }}
+          SYNC__XOSS__PASSWORD: ${{ secrets.SYNC_XOSS_PASSWORD }}
+          SYNC__XINGZHE__EMAIL: ${{ secrets.SYNC_XINGZHE_EMAIL }}
+          SYNC__XINGZHE__PASSWORD: ${{ secrets.SYNC_XINGZHE_PASSWORD }}
+          SYNC__GARMIN_CN__EMAIL: ${{ secrets.SYNC_GARMIN_CN_EMAIL }}
+          SYNC__GARMIN_CN__PASSWORD: ${{ secrets.SYNC_GARMIN_CN_PASSWORD }}
+          SYNC__GARMIN__EMAIL: ${{ secrets.SYNC_GARMIN_EMAIL }}
+          SYNC__GARMIN__PASSWORD: ${{ secrets.SYNC_GARMIN_PASSWORD }}
+          SYNC__GARMIN__SECRET: ${{ secrets.SYNC_GARMIN_SECRET }}
+          SYNC__STRAVA__CLIENT_ID: ${{ secrets.SYNC_STRAVA_CLIENT_ID }}
+          SYNC__STRAVA__CLIENT_SECRET: ${{ secrets.SYNC_STRAVA_CLIENT_SECRET }}
+          SYNC__STRAVA__REFRESH_TOKEN: ${{ secrets.SYNC_STRAVA_REFRESH_TOKEN }}
+        run: bundle exec exe/workouts sync
+
+      - id: cron
+        run: echo "N=$(grep -oP '/\K\d+(?= \* \*)' .github/workflows/sync.yml)" >> $GITHUB_OUTPUT
+
+      - name: Decide interval
+        id: decide
+        env:
+          N: ${{ steps.cron.outputs.N || 3 }}
+        run: |
+          bundle exec ruby -e '
+            n = ENV["N"].to_i
+            db = "data/workouts.db"
+            unless File.exist?(db)
+              puts "new_n=#{n}"
+              exit
+            end
+            require "sequel"
+            row = Sequel.sqlite(db)[:activities].order(Sequel.desc(:start_date)).first
+            unless row
+              puts "new_n=#{n}"
+              exit
+            end
+            f = ((Time.now - Time.parse(row[:start_date].to_s)) / 86400).round
+            n -= 1 if f < n && n > 1
+            n += 1 if f > 2 * n + 1 && n < 7
+            puts "f=#{f}"
+            puts "new_n=#{n}"
+          ' >> $GITHUB_OUTPUT
+
+      - name: Update cron (schedule only)
+        if: github.event_name == 'schedule'
+        env:
+          NEW_N: ${{ steps.decide.outputs.new_n }}
+        run: |
+          sed -i "s|/\\([0-9]\\) \\* \\*|/${NEW_N} * *|" .github/workflows/sync.yml
+          git config user.name "workouts-bot"
+          git config user.email "bot@workouts"
+          git add .github/workflows/sync.yml
+          git diff --cached --quiet || \
+            git commit -m "chore: sync interval N=$NEW_N"
+          git pull --rebase
+          git push
+
+      - uses: actions/cache@v4
+        if: always()
+        with:
+          path: data/workouts.db
+          key: workouts-db
+
+      - name: Export
+        if: always()
+        run: |
+          bundle exec exe/workouts export json
+          bundle exec exe/workouts export svg --style github --title "Workouts" --output data/svg/github.svg
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: exports
+          path: |
+            data/activities.json
+            data/svg/
