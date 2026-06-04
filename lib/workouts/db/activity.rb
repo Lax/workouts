@@ -1,37 +1,33 @@
 module Workouts
   module DB
-    class Activity < Sequel::Model(:activities)
-      unrestrict_primary_key
+    SPORT_CATEGORIES = %w[run ride hike walk swim ski workout other].freeze
 
-      SPORT_CATEGORIES = %w[run ride hike walk swim ski workout other].freeze
+    def self.activity_to_hash(a)
+      return nil unless a
 
-      def to_export_hash
-        {
-          run_id: run_id,
-          name: name,
-          distance: distance,
-          moving_time: format_time(moving_time),
-          type: sport_category,
-          subtype: sport_type,
-          start_date: start_date,
-          start_date_local: start_date_local,
-          location_country: location_country,
-          summary_polyline: summary_polyline,
-          average_heartrate: average_heartrate,
-          average_speed: average_speed,
-          elevation_gain: elevation_gain
-        }
-      end
+      {
+        run_id: a[:run_id],
+        name: a[:name],
+        distance: a[:distance],
+        moving_time: format_time(a[:moving_time]),
+        type: a[:sport_category],
+        subtype: a[:sport_type],
+        start_date: a[:start_date],
+        start_date_local: a[:start_date_local],
+        location_country: a[:location_country],
+        summary_polyline: a[:summary_polyline],
+        average_heartrate: a[:average_heartrate],
+        average_speed: a[:average_speed],
+        elevation_gain: a[:elevation_gain]
+      }
+    end
 
-      private
-
-      def format_time(seconds)
-        return nil unless seconds
-        hours = seconds / 3600
-        minutes = (seconds % 3600) / 60
-        secs = seconds % 60
-        format("%d:%02d:%02d", hours, minutes, secs)
-      end
+    def self.format_time(seconds)
+      return nil unless seconds
+      hours = seconds / 3600
+      minutes = (seconds % 3600) / 60
+      secs = seconds % 60
+      format("%d:%02d:%02d", hours, minutes, secs)
     end
   end
 end
