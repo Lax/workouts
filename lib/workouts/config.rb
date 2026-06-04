@@ -22,12 +22,14 @@ module Workouts
 
     ENV_SEPARATOR = "__"
     DEFAULT_PATH = "config/config.yml"
+    KNOWN_TOP_KEYS = %w[database sync export privacy system].freeze
 
     def initialize(path = nil)
       @data = deep_dup(DEFAULTS)
       load_file(path) if path
       load_file(DEFAULT_PATH) if !path && File.exist?(DEFAULT_PATH)
       load_env
+      validate!
     end
 
     def [](key)
@@ -51,6 +53,12 @@ module Workouts
     end
 
     private
+
+    def validate!
+      @data.each_key do |k|
+        warn "Config: unknown top-level key '#{k}'" unless KNOWN_TOP_KEYS.include?(k)
+      end
+    end
 
     def load_file(path)
       yaml = YAML.safe_load(File.read(path)) || {}
