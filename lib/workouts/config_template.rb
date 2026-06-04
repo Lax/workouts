@@ -21,8 +21,9 @@ module Workouts
           #   password: ""
 
           # keep:
-          #   phone: ""
-          #   password: ""
+          #   phone: ""        # or env: SYNC__KEEP__PHONE
+          #   password: ""     # or env: SYNC__KEEP__PASSWORD
+          #   # Keep data uses GCJ-02 coordinates (auto-converted to WGS84)
 
           # igpsport:
           #   phone: ""
