@@ -46,4 +46,16 @@ RSpec.describe Workouts::Config do
     config = Workouts::Config.new
     expect(config.sync_config("nonexistent")).to eq({})
   end
+
+  it "warns on unknown top-level key" do
+    path = File.join(File.dirname(__FILE__), "fixtures", "bad_config.yml")
+    File.write(path, <<~YAML)
+      database:
+        path: /tmp/test.db
+      unknown_key:
+        foo: bar
+    YAML
+    expect { Workouts::Config.new(path) }.to output(/unknown top-level key/).to_stderr
+    File.delete(path) if File.exist?(path)
+  end
 end
