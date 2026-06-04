@@ -2,6 +2,8 @@ RSpec.describe Workouts::Config do
   let(:config_path) { File.join(File.dirname(__FILE__), "fixtures", "test_config.yml") }
 
   before do
+    dir = File.dirname(config_path)
+    FileUtils.mkdir_p(dir) unless Dir.exist?(dir)
     File.write(config_path, <<~YAML)
       database:
         path: /tmp/test.db
