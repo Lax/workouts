@@ -95,6 +95,21 @@ jobs:
           bundle exec exe/workouts export json
           bundle exec exe/workouts export svg --style github --title "Workouts" --output data/svg/github.svg
 
+      - name: Prepare pages directory
+        if: always()
+        run: |
+          mkdir -p pages/svg
+          cp data/activities.json pages/
+          for f in data/svg/*.svg; do
+            [ -f "$f" ] && cp "$f" pages/svg/
+          done
+
+      - uses: actions/upload-pages-artifact@v3
+        if: always()
+        with:
+          name: pages-artifact
+          path: ./pages
+
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -102,3 +117,51 @@ jobs:
           path: |
             data/activities.json
             data/svg/
+
+  deploy:
+    needs: [sync]
+    if: success()
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+    concurrency:
+      group: pages
+      cancel-in-progress: true
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: pages-artifact
+          path: ./pages
+
+      - name: Generate index.html
+        run: |
+          cat > pages/index.html << 'PAGEOF'
+          <!DOCTYPE html>
+          <html lang="zh-CN">
+          <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width,initial-scale=1">
+            <title>Workouts</title>
+            <style>
+              body { background: #222; color: #fff; font-family: sans-serif; text-align: center; padding: 2rem; }
+              img { max-width: 100%; margin: 1rem 0; }
+              a { color: #4DD2FF; }
+            </style>
+          </head>
+          <body>
+            <h1>Workouts</h1>
+            <img src="svg/github.svg" alt="GitHub style poster">
+            <p><a href="activities.json">JSON 数据</a></p>
+          </body>
+          </html>
+          PAGEOF
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./pages
+
+      - id: deployment
+        uses: actions/deploy-pages@v4
