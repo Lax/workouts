@@ -1,10 +1,18 @@
 require_relative "base"
+require "openssl"
 
 module Workouts
   module Sync
     class XingZhe < Base
-      BASE_URL = "https://www.imxingzhe.com"
-      LOGIN_URL = "#{BASE_URL}/api/v1/user/login/"
+      BASE_HOST = "www.imxingzhe.com"
+      LOGIN_PATH = "/api/v1/user/login/"
+      WORKOUTS_PATH = "/api/v1/pgworkout/"
+      RSA_PUBKEY = "MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDmuQkBbijudDAJgfffDeeIButqWHZvUwcRuvWdg89393FSdz3IJUHc0rgI/S3WuU8N0VePJLmVAZtCOK4qe4FY/eKmWpJmn7JfXB4HTMWjPVoyRZmSYjW4L8GrWmh51Qj7DwpTADadF3aq04o+s1b8LXJa8r6+TIqqL5WUHtRqmQIDAQAB"
+
+      SPORT_MAP = {
+        3 => "ride", 1 => "run", 2 => "hike",
+        5 => "swim", 6 => "walk", 11 => "ski", 13 => "workout"
+      }.freeze
 
       def initialize(...)
         super
@@ -14,114 +22,130 @@ module Workouts
 
       def call
         return 0 if @email.nil? || @password.nil?
-
         return 0 unless login
-
         sync_activities
       end
 
       private
 
+      def http_request(method, path, body: nil, params: nil, headers: {})
+        uri = URI("https://#{BASE_HOST}#{path}")
+        uri.query = URI.encode_www_form(params) if params
+
+        req = case method
+              when :get then Net::HTTP::Get.new(uri)
+              when :post then Net::HTTP::Post.new(uri)
+              end
+
+        headers.each { |k, v| req[k] = v }
+        req.body = body if body
+
+        http = Net::HTTP.new(uri.host, uri.port, nil, nil, nil, nil)
+        http.use_ssl = true
+        http.open_timeout = 30
+        http.read_timeout = 60
+        http.start { |h| h.request(req) }
+      end
+
       def login
-        resp = Faraday.post(LOGIN_URL,
-          JSON.generate({ account: @email, password: @password }),
-          { "Content-Type" => "application/json", "Accept" => "application/json" }
+        encrypted = rsa_encrypt(@password)
+        resp = http_request(:post, LOGIN_PATH,
+          body: JSON.generate({ account: @email, password: encrypted }),
+          headers: { "Content-Type" => "application/json" }
         )
-        return false unless resp.status == 200
+        return false unless resp.code.to_i == 200
 
         data = JSON.parse(resp.body)
         return false unless data["code"] == 0
 
-        @token = data.dig("data", "token")
-        return false unless @token
+        cookie = extract_cookie(resp)
+        return false unless cookie
 
-        @headers = { "Authorization" => "Token #{@token}", "Accept" => "application/json" }
+        @headers = { "Cookie" => cookie, "Accept" => "application/json" }
         true
       end
 
+      def rsa_encrypt(password)
+        pem = "-----BEGIN PUBLIC KEY-----\n#{RSA_PUBKEY}\n-----END PUBLIC KEY-----"
+        key = OpenSSL::PKey::RSA.new(pem)
+        Base64.strict_encode64(key.public_encrypt(password, OpenSSL::PKey::RSA::PKCS1_PADDING))
+      end
+
+      def extract_cookie(resp)
+        set_cookie = resp["set-cookie"]
+        return nil unless set_cookie
+        m = set_cookie.match(/sessionid=([^;]+)/)
+        m ? "sessionid=#{m[1]}" : nil
+      end
+
       def sync_activities
-        page = 1
+        existing = existing_run_ids
+        offset = 0
+        limit = 50
         count = 0
 
         loop do
-          activities = fetch_page(page)
-          break if activities.nil? || activities.empty?
+          acts = fetch_page(offset, limit)
+          break if acts.nil? || acts.empty?
 
-          activities.each do |act|
-            type = map_sport(act["sport_type"] || act["type"])
+          acts.each do |act|
+            aid = act["id"].to_s
+            next if existing.include?(aid)
+
+            type = map_sport(act["sport"])
             next if skip_type?(type)
 
             count += 1 if process_activity(act, type)
           end
 
-          page += 1
+          offset += limit
         end
 
         count
       end
 
-      def fetch_page(page)
-        resp = Faraday.get("#{BASE_URL}/api/activities/",
-          { page: page, page_size: 50 },
-          @headers
+      def fetch_page(offset, limit)
+        resp = http_request(:get, WORKOUTS_PATH,
+          params: { offset: offset, limit: limit },
+          headers: @headers
         )
-        return nil unless resp.status == 200
+        return nil unless resp.code.to_i == 200
 
-        data = JSON.parse(resp.body)
-        data["results"] || data["data"] || []
+        JSON.parse(resp.body).dig("data", "data")
       end
 
       def process_activity(act, type)
-        act_id = act["id"].to_s
+        start_t = Time.at(act["start_time"] / 1000.0).utc rescue nil
+        return false unless start_t
 
-        start_t = parse_time(act["start_time"] || act["start_date"] || act["created_at"])
-        distance = (act["distance"] || act["total_distance"] || 0).to_f
-        moving_time = (act["moving_time"] || act["elapsed_time"] || act["duration"] || 0).to_i
-        elapsed_time = (act["elapsed_time"] || act["duration"] || moving_time).to_i
+        distance = act["distance"].to_f
+        moving_time = act["duration"].to_i
 
-        attrs = {
-          run_id: "xingzhe_#{act_id}",
-          name: act["name"] || act["title"] || "XingZhe Activity",
+        upsert_activity({
+          run_id: "xingzhe_#{act["id"]}",
+          name: act["title"] || "XingZhe Activity",
           distance: distance,
           moving_time: moving_time > 0 ? moving_time : nil,
-          elapsed_time: elapsed_time > 0 ? elapsed_time : nil,
+          elapsed_time: moving_time > 0 ? moving_time : nil,
           sport_category: type,
-          sport_type: (act["sport_type"] || act["type"]).to_s,
-          start_date: start_t,
-          start_date_local: start_t,
-          location_country: act["location"] || act["city"],
-          average_heartrate: (act["avg_hr"] || act["average_heartrate"] || 0).to_f.nonzero?,
-          average_speed: (act["avg_speed"] || act["average_speed"] || 0).to_f.nonzero?,
-          elevation_gain: (act["total_elevation"] || act["elevation"] || act["elevation_gain"] || 0).to_f.nonzero?,
+          sport_type: act["sport"].to_s,
+          start_date: start_t.strftime("%Y-%m-%d %H:%M:%S"),
+          start_date_local: start_t.strftime("%Y-%m-%d %H:%M:%S"),
+          average_speed: (act["avg_speed"].to_f / 3.6).round(2).nonzero?,
+          elevation_gain: act["elevation_gain"].to_f.nonzero?,
           source: "xingzhe"
-        }
-
-        upsert_activity(attrs)
+        })
         true
       end
 
       def map_sport(sport)
-        return "other" unless sport
-        case sport.to_s.downcase
-        when /riding|cycling|bike|ride/ then "ride"
-        when /running|run/ then "run"
-        when /walking|walk/ then "walk"
-        when /swimming|swim/ then "swim"
-        when /hiking|hike/ then "hike"
-        when /skiing|ski/ then "ski"
-        when /workout/ then "workout"
-        else "other"
-        end
+        SPORT_MAP[sport] || "other"
       end
 
-      def parse_time(str)
-        return nil unless str
-        normalized = str.to_s.tr(".", "-")
-        Time.parse(normalized).strftime("%Y-%m-%d %H:%M:%S")
-      rescue
-        nil
+      def existing_run_ids
+        @db[:activities].where(source: "xingzhe").select_map(:run_id)
+          .map { |id| id.sub("xingzhe_", "") }
       end
-
     end
   end
 end
