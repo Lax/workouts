@@ -19,5 +19,8 @@ Gem::Specification.new do |s|
   s.add_dependency "faraday", "~> 2.0"
   s.add_dependency "faraday-multipart", "~> 1.0"
   s.add_dependency "csv", "~> 3.0"
+  s.add_dependency "base64", "~> 0.2"
+  s.add_dependency "zlib", "~> 3.0"
+  s.add_dependency "openssl", "~> 3.0"
   s.add_dependency "nokogiri", "~> 1.16"
 end
