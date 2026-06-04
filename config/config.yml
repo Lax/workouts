@@ -2,7 +2,31 @@
 database:
   path: data/workouts.db
 
-sync: {}
+sync:
+  # strava:
+  #   client_id: ""
+  #   client_secret: ""
+  #   refresh_token: ""
+
+  # garmin:
+  #   email: ""
+  #   password: ""
+
+  # garmin_cn:
+  #   email: ""
+  #   password: ""
+
+  # keep:
+  #   phone: ""
+  #   password: ""
+
+  # igpsport:
+  #   phone: ""
+  #   password: ""
+
+  # xoss:
+  #   email: ""
+  #   password: ""
 
 export:
   json:
