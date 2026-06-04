@@ -1,0 +1,24 @@
+services:
+  workouts:
+    build: .
+    image: workouts-cli
+    container_name: workouts
+    entrypoint: ["bundle", "exec", "exe/workouts"]
+    volumes:
+      - ./data:/app/data
+    environment:
+      - SYNC__STRAVA__CLIENT_ID
+      - SYNC__STRAVA__CLIENT_SECRET
+      - SYNC__STRAVA__REFRESH_TOKEN
+      - SYNC__GARMIN__EMAIL
+      - SYNC__GARMIN__PASSWORD
+      - SYNC__KEEP__PHONE
+      - SYNC__KEEP__PASSWORD
+      - SYNC__IGPSPORT__PHONE
+      - SYNC__IGPSPORT__PASSWORD
+      - SYNC__XOSS__EMAIL
+      - SYNC__XOSS__PASSWORD
+      - SYNC__XINGZHE__EMAIL
+      - SYNC__XINGZHE__PASSWORD
+    tmpfs:
+      - /tmp

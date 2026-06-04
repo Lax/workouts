@@ -1,0 +1,14 @@
+.bundle/
+vendor/
+.bundle/
+data/*.db
+data/*.json
+data/*.csv
+data/svg/
+*.gem
+.git/
+.gitignore
+.github/
+README.md
+spec/
+docker-compose.yml
