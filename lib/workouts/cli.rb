@@ -201,6 +201,35 @@ module Workouts
       end
     end
 
+    desc "auth SOURCE", "Authenticate with a sync source (garmin, garmin_cn)"
+    def auth(source)
+      sources = %w[garmin garmin_cn]
+      unless sources.include?(source)
+        say_status :error, "Supported: #{sources.join(', ')}", :red
+        return
+      end
+
+      config = workouts_config.sync_config(source)
+      if config.empty?
+        say_status :warn, "No config for #{source}. Set env vars or config.yml", :yellow
+        return
+      end
+
+      db = connect_db
+      adapter = build_sync_adapter(source, db, nil)
+      unless adapter.respond_to?(:authenticate)
+        say_status :error, "#{source} does not support interactive auth", :red
+        return
+      end
+
+      say_status :auth, "Logging in to #{source}...", :green
+      if adapter.authenticate
+        say_status :done, "#{source} authenticated successfully", :green
+      else
+        say_status :error, "Authentication failed", :red
+      end
+    end
+
     desc "version", "Show version"
     def version
       puts "Workouts v#{Workouts::VERSION}"
