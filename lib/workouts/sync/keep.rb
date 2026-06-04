@@ -60,9 +60,32 @@ module Workouts
 
       private
 
+      def http_post(url, body, headers)
+        uri = URI(url)
+        req = Net::HTTP::Post.new(uri)
+        headers.each { |k, v| req[k] = v }
+        req.body = body.is_a?(Hash) ? URI.encode_www_form(body) : body
+        http = Net::HTTP.new(uri.host, uri.port, nil, nil, nil, nil)
+        http.use_ssl = uri.scheme == "https"
+        http.open_timeout = 30
+        http.read_timeout = 60
+        http.start { |h| h.request(req) }
+      end
+
+      def http_get(url, headers)
+        uri = URI(url)
+        req = Net::HTTP::Get.new(uri)
+        headers.each { |k, v| req[k] = v }
+        http = Net::HTTP.new(uri.host, uri.port, nil, nil, nil, nil)
+        http.use_ssl = uri.scheme == "https"
+        http.open_timeout = 30
+        http.read_timeout = 60
+        http.start { |h| h.request(req) }
+      end
+
       def login
-        resp = Faraday.post(LOGIN_URL, { mobile: @phone, password: @password }, @headers)
-        return nil unless resp.status == 200
+        resp = http_post(LOGIN_URL, { mobile: @phone, password: @password }, @headers)
+        return nil unless resp.code.to_i == 200
 
         data = JSON.parse(resp.body)
         token = data.dig("data", "token")
@@ -92,8 +115,8 @@ module Workouts
 
         loop do
           url = STATS_URL % { sport: sport, last_date: last_date }
-          resp = @session ? Faraday.get(url, {}, @headers) : nil
-          break unless resp&.status == 200
+          resp = @session ? http_get(url, @headers) : nil
+          break unless resp&.code&.to_i == 200
 
           data = JSON.parse(resp.body)["data"]
           break unless data
@@ -120,8 +143,8 @@ module Workouts
 
       def sync_single_run(run_id, sport)
         url = LOG_URL % { sport: sport, run_id: run_id }
-        resp = Faraday.get(url, {}, @headers)
-        return false unless resp.status == 200
+        resp = http_get(url, @headers)
+        return false unless resp.code.to_i == 200
 
         data = JSON.parse(resp.body)
         run_data = data["data"]
@@ -190,8 +213,8 @@ module Workouts
           elapsed_time: elapsed_time,
           sport_category: TYPE_MAP[data_type] || "other",
           sport_type: data_type,
-          start_date: format_time(start_date),
-          start_date_local: format_time(start_date),
+          start_date: start_date.strftime("%Y-%m-%d %H:%M:%S"),
+          start_date_local: start_date.strftime("%Y-%m-%d %H:%M:%S"),
           location_country: run_data["region"],
           summary_polyline: polyline_str,
           average_heartrate: avg_hr&.round(1),
