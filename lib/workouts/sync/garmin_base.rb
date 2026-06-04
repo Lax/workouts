@@ -283,7 +283,7 @@ module Workouts
       end
 
       def send_http(uri, request)
-        http = Net::HTTP.new(uri.host, uri.port)
+        http = Net::HTTP.new(uri.host, uri.port, nil, nil, nil, nil)
         http.use_ssl = true
         http.open_timeout = 30
         http.read_timeout = 60
