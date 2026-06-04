@@ -342,7 +342,7 @@ module Workouts
       end
 
       def spider_sleep
-        Kernel.sleep(1)
+        sleep 0.1
       end
     end
   end
