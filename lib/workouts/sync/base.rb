@@ -19,7 +19,7 @@ module Workouts
       protected
 
       def time_expired?
-        return false unless @time_budget && @start_time
+        return false unless @time_budget.is_a?(Numeric) && @time_budget > 0 && @start_time
         (Time.now - @start_time) > @time_budget
       end
 
