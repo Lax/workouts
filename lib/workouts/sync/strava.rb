@@ -88,20 +88,7 @@ module Workouts
       end
 
       def map_sport_type(type, sport_type)
-        st = (sport_type || type).to_s.downcase
-
-        case st
-        when "run", "trailrun", "trail_run" then "run"
-        when "virtualrun", "virtual_run", "indoorrun", "indoor_run" then "run"
-        when "ride", "mountainbike", "gravelride", "ebikeride" then "ride"
-        when "virtualride", "indoor_ride", "indoorride", "virtual_ride" then "ride"
-        when "hike" then "hike"
-        when "walk" then "walk"
-        when "swim" then "swim"
-        when "ski", "backcountryski", "nordicski" then "ski"
-        when "workout", "strengthtraining" then "workout"
-        else "other"
-        end
+        SportMapper.canonicalize(sport_type || type)
       end
     end
   end
