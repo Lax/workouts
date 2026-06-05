@@ -105,10 +105,10 @@ jobs:
             [ -f "$f" ] && cp "$f" pages/svg/
           done
 
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: pages-artifact
+          name: pages-assets
           path: ./pages
 
       - uses: actions/upload-artifact@v4
@@ -134,7 +134,7 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          name: pages-artifact
+          name: pages-assets
           path: ./pages
 
       - name: Generate index.html
