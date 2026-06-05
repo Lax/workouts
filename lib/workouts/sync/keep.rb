@@ -51,6 +51,8 @@ module Workouts
         @session = login
         return 0 unless @session
 
+        @existing_ids = existing_run_ids
+
         count = 0
         KEEP_TYPES.each do |sport|
           count += sync_sport_type(sport)
@@ -98,9 +100,8 @@ module Workouts
       end
 
       def sync_sport_type(sport)
-        old_ids = existing_run_ids
         run_ids = fetch_run_ids(sport)
-        new_ids = run_ids.reject { |id| old_ids.include?(id) }
+        new_ids = run_ids.reject { |id| @existing_ids.include?("keep_#{id}") }
 
         new_ids.count { |id| sync_single_run(id, sport) }
       end
