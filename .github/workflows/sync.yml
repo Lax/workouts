@@ -177,7 +177,7 @@ jobs:
             "#s-#{t}:checked ~ .poster g:not(.s-#{t}) rect { fill: #444444 !important; }"
           }.join("\n          ")
           legend_items = types.map { |k, v|
-            %(<label for="s-#{k}" style="border-color:#{v[:color]}">#{v[:label]}</label>)
+            %(<label for="s-#{k}" style="background-color:#{v[:color]}">#{v[:label]}</label>)
           }.join("\n          ")
           html = <<~HTML
           <!DOCTYPE html>
@@ -200,7 +200,7 @@ jobs:
                 opacity: 0.25; transition: opacity 0.3s ease, transform 0.3s ease;
               }
               .legend:hover, .legend:focus-within { opacity: 1; transform: translateX(-50%) translateY(0); }
-              .legend label { cursor: pointer; padding: 0.25rem 0.75rem; border: 1px solid #555; border-radius: 4px; }
+              .legend label { cursor: pointer; padding: 0.25rem 0.75rem; border: 1px solid transparent; border-radius: 4px; color: #fff; background-color: #555; }
               .legend label:hover { border-color: #fff; }
               body { padding-top: 4rem; }
               @media (max-width: 767px) {
@@ -212,7 +212,7 @@ jobs:
                 .poster { padding-bottom: 4rem; }
               }
               #{hide_rules}
-              #{types.keys.map { |t| "#s-#{t}:checked ~ .legend label[for=\"s-#{t}\"], #s-all:checked ~ .legend label[for=\"s-all\"]" }.join(",\n              ")} { background: #333; border-color: #fff; }
+              #{types.keys.map { |t| "#s-#{t}:checked ~ .legend label[for=\"s-#{t}\"], #s-all:checked ~ .legend label[for=\"s-all\"]" }.join(",\n              ")} { border-width: 2px; }
             </style>
           </head>
           <body>
