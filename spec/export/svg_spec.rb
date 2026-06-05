@@ -102,7 +102,7 @@ RSpec.describe Workouts::Export::SVG::GithubDrawer do
       expect(title).to match(/walk/)
       expect(title).to match(/4\.0 km/)
       expect(title).to match(/10min/)
-      expect(title).not_to include("&#10;")
+      expect(title).not_to include("\n")
     end
 
     it "uses newline separator for multiple tracks" do
@@ -112,7 +112,7 @@ RSpec.describe Workouts::Export::SVG::GithubDrawer do
       ]
       grouped = drawer.send(:group_by_date_and_category)
       title = drawer.send(:build_day_title, "2024-06-15", grouped["2024-06-15"])
-      expect(title).to include("&#10;")
+      expect(title).to include("\n")
       expect(title).to include("ride")
       expect(title).to include("walk")
     end

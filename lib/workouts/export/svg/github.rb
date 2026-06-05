@@ -155,7 +155,7 @@ module Workouts
             all.each do |t|
               lines << "  #{t.sport_category}  #{format_dist(t.length)}  #{format_time(t.moving_time)}"
             end
-            lines.join("&#10;")
+            lines.join("\n")
           end
         end
 
