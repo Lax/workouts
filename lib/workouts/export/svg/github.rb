@@ -96,7 +96,7 @@ module Workouts
         def group_by_date
           h = {}
           poster.tracks.each do |t|
-            key = t.date.to_s
+            key = t.date.to_date.to_s
             (h[key] ||= []) << t
           end
           h
