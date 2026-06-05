@@ -281,7 +281,7 @@ docker compose run --rm workouts export json
 
 | 来源 | 数量 |
 |---|---|
-| Keep | 837 |
+| Keep | 837（838 条原始 GPS 已备份，21MB） |
 | iGPSPORT | 56 |
 | XOSS | 44 |
 | XingZhe | 34 |
@@ -289,9 +289,13 @@ docker compose run --rm workouts export json
 | Garmin 国际版 | CF 429 封禁 |
 | Strava | 待配置 |
 
+### 原始 GPS 文件
+
+`data/raw/keep/` 下存有 838 个 JSON 文件，总量 21MB。每个文件包含完整的 GCJ-02→WGS-84 坐标转换后点阵、海拔、时间戳和逐点心率。
+
 ### 测试
 
-RSpec 53 例，0 失败。覆盖：
+RSpec 116 例，0 失败。覆盖：
 - Config（YAML 加载 + env var merge + 未知 key 警告）
 - Geo（坐标转换 3 套 + Polyline 编解码）
 - Privacy（起终点偏移过滤）
@@ -307,9 +311,8 @@ RSpec 53 例，0 失败。覆盖：
 
 | 项 | 工作量 | 说明 |
 |---|---|---|
-| Keep raw 数据持久化 | 2d | `data/raw/keep/{id}.json` + 统一列表 + 时间预算 + CS1/CS2 缓存策略 |
 | Garmin access_token 环境变量 | 0.5h | `SYNC__GARMIN__ACCESS_TOKEN` 直接使用 bearer token 跳过 SSO |
-| Sync Workflows 状态确认 | 0.5h | Pages 部署已验证，确认 cache/artifact 正常流转 |
+| iGPSPORT 原生 GPS 调研 | 1d | 探索 detail API / FIT 下载端点 |
 
 ### P1 — 功能扩展
 
@@ -329,6 +332,7 @@ RSpec 53 例，0 失败。覆盖：
 
 | 项 | 状态 |
 |---|---|
+| Keep raw 数据持久化（838 条，21MB） | ✅ 已完成 |
 | Keep spider_sleep 1s → 0.1s | ✅ 已完成 |
 | Config 未知 key 警告 | ✅ 已完成 |
 | SportMapper 三层回退 | ✅ 已完成 |
