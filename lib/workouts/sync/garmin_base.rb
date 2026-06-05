@@ -30,7 +30,7 @@ module Workouts
       end
 
       def call
-        return 0 if @email.nil? || @password.nil?
+        return 0 if @email.to_s.empty? || @password.to_s.empty?
 
         return 0 unless authenticate
 
