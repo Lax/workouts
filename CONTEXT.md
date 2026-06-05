@@ -22,6 +22,7 @@
 | `parse <file.gpx\|file.tcx> [--save]` | 解析本地 GPX/TCX 文件，可选写入 DB |
 | `init` | 生成默认 config.yml |
 | `migrate` | 运行数据库迁移 |
+| `raw polyline` | 从 `data/raw/` 重新生成 `summary_polyline`（算法变更时用）|
 | `version` | 版本号 |
 
 ---
@@ -32,11 +33,13 @@
 ┌─────────────┐     ┌──────────────┐     ┌─────────────┐
 │ Strava      │     │  Sync::Base  │     │ Export::SVG │
 │ Garmin      │────▶│  upsert      │────▶│ Export::JSON│
-│ Keep        │     │  skip_type?  │     │ Export::CSV │
-│ iGPSPORT    │     │  privacy     │     └─────────────┘
-│ XOSS (xoss) │     └──────┬───────┘
-│ XingZhe     │            │
-└─────────────┘            ▼
+│ Keep        │     │  write_raw   │     │ Export::CSV │
+│ iGPSPORT    │     │  skip_type?  │     └─────────────┘
+│ XOSS (xoss) │     └───┬───┬──────┘
+│ XingZhe     │         │   │
+└─────────────┘         │   └───▶ data/raw/{source}/
+                        │           (原始 GPS 点阵备份)
+                        ▼
                     ┌──────────────┐
                     │   SQLite DB  │
                     │  (Sequel ORM)│
@@ -68,15 +71,19 @@
 
 同步中:
   1. 读取已存在的 run_id 列表 (existing_run_ids)
-  2. 分页拉取活动列表
-  3. 跳过已存在的 (next if existing.include?)
-  4. 按活动类型过滤 (skip_type?)  
-  5. build_attrs → upsert_activity
+  2. 分页拉取活动列表 (fetch_run_ids)
+  3. 计算 new_ids（未同步的） + missing_raw（已有摘要但缺原始 GPS 的）
+  4. 合并为统一列表（new_ids 在前，优先同步）
+  5. 逐活动处理:
+     a. 时间预算耗尽? → break（下次 CI run 继续）
+     b. raw 文件已存在? → next（crash 恢复保护）
+     c. 一次 API 调用 → 解密 GPS → 写 raw 文件 + 写 DB (含 summary_polyline)
+  6. 按活动类型过滤 (skip_type?)
 
 同步后:
-  6. 计算新鲜度 f
-  7. f < N → N=max(1,N-1); f > 2N+1 → N=min(7,N+1)
-  8. 写回 cron 行 (schedule only)
+  7. 计算新鲜度 f
+  8. f < N → N=max(1,N-1); f > 2N+1 → N=min(7,N+1)
+  9. 写回 cron 行 (schedule only)
 ```
 
 ### 去重机制
@@ -128,6 +135,7 @@ CREATE TABLE activities (
 SYNC__KEEP__PHONE       → sync.keep.phone
 SYNC__GARMIN_CN__EMAIL  → sync.garmin_cn.email
 SYNC__STRAVA_CLIENT_ID  → sync.strava.client_id
+SYNC__TIME_BUDGET       → sync.time_budget           # 全局 sync 配置
 ```
 
 `__` 作为层级分隔符 → key 自身可含单 `_`（如 `garmin_cn`）
@@ -195,13 +203,15 @@ f > 2N+1 → N = min(7, N+1)    → 减速
 sync job:
   1. checkout
   2. setup Ruby + restore cache
-  3. workouts sync (15 secrets → env)
-  4. 读 N → 算 f → 可能改 cron
-  5. save cache
-  6. export json + svg
-  7. prepare pages dir (排除 DB)
-  8. upload-pages-artifact
-  9. upload-artifact (备选)
+  3. cache/restore DB + data/raw/
+  4. workouts sync (受 SYNC__TIME_BUDGET 限制)
+  5. cache/save DB (CS1 — 同步后立即保存)
+  6. cache/save data/raw/
+  7. 读 N → 算 f → 可能改 cron
+  8. export json + svg
+  9. prepare pages dir (排除 DB)
+  10. upload-pages-artifact
+  11. upload-artifact (备选)
 
 deploy job:
   if: success()
@@ -212,6 +222,16 @@ deploy job:
   3. upload-pages-artifact
   4. deploy-pages@v4
 ```
+
+### GitHub Actions 用量
+
+| 指标 | 免费 (2000 min) | Pro (3000 min) |
+|---|---|---|
+| 日常 CI（30 × 10min） | 300 min ✅ | 300 min ✅ |
+| 批量回填（一次性 4 × 22min） | ~88 min ✅ | ~88 min ✅ |
+| 月度使用率 | ~15% | ~10% |
+
+缓存总计 ~300 MB（DB + raw），远低于 10GB 上限。
 
 ---
 
@@ -247,6 +267,11 @@ docker compose run --rm workouts export json
 | `__` 分隔 env var | 避免与 `garmin_cn` 等 key 中的 `_` 冲突 |
 | 保留 `upload-artifact` | Pages 部署稳定后再移除 |
 | Keep 用摘要数据 | FIT 格式无解析器 |
+| `data/raw/{source}/` 平面目录 | 与 running_page `GPX_OUT/` 兼容，symlink 级桥接 |
+| Keep raw 存 decrypt JSON | 保留原始 HR 序列和相对时间戳，polyline 生成可重跑 |
+| 统一列表：new_ids + missing_raw | 一次 API 调用完成 summary + raw，省 50% API 开销 |
+| 时间预算在循环顶部 break | 避免写了 summary 但没写 raw 的不一致状态 |
+| temp→rename 原子写入 raw 文件 | 崩溃恢复时 `raw_file_exists?` 不误判 |
 
 ---
 
@@ -282,6 +307,7 @@ RSpec 53 例，0 失败。覆盖：
 
 | 项 | 工作量 | 说明 |
 |---|---|---|
+| Keep raw 数据持久化 | 2d | `data/raw/keep/{id}.json` + 统一列表 + 时间预算 + CS1/CS2 缓存策略 |
 | Garmin access_token 环境变量 | 0.5h | `SYNC__GARMIN__ACCESS_TOKEN` 直接使用 bearer token 跳过 SSO |
 | Sync Workflows 状态确认 | 0.5h | Pages 部署已验证，确认 cache/artifact 正常流转 |
 
@@ -289,7 +315,7 @@ RSpec 53 例，0 失败。覆盖：
 
 | 项 | 工作量 | 说明 |
 |---|---|---|
-| GPX 重新导出 | 1d | `export gpx` 从 polyline 反算 GPS 点 |
+| GPX 重新导出 | 1d | `export gpx` 从 `data/raw/` 文件导出，迁移 running_page 时考虑 |
 | Strava OAuth 交互式授权 | 1d | `auth strava` 启动本地 HTTP server 完成 OAuth 回调 |
 
 ### P2 — 工程完善
