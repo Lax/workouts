@@ -40,6 +40,9 @@ module Workouts
     option :min_distance, type: :numeric, desc: "Minimum distance in km (--min-distance)", default: 0
     option :birth, type: :string, desc: "Birth date (YYYY-MM) for month-of-life style"
     option :summary_year, type: :numeric, desc: "Year for summary style (--summary-year)"
+    option :color_run, type: :string, desc: "Color for run activities (--color-run)", default: "#4DD2FF"
+    option :color_ride, type: :string, desc: "Color for ride activities (--color-ride)", default: "#FF6B6B"
+    option :color_walk, type: :string, desc: "Color for walk activities (--color-walk)", default: "#4ECDC4"
     def svg
       config = Workouts::Config.new
       db = Workouts::DB::Connection.new(config.db_path).db
@@ -75,7 +78,10 @@ module Workouts
         min_distance: options[:min_distance] || 0,
         activity_filter: options[:activity]&.map(&:strip)&.map(&:downcase),
         birth: options[:birth],
-        summary_year: options[:summary_year]
+        summary_year: options[:summary_year],
+        color_run: options[:color_run],
+        color_ride: options[:color_ride],
+        color_walk: options[:color_walk]
       )
 
       count = svg_gen.call

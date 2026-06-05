@@ -2,12 +2,14 @@ module Workouts
   module Export
     module SVG
       class GithubDrawer < BaseDrawer
+        REFERENCE = Poster::REFERENCE_DISTANCES
+
         def draw(doc, size, offset)
           return "" unless poster.tracks&.any?
 
           lines = []
-          track_by_date = group_by_date
-          length_range_by_date = compute_length_range(track_by_date)
+          track_by_date = group_by_date_and_category
+          poster.per_category_max = compute_per_category_max(track_by_date)
 
           total_by_year = total_length_by_year
           month_names = %w[Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec]
@@ -55,31 +57,33 @@ module Workouts
 
                 rect_y += 3.5
                 date_key = github_day.to_s
-                track_list = track_by_date[date_key]
+                tracks_by_cat = track_by_date[date_key]
 
-                if track_list
-                  total_len = track_list.sum(&:length)
-                  dist_km = poster.m2u(total_len)
-                  sd1 = poster.special_distance[:special_distance]
-                  sd2 = poster.special_distance[:special_distance2]
-
-                  color = if dist_km >= sd2
-                            poster.colors[:special2] || poster.colors[:special]
-                          elsif sd1 < dist_km && dist_km < sd2
-                            poster.colors[:special]
-                          else
-                            intensity = length_range_by_date.zero? ? 0 : [total_len / length_range_by_date.to_f, 1.0].min
-                            interpolate_color("#444444", poster.colors[:track], intensity)
-                          end
-
-                  title = "#{date_key} #{format("%.1f", dist_km)} #{poster.u}"
+                if tracks_by_cat
+                  dom_cat, dom_len = dominant_category(tracks_by_cat)
+                  base_color = poster.color_by_category[dom_cat] || poster.colors[:track]
+                  cat_max = poster.per_category_max[dom_cat] || dom_len
+                  if cat_max > 0
+                    intensity = (dom_len / cat_max.to_f) ** 0.3
+                    intensity = [[intensity, 0.0].max, 1.0].min
+                  else
+                    intensity = 0
+                  end
+                  color = interpolate_color("#444444", base_color, intensity)
+                  css_class = "s-#{dom_cat}"
+                  title = "#{date_key} #{format("%.1f", poster.m2u(dom_len))} #{poster.u}"
                 else
                   color = "#444444"
+                  css_class = nil
                   title = date_key
                 end
 
                 rect = tag("rect", { x: rect_x, y: rect_y, width: dom[0], height: dom[1], fill: color })
-                lines << %(<g><title>#{escape(title)}</title>#{rect}</g>)
+                if css_class
+                  lines << %(<g class="#{css_class}"><title>#{escape(title)}</title>#{rect}</g>)
+                else
+                  lines << %(<g><title>#{escape(title)}</title>#{rect}</g>)
+                end
                 github_day += 1
               end
               rect_x += 3.5
@@ -93,22 +97,52 @@ module Workouts
 
         private
 
-        def group_by_date
+        # Dominant selection uses raw ratio (d / REF).
+        # Any monotonic transform would yield the same winner — no transform needed.
+        def dominant_category(tracks_by_cat)
+          best_cat = nil
+          best_val = -1.0
+          tracks_by_cat.each do |cat, tracks|
+            total_m = tracks.sum(&:length)
+            ref = REFERENCE[cat]
+            next unless ref && ref > 0
+            val = total_m / ref.to_f
+            if val > best_val
+              best_val = val
+              best_cat = cat
+            end
+          end
+          best_cat ||= tracks_by_cat.keys.first
+          total_m = tracks_by_cat[best_cat].sum(&:length)
+          [best_cat, total_m]
+        end
+
+        def group_by_date_and_category
           h = {}
           poster.tracks.each do |t|
-            key = t.date.to_date.to_s
-            (h[key] ||= []) << t
+            date_key = t.date.to_date.to_s
+            cat = t.sport_category
+            h[date_key] ||= {}
+            (h[date_key][cat] ||= []) << t
           end
           h
         end
 
-        def compute_length_range(track_by_date)
-          max = 0.0
-          track_by_date.each_value do |tracks|
-            len = tracks.sum(&:length)
-            max = len if len > max
+        # Intensity transform: power^0.3
+        # Compared options for the skewed per-category distance distribution:
+        #   linear  — 82% of color scale wasted on tail outliers
+        #   log     — compresses low-end worse than power
+        #   CDF     — best visual distribution but unstable as data grows
+        # Power^0.3 is a pragmatic balance: simple, stable, good-enough low-end spread.
+        def compute_per_category_max(track_by_date)
+          maxes = Hash.new(0.0)
+          track_by_date.each_value do |cats|
+            cats.each do |cat, tracks|
+              len = tracks.sum(&:length)
+              maxes[cat] = len if len > maxes[cat]
+            end
           end
-          max
+          maxes
         end
 
         def total_length_by_year

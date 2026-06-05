@@ -9,7 +9,8 @@ module Workouts
                        special_color: "#FFFF00", text_color: "#FFFFFF",
                        special_distance: 10, special_distance2: 20,
                        min_distance: 0, activity_filter: nil,
-                       birth: nil, summary_year: nil, github_style: "align-firstday")
+                       birth: nil, summary_year: nil, github_style: "align-firstday",
+                       color_run: nil, color_ride: nil, color_walk: nil)
           @db = db
           @style = style
           @output = output
@@ -29,6 +30,9 @@ module Workouts
           @activity_filter = activity_filter
           @birth = birth
           @summary_year = summary_year
+          @color_run = color_run
+          @color_ride = color_ride
+          @color_walk = color_walk
           @github_style = github_style
         end
 
@@ -89,6 +93,9 @@ module Workouts
         def build_drawer
           poster = Poster.new(@title, @athlete, @colors, @special_distance)
           poster.github_style = @github_style
+          poster.color_by_category["run"] = @color_run if @color_run
+          poster.color_by_category["ride"] = @color_ride if @color_ride
+          poster.color_by_category["walk"] = @color_walk if @color_walk
 
           case @style
           when "github" then GithubDrawer.new(poster)
