@@ -14,6 +14,7 @@ module Workouts
       AES_IV = Base64.decode64("MjM0Njg5MjQzMjkyMDMwMA==")
 
       KEEP_TYPES = %w[running hiking cycling].freeze
+      KEEP_RAW_EXT = "json".freeze
 
       TYPE_MAP = {
         "outdoorWalking" => "walk",
@@ -34,7 +35,7 @@ module Workouts
       TIMESTAMP_THRESHOLD = 3_600_000
       HR_THRESHOLD = 100
 
-      def initialize(config:, db:, activity_filter: nil, privacy: nil)
+      def initialize(config:, db:, activity_filter: nil, privacy: nil, time_budget: nil)
         super
         @phone = @config["phone"] || @config["mobile"]
         @password = @config["password"]
@@ -46,6 +47,7 @@ module Workouts
       end
 
       def call
+        @start_time = Time.now
         return 0 if @phone.nil? || @password.nil?
 
         @session = login
@@ -100,12 +102,25 @@ module Workouts
       end
 
       def sync_sport_type(sport)
-        run_ids = fetch_run_ids(sport)
-        new_ids = run_ids.reject { |id| @existing_ids.include?("keep_#{extract_id(id) || id}") }
-        total = new_ids.size
+        compound_ids = fetch_run_ids(sport)
+        new_ids = compound_ids.reject { |cid|
+          @existing_ids.include?("keep_#{extract_id(cid) || cid}")
+        }
+        missing_raw = compound_ids.select { |cid|
+          keep_id = extract_id(cid) || cid
+          run_id = "keep_#{keep_id}"
+          @existing_ids.include?(run_id) && !raw_file_exists?(keep_id)
+        }
+        all_ids = new_ids + missing_raw
+        total = all_ids.size
         synced = 0
-        new_ids.each do |id|
-          synced += 1 if sync_single_run(id, sport)
+
+        all_ids.each do |compound_id|
+          keep_id = extract_id(compound_id) || compound_id
+          break if time_expired?
+          next  if raw_file_exists?(keep_id)
+
+          synced += 1 if sync_single_run_with_raw(compound_id, sport)
           report_progress(synced, total)
         end
         synced
@@ -147,8 +162,8 @@ module Workouts
         ids
       end
 
-      def sync_single_run(run_id, sport)
-        url = LOG_URL % { sport: sport, run_id: run_id }
+      def sync_single_run_with_raw(compound_id, sport)
+        url = LOG_URL % { sport: sport, run_id: compound_id }
         resp = http_get(url, @headers)
         return false unless resp.code.to_i == 200
 
@@ -156,16 +171,45 @@ module Workouts
         run_data = data["data"]
         return false unless run_data
 
-        track = build_activity(run_data)
-        return false unless track
+        payload = decrypt_raw_payload(run_data)
+        wgs_points = compute_wgs_points(payload, run_data)
 
-        upsert_activity(track)
+        attrs = build_activity_from_wgs(run_data, wgs_points)
+        return false unless attrs
+
+        write_raw_file(wgs_points, attrs[:run_id])
+        upsert_activity(attrs)
         true
       rescue JSON::ParserError
         false
       end
 
-      def build_activity(run_data)
+      def decrypt_raw_payload(run_data)
+        {
+          geo_points: decode_geo_points(run_data["geoPoints"]),
+          hr_data: decode_hr_data(run_data.dig("heartRate", "heartRates"))
+        }
+      end
+
+      def compute_wgs_points(payload, run_data)
+        geo_points = payload[:geo_points]
+        hr_data = payload[:hr_data]
+        return [] unless geo_points&.any?
+
+        start_time = run_data["startTime"]
+        use_absolute_ts = geo_points.first["timestamp"].to_i > TIMESTAMP_THRESHOLD
+        effective_start = use_absolute_ts ? 0 : start_time
+
+        geo_points.map do |p|
+          lat, lng = Geo::CoordTransform.gcj02_to_wgs84_exact(p["latitude"], p["longitude"])
+          ts = p["timestamp"] || p["unixTimestamp"]
+          pt_time = ts ? Time.at(effective_start / 1000.0 + ts.to_i / 10.0).utc : nil
+          hr = find_nearest_hr(hr_data, ts, start_time)
+          [lat, lng, p["altitude"], pt_time, hr]
+        end
+      end
+
+      def build_activity_from_wgs(run_data, wgs_points)
         keep_id = extract_id(run_data["id"])
         return nil unless keep_id
 
@@ -177,9 +221,6 @@ module Workouts
         start_date = Time.at(start_time / 1000.0).utc
         data_type = run_data["dataType"]
 
-        geo_points = decode_geo_points(run_data["geoPoints"])
-        hr_data = decode_hr_data(run_data.dig("heartRate", "heartRates"))
-
         avg_hr = run_data.dig("heartRate", "averageHeartRate")
         avg_hr = nil if avg_hr && avg_hr < 0
 
@@ -187,18 +228,7 @@ module Workouts
         total_elevation = run_data["elevation"]
         computed_distance = run_data["distance"]
 
-        if geo_points&.any?
-          use_absolute_ts = geo_points.first["timestamp"].to_i > TIMESTAMP_THRESHOLD
-          effective_start = use_absolute_ts ? 0 : start_time
-
-          wgs_points = geo_points.map do |p|
-            lat, lng = Geo::CoordTransform.gcj02_to_wgs84_exact(p["latitude"], p["longitude"])
-            ts = p["timestamp"] || p["unixTimestamp"]
-            pt_time = ts ? Time.at(effective_start / 1000.0 + ts.to_i / 10.0).utc : nil
-            hr = find_nearest_hr(hr_data, ts, start_time)
-            [lat, lng, p["altitude"], pt_time, hr]
-          end
-
+        if wgs_points.any?
           if wgs_points.any? { |pt| pt[3] }
             computed_distance ||= total_distance_haversine(wgs_points)
             total_elevation ||= elevation_gain_from_points(wgs_points)
@@ -228,6 +258,25 @@ module Workouts
           elevation_gain: total_elevation&.round(1),
           source: "keep"
         }
+      end
+
+      def write_raw_file(wgs_points, run_id)
+        keep_id = run_id.sub("keep_", "")
+        dir = raw_dir
+        FileUtils.mkdir_p(dir)
+        tmp = File.join(dir, ".#{keep_id}.#{KEEP_RAW_EXT}.tmp")
+        final = File.join(dir, "#{keep_id}.#{KEEP_RAW_EXT}")
+        File.write(tmp, JSON.generate(wgs_points.map { |lat, lng, alt, time, hr|
+          { latitude: lat, longitude: lng,
+            altitude: alt,
+            timestamp: time&.strftime("%Y-%m-%dT%H:%M:%SZ"),
+            heartrate: hr }
+        }))
+        File.rename(tmp, final)
+      end
+
+      def raw_path(platform_id)
+        File.join(raw_dir, "#{platform_id}.#{KEEP_RAW_EXT}")
       end
 
       def extract_id(id_str)

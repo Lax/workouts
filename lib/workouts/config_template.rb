@@ -7,6 +7,8 @@ module Workouts
           path: data/workouts.db
 
         sync:
+          # time_budget: 300            # Max seconds per sync run (optional, env: SYNC__TIME_BUDGET)
+
           # strava:
           #   client_id: ""
           #   client_secret: ""
