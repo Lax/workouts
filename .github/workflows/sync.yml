@@ -176,13 +176,30 @@ jobs:
             <meta name="viewport" content="width=device-width,initial-scale=1">
             <title>Workouts</title>
             <style>
-              body { background: #222; color: #fff; font-family: sans-serif; text-align: center; padding: 2rem; }
+              body { background: #222; color: #fff; font-family: sans-serif; text-align: center; margin: 0; }
               a { color: #4DD2FF; }
-              .legend { display: flex; justify-content: center; gap: 1rem; margin: 1rem 0; flex-wrap: wrap; }
-              .legend label { cursor: pointer; padding: 0.25rem 0.75rem; border: 1px solid #555; border-radius: 4px; }
-              .legend label:hover { border-color: #fff; }
               input[name="s"] { display: none; }
               .poster svg { max-width: 100%; height: auto; }
+              .legend {
+                position: fixed; z-index: 100;
+                display: flex; gap: 0.5rem; padding: 0.5rem 0.75rem;
+                background: rgba(34,34,34,0.9); border: 1px solid #555;
+                top: 1rem; left: 50%; transform: translateX(-50%);
+                border-radius: 2rem; box-shadow: 0 2px 12px rgba(0,0,0,0.3);
+                opacity: 0.25; transition: opacity 0.3s ease, transform 0.3s ease;
+              }
+              .legend:hover, .legend:focus-within { opacity: 1; transform: translateX(-50%) translateY(0); }
+              .legend label { cursor: pointer; padding: 0.25rem 0.75rem; border: 1px solid #555; border-radius: 4px; }
+              .legend label:hover { border-color: #fff; }
+              body { padding-top: 4rem; }
+              @media (max-width: 767px) {
+                .legend { top: auto; bottom: 0; left: 0; right: 0; transform: none; border-radius: 0;
+                  border-bottom: none; border-left: none; border-right: none;
+                  justify-content: center; gap: 1rem; padding: 0.75rem; flex-wrap: wrap;
+                  opacity: 1; transition: none;
+                }
+                .poster { padding-bottom: 4rem; }
+              }
               #{hide_rules}
               #{types.keys.map { |t| "#s-#{t}:checked ~ .legend label[for=\"s-#{t}\"], #s-all:checked ~ .legend label[for=\"s-all\"]" }.join(",\n              ")} { background: #333; border-color: #fff; }
             </style>
