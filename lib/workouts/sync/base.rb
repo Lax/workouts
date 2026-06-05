@@ -3,11 +3,13 @@ require_relative "tally"
 module Workouts
   module Sync
     class Base
-      def initialize(config:, db:, activity_filter: nil, privacy: nil)
+      def initialize(config:, db:, activity_filter: nil, privacy: nil, time_budget: nil)
         @config = config
         @db = db
         @activity_filter = activity_filter
         @privacy = privacy
+        @time_budget = time_budget
+        @start_time = nil
       end
 
       def call
@@ -15,6 +17,25 @@ module Workouts
       end
 
       protected
+
+      def time_expired?
+        return false unless @time_budget && @start_time
+        (Time.now - @start_time) > @time_budget
+      end
+
+      def raw_dir
+        src = self.class.name.split("::").last.downcase
+        src = "garmin" if src.start_with?("garmin")
+        File.join("data", "raw", src)
+      end
+
+      def raw_path(platform_id)
+        raise NotImplementedError
+      end
+
+      def raw_file_exists?(platform_id)
+        File.exist?(raw_path(platform_id))
+      end
 
       def report_progress(count, total = nil)
         return if skip_progress?(count, total)

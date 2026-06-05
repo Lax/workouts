@@ -271,7 +271,7 @@ module Workouts
                 return nil
               end
 
-      klass.new(config: config, db: db, activity_filter: filter)
+      klass.new(config: config, db: db, activity_filter: filter, time_budget: workouts_config.dig("sync", "time_budget"))
     end
   end
 end
