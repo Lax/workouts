@@ -19,8 +19,8 @@ jobs:
         id: db-cache
         with:
           path: data/workouts.db
-          key: workouts-db-v2-${{ hashFiles('db/migrations/*.rb') }}-${{ github.run_id }}
-          restore-keys: workouts-db-v2-${{ hashFiles('db/migrations/*.rb') }}-
+          key: workouts-db-v1-${{ hashFiles('db/migrations/*.rb') }}-${{ github.run_id }}
+          restore-keys: workouts-db-v1-${{ hashFiles('db/migrations/*.rb') }}-
 
       - uses: actions/cache/restore@v4
         id: raw-cache
