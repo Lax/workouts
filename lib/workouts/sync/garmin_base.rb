@@ -252,6 +252,7 @@ module Workouts
             attrs = build_attrs(details, act["activityId"], type)
             upsert_activity(attrs)
             count += 1
+            report_progress(count)
           end
 
           start += limit

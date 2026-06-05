@@ -1,3 +1,5 @@
+require_relative "tally"
+
 module Workouts
   module Sync
     class Base
@@ -13,6 +15,36 @@ module Workouts
       end
 
       protected
+
+      def report_progress(count, total = nil)
+        return if skip_progress?(count, total)
+
+        tally = Tally.new(count)
+        line = "#{source_label}: #{tally} (#{count}"
+        line += "/#{total}" if total
+        line += ") "
+        print "\r#{line}"
+        $stdout.flush
+      end
+
+      def skip_progress?(count, total)
+        return false if count <= 50
+
+        remaining = total ? total - count : Float::INFINITY
+        return false if remaining <= 50
+
+        if count > 100 && remaining > 100
+          count % 10 != 0
+        elsif count > 50 && remaining > 50
+          count % 5 != 0
+        else
+          false
+        end
+      end
+
+      def source_label
+        self.class.name.split("::").last
+      end
 
       def upsert_activity(attrs)
         attrs = attrs.transform_keys(&:to_s)
