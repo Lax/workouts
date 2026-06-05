@@ -15,11 +15,12 @@ jobs:
           ruby-version: '3.4'
           bundler-cache: true
 
-      - uses: actions/cache@v4
+      - uses: actions/cache/restore@v4
         id: db-cache
         with:
           path: data/workouts.db
-          key: workouts-db
+          key: workouts-db-v1-${{ hashFiles('db/migrations/*.rb') }}
+          restore-keys: workouts-db-v1-
 
       - name: Sync
         env:
@@ -83,11 +84,11 @@ jobs:
           git pull --rebase
           git push
 
-      - uses: actions/cache@v4
+      - uses: actions/cache/save@v4
         if: always()
         with:
           path: data/workouts.db
-          key: workouts-db
+          key: ${{ steps.db-cache.outputs.cache-primary-key }}
 
       - name: Export
         if: always()
