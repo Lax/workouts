@@ -84,6 +84,7 @@ module Workouts
             next if existing.include?(act_id)
 
             count += 1 if process_activity(act)
+            report_progress(count)
           end
 
           offset += limit

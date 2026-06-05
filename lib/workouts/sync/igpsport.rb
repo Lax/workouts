@@ -66,6 +66,7 @@ module Workouts
 
             upsert_activity(attrs)
             count += 1
+            report_progress(count)
           end
 
           page += 1

@@ -96,6 +96,7 @@ module Workouts
             next if skip_type?(type)
 
             count += 1 if process_activity(act, type)
+            report_progress(count)
           end
 
           offset += limit

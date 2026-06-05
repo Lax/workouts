@@ -142,6 +142,7 @@ module Workouts
         next unless adapter
 
         count = adapter.call
+        print "\r#{' ' * 60}\r"
         say_status :done, "#{source}: #{count} activities", :green
       end
     end
