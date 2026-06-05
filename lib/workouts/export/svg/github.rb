@@ -71,7 +71,7 @@ module Workouts
                   end
                   color = interpolate_color("#444444", base_color, intensity)
                   css_class = "s-#{dom_cat}"
-                  title = "#{date_key} #{format("%.1f", poster.m2u(dom_len))} #{poster.u}"
+                  title = build_day_title(date_key, tracks_by_cat)
                 else
                   color = "#444444"
                   css_class = nil
@@ -143,6 +143,34 @@ module Workouts
             end
           end
           maxes
+        end
+
+        def build_day_title(date_key, tracks_by_cat)
+          all = tracks_by_cat.values.flatten
+          if all.size == 1
+            t = all.first
+            "#{date_key}  #{t.sport_category}  #{format_dist(t.length)}  #{format_time(t.moving_time)}"
+          else
+            lines = [date_key]
+            all.each do |t|
+              lines << "  #{t.sport_category}  #{format_dist(t.length)}  #{format_time(t.moving_time)}"
+            end
+            lines.join("&#10;")
+          end
+        end
+
+        def format_dist(meters)
+          "#{format("%.1f", poster.m2u(meters))} #{poster.u}"
+        end
+
+        def format_time(seconds)
+          return "" unless seconds && seconds > 0
+          mins = (seconds / 60).to_i
+          if mins >= 60
+            "#{mins / 60}h #{format('%02d', mins % 60)}min"
+          else
+            "#{mins}min"
+          end
         end
 
         def total_length_by_year

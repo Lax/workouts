@@ -93,4 +93,42 @@ RSpec.describe Workouts::Export::SVG::GithubDrawer do
       expect(fills.any? { |c| c != "#444444" }).to be true
     end
   end
+
+  describe "#build_day_title" do
+    it "includes category, distance, and time for single track" do
+      poster.tracks = [build_track("2024-06-15T10:00:00Z", distance: 4000, category: "walk", run_id: "a")]
+      grouped = drawer.send(:group_by_date_and_category)
+      title = drawer.send(:build_day_title, "2024-06-15", grouped["2024-06-15"])
+      expect(title).to match(/walk/)
+      expect(title).to match(/4\.0 km/)
+      expect(title).to match(/10min/)
+      expect(title).not_to include("&#10;")
+    end
+
+    it "uses newline separator for multiple tracks" do
+      poster.tracks = [
+        build_track("2024-06-15T10:00:00Z", distance: 5000, category: "ride", run_id: "a"),
+        build_track("2024-06-15T14:00:00Z", distance: 3000, category: "walk", run_id: "b"),
+      ]
+      grouped = drawer.send(:group_by_date_and_category)
+      title = drawer.send(:build_day_title, "2024-06-15", grouped["2024-06-15"])
+      expect(title).to include("&#10;")
+      expect(title).to include("ride")
+      expect(title).to include("walk")
+    end
+  end
+
+  describe "#format_time" do
+    it "returns empty string for nil" do
+      expect(drawer.send(:format_time, nil)).to eq("")
+    end
+
+    it "returns minutes-only format" do
+      expect(drawer.send(:format_time, 1500)).to eq("25min")
+    end
+
+    it "returns hours and minutes format" do
+      expect(drawer.send(:format_time, 5400)).to eq("1h 30min")
+    end
+  end
 end
