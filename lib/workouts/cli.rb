@@ -130,7 +130,7 @@ module Workouts
                   [options[:source]]
                 else
                   %w[strava garmin keep igpsport xoss xingzhe].select do |s|
-                    !workouts_config.sync_config(s).empty?
+                    source_configured?(s)
                   end
                 end
 
@@ -243,6 +243,11 @@ module Workouts
     end
 
     private
+
+    def source_configured?(source)
+      config = workouts_config.sync_config(source)
+      config.values.any? { |v| v.to_s != "" }
+    end
 
     def connect_db
       Workouts::DB::Connection.new(db_path).db
