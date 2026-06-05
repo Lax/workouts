@@ -96,6 +96,21 @@ jobs:
           bundle exec exe/workouts export json
           bundle exec exe/workouts export svg --style github --title "Workouts" --output data/svg/github.svg
 
+      - name: Validate SVG
+        if: always()
+        run: |
+          bundle exec ruby -e '
+            require "nokogiri"
+            Dir["data/svg/*.svg"].each do |f|
+              doc = Nokogiri::XML(File.read(f))
+              if doc.errors.any?
+                puts "::error::#{f}: #{doc.errors.map(&:to_s).join(", ")}"
+                exit 1
+              end
+              puts "OK #{f}"
+            end
+          '
+
       - name: Prepare pages directory
         if: always()
         run: |
