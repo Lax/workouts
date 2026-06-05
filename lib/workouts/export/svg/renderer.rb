@@ -199,11 +199,19 @@ module Workouts
           lines << tag("text", { x: 10, y: h - 10, fill: tc, style: val }, poster.athlete)
 
           unless poster.drawer_type == "monthoflife"
-            lines << tag("text", { x: 65, y: h - 20, fill: tc, style: hdr }, "SPECIAL TRACKS")
-            lines << tag("rect", { x: 65, y: h - 17, width: 2.6, height: 2.6, fill: poster.colors[:special] })
-            lines << tag("text", { x: 70, y: h - 14.5, fill: tc, style: sm }, "Over #{sd1} km")
-            lines << tag("rect", { x: 65, y: h - 13, width: 2.6, height: 2.6, fill: poster.colors[:special2] })
-            lines << tag("text", { x: 70, y: h - 10.5, fill: tc, style: sm }, "Over #{sd2} km")
+            lines << tag("text", { x: 65, y: h - 20, fill: tc, style: hdr }, "BREAKDOWN")
+            cats = %w[run ride walk]
+            y = h - 17
+            cats.each do |cat|
+              t = poster.tracks.select { |tr| tr.sport_category == cat }
+              next if t.empty?
+              color = poster.color_by_category[cat] || poster.colors[:track]
+              total = t.sum(&:length)
+              lines << tag("rect", { x: 65, y: y, width: 2.6, height: 2.6, fill: color })
+              lines << tag("text", { x: 70, y: y + 2, fill: tc, style: sm },
+                "#{cat}  #{t.size}  #{format_float(poster.m2u(total))}#{poster.u}")
+              y += 3
+            end
           end
 
           lines << tag("text", { x: 120, y: h - 20, fill: tc, style: hdr }, "STATISTICS")
