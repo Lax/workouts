@@ -101,7 +101,7 @@ module Workouts
 
       def sync_sport_type(sport)
         run_ids = fetch_run_ids(sport)
-        new_ids = run_ids.reject { |id| @existing_ids.include?("keep_#{id}") }
+        new_ids = run_ids.reject { |id| @existing_ids.include?("keep_#{extract_id(id) || id}") }
         total = new_ids.size
         synced = 0
         new_ids.each do |id|
