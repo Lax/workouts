@@ -202,16 +202,18 @@ f > 2N+1 → N = min(7, N+1)    → 减速
 ```
 sync job:
   1. checkout
-  2. setup Ruby + restore cache
+  2. setup Ruby + restore cache (DB + raw)
   3. cache/restore DB + data/raw/
-  4. workouts sync (受 SYNC__TIME_BUDGET 限制)
-  5. cache/save DB (CS1 — 同步后立即保存)
-  6. cache/save data/raw/
-  7. 读 N → 算 f → 可能改 cron
-  8. export json + svg
-  9. prepare pages dir (排除 DB)
-  10. upload-pages-artifact
-  11. upload-artifact (备选)
+  4. fetch workouts-raw repo (always: git init + depth 1 + rsync --exclude=.git)
+  5. record raw digest (count + MD5)
+  6. workouts sync (受 SYNC__TIME_BUDGET 限制)
+  7. if raw changed → push workouts-raw (rsync --exclude=.git + add + commit + depth 2 fetch + rebase + push)
+  8. cache/save DB + raw (if changed)
+  9. 读 N → 算 f → 可能改 cron
+  10. export json + svg
+  11. prepare pages dir (排除 DB)
+  12. upload-pages-artifact
+  13. upload-artifact (备选)
 
 deploy job:
   if: success()
@@ -272,6 +274,11 @@ docker compose run --rm workouts export json
 | 统一列表：new_ids + missing_raw | 一次 API 调用完成 summary + raw，省 50% API 开销 |
 | 时间预算在循环顶部 break | 避免写了 summary 但没写 raw 的不一致状态 |
 | temp→rename 原子写入 raw 文件 | 崩溃恢复时 `raw_file_exists?` 不误判 |
+| rsync 双向 `--exclude=.git` | 避免 `.git/` 元数据污染 data/raw/ 目录 |
+| `fetch --depth 1` (restore) | 只需 HEAD，最快，单次 commit+push 够用 |
+| `fetch --depth 2` (push 前 rebase) | depth 1 无共同祖先导致 rebase 失败；depth 2 仅多 1 commit (~1KB) |
+| workouts-raw 独立 repo 持久化 | 永久存档独立于 GH Cache；每次 CI 始终 fetch，5 场景自愈 |
+| 5 冲突场景 (A-F) 全自愈 | `--ignore-existing` + rebase + `continue-on-error`，无数据丢失 |
 
 ---
 
@@ -292,6 +299,13 @@ docker compose run --rm workouts export json
 ### 原始 GPS 文件
 
 `data/raw/keep/` 下存有 838 个 JSON 文件，总量 21MB。每个文件包含完整的 GCJ-02→WGS-84 坐标转换后点阵、海拔、时间戳和逐点心率。
+
+### workouts-raw 仓库
+
+独立 GitHub 仓库 `Lax/workouts-raw`（私有），平面结构 `/{source}/{id}.json`：
+- PAT 认证（`Contents: write` 权限，仅限此仓库）
+- 每次 CI 始终 fetch，与 GH Cache 互为冗余
+- 5 并发冲突场景全部自愈
 
 ### 测试
 
@@ -333,6 +347,7 @@ RSpec 116 例，0 失败。覆盖：
 | 项 | 状态 |
 |---|---|
 | Keep raw 数据持久化（838 条，21MB） | ✅ 已完成 |
+| workouts-raw 独立仓库（PAT/rsync/depth 策略/5 场景自愈） | ✅ 已完成 |
 | Keep spider_sleep 1s → 0.1s | ✅ 已完成 |
 | Config 未知 key 警告 | ✅ 已完成 |
 | SportMapper 三层回退 | ✅ 已完成 |
