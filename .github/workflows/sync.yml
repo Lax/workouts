@@ -7,6 +7,8 @@ on:
 jobs:
   sync:
     runs-on: ubuntu-latest
+    outputs:
+      db_changed: ${{ steps.db-changed.outputs.changed }}
     steps:
       - uses: actions/checkout@v4
 
@@ -128,18 +130,44 @@ jobs:
           path: data/raw/
           key: ${{ steps.raw-cache.outputs.cache-primary-key }}
 
-      - name: Export
-        if: always()
-        run: |
-          bundle exec exe/workouts export json
-          bundle exec exe/workouts export svg --style github --title "Workouts" --output data/svg/github.svg
+      - uses: actions/upload-artifact@v4
+        if: steps.db-changed.outputs.changed == 'true'
+        with:
+          name: workouts-db
+          path: data/workouts.db
+          retention-days: 1
+
+  build:
+    needs: [sync]
+    if: needs.sync.outputs.db_changed == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.4'
+          bundler-cache: true
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: workouts-db
+          path: data/
+
+      - name: Create build directory
+        run: mkdir -p build/svg
+
+      - name: Export JSON
+        run: bundle exec exe/workouts export json --output build/activities.json
+
+      - name: Export SVG
+        run: bundle exec exe/workouts export svg --style github --title "Workouts" --output build/svg/github.svg
 
       - name: Validate SVG
-        if: always()
         run: |
           bundle exec ruby -e '
             require "nokogiri"
-            Dir["data/svg/*.svg"].each do |f|
+            Dir["build/svg/*.svg"].each do |f|
               doc = Nokogiri::XML(File.read(f))
               if doc.errors.any?
                 puts "::error::#{f}: #{doc.errors.map(&:to_s).join(", ")}"
@@ -149,51 +177,10 @@ jobs:
             end
           '
 
-      - name: Prepare pages directory
-        if: always()
-        run: |
-          mkdir -p pages/svg
-          cp data/activities.json pages/
-          for f in data/svg/*.svg; do
-            [ -f "$f" ] && cp "$f" pages/svg/
-          done
-
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: pages-assets
-          path: ./pages
-
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: exports
-          path: |
-            data/activities.json
-            data/svg/
-
-  deploy:
-    needs: [sync]
-    if: success()
-    runs-on: ubuntu-latest
-    permissions:
-      pages: write
-      id-token: write
-    environment:
-      name: github-pages
-    concurrency:
-      group: pages
-      cancel-in-progress: true
-    steps:
-      - uses: actions/download-artifact@v4
-        with:
-          name: pages-assets
-          path: ./pages
-
       - name: Generate index.html
         run: |
           ruby -e '
-          svg_content = File.read("pages/svg/github.svg")
+          svg_content = File.read("build/svg/github.svg")
           types = {
             "run"  => { label: "Run",  color: "#4DD2FF" },
             "walk" => { label: "Walk", color: "#4ECDC4" },
@@ -257,12 +244,35 @@ jobs:
           </body>
           </html>
           HTML
-          File.write("pages/index.html", html)
+          File.write("build/index.html", html)
           '
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pages-assets
+          path: ./build
+
+  deploy:
+    needs: [build]
+    if: success()
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+    concurrency:
+      group: pages
+      cancel-in-progress: true
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: pages-assets
+          path: ./build
 
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: ./pages
+          path: ./build
 
       - id: deployment
         uses: actions/deploy-pages@v4
