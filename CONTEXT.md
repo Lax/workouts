@@ -27,6 +27,16 @@
 
 ---
 
+## CLI 文件结构
+
+```
+lib/workouts/cli.rb              # 主 CLI（Workouts::CLI），加载子模块
+lib/workouts/cli/export.rb       # 导出子命令（ExportCLI: json, csv, svg, all）
+lib/workouts/cli/sync.rb         # 同步子模块（sync, auth）
+```
+
+---
+
 ## 架构
 
 ```
