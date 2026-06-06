@@ -6,7 +6,7 @@ module Workouts
     def json
       config = Workouts::Config.new
       db = Workouts::DB::Connection.new(config.db_path).db
-      path = options[:output] || config.export_config.dig("json", "path") || "data/activities.json"
+      path = options[:output] || config.export_config.dig("json", "path") || "build/activities.json"
       filter = options[:activity]&.map(&:strip)&.map(&:downcase)
       count = Export::JSON.new(db: db, output: path, activity_filter: filter).call
       say_status :done, "Exported #{count} activities to #{path}", :green
@@ -18,7 +18,7 @@ module Workouts
     def csv
       config = Workouts::Config.new
       db = Workouts::DB::Connection.new(config.db_path).db
-      path = options[:output] || config.export_config.dig("csv", "path") || "data/workouts.csv"
+      path = options[:output] || config.export_config.dig("csv", "path") || "build/workouts.csv"
       filter = options[:activity]&.map(&:strip)&.map(&:downcase)
       Export::CSV.new(db: db, output: path, activity_filter: filter).call
       say_status :done, "Exported to #{path}", :green
@@ -46,7 +46,7 @@ module Workouts
     def svg
       config = Workouts::Config.new
       db = Workouts::DB::Connection.new(config.db_path).db
-      svg_dir = config.export_config.dig("svg", "dir") || "data/svg"
+      svg_dir = config.export_config.dig("svg", "dir") || "build/svg"
       path = options[:output] || "#{svg_dir}/#{options[:style]}.svg"
 
       style = options[:style]
