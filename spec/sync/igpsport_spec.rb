@@ -42,6 +42,9 @@ RSpec.describe Workouts::Sync::IGPSPORT do
         allow(igp).to receive(:login).and_return(true)
         allow(igp).to receive(:fetch_page).with(1).and_return(activities)
         allow(igp).to receive(:fetch_page).with(2).and_return([])
+        allow(igp).to receive(:get_download_url).and_return("https://example.com/fit")
+        allow(igp).to receive(:download_fit).and_return(true)
+        allow(igp).to receive(:fit_to_polyline).and_return("polyline_string")
         allow(igp).to receive(:report_progress)
       end
 
@@ -56,17 +59,34 @@ RSpec.describe Workouts::Sync::IGPSPORT do
         expect(row[:run_id]).to match(/\Aigpsport_\d+\z/)
         expect(row[:source]).to eq("igpsport")
         expect(row[:sport_category]).to eq("ride")
+        expect(row[:summary_polyline]).to eq("polyline_string")
       end
 
       it "skips already synced activities" do
         db[:activities].insert(run_id: "igpsport_50279925", source: "igpsport")
         expect(igp.call).to eq(2)
       end
+
+      it "skips when download fails" do
+        allow(igp).to receive(:get_download_url).and_return(nil)
+        expect(igp.call).to eq(0)
+      end
+    end
+  end
+
+  describe "#get_download_url" do
+    before do
+      resp = instance_double(Faraday::Response, status: 200, body: %<{"data":"https://example.fit"}>)
+      allow(Faraday).to receive(:get).and_return(resp)
+    end
+
+    it "returns download URL" do
+      expect(igp.send(:get_download_url, "12345")).to eq("https://example.fit")
     end
   end
 
   describe "#build_attrs" do
-    subject(:attrs) { igp.send(:build_attrs, row, row["rideId"].to_s) }
+    subject(:attrs) { igp.send(:build_attrs, row, row["rideId"].to_s, "poly_abc") }
     let(:row) { fixture_rows.first }
 
     it "sets run_id" do
@@ -79,6 +99,10 @@ RSpec.describe Workouts::Sync::IGPSPORT do
 
     it "has sport_category" do
       expect(attrs[:sport_category]).to eq("ride")
+    end
+
+    it "has polyline" do
+      expect(attrs[:summary_polyline]).to eq("poly_abc")
     end
 
     it "has start_date" do

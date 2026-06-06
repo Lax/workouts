@@ -9,3 +9,5 @@ build/
 *.bak
 *.gem
 config/config.yml
+vendor/fit-js/node_modules/
+vendor/fit-js/dist/

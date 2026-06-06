@@ -25,4 +25,5 @@ Gem::Specification.new do |s|
   s.add_dependency "openssl", "~> 3.0"
   s.add_dependency "nokogiri", "~> 1.16"
   s.add_dependency "oauth", "~> 1.0"
+  s.add_dependency "mini_racer", "~> 0.16"
 end
