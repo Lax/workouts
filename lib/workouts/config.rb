@@ -6,9 +6,9 @@ module Workouts
       "database" => { "path" => "data/workouts.db" },
       "sync" => {},
       "export" => {
-        "json" => { "path" => "data/activities.json" },
-        "svg" => { "dir" => "data/svg" },
-        "csv" => { "path" => "data/workouts.csv" }
+        "json" => { "path" => "build/activities.json" },
+        "svg" => { "dir" => "build/svg" },
+        "csv" => { "path" => "build/workouts.csv" }
       },
       "privacy" => {
         "start_end_range" => 200

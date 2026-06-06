@@ -49,11 +49,11 @@ module Workouts
 
         export:
           json:
-            path: data/activities.json
+            path: build/activities.json
           svg:
-            dir: data/svg
+            dir: build/svg
           csv:
-            path: data/workouts.csv
+            path: build/workouts.csv
 
         privacy:
           start_end_range: 200
