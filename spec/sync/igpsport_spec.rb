@@ -64,6 +64,8 @@ RSpec.describe Workouts::Sync::IGPSPORT do
 
       it "skips already synced activities" do
         db[:activities].insert(run_id: "igpsport_50279925", source: "igpsport")
+        FileUtils.mkdir_p("data/raw/igpsport")
+        File.write("data/raw/igpsport/50279925.fit", "")
         expect(igp.call).to eq(2)
       end
 

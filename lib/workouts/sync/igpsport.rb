@@ -22,6 +22,7 @@ module Workouts
       end
 
       def call
+        @start_time = Time.now
         return 0 if @phone.nil? || @password.nil?
         return 0 unless login
         sync_activities
@@ -53,9 +54,11 @@ module Workouts
 
           rows.each do |act|
             ride_id = act["rideId"].to_s
-            next if existing.include?(ride_id)
 
-            synced = sync_single(ride_id)
+            next if existing.include?(ride_id) && raw_file_exists?(ride_id)
+            break if time_expired?
+
+            synced = sync_activity(act, ride_id)
             count += 1 if synced
             report_progress(count) if synced
           end
@@ -66,27 +69,18 @@ module Workouts
         count
       end
 
-      def sync_single(ride_id)
-        summary = fetch_summary(ride_id)
-        return false unless summary
-
+      def sync_activity(act, ride_id)
         url = get_download_url(ride_id)
         return false unless url
 
         download_fit(url, ride_id)
         polyline = fit_to_polyline(ride_id)
 
-        attrs = build_attrs(summary, ride_id, polyline)
+        attrs = build_attrs(act, ride_id, polyline)
         return false unless attrs
 
         upsert_activity(attrs)
         true
-      end
-
-      def fetch_summary(ride_id)
-        rows = fetch_page(1)
-        return nil unless rows
-        rows.find { |r| r["rideId"].to_s == ride_id }
       end
 
       def get_download_url(ride_id)
