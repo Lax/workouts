@@ -38,12 +38,12 @@
 │ XOSS (xoss) │     └───┬───┬──────┘
 │ XingZhe     │         │   │
 └─────────────┘         │   └───▶ data/raw/{source}/
-                        │           (原始 GPS 点阵备份)
+                        │           (原始 GPS 点阵备份, GH Cache)
                         ▼
-                    ┌──────────────┐
-                    │   SQLite DB  │
-                    │  (Sequel ORM)│
-                    └──────────────┘
+                    ┌──────────────────┐
+                    │   SQLite DB      │
+                    │  (Sequel ORM)    │
+                    └──────────────────┘
 ```
 
 ---
@@ -194,7 +194,7 @@ f > 2N+1 → N = min(7, N+1)    → 减速
 
 | 触发 | 操作 |
 |---|---|
-| schedule `*/N` (自适应) | 同步 + 导出 + 部署 Pages |
+| schedule `*/N` (自适应) | 同步 + 构建 + 部署 Pages |
 | workflow_dispatch | 手动触发，不改 cron |
 
 ### jobs
@@ -202,27 +202,30 @@ f > 2N+1 → N = min(7, N+1)    → 减速
 ```
 sync job:
   1. checkout
-  2. setup Ruby + restore cache (DB + raw)
-  3. cache/restore DB + data/raw/
-  4. fetch workouts-raw repo (always: git init + depth 1 + rsync --exclude=.git)
-  5. record raw digest (count + MD5)
+  2. setup Ruby + bundle
+  3. restore DB cache
+  4. restore raw cache (data/raw/)
+  5. record digests (DB + raw)
   6. workouts sync (受 SYNC__TIME_BUDGET 限制)
-  7. if raw changed → push workouts-raw (rsync --exclude=.git + add + commit + depth 2 fetch + rebase + push)
-  8. cache/save DB + raw (if changed)
-  9. 读 N → 算 f → 可能改 cron
-  10. export json + svg
-  11. prepare pages dir (排除 DB)
-  12. upload-pages-artifact
-  13. upload-artifact (备选)
+  7. check changed (DB + raw)
+  8. save cache (DB + raw, if changed)
+  9. upload DB artifact (for build job)
+  10. 读 N → 算 f → 可能改 cron
 
-deploy job:
-  if: success()
-  permissions: pages:write + id-token:write
-  environment: github-pages
-  1. download artifact
-  2. 生成 index.html
-  3. upload-pages-artifact
-  4. deploy-pages@v4
+build job (needs: sync):
+  1. checkout + setup Ruby
+  2. download DB artifact
+  3. create build/ dir
+  4. export json → build/activities.json
+  5. export svg → build/svg/github.svg
+  6. validate SVG
+  7. generate index.html → build/index.html
+  8. upload build artifact
+
+deploy job (needs: build):
+  1. download build artifact
+  2. upload-pages-artifact from ./build
+  3. deploy-pages@v4
 ```
 
 ### GitHub Actions 用量
@@ -274,11 +277,8 @@ docker compose run --rm workouts export json
 | 统一列表：new_ids + missing_raw | 一次 API 调用完成 summary + raw，省 50% API 开销 |
 | 时间预算在循环顶部 break | 避免写了 summary 但没写 raw 的不一致状态 |
 | temp→rename 原子写入 raw 文件 | 崩溃恢复时 `raw_file_exists?` 不误判 |
-| rsync 双向 `--exclude=.git` | 避免 `.git/` 元数据污染 data/raw/ 目录 |
-| `fetch --depth 1` (restore) | 只需 HEAD，最快，单次 commit+push 够用 |
-| `fetch --depth 2` (push 前 rebase) | depth 1 无共同祖先导致 rebase 失败；depth 2 仅多 1 commit (~1KB) |
-| workouts-raw 独立 repo 持久化 | 永久存档独立于 GH Cache；每次 CI 始终 fetch，5 场景自愈 |
-| 5 冲突场景 (A-F) 全自愈 | `--ignore-existing` + rebase + `continue-on-error`，无数据丢失 |
+| `data/raw/` 使用 GH Cache | 零认证问题，7 天保留，21MB ~1s restore |
+| 导出默认路径 `data/` → `build/` | 源数据与生成制品分离，gitignored |
 
 ---
 
@@ -296,16 +296,13 @@ docker compose run --rm workouts export json
 | Garmin 国际版 | CF 429 封禁 |
 | Strava | 待配置 |
 
-### 原始 GPS 文件
+### 原始 GPS 文件（GH Cache）
 
-`data/raw/keep/` 下存有 838 个 JSON 文件，总量 21MB。每个文件包含完整的 GCJ-02→WGS-84 坐标转换后点阵、海拔、时间戳和逐点心率。
-
-### workouts-raw 仓库
-
-独立 GitHub 仓库 `Lax/workouts-raw`（私有），平面结构 `/{source}/{id}.json`：
-- PAT 认证（`Contents: write` 权限，仅限此仓库）
-- 每次 CI 始终 fetch，与 GH Cache 互为冗余
-- 5 并发冲突场景全部自愈
+`data/raw/` 下存有原始 GPS JSON 文件（Keep 838 个，21MB），通过 `actions/cache` 管理：
+- `workouts-raw-v1-<run_id>` key + `workouts-raw-v1-` 前缀回退
+- 7 天保留期，仅在新活动时更新
+- cache miss → API 全量重拉（受 `time_budget` 限制，1-3 次 CI run 补齐）
+- 每个 JSON 包含完整的 GCJ-02→WGS-84 坐标转换后点阵、海拔、时间戳和逐点心率
 
 ### 测试
 
@@ -347,7 +344,9 @@ RSpec 116 例，0 失败。覆盖：
 | 项 | 状态 |
 |---|---|
 | Keep raw 数据持久化（838 条，21MB） | ✅ 已完成 |
-| workouts-raw 独立仓库（PAT/rsync/depth 策略/5 场景自愈） | ✅ 已完成 |
+| 导出路径 `data/` → `build/`（源数据与制品分离） | ✅ 已完成 |
+| 3-job workflow（sync / build / deploy） | ✅ 已完成 |
+| 原始数据 GH Cache（替代 submodule） | ✅ 已完成 |
 | Keep spider_sleep 1s → 0.1s | ✅ 已完成 |
 | Config 未知 key 警告 | ✅ 已完成 |
 | SportMapper 三层回退 | ✅ 已完成 |
