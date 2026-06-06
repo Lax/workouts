@@ -1,0 +1,17 @@
+RSpec.describe Workouts::ExportCLI do
+  it "registers json command" do
+    expect(described_class.commands).to include("json")
+  end
+
+  it "registers csv command" do
+    expect(described_class.commands).to include("csv")
+  end
+
+  it "registers svg command" do
+    expect(described_class.commands).to include("svg")
+  end
+
+  it "registers all command" do
+    expect(described_class.commands).to include("all")
+  end
+end

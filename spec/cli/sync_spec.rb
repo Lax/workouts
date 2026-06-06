@@ -1,0 +1,29 @@
+RSpec.describe Workouts::CLI do
+  it "registers sync command" do
+    expect(described_class.commands).to include("sync")
+  end
+
+  it "registers auth command" do
+    expect(described_class.commands).to include("auth")
+  end
+
+  it "registers export subcommand" do
+    expect(described_class.commands).to include("export")
+  end
+
+  it "registers migrate command" do
+    expect(described_class.commands).to include("migrate")
+  end
+
+  it "registers init command" do
+    expect(described_class.commands).to include("init")
+  end
+
+  it "registers parse command" do
+    expect(described_class.commands).to include("parse")
+  end
+
+  it "registers version command" do
+    expect(described_class.commands).to include("version")
+  end
+end

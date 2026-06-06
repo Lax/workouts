@@ -1,0 +1,83 @@
+module Workouts
+  module Cli
+    module Sync
+      def sync
+        db = connect_db
+        sources = if options[:source]
+                    [options[:source]]
+                  else
+                    %w[strava garmin keep igpsport xoss xingzhe].select do |s|
+                      source_configured?(s)
+                    end
+                  end
+
+        filter = options[:activity]&.map(&:strip)&.map(&:downcase)
+
+        sources.each do |source|
+          say_status :syncing, source, :green
+          adapter = build_sync_adapter(source, db, filter)
+          next unless adapter
+
+          count = adapter.call
+          print "\r#{' ' * 60}\r"
+          say_status :done, "#{source}: #{count} activities", :green
+        end
+      end
+
+      def auth(source)
+        sources = %w[garmin garmin_cn xoss xingzhe]
+        unless sources.include?(source)
+          say_status :error, "Supported: #{sources.join(', ')}", :red
+          return
+        end
+
+        config = workouts_config.sync_config(source)
+        if config.empty?
+          say_status :warn, "No config for #{source}. Set env vars or config.yml", :yellow
+          return
+        end
+
+        db = connect_db
+        adapter = build_sync_adapter(source, db, nil)
+        unless adapter.respond_to?(:authenticate)
+          say_status :error, "#{source} does not support interactive auth", :red
+          return
+        end
+
+        say_status :auth, "Logging in to #{source}...", :green
+        if adapter.authenticate
+          say_status :done, "#{source} authenticated successfully", :green
+        else
+          say_status :error, "Authentication failed", :red
+        end
+      end
+
+      private
+
+      def source_configured?(source)
+        config = workouts_config.sync_config(source)
+        config.values.any? { |v| v.to_s != "" }
+      end
+
+      def build_sync_adapter(source, db, filter)
+        config = workouts_config.sync_config(source)
+        return nil if config.empty?
+
+        klass = case source
+                when "strava" then Sync::Strava
+                when "garmin" then Sync::Garmin
+                when "garmin_cn" then Sync::GarminCN
+                when "keep" then Sync::Keep
+                when "igpsport" then Sync::IGPSPORT
+                when "xoss" then Sync::XOSS
+                when "xingzhe" then Sync::XingZhe
+                else
+                  say_status :error, "Unknown source: #{source}", :red
+                  return nil
+                end
+
+        klass.new(config:, db:, activity_filter: filter, time_budget: workouts_config.dig("sync", "time_budget"))
+      end
+    end
+  end
+end
