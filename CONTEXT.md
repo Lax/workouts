@@ -314,6 +314,44 @@ docker compose run --rm workouts export json
 - cache miss → API 全量重拉（受 `time_budget` 限制，1-3 次 CI run 补齐）
 - 每个 JSON 包含完整的 GCJ-02→WGS-84 坐标转换后点阵、海拔、时间戳和逐点心率
 
+### iGPSPORT 原始数据调研
+
+调研日期：2026-06-06，参考：[yihong0618/running_page](https://github.com/yihong0618/running_page)
+
+#### API 端点
+
+| 端点 | 方式 | 结果 |
+|---|---|---|
+| `getDownloadUrl/{rideId}` | GET → OSS URL | ✅ 返回可下载的分享链接 |
+| 实际下载内容 | HTTP GET OSS URL | ✅ FIT 二进制（`.FIT` 签名，CRC 有效） |
+| `reqType=1`（GPX） | 同 URL | ❌ 返回相同 FIT 文件 |
+| `reqType=2`（TCX） | 活动列表为空 | ❌ 不支持 |
+
+**结论：仅 FIT 格式可用。** `reqType` 不影响 `getDownloadUrl` 输出，始终返回 FIT。
+
+#### 上游解析方式
+
+`running_page` 使用 Python 官方包 `garmin-fit-sdk` 直接解析 FIT，不转 GPX：
+
+```python
+from garmin_fit_sdk import Decoder, Stream
+stream = Stream.from_file(fit_path)
+messages, errors = decoder.read()
+for record in messages["record_mesgs"]:
+    if "position_lat" in record and "position_long" in record:
+        lat = record["position_lat"] / 2147483648.0
+        lng = record["position_long"] / 2147483648.0
+```
+
+#### 决定：不推进
+
+| 原因 | 说明 |
+|---|---|
+| 活动价值 | 均为 < 4km 短途骑行，GPS polyline 意义有限 |
+| Ruby 生态 | 无 FIT 解析 gem，手写不现实 |
+| 外部依赖 | 引入 Python 运行时违背项目轻量原则 |
+| 现有数据 | 摘要 API 已满足需求（距离、时间、速度、海拔） |
+
 ### 测试
 
 RSpec 116 例，0 失败。覆盖：
@@ -333,7 +371,6 @@ RSpec 116 例，0 失败。覆盖：
 | 项 | 工作量 | 说明 |
 |---|---|---|
 | Garmin access_token 环境变量 | 0.5h | `SYNC__GARMIN__ACCESS_TOKEN` 直接使用 bearer token 跳过 SSO |
-| iGPSPORT 原生 GPS 调研 | 1d | 探索 detail API / FIT 下载端点 |
 
 ### P1 — 功能扩展
 
@@ -354,6 +391,7 @@ RSpec 116 例，0 失败。覆盖：
 | 项 | 状态 |
 |---|---|
 | Keep raw 数据持久化（838 条，21MB） | ✅ 已完成 |
+| iGPSPORT 原生 GPS 调研（FIT/GPX 下载） | ✅ 已完成（决定不使用） |
 | 导出路径 `data/` → `build/`（源数据与制品分离） | ✅ 已完成 |
 | 3-job workflow（sync / build / deploy） | ✅ 已完成 |
 | 原始数据 GH Cache（替代 submodule） | ✅ 已完成 |
