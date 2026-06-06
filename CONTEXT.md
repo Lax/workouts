@@ -289,6 +289,7 @@ docker compose run --rm workouts export json
 | temp→rename 原子写入 raw 文件 | 崩溃恢复时 `raw_file_exists?` 不误判 |
 | `data/raw/` 使用 GH Cache | 零认证问题，7 天保留，21MB ~1s restore |
 | 导出默认路径 `data/` → `build/` | 源数据与生成制品分离，gitignored |
+| `mini_racer` + `@garmin/fitsdk` 解析 FIT | V8 引擎在 Ruby 进程中执行 JS SDK，纯 gem 依赖，无需外部运行时 |
 
 ---
 
@@ -343,14 +344,29 @@ for record in messages["record_mesgs"]:
         lng = record["position_long"] / 2147483648.0
 ```
 
-#### 决定：不推进
+#### FIT 解析方案选型
 
-| 原因 | 说明 |
-|---|---|
-| 活动价值 | 均为 < 4km 短途骑行，GPS polyline 意义有限 |
-| Ruby 生态 | 无 FIT 解析 gem，手写不现实 |
-| 外部依赖 | 引入 Python 运行时违背项目轻量原则 |
-| 现有数据 | 摘要 API 已满足需求（距离、时间、速度、海拔） |
+| 方案 | 工作量 | 依赖 | 评价 |
+|---|---|---|---|
+| Python subprocess | 1d | python + `garmin-fit-sdk` | ❌ 增加 Python 运行时 |
+| C SDK + Ruby FFI | 3d | `fit-c-sdk` + gcc 编译 | ⚠️ 需 CI 编译步骤 |
+| **JS SDK + mini_racer** | **~4d** | **`mini_racer` gem + JS bundle** | **✅ 纯 Ruby 依赖，无额外运行时** |
+
+**选定：`mini_racer` + `@garmin/fitsdk`**
+
+- JS SDK 是 Garmin 官方包（npm `@garmin/fitsdk`，77⭐）
+- `mini_racer` 是 Ruby gem（预编译 V8 引擎，无额外运行时）
+- Webpack 打包为单文件 `lib/workouts/fit/decoder.js`（~150KB）
+- CI 无额外步骤——`mini_racer` 是 gem 依赖，JS decoder 是静态文件
+
+**实现计划（4 Phase）：**
+
+| Phase | 内容 | 产出 |
+|---|---|---|
+| 1 | webpack 打包 JS SDK | `lib/workouts/fit/decoder.js` |
+| 2 | Ruby `FIT::Decoder` 类 | `lib/workouts/fit/decoder.rb` |
+| 3 | iGPSPORT raw 数据链路（下载 + 解析 + polyline） | `igpsport.rb` 新增方法 |
+| 4 | 测试（FIT fixture + spec） | 测试覆盖 |
 
 ### 测试
 
@@ -375,7 +391,8 @@ RSpec 116 例，0 失败。覆盖：
 ### P1 — 功能扩展
 
 | 项 | 工作量 | 说明 |
-|---|---|---|
+|---|---|---|---|
+| iGPSPORT 原始数据 | 4d | FIT 下载 + 解析 + polyline |
 | GPX 重新导出 | 1d | `export gpx` 从 `data/raw/` 文件导出，迁移 running_page 时考虑 |
 | Strava OAuth 交互式授权 | 1d | `auth strava` 启动本地 HTTP server 完成 OAuth 回调 |
 
@@ -391,7 +408,7 @@ RSpec 116 例，0 失败。覆盖：
 | 项 | 状态 |
 |---|---|
 | Keep raw 数据持久化（838 条，21MB） | ✅ 已完成 |
-| iGPSPORT 原生 GPS 调研（FIT/GPX 下载） | ✅ 已完成（决定不使用） |
+| iGPSPORT 原生 GPS 调研（FIT 方案选型完成） | ✅ 已完成（选定 mini_racer + JS SDK） |
 | 导出路径 `data/` → `build/`（源数据与制品分离） | ✅ 已完成 |
 | 3-job workflow（sync / build / deploy） | ✅ 已完成 |
 | 原始数据 GH Cache（替代 submodule） | ✅ 已完成 |
