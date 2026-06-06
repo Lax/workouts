@@ -36,6 +36,8 @@ RSpec.describe Workouts::Sync::IGPSPORT do
     end
 
     context "with activities to sync" do
+      let(:activities) { fixture_rows }
+
       before do
         allow(igp).to receive(:login).and_return(true)
         allow(igp).to receive(:fetch_page).with(1).and_return(activities)
@@ -43,25 +45,44 @@ RSpec.describe Workouts::Sync::IGPSPORT do
         allow(igp).to receive(:report_progress)
       end
 
-      let(:activities) do
-        [{ "rideId" => 5001, "title" => "IGP Ride", "exerciseType" => 0,
-           "rideDistance" => 25000.0, "totalMovingTime" => 5400,
-           "startTime" => "2025-01-01 10:00:00", "avgSpeed" => 4.63,
-           "totalAscent" => 150.0 }]
-      end
-
-      it "syncs one activity" do
-        expect(igp.call).to eq(1)
+      it "syncs all activities" do
+        expect(igp.call).to eq(3)
       end
 
       it "inserts into database" do
         igp.call
-        expect(db[:activities].count).to eq(1)
+        expect(db[:activities].count).to eq(3)
         row = db[:activities].first
-        expect(row[:run_id]).to eq("igpsport_5001")
+        expect(row[:run_id]).to match(/\Aigpsport_\d+\z/)
         expect(row[:source]).to eq("igpsport")
         expect(row[:sport_category]).to eq("ride")
       end
+
+      it "skips already synced activities" do
+        db[:activities].insert(run_id: "igpsport_50279925", source: "igpsport")
+        expect(igp.call).to eq(2)
+      end
+    end
+  end
+
+  describe "#build_attrs" do
+    subject(:attrs) { igp.send(:build_attrs, row, row["rideId"].to_s) }
+    let(:row) { fixture_rows.first }
+
+    it "sets run_id" do
+      expect(attrs[:run_id]).to eq("igpsport_50279925")
+    end
+
+    it "has distance" do
+      expect(attrs[:distance]).to be_within(0.1).of(2341.77)
+    end
+
+    it "has sport_category" do
+      expect(attrs[:sport_category]).to eq("ride")
+    end
+
+    it "has start_date" do
+      expect(attrs[:start_date]).to be_a(Time)
     end
   end
 
@@ -93,5 +114,9 @@ RSpec.describe Workouts::Sync::IGPSPORT do
     it "returns nil for nil" do
       expect(igp.send(:parse_date, nil)).to be_nil
     end
+  end
+
+  def fixture_rows
+    @fixture_rows ||= JSON.parse(load_fixture("igpsport/activities_page.json")).dig("data", "rows")
   end
 end
