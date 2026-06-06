@@ -2,7 +2,7 @@ RSpec.describe Workouts::Sync::Keep do
   let(:db) { create_test_db }
   let(:config) { { "phone" => "13800138000", "password" => "test-pw" } }
   subject(:keep) { described_class.new(config:, db:, time_budget: nil) }
-  let(:compound_id) { "userhash_9223370326790482307_rn" }
+  let(:compound_id) { "userhash_9223370458896850307_rn" }
 
   before do
     FileUtils.mkdir_p("data/raw/keep")
@@ -137,14 +137,14 @@ RSpec.describe Workouts::Sync::Keep do
         keep.call
         expect(db[:activities].count).to eq(1)
         row = db[:activities].first
-        expect(row[:run_id]).to eq("keep_9223370326790482307")
+        expect(row[:run_id]).to eq("keep_9223370458896850307")
         expect(row[:source]).to eq("keep")
         expect(row[:sport_category]).to eq("run")
       end
 
       it "preserves raw file" do
         keep.call
-        path = "data/raw/keep/9223370326790482307.json"
+        path = "data/raw/keep/9223370458896850307.json"
         expect(File.exist?(path)).to be true
         content = JSON.parse(File.read(path))
         expect(content).to be_an(Array)
@@ -153,8 +153,8 @@ RSpec.describe Workouts::Sync::Keep do
 
     context "when activity already in DB and raw file exists" do
       before do
-        db[:activities].insert(run_id: "keep_9223370326790482307", source: "keep")
-        File.write("data/raw/keep/9223370326790482307.json", "[]")
+        db[:activities].insert(run_id: "keep_9223370458896850307", source: "keep")
+        File.write("data/raw/keep/9223370458896850307.json", "[]")
         allow(keep).to receive(:http_post).with(any_args).and_return(login_ok)
         empty = empty_stats
         allow(keep).to receive(:http_get).and_return(
@@ -182,7 +182,7 @@ RSpec.describe Workouts::Sync::Keep do
 
     it "writes raw file" do
       keep.send(:sync_single_run_with_raw, compound_id, "running")
-      path = "data/raw/keep/9223370326790482307.json"
+      path = "data/raw/keep/9223370458896850307.json"
       expect(File.exist?(path)).to be true
     end
 

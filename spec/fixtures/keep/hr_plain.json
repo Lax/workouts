@@ -1,1 +1,37 @@
-[]
+[
+  {
+    "flags": [],
+    "isPause": false,
+    "beatsPerMinute": 123,
+    "timestamp": 720,
+    "timeAxis": 720
+  },
+  {
+    "flags": [],
+    "isPause": false,
+    "beatsPerMinute": 134,
+    "timestamp": 1670,
+    "timeAxis": 1670
+  },
+  {
+    "flags": [],
+    "isPause": false,
+    "beatsPerMinute": 134,
+    "timestamp": 1720,
+    "timeAxis": 1720
+  },
+  {
+    "flags": [],
+    "isPause": false,
+    "beatsPerMinute": 141,
+    "timestamp": 4370,
+    "timeAxis": 4370
+  },
+  {
+    "flags": [],
+    "isPause": false,
+    "beatsPerMinute": 141,
+    "timestamp": 4870,
+    "timeAxis": 4870
+  }
+]
