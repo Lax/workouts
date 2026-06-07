@@ -43,12 +43,19 @@ RSpec.describe Workouts::Sync::Strava do
           "start_date_local" => "2025-01-01T18:00:00Z",
           "map" => { "summary_polyline" => "abc" },
           "average_heartrate" => 150, "average_speed" => 2.78,
-          "total_elevation_gain" => 50.0 }
+          "total_elevation_gain" => 50.0, "sport_type" => nil }
       end
 
       before do
         allow(strava).to receive(:refresh_access_token).and_return("tok123")
         allow(strava).to receive(:fetch_activities).and_return([activity], [])
+        allow(strava).to receive(:fetch_detail).and_return(
+          JSON.parse(File.read("spec/fixtures/strava/3103806497.json"))
+        )
+        allow(strava).to receive(:fetch_streams).and_return(
+          JSON.parse(File.read("spec/fixtures/strava/streams_3103806497.json"))
+        )
+        allow(strava).to receive(:report_progress)
       end
 
       it "syncs one activity" do
@@ -63,10 +70,30 @@ RSpec.describe Workouts::Sync::Strava do
         expect(row[:source]).to eq("strava")
         expect(row[:sport_category]).to eq("run")
       end
+
+      it "writes L1 raw file" do
+        strava.call
+        path = "data/raw/strava/1001.json"
+        expect(File.exist?(path)).to be true
+        content = JSON.parse(File.read(path))
+        expect(content).to have_key("detail")
+        expect(content).to have_key("streams")
+      end
+
+      it "writes L2 standardized view" do
+        strava.call
+        path = "data/std/strava/1001.json"
+        expect(File.exist?(path)).to be true
+        content = JSON.parse(File.read(path))
+        expect(content).to be_an(Array)
+        expect(content.first).to have_key("positionLat")
+        expect(content.first).to have_key("positionLong")
+      end
     end
   end
 
   describe "#build_attrs" do
+    subject(:attrs) { strava.send(:build_attrs, act, "ride", "poly_abc") }
     let(:act) do
       { "id" => 2002, "name" => "Afternoon Ride", "distance" => 20000.0,
         "moving_time" => 3600, "elapsed_time" => 4000,
@@ -76,7 +103,7 @@ RSpec.describe Workouts::Sync::Strava do
         "map" => { "summary_polyline" => "xyz" },
         "total_elevation_gain" => 200.0 }
     end
-    subject(:attrs) { strava.send(:build_attrs, act, "ride") }
+    before { allow(strava).to receive(:credentials_present?).and_return(false) }
 
     it "sets run_id" do
       expect(attrs[:run_id]).to eq("strava_2002")
@@ -86,12 +113,8 @@ RSpec.describe Workouts::Sync::Strava do
       expect(attrs[:sport_category]).to eq("ride")
     end
 
-    it "uses sport_type over type" do
-      expect(attrs[:sport_type]).to eq("ebikeride")
-    end
-
-    it "includes polyline" do
-      expect(attrs[:summary_polyline]).to eq("xyz")
+    it "uses polyline parameter" do
+      expect(attrs[:summary_polyline]).to eq("poly_abc")
     end
   end
 
@@ -102,6 +125,36 @@ RSpec.describe Workouts::Sync::Strava do
 
     it "falls back to type when sport_type is nil" do
       expect(strava.send(:map_sport_type, "Run", nil)).to eq("run")
+    end
+  end
+
+  describe "#streams_to_l2" do
+    let(:detail) { JSON.parse(File.read("spec/fixtures/strava/3103806497.json")) }
+    let(:streams) { JSON.parse(File.read("spec/fixtures/strava/streams_3103806497.json")) }
+    subject(:l2) { strava.send(:streams_to_l2, detail, streams) }
+
+    it "returns an array of points" do
+      expect(l2).to be_an(Array)
+      expect(l2.size).to be > 0
+    end
+
+    it "each point has positionLat and positionLong" do
+      l2.each do |pt|
+        expect(pt).to have_key(:positionLat)
+        expect(pt).to have_key(:positionLong)
+      end
+    end
+
+    it "includes altitude when available" do
+      has_alt = l2.any? { |pt| pt[:altitude] != nil }
+      expect(has_alt).to be true
+    end
+
+    it "coordinates are within China range" do
+      l2.each do |pt|
+        expect(pt[:positionLat]).to be_between(10, 55)
+        expect(pt[:positionLong]).to be_between(70, 140)
+      end
     end
   end
 end

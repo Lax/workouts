@@ -7,4 +7,5 @@ group :development do
   gem "rspec", "~> 3.12"
   gem "pry"
   gem "mini_racer"
+  gem "webrick"
 end
