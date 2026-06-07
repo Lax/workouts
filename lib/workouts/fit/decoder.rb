@@ -10,7 +10,12 @@ module Workouts
       def self.decode(path)
         bytes = File.read(path, mode: "rb").bytes
         json = CTX.eval("FitDecoder.decodeFit(#{bytes.inspect})")
-        JSON.parse(json)
+        records = JSON.parse(json)
+        records.each do |r|
+          r["positionLat"] *= 180 if r["positionLat"]
+          r["positionLong"] *= 180 if r["positionLong"]
+        end
+        records
       end
 
       def self.info(path)

@@ -40,6 +40,15 @@ RSpec.describe Workouts::FIT::Decoder do
       has_all_positions = points.all? { |pt| pt["positionLat"] != nil && pt["positionLong"] != nil }
       expect(has_all_positions).to be true
     end
+
+    it "converts semicircles to correct geographic coordinates" do
+      lats = points.map { |pt| pt["positionLat"] }
+      lngs = points.map { |pt| pt["positionLong"] }
+      expect(lats.min).to be > 15
+      expect(lngs.min).to be > 70
+      expect(lats.max).to be < 55
+      expect(lngs.max).to be < 140
+    end
   end
 
   describe ".info" do
