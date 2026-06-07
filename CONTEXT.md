@@ -281,29 +281,28 @@ docker compose run --rm workouts export json
 Sync Stage                         Build Stage                 Deploy / Publish
 ────────────────                  ──────────────────           ────────────────
 
-L1: data/raw/{source}/      L3 → L4: build/                  L6: Pages
+L1: data/raw/{source}/      L3 → L4: build/                  L5: 运动主页
     {id}.{ext}                    index.html                         ─→ 网页
     原始 API 数据                  activities.json
                                   github.svg
 L2: data/std/{source}/
-    {id}.json                L4 → L5: upload artifact         L6: gpx_out/
-    标准化视图                                                      GPS 轨迹下载
-                                                                  ─→ 网页可下载
-L3: SQLite DB                L2 → L6: export gpx                ─→ 推送到第三方
+    {id}.json                L4 → L5: upload + deploy         L5: gpx_out/
+    规整数据                                                         GPS 轨迹下载
+                                                                  ─→ 运动主页可下载
+L3: SQLite DB                L2 → L5: export gpx                ─→ 推送到第三方
     activities
-    (summary_polyline)                                          L5 → L6: Pages artifact
+    (summary_polyline)
 ```
 
 ### 各层说明
 
 | 层 | 名称 | 内容 | 阶段 | 格式 | 路径 |
 |---|---|---|---|---|---|
-| **L1** | 完整原始数据 | API 最小解码，不丢字段 | Sync | `.fit` / `.raw.json` | `data/raw/{source}/` |
-| **L2** | 标准化视图 | WGS-84 + 统一 schema，保留全部字段 | Sync | `.json` | `data/std/{source}/` |
-| **L3** | 数据库摘要 | polyline + 统计字段（距离/时间/心率等） | Sync | SQLite | `data/workouts.db` |
-| **L4** | 构建制品 | JSON/CSV/SVG/HTML 导出 | Build | `.json` / `.svg` / `.html` / `.csv` | `build/` |
-| **L5** | Pages 发布包 | GitHub Pages 部署 artifact | Build → Deploy | artifact | — |
-| **L6** | 网站 / GPX | 公开页面 + 轨迹文件下载 | Deploy / Export | HTML/CSS/SVG/JS / `.gpx` | Pages URL / `gpx_out/` |
+| **L1** | 源始档案 | API 最小解码，不丢字段 | Sync | `.fit` / `.raw.json` | `data/raw/{source}/` |
+| **L2** | 规整数据 | WGS-84 + 统一 schema，保留全部字段 | Sync | `.json` | `data/std/{source}/` |
+| **L3** | 摘要库 | polyline + 统计字段（距离/时间/心率等） | Sync | SQLite | `data/workouts.db` |
+| **L4** | 发布素材 | JSON/CSV/SVG/HTML 导出 | Build | `.json` / `.svg` / `.html` / `.csv` | `build/` |
+| **L5** | 运动主页 | 运动数据网站 + GPX 轨迹下载 | Deploy / Export | HTML/CSS/SVG/JS / `.gpx` | Pages URL / `gpx_out/` |
 
 ### 层间依赖
 
