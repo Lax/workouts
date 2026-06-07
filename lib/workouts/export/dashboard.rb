@@ -87,186 +87,240 @@ module Workouts
             <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/theme/dark.js"></script>
             <style>
               * { box-sizing: border-box; margin: 0; padding: 0; }
-              body { background: #1a1a2e; color: #e0e0e0; font-family: -apple-system,BlinkMacSystemFont,sans-serif; min-height: 100vh; }
+              body { background: #1a1a2e; color: #e0e0e0; font-family: -apple-system,BlinkMacSystemFont,sans-serif; overflow: hidden; height: 100vh; }
               a { color: #4DD2FF; text-decoration: none; }
-              a:hover { text-decoration: underline; }
 
-              .header { background: linear-gradient(135deg, #16213e, #1a1a2e); padding: 1.5rem 1rem; text-align: center; border-bottom: 1px solid #2a2a4a; }
-              .header h1 { font-size: 1.6rem; font-weight: 700; color: #4DD2FF; letter-spacing: 2px; }
-              .header .subtitle { color: #666; font-size: 0.8rem; margin-top: 4px; }
+              #map-container { position: fixed; inset: 0; z-index: 0; }
+              #map { width: 100%; height: 100%; }
 
-              .container { max-width: 1200px; margin: 0 auto; padding: 1rem; }
+              .overlay { position: fixed; z-index: 1; pointer-events: none; }
+              .overlay > * { pointer-events: auto; }
 
-              .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 1rem; }
-              .stat-card { background: #16213e; border-radius: 12px; padding: 1rem; text-align: center; border: 1px solid #2a2a4a; }
-              .stat-card .num { font-size: 1.6rem; font-weight: 700; color: #4DD2FF; display: block; }
-              .stat-card .label { font-size: 0.75rem; color: #888; margin-top: 4px; }
-              .stat-card .num.active { color: #4ECDC4; }
-              .delta { font-size: 0.7rem; margin-top: 2px; display: block; }
-              .delta.up { color: #4ECDC4; }
-              .delta.down { color: #FF6B6B; }
-              .delta.new { color: #888; }
+              .ol-tl { top: 12px; left: 12px; display: flex; flex-direction: column; gap: 6px; }
+              .ol-tr { top: 12px; right: 12px; display: flex; flex-direction: column; gap: 6px; align-items: flex-end; }
 
-              .insight { text-align: center; font-size: 0.85rem; color: #aaa; margin: -0.5rem 0 1rem 0; padding: 0.5rem; background: #16213e; border-radius: 8px; border: 1px solid #2a2a4a; line-height: 1.5; }
-              .insight em { color: #4DD2FF; font-style: normal; }
+              .brand { font-size: 0.85rem; color: #888; letter-spacing: 1px; }
+              .brand strong { color: #4DD2FF; font-weight: 700; }
 
-              .filter-bar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 1rem; padding: 0.75rem; background: #16213e; border-radius: 12px; border: 1px solid #2a2a4a; }
-              .filter-bar select, .filter-bar input { background: #0f3460; color: #e0e0e0; border: 1px solid #2a2a4a; border-radius: 6px; padding: 6px 12px; font-size: 0.85rem; outline: none; }
-              .filter-bar select:focus, .filter-bar input:focus { border-color: #4DD2FF; }
-              .filter-bar select { cursor: pointer; min-width: 90px; }
-              .filter-bar input[type="text"] { flex: 1; min-width: 150px; }
-              .filter-bar input[type="number"] { width: 60px; }
-              .filter-bar .filter-label { color: #888; font-size: 0.75rem; margin-right: -4px; }
-              .filter-bar .stat-hint { color: #4ECDC4; font-size: 0.8rem; margin-left: auto; white-space: nowrap; }
-              .filter-bar .dist-label { color: #888; font-size: 0.7rem; margin: 0 2px; }
-              .sort-btn { background: transparent; border: 1px solid #2a2a4a; color: #888; border-radius: 4px; padding: 2px 8px; font-size: 0.75rem; cursor: pointer; }
-              .sort-btn:hover { border-color: #4DD2FF; color: #4DD2FF; }
-              .sort-btn.active { border-color: #4DD2FF; color: #4DD2FF; }
-
-              .year-pills { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 1rem; align-items: center; }
-              .year-pill { padding: 4px 14px; border-radius: 20px; border: 1px solid #2a2a4a; background: transparent; color: #888; cursor: pointer; font-size: 0.8rem; transition: all 0.2s; }
+              .year-pills { display: flex; gap: 4px; flex-wrap: wrap; }
+              .year-pill { padding: 3px 10px; border-radius: 14px; border: 1px solid #2a2a4a; background: rgba(22,33,62,0.85); color: #888; cursor: pointer; font-size: 0.75rem; transition: all 0.15s; backdrop-filter: blur(4px); }
               .year-pill:hover { border-color: #4DD2FF; color: #4DD2FF; }
               .year-pill.active { background: #4DD2FF; color: #1a1a2e; border-color: #4DD2FF; font-weight: 600; }
-              .month-chip { padding: 4px 10px; border-radius: 20px; border: 1px solid #4ECDC4; background: transparent; color: #4ECDC4; cursor: pointer; font-size: 0.8rem; margin-left: 6px; }
-              .month-chip:hover { background: rgba(78,205,196,0.15); }
-              .month-chip .x { margin-left: 4px; font-weight: 700; }
+              .month-chip { padding: 3px 10px; border-radius: 14px; border: 1px solid #4ECDC4; background: rgba(78,205,196,0.15); color: #4ECDC4; cursor: pointer; font-size: 0.75rem; display: inline-flex; align-items: center; gap: 4px; }
+              .month-chip:hover { background: rgba(78,205,196,0.25); }
 
-              .loading { text-align: center; padding: 3rem; color: #666; font-size: 0.9rem; }
-              .loading .spinner { display: inline-block; width: 24px; height: 24px; border: 3px solid #2a2a4a; border-top-color: #4DD2FF; border-radius: 50%; animation: spin 0.8s linear infinite; margin-bottom: 8px; }
+              .legend-toggle { display: flex; background: rgba(22,33,62,0.85); border-radius: 8px; border: 1px solid #2a2a4a; overflow: hidden; backdrop-filter: blur(4px); }
+              .legend-btn { padding: 4px 12px; font-size: 0.7rem; color: #888; cursor: pointer; border: none; background: transparent; transition: all 0.15s; }
+              .legend-btn:hover { color: #ccc; }
+              .legend-btn.active { background: #4DD2FF; color: #1a1a2e; font-weight: 600; }
+              .legend-btn:first-child { border-right: 1px solid #2a2a4a; }
+
+              .speed-legend { display: flex; gap: 0; border-radius: 6px; overflow: hidden; height: 8px; margin-top: 4px; }
+              .speed-legend span { flex: 1; }
+              .sl-blue { background: #4A90D9; }
+              .sl-green { background: #50C878; }
+              .sl-yellow { background: #FFD700; }
+              .sl-red { background: #FF4500; }
+
               @keyframes spin { to { transform: rotate(360deg); } }
 
-              .main-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 1rem; }
-              .chart-box { background: #16213e; border-radius: 12px; padding: 1rem; border: 1px solid #2a2a4a; min-height: 320px; }
-              .chart-box .chart-title { font-size: 0.85rem; color: #888; margin-bottom: 8px; }
-              #chart { width: 100%; height: 300px; }
-              #chart-small { width: 100%; height: 200px; }
+              .drawer { position: fixed; bottom: 0; left: 0; right: 0; z-index: 2; transform: translateY(calc(100% - 52px)); transition: transform 0.3s ease-out; will-change: transform; }
+              .drawer.open { transform: translateY(0); }
 
-              .map-box { background: #16213e; border-radius: 12px; padding: 0; border: 1px solid #2a2a4a; overflow: hidden; min-height: 320px; }
-              #map { width: 100%; height: 320px; }
+              .drawer-handle { height: 16px; display: flex; justify-content: center; align-items: center; cursor: pointer; background: #16213e; border-radius: 12px 12px 0 0; border: 1px solid #2a2a4a; border-bottom: none; padding: 2px 0; }
+              .drawer-handle .bar { width: 32px; height: 3px; border-radius: 2px; background: #444; }
+              .drawer-handle:hover .bar { background: #4DD2FF; }
 
-              .list-box { background: #16213e; border-radius: 12px; border: 1px solid #2a2a4a; margin-bottom: 1rem; }
-              .list-header { display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 1rem; border-bottom: 1px solid #2a2a4a; }
-              .list-header span { font-size: 0.8rem; color: #888; }
-              .list-header .count { color: #4DD2FF; font-weight: 600; }
-              .list-body { max-height: 500px; overflow-y: auto; }
-              .list-body::-webkit-scrollbar { width: 6px; }
-              .list-body::-webkit-scrollbar-track { background: #0f3460; }
-              .list-body::-webkit-scrollbar-thumb { background: #2a2a4a; border-radius: 3px; }
-              .act-item { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; padding: 10px 16px; border-bottom: 1px solid #222; cursor: pointer; transition: background 0.15s; align-items: center; }
+              .drawer-collapsed { height: 34px; display: flex; align-items: center; padding: 0 10px; gap: 6px; background: #16213e; border-left: 1px solid #2a2a4a; border-right: 1px solid #2a2a4a; }
+              .stat-pill { font-size: 0.72rem; color: #888; white-space: nowrap; display: flex; align-items: center; gap: 3px; }
+              .stat-pill strong { color: #fff; font-weight: 600; }
+              .stat-pill .delta { display: inline; font-size: 0.65rem; margin: 0; }
+              .stat-pill .delta.up { color: #4ECDC4; }
+              .stat-pill .delta.down { color: #FF6B6B; }
+              .spacer { flex: 1; }
+              .icon-btn { background: transparent; border: 1px solid #2a2a4a; color: #888; border-radius: 6px; padding: 4px 8px; font-size: 0.85rem; cursor: pointer; transition: all 0.15s; line-height: 1; }
+              .icon-btn:hover { border-color: #4DD2FF; color: #4DD2FF; }
+
+              .drawer-body { height: 45vh; max-height: 480px; background: #16213e; border-left: 1px solid #2a2a4a; border-right: 1px solid #2a2a4a; display: none; flex-direction: column; }
+              .drawer.open .drawer-body { display: flex; }
+
+              .drawer-tabs { display: flex; border-bottom: 1px solid #2a2a4a; flex-shrink: 0; }
+              .drawer-tab { padding: 8px 16px; font-size: 0.8rem; color: #888; cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.15s; background: transparent; border-top: none; border-left: none; border-right: none; }
+              .drawer-tab:hover { color: #ccc; }
+              .drawer-tab.active { color: #4DD2FF; border-bottom-color: #4DD2FF; }
+              .drawer-tab .badge { font-size: 0.65rem; color: #666; margin-left: 4px; }
+
+              .drawer-panel { display: none; flex: 1; overflow-y: auto; overscroll-behavior: contain; }
+              .drawer-panel.active { display: block; }
+              .drawer-panel::-webkit-scrollbar { width: 5px; }
+              .drawer-panel::-webkit-scrollbar-track { background: transparent; }
+              .drawer-panel::-webkit-scrollbar-thumb { background: #2a2a4a; border-radius: 3px; }
+
+              .act-item { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; padding: 9px 14px; border-bottom: 1px solid #222; cursor: pointer; transition: background 0.12s; align-items: center; min-height: 48px; }
               .act-item:hover { background: #0f3460; }
               .act-item.active { background: #1a3a6a; }
               .act-item.hover { background: #1a3a6a; box-shadow: inset 3px 0 0 #4DD2FF; }
-              .act-item .act-date { font-size: 0.75rem; color: #666; white-space: nowrap; min-width: 80px; }
-              .act-item .act-name { font-size: 0.85rem; color: #ccc; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-              .act-item .act-name .src-badge { display: inline-block; font-size: 0.6rem; padding: 1px 6px; border-radius: 3px; margin-left: 6px; color: #888; background: #0f3460; }
-              .act-item .act-meta { text-align: right; font-size: 0.75rem; color: #888; white-space: nowrap; }
-              .act-item .act-meta .dist { color: #4DD2FF; font-weight: 600; }
               .act-item .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+              .act-item .act-name { font-size: 0.82rem; color: #ccc; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+              .act-item .act-name .src-badge { font-size: 0.6rem; padding: 1px 5px; border-radius: 3px; margin-left: 5px; color: #888; background: #0f3460; }
+              .act-item .act-date { font-size: 0.7rem; color: #666; }
+              .act-item .act-meta { text-align: right; font-size: 0.72rem; color: #888; white-space: nowrap; }
+              .act-item .act-meta .dist { color: #4DD2FF; font-weight: 600; }
 
-              .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 1000; justify-content: center; align-items: center; }
-              .modal-overlay.show { display: flex; }
-              .modal { background: #16213e; border-radius: 16px; max-width: 600px; width: 90%; max-height: 80vh; overflow-y: auto; padding: 1.5rem; border: 1px solid #2a2a4a; position: relative; }
-              .modal .close { position: absolute; top: 12px; right: 16px; font-size: 1.5rem; cursor: pointer; color: #888; }
-              .modal .close:hover { color: #fff; }
-              .modal h2 { font-size: 1.1rem; margin-bottom: 4px; }
-              .modal .meta { color: #888; font-size: 0.8rem; margin-bottom: 1rem; }
-              .modal .grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
-              .modal .grid .item { background: #0f3460; padding: 8px; border-radius: 8px; text-align: center; }
-              .modal .grid .item .v { font-size: 1.1rem; font-weight: 700; color: #4DD2FF; display: block; }
-              .modal .grid .item .l { font-size: 0.7rem; color: #888; }
-              #modal-map { width: 100%; height: 250px; border-radius: 8px; margin-top: 1rem; }
+              .list-controls { display: flex; gap: 6px; padding: 6px 14px; border-bottom: 1px solid #2a2a4a; align-items: center; flex-wrap: wrap; }
+              .list-controls .sort-btn { background: transparent; border: 1px solid #2a2a4a; color: #888; border-radius: 4px; padding: 2px 8px; font-size: 0.7rem; cursor: pointer; }
+              .list-controls .sort-btn:hover { border-color: #4DD2FF; color: #4DD2FF; }
+              .list-controls .sort-btn.active { border-color: #4DD2FF; color: #4DD2FF; }
+              .list-controls .count { font-size: 0.7rem; color: #666; margin-left: auto; }
 
-              .footer { text-align: center; padding: 1rem; color: #444; font-size: 0.7rem; }
-              .footer a { color: #555; }
+              .filter-grid { padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; }
+              .filter-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+              .filter-row label { font-size: 0.72rem; color: #888; min-width: 40px; }
+              .filter-row select, .filter-row input { background: #0f3460; color: #e0e0e0; border: 1px solid #2a2a4a; border-radius: 5px; padding: 5px 10px; font-size: 0.8rem; outline: none; }
+              .filter-row select:focus, .filter-row input:focus { border-color: #4DD2FF; }
+              .filter-row input[type="text"] { flex: 1; min-width: 120px; }
+              .filter-row input[type="number"] { width: 56px; }
+              .filter-row .hint { font-size: 0.7rem; color: #666; }
 
-              @media (max-width: 768px) {
-                .stats-row { grid-template-columns: repeat(2, 1fr); }
-                .main-grid { grid-template-columns: 1fr; }
-                .filter-bar .stat-hint { display: none; }
-                .modal .grid { grid-template-columns: 1fr 1fr; }
+              .insight { font-size: 0.78rem; color: #aaa; padding: 6px 14px; background: #0f3460; border-radius: 6px; margin: 0 14px 8px 14px; line-height: 1.5; text-align: center; }
+              .insight em { color: #4DD2FF; font-style: normal; }
+
+              .detail-overlay { display: none; position: fixed; inset: 0; z-index: 3; background: rgba(0,0,0,0.5); justify-content: center; align-items: flex-end; }
+              .detail-overlay.open { display: flex; }
+              .detail-panel { background: #16213e; border-radius: 16px 16px 0 0; max-width: 600px; width: 100%; max-height: 80vh; overflow-y: auto; padding: 1.2rem 1.2rem 2rem; border-top: 1px solid #2a2a4a; animation: slideUp 0.3s ease-out; }
+              @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+              .detail-panel .close { float: right; font-size: 1.4rem; cursor: pointer; color: #888; line-height: 1; }
+              .detail-panel .close:hover { color: #fff; }
+              .detail-panel h2 { font-size: 1.05rem; margin-bottom: 2px; }
+              .detail-panel .meta { color: #888; font-size: 0.78rem; margin-bottom: 0.8rem; }
+              .detail-panel .grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
+              .detail-panel .grid .item { background: #0f3460; padding: 6px; border-radius: 6px; text-align: center; }
+              .detail-panel .grid .item .v { font-size: 1rem; font-weight: 700; color: #4DD2FF; display: block; }
+              .detail-panel .grid .item .l { font-size: 0.65rem; color: #888; }
+              #detail-map { width: 100%; height: 180px; border-radius: 8px; margin-top: 0.8rem; }
+
+              .charts-overlay { display: none; position: fixed; inset: 0; z-index: 4; background: rgba(0,0,0,0.6); justify-content: center; align-items: center; }
+              .charts-overlay.open { display: flex; }
+              .charts-panel { background: #16213e; border-radius: 16px; max-width: 520px; width: 92%; max-height: 85vh; overflow-y: auto; padding: 1.2rem; border: 1px solid #2a2a4a; }
+              .charts-panel .close { float: right; font-size: 1.4rem; cursor: pointer; color: #888; line-height: 1; }
+              .charts-panel .close:hover { color: #fff; }
+              .charts-panel h3 { font-size: 0.9rem; color: #888; margin-bottom: 8px; }
+              #chart { width: 100%; height: 240px; }
+              #chart-small { width: 100%; height: 200px; }
+
+              .empty { padding: 2rem; text-align: center; color: #666; font-size: 0.85rem; }
+
+              ::-webkit-scrollbar { width: 5px; }
+              ::-webkit-scrollbar-track { background: transparent; }
+              ::-webkit-scrollbar-thumb { background: #2a2a4a; border-radius: 3px; }
+
+              @media (max-width: 640px) {
+                .drawer-body { height: 55vh; }
+                .detail-panel .grid { grid-template-columns: 1fr 1fr; }
+                .charts-panel { width: 96%; padding: 0.8rem; }
+                .year-pill { font-size: 0.7rem; padding: 2px 8px; }
+                .ol-tl { top: 8px; left: 8px; }
+                .ol-tr { top: 8px; right: 8px; }
+                .stat-pill { font-size: 0.68rem; }
               }
             </style>
           </head>
           <body>
-            <div class="header">
-              <h1>Workouts</h1>
-              <div class="subtitle">#{years_range}</div>
-            </div>
-            <div class="container">
-              <div class="stats-row" id="stats-row">
-                <div class="stat-card"><span class="num" id="stat-count">0</span><span class="label">总运动</span><span class="delta" id="delta-count"></span></div>
-                <div class="stat-card"><span class="num" id="stat-dist">0</span><span class="label">总距离 (km)</span><span class="delta" id="delta-dist"></span></div>
-                <div class="stat-card"><span class="num" id="stat-time">0</span><span class="label">总时长 (h)</span><span class="delta" id="delta-time"></span></div>
-                <div class="stat-card"><span class="num" id="stat-elev">0</span><span class="label">总爬升 (m)</span><span class="delta" id="delta-elev"></span></div>
-              </div>
-              <div class="loading" id="loading"><div class="spinner"></div><br>加载中...</div>
-              <div class="insight" id="insight"></div>
+            <div id="map-container"><div id="map"></div></div>
 
+            <div class="overlay ol-tl">
+              <div class="brand"><strong>Workouts</strong> #{years_range}</div>
               <div class="year-pills" id="year-pills"></div>
+            </div>
 
-              <div class="filter-bar">
-                <span class="filter-label">类型</span>
-                <select id="filter-type"><option value="all">全部</option></select>
-                <span class="filter-label">来源</span>
-                <select id="filter-source"><option value="all">全部</option></select>
-                <span class="filter-label">距离</span>
-                <input type="number" id="filter-dist-min" placeholder="0" min="0" step="0.5" value="">
-                <span class="dist-label">—</span>
-                <input type="number" id="filter-dist-max" placeholder="∞" min="0" step="0.5" value="">
-                <span class="dist-label">km</span>
-                <input type="text" id="filter-search" placeholder="搜索名称...">
-                <span class="stat-hint" id="filter-hint"></span>
+            <div class="overlay ol-tr">
+              <div class="legend-toggle">
+                <button class="legend-btn active" data-mode="speed" onclick="setColorMode('speed')">速度</button>
+                <button class="legend-btn" data-mode="type" onclick="setColorMode('type')">类型</button>
               </div>
+              <div class="speed-legend" id="speed-legend"><span class="sl-blue"></span><span class="sl-green"></span><span class="sl-yellow"></span><span class="sl-red"></span></div>
+            </div>
 
-              <div class="main-grid">
-                <div class="chart-box">
-                  <div class="chart-title">月运动距离</div>
-                  <div id="chart"></div>
+            <div class="drawer" id="app-drawer">
+              <div class="drawer-handle" onclick="toggleDrawer()"><div class="bar"></div></div>
+              <div class="drawer-collapsed">
+                <span class="stat-pill"><strong id="pill-count">0</strong>次</span>
+                <span class="stat-pill"><strong id="pill-dist">0</strong>km <span class="delta" id="pill-delta-dist"></span></span>
+                <span class="stat-pill"><strong id="pill-time">0</strong>h <span class="delta" id="pill-delta-time"></span></span>
+                <span class="stat-pill"><strong id="pill-elev">0</strong>m</span>
+                <span class="spacer"></span>
+                <button class="icon-btn" onclick="openCharts()" title="图表">&#x1F4CA;</button>
+                <button class="icon-btn" onclick="toggleDrawer()" title="展开">&#x25B2;</button>
+              </div>
+              <div class="drawer-body">
+                <div class="drawer-tabs">
+                  <button class="drawer-tab active" data-tab="list" onclick="switchTab('list')">活动列表 <span class="badge" id="list-badge"></span></button>
+                  <button class="drawer-tab" data-tab="filters" onclick="switchTab('filters')">筛选</button>
                 </div>
-                <div class="chart-box">
-                  <div class="chart-title">运动类型分布</div>
-                  <div id="chart-small"></div>
-                </div>
-              </div>
-
-              <div class="map-box">
-                <div id="map"></div>
-              </div>
-
-              <div class="list-box">
-                <div class="list-header">
-                  <span>活动列表</span>
-                  <span style="display:flex;gap:4px;align-items:center">
+                <div class="drawer-panel active" id="panel-list">
+                  <div class="list-controls">
                     <button class="sort-btn active" data-sort="date" onclick="setSort('date')">日期</button>
                     <button class="sort-btn" data-sort="dist" onclick="setSort('dist')">距离</button>
                     <button class="sort-btn" data-sort="time" onclick="setSort('time')">时间</button>
-                    <span class="count" id="list-count" style="margin-left:6px">0</span>
-                  </span>
+                    <span class="count" id="list-count"></span>
+                  </div>
+                  <div id="list-body"></div>
                 </div>
-                <div class="list-body" id="list-body"></div>
+                <div class="drawer-panel" id="panel-filters">
+                  <div class="insight" id="insight"></div>
+                  <div class="filter-grid">
+                    <div class="filter-row">
+                      <label>类型</label>
+                      <select id="filter-type"><option value="all">全部</option></select>
+                    </div>
+                    <div class="filter-row">
+                      <label>来源</label>
+                      <select id="filter-source"><option value="all">全部</option></select>
+                    </div>
+                    <div class="filter-row">
+                      <label>距离</label>
+                      <input type="number" id="filter-dist-min" placeholder="0" min="0" step="0.5" value="">
+                      <span style="color:#444">—</span>
+                      <input type="number" id="filter-dist-max" placeholder="&infin;" min="0" step="0.5" value="">
+                      <span style="color:#888;font-size:0.7rem">km</span>
+                    </div>
+                    <div class="filter-row">
+                      <label>搜索</label>
+                      <input type="text" id="filter-search" placeholder="活动名称...">
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
 
-            <div class="modal-overlay" id="modal">
-              <div class="modal">
-                <span class="close" id="modal-close">&times;</span>
-                <h2 id="modal-name"></h2>
-                <div class="meta"><span id="modal-date"></span> · <span id="modal-type"></span></div>
+            <div class="detail-overlay" id="detail-overlay">
+              <div class="detail-panel">
+                <span class="close" id="detail-close">&times;</span>
+                <h2 id="detail-name"></h2>
+                <div class="meta"><span id="detail-date"></span> · <span id="detail-type"></span></div>
                 <div class="grid">
-                  <div class="item"><span class="v" id="modal-dist"></span><span class="l">距离 (km)</span></div>
-                  <div class="item"><span class="v" id="modal-pace"></span><span class="l">配速</span></div>
-                  <div class="item"><span class="v" id="modal-time"></span><span class="l">运动时间</span></div>
-                  <div class="item"><span class="v" id="modal-speed"></span><span class="l">均速 (km/h)</span></div>
-                  <div class="item"><span class="v" id="modal-hr"></span><span class="l">平均心率</span></div>
-                  <div class="item"><span class="v" id="modal-elev"></span><span class="l">爬升 (m)</span></div>
+                  <div class="item"><span class="v" id="detail-dist"></span><span class="l">距离 (km)</span></div>
+                  <div class="item"><span class="v" id="detail-pace"></span><span class="l">配速</span></div>
+                  <div class="item"><span class="v" id="detail-time"></span><span class="l">运动时间</span></div>
+                  <div class="item"><span class="v" id="detail-speed"></span><span class="l">均速 (km/h)</span></div>
+                  <div class="item"><span class="v" id="detail-hr"></span><span class="l">平均心率</span></div>
+                  <div class="item"><span class="v" id="detail-elev"></span><span class="l">爬升 (m)</span></div>
                 </div>
-                <div id="modal-map"></div>
+                <div id="detail-map"></div>
               </div>
             </div>
 
-            <div class="footer">
-              <a href="activities.json">JSON</a> · <a href="stats.json">Stats</a> · Generated by Workouts CLI
+            <div class="charts-overlay" id="charts-overlay">
+              <div class="charts-panel">
+                <span class="close" id="charts-close">&times;</span>
+                <h3>月运动距离</h3>
+                <div id="chart"></div>
+                <h3 style="margin-top:12px">运动类型分布</h3>
+                <div id="chart-small"></div>
+              </div>
             </div>
+
+            <div style="display:none"><a href="activities.json">JSON</a> · <a href="stats.json">Stats</a> · Generated by Workouts CLI</div>
 
             <script>
             (function() {
@@ -294,14 +348,24 @@ module Workouts
               function fmtPace(a) { if (!a || !a.moving_time || !a.distance || a.distance < 1) return '—'; var spk = a.moving_time / (a.distance / 1000); return Math.floor(spk/60)+"'" + String(Math.floor(spk%60)).padStart(2,'0')+'"'; }
               function fmtSpeed(a) { if (!a || !a.average_speed) return '—'; return (a.average_speed * 3.6).toFixed(1); }
               function distKm(a) { return a.distance ? (a.distance / 1000) : 0; }
-              function catColor(c) { return '#4DD2FF'; }
 
               var CAT_COLORS = { run: '#4DD2FF', walk: '#4ECDC4', ride: '#FF6B6B', hike: '#FFD93D' };
-              var SRC_COLORS = { keep: '#4DD2FF', strava: '#FF6B6B', igpsport: '#4ECDC4', xoss: '#FFD93D', xingzhe: '#FF9FF3' };
               function typeColor(t) { return CAT_COLORS[t] || '#888'; }
-              function srcColor(s) { return SRC_COLORS[s] || '#888'; }
 
-              var state = { activities: [], stats: null, filtered: [], map: null, chart: null, chartSmall: null, activeId: null, chartReady: false, monthFilter: null, sortBy: 'date', sortDesc: true, polylineMap: {} };
+              function speedColor(speedMs) {
+                var s = (speedMs || 0) * 3.6;
+                if (s < 3) return '#4A90D9';
+                if (s < 6) return '#50C878';
+                if (s < 9) return '#FFD700';
+                return '#FF4500';
+              }
+
+              function traceColor(a, mode) {
+                if (mode === 'type') return typeColor(a.type);
+                return speedColor(a.average_speed);
+              }
+
+              var state = { activities: [], stats: null, filtered: [], map: null, chart: null, chartSmall: null, activeId: null, chartReady: false, monthFilter: null, sortBy: 'date', sortDesc: true, polylineMap: {}, drawerOpen: false, colorMode: 'speed' };
 
     function init() {
       Promise.all([
@@ -317,25 +381,16 @@ module Workouts
         state.activities = results[0];
         state.stats = results[1];
         var stats = results[1];
-        document.getElementById('loading').style.display = 'none';
         initFilters(stats);
         try {
-          state.chart = echarts.init(document.getElementById('chart'), 'dark');
-          state.chartSmall = echarts.init(document.getElementById('chart-small'), 'dark');
-        } catch(e) { console.error('ECharts init:', e); }
-        try {
-          state.map = L.map('map', { zoomControl: true }).setView([30, 110], 4);
+          state.map = L.map('map', { zoomControl: true, attributionControl: false }).setView([30, 110], 4);
           L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-            attribution: '&copy; <a href="https://carto.com/">CARTO</a>',
             maxZoom: 19
           }).addTo(state.map);
         } catch(e) { console.error('Map init:', e); }
         applyFilters();
       }).catch(function(e) {
         console.error('Dashboard init error:', e);
-        document.getElementById('loading').style.display = 'none';
-        var el = document.getElementById('stats-row');
-        if (el) el.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:2rem;color:#ff6b6b">Error: ' + e.message + '</div>';
       });
     }
 
@@ -387,6 +442,7 @@ module Workouts
                 document.querySelectorAll('.year-pill').forEach(function(b) { b.classList.remove('active'); });
                 var target = document.querySelector('.year-pill[data-year="' + y + '"]');
                 if (target) target.classList.add('active');
+                state.monthFilter = null;
                 applyFilters();
               }
 
@@ -441,6 +497,33 @@ module Workouts
                 renderList();
               }
 
+              function setSort(field) {
+                if (state.sortBy === field) { state.sortDesc = !state.sortDesc; }
+                else { state.sortBy = field; state.sortDesc = true; }
+                document.querySelectorAll('.sort-btn').forEach(function(b) {
+                  b.classList.toggle('active', b.dataset.sort === field);
+                });
+                applyFilters();
+              }
+
+              function clearMonthFilter() {
+                state.monthFilter = null;
+                applyFilters();
+              }
+
+              function renderMonthChip() {
+                var container = document.getElementById('year-pills');
+                var existing = container.querySelector('.month-chip');
+                if (existing) existing.remove();
+                if (state.monthFilter) {
+                  var chip = document.createElement('span');
+                  chip.className = 'month-chip';
+                  chip.innerHTML = state.monthFilter + ' <span class="x" onclick="clearMonthFilter()">&times;</span>';
+                  chip.onclick = clearMonthFilter;
+                  container.appendChild(chip);
+                }
+              }
+
               function renderInsight(count, dist, time, elev) {
                 var el = document.getElementById('insight');
                 var msgs = [];
@@ -482,33 +565,6 @@ module Workouts
                 el.innerHTML = msgs.join(' \u00B7 ');
               }
 
-              function setSort(field) {
-                if (state.sortBy === field) { state.sortDesc = !state.sortDesc; }
-                else { state.sortBy = field; state.sortDesc = true; }
-                document.querySelectorAll('.sort-btn').forEach(function(b) {
-                  b.classList.toggle('active', b.dataset.sort === field);
-                });
-                applyFilters();
-              }
-
-              function clearMonthFilter() {
-                state.monthFilter = null;
-                applyFilters();
-              }
-
-              function renderMonthChip() {
-                var container = document.getElementById('year-pills');
-                var existing = container.querySelector('.month-chip');
-                if (existing) existing.remove();
-                if (state.monthFilter) {
-                  var chip = document.createElement('span');
-                  chip.className = 'month-chip';
-                  chip.innerHTML = state.monthFilter + ' <span class="x" onclick="clearMonthFilter()">&times;</span>';
-                  chip.onclick = clearMonthFilter;
-                  container.appendChild(chip);
-                }
-              }
-
               function renderStats() {
                 var acts = state.filtered;
                 var count = acts.length;
@@ -518,13 +574,12 @@ module Workouts
                   time += a.moving_time || 0;
                   elev += a.elevation_gain || 0;
                 });
-                document.getElementById('stat-count').textContent = count;
-                document.getElementById('stat-dist').textContent = (dist / 1000).toFixed(0);
-                document.getElementById('stat-time').textContent = (time / 3600).toFixed(1);
-                document.getElementById('stat-elev').textContent = elev.toFixed(0);
+                document.getElementById('pill-count').textContent = count;
+                document.getElementById('pill-dist').textContent = (dist / 1000).toFixed(0);
+                document.getElementById('pill-time').textContent = (time / 3600).toFixed(1);
+                document.getElementById('pill-elev').textContent = elev.toFixed(0);
                 document.getElementById('list-count').textContent = count + ' 项';
-                var hint = document.getElementById('filter-hint');
-                hint.textContent = count + ' / ' + state.activities.length + ' 活动';
+                document.getElementById('list-badge').textContent = count;
 
                 renderDeltas(count, dist, time, elev);
                 renderInsight(count, dist, time, elev);
@@ -540,14 +595,14 @@ module Workouts
                     if (yr.year === y - 1) prev = yr;
                   });
                 }
-                var stats = [
-                  { id: 'count', val: count },
-                  { id: 'dist', val: dist / 1000 },
-                  { id: 'time', val: time / 3600 },
-                  { id: 'elev', val: elev }
+                var items = [
+                  { id: 'count', val: count, elId: 'delta-count' },
+                  { id: 'dist', val: dist / 1000, elId: 'delta-dist' },
+                  { id: 'time', val: time / 3600, elId: 'delta-time' },
+                  { id: 'elev', val: elev, elId: 'delta-elev' }
                 ];
-                stats.forEach(function(s) {
-                  var el = document.getElementById('delta-' + s.id);
+                items.forEach(function(s) {
+                  var el = document.getElementById(s.elId);
                   if (!prev) {
                     var comp = compareToPrevYear(s.id, s.val);
                     if (comp) { showDelta(el, comp.val, comp.pct); return; }
@@ -562,7 +617,6 @@ module Workouts
               function compareToPrevYear(metric, val) {
                 if (!state.stats || !state.stats.yearly || state.stats.yearly.length < 2) return null;
                 var years = state.stats.yearly;
-                var last = years[years.length - 1];
                 var prev = years[years.length - 2];
                 var activePill = document.querySelector('.year-pill.active');
                 var year = activePill ? activePill.dataset.year : 'all';
@@ -573,6 +627,7 @@ module Workouts
               }
 
               function showDelta(el, diff, pct) {
+                if (!el) return;
                 if (Math.abs(diff) < 0.01) { el.textContent = ''; return; }
                 var arrow = diff > 0 ? '\u25B2' : '\u25BC';
                 var cls = diff > 0 ? 'up' : 'down';
@@ -585,7 +640,7 @@ module Workouts
                 var body = document.getElementById('list-body');
                 var html = '';
                 state.filtered.forEach(function(a) {
-                  var c = typeColor(a.type);
+                  var c = state.colorMode === 'speed' ? speedColor(a.average_speed) : typeColor(a.type);
                   var d = distKm(a);
                   html += '<div class="act-item" data-id="' + escAttr(a.run_id) + '">';
                   html += '<span class="dot" style="background:' + c + '"></span>';
@@ -594,7 +649,7 @@ module Workouts
                   html += '<div class="act-meta"><span class="dist">' + d.toFixed(1) + '</span> km<br>' + fmtTime(a.moving_time) + '</div>';
                   html += '</div>';
                 });
-                body.innerHTML = html || '<div style="padding:2rem;text-align:center;color:#666;">没有匹配的活动</div>';
+                body.innerHTML = html || '<div class="empty">没有匹配的活动</div>';
                 body.onclick = function(e) {
                   var item = e.target.closest('.act-item');
                   if (item) showActivity(item.dataset.id);
@@ -611,15 +666,65 @@ module Workouts
 
               function highlightMap(id) {
                 Object.keys(state.polylineMap).forEach(function(k) {
-                  state.polylineMap[k].setStyle({ weight: 1.5, opacity: 0.2 });
+                  state.polylineMap[k].setStyle({ weight: 1.5, opacity: 0.15 });
                 });
                 var line = state.polylineMap[id];
-                if (line) line.setStyle({ weight: 4, opacity: 1, color: '#4DD2FF' });
+                if (line) line.setStyle({ weight: 3.5, opacity: 1, color: '#4DD2FF' });
               }
               function unhighlightMap() {
                 Object.keys(state.polylineMap).forEach(function(k) {
                   state.polylineMap[k].setStyle({ weight: 1.5, opacity: 0.5 });
                 });
+              }
+
+              function setColorMode(mode) {
+                state.colorMode = mode;
+                document.querySelectorAll('.legend-btn').forEach(function(b) {
+                  b.classList.toggle('active', b.dataset.mode === mode);
+                });
+                renderMap();
+                renderList();
+              }
+
+              function toggleDrawer() {
+                state.drawerOpen = !state.drawerOpen;
+                document.getElementById('app-drawer').classList.toggle('open', state.drawerOpen);
+                setTimeout(function() { if (state.map) state.map.invalidateSize(); }, 350);
+              }
+
+              function switchTab(tab) {
+                document.querySelectorAll('.drawer-tab').forEach(function(t) { t.classList.toggle('active', t.dataset.tab === tab); });
+                document.querySelectorAll('.drawer-panel').forEach(function(p) { p.classList.toggle('active', p.id === 'panel-' + tab); });
+                if (tab === 'chart') {
+                  setTimeout(function() {
+                    if (state.chart) state.chart.resize();
+                    if (state.chartSmall) state.chartSmall.resize();
+                  }, 100);
+                }
+              }
+
+              function openCharts() {
+                document.getElementById('charts-overlay').classList.add('open');
+                if (!state.chartReady) {
+                  try {
+                    state.chart = echarts.init(document.getElementById('chart'), 'dark');
+                    state.chartSmall = echarts.init(document.getElementById('chart-small'), 'dark');
+                    state.chartReady = true;
+                  } catch(e) { console.error('ECharts init:', e); }
+                }
+                setTimeout(function() {
+                  if (state.chart) state.chart.resize();
+                  if (state.chartSmall) state.chartSmall.resize();
+                }, 150);
+              }
+              function closeCharts() {
+                document.getElementById('charts-overlay').classList.remove('open');
+              }
+
+              function openDetail() { document.getElementById('detail-overlay').classList.add('open'); }
+              function closeDetail() {
+                document.getElementById('detail-overlay').classList.remove('open');
+                if (state.detailMap) { state.detailMap.remove(); state.detailMap = null; }
               }
 
               function renderChart() {
@@ -686,11 +791,10 @@ module Workouts
                   if (!a.polyline) return;
                   var pts = decodePolyline(a.polyline);
                   if (pts.length < 2) return;
-                  var line = L.polyline(pts, {
-                    color: typeColor(a.type),
-                    weight: 1.5,
-                    opacity: 0.5
-                  });
+                  var color = state.colorMode === 'speed' ? speedColor(a.average_speed) : typeColor(a.type);
+                  var yr = parseInt((a.start_date || '').slice(0,4));
+                  var opacity = yr ? Math.max(0.12, 1 - (new Date().getFullYear() - yr) * 0.12) : 0.4;
+                  var line = L.polyline(pts, { color: color, weight: 2, opacity: opacity });
                   line.bindTooltip((a.name || '') + ' — ' + distKm(a).toFixed(1) + 'km', { direction: 'top' });
                   line.on('click', function() { showActivity(a.run_id); });
                   line.on('mouseover', function() { highlightList(a.run_id); });
@@ -717,48 +821,46 @@ module Workouts
               function showActivity(runId) {
                 var a = state.activities.find(function(x) { return x.run_id === runId; });
                 if (!a) return;
+                if (state.drawerOpen) toggleDrawer();
                 document.querySelectorAll('.act-item').forEach(function(el) { el.classList.remove('active'); });
                 var el = document.querySelector('.act-item[data-id="' + runId.replace(/'/g,"\\'") + '"]');
                 if (el) { el.classList.add('active'); el.scrollIntoView({ block: 'nearest' }); }
 
-                var modal = document.getElementById('modal');
-                document.getElementById('modal-name').textContent = a.name || '';
-                document.getElementById('modal-date').textContent = fmtDate(a.start_date);
-                document.getElementById('modal-type').textContent = a.type || '';
-                document.getElementById('modal-dist').textContent = distKm(a).toFixed(2);
-                document.getElementById('modal-pace').textContent = fmtPace(a);
-                document.getElementById('modal-time').textContent = fmtTime(a.moving_time);
-                document.getElementById('modal-speed').textContent = fmtSpeed(a);
-                document.getElementById('modal-hr').textContent = a.average_heartrate ? a.average_heartrate.toFixed(0) : '—';
-                document.getElementById('modal-elev').textContent = a.elevation_gain ? a.elevation_gain.toFixed(0) : '—';
-                modal.classList.add('show');
+                document.getElementById('detail-name').textContent = a.name || '';
+                document.getElementById('detail-date').textContent = fmtDate(a.start_date);
+                document.getElementById('detail-type').textContent = a.type || '';
+                document.getElementById('detail-dist').textContent = distKm(a).toFixed(2);
+                document.getElementById('detail-pace').textContent = fmtPace(a);
+                document.getElementById('detail-time').textContent = fmtTime(a.moving_time);
+                document.getElementById('detail-speed').textContent = fmtSpeed(a);
+                document.getElementById('detail-hr').textContent = a.average_heartrate ? a.average_heartrate.toFixed(0) : '—';
+                document.getElementById('detail-elev').textContent = a.elevation_gain ? a.elevation_gain.toFixed(0) : '—';
+                openDetail();
 
-                var mapContainer = document.getElementById('modal-map');
+                var mapContainer = document.getElementById('detail-map');
                 if (a.polyline && a.polyline.length > 0) {
-                  if (state.modalMap) { state.modalMap.remove(); }
-                  state.modalMap = L.map(mapContainer, { zoomControl: false }).setView([30, 110], 13);
-                  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-                    attribution: '&copy; <a href="https://carto.com/">CARTO</a>', maxZoom: 19
-                  }).addTo(state.modalMap);
+                  if (state.detailMap) { state.detailMap.remove(); }
+                  state.detailMap = L.map(mapContainer, { zoomControl: false }).setView([30, 110], 13);
+                  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 19 }).addTo(state.detailMap);
                   var pts = decodePolyline(a.polyline);
                   if (pts.length >= 2) {
-                    var line = L.polyline(pts, { color: '#4DD2FF', weight: 3, opacity: 0.8 }).addTo(state.modalMap);
-                    state.modalMap.fitBounds(line.getBounds().pad(0.1));
+                    var line = L.polyline(pts, { color: '#4DD2FF', weight: 3, opacity: 0.8 }).addTo(state.detailMap);
+                    state.detailMap.fitBounds(line.getBounds().pad(0.1));
                   }
-                  setTimeout(function() { state.modalMap.invalidateSize(); }, 100);
+                  setTimeout(function() { if (state.detailMap) state.detailMap.invalidateSize(); }, 150);
                 }
               }
 
-              function closeModal() {
-                document.getElementById('modal').classList.remove('show');
-                if (state.modalMap) { state.modalMap.remove(); state.modalMap = null; }
-              }
-              document.getElementById('modal-close').onclick = closeModal;
-              document.getElementById('modal').onclick = function(e) {
-                if (e.target === this) closeModal();
+              document.getElementById('detail-close').onclick = closeDetail;
+              document.getElementById('detail-overlay').onclick = function(e) {
+                if (e.target === this) closeDetail();
+              };
+              document.getElementById('charts-close').onclick = closeCharts;
+              document.getElementById('charts-overlay').onclick = function(e) {
+                if (e.target === this) closeCharts();
               };
               document.addEventListener('keydown', function(e) {
-                if (e.key === 'Escape') { closeModal(); }
+                if (e.key === 'Escape') { closeDetail(); closeCharts(); }
               });
 
               function escHtml(s) {
