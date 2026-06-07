@@ -184,8 +184,8 @@ jobs:
       - name: Export Stats
         run: bundle exec exe/workouts export stats --output build/stats.json
 
-      - name: Export HTML site
-        run: bundle exec exe/workouts export html --output build/
+      - name: Export dashboard
+        run: bundle exec exe/workouts export dashboard --output build/
 
       - uses: actions/upload-artifact@v4
         with:
