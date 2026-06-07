@@ -102,6 +102,13 @@ module Workouts
               .stat-card .num { font-size: 1.6rem; font-weight: 700; color: #4DD2FF; display: block; }
               .stat-card .label { font-size: 0.75rem; color: #888; margin-top: 4px; }
               .stat-card .num.active { color: #4ECDC4; }
+              .delta { font-size: 0.7rem; margin-top: 2px; display: block; }
+              .delta.up { color: #4ECDC4; }
+              .delta.down { color: #FF6B6B; }
+              .delta.new { color: #888; }
+
+              .insight { text-align: center; font-size: 0.85rem; color: #aaa; margin: -0.5rem 0 1rem 0; padding: 0.5rem; background: #16213e; border-radius: 8px; border: 1px solid #2a2a4a; line-height: 1.5; }
+              .insight em { color: #4DD2FF; font-style: normal; }
 
               .filter-bar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 1rem; padding: 0.75rem; background: #16213e; border-radius: 12px; border: 1px solid #2a2a4a; }
               .filter-bar select, .filter-bar input { background: #0f3460; color: #e0e0e0; border: 1px solid #2a2a4a; border-radius: 6px; padding: 6px 12px; font-size: 0.85rem; outline: none; }
@@ -187,12 +194,13 @@ module Workouts
             </div>
             <div class="container">
               <div class="stats-row" id="stats-row">
-                <div class="stat-card"><span class="num" id="stat-count">0</span><span class="label">总运动</span></div>
-                <div class="stat-card"><span class="num" id="stat-dist">0</span><span class="label">总距离 (km)</span></div>
-                <div class="stat-card"><span class="num" id="stat-time">0</span><span class="label">总时长 (h)</span></div>
-                <div class="stat-card"><span class="num" id="stat-elev">0</span><span class="label">总爬升 (m)</span></div>
+                <div class="stat-card"><span class="num" id="stat-count">0</span><span class="label">总运动</span><span class="delta" id="delta-count"></span></div>
+                <div class="stat-card"><span class="num" id="stat-dist">0</span><span class="label">总距离 (km)</span><span class="delta" id="delta-dist"></span></div>
+                <div class="stat-card"><span class="num" id="stat-time">0</span><span class="label">总时长 (h)</span><span class="delta" id="delta-time"></span></div>
+                <div class="stat-card"><span class="num" id="stat-elev">0</span><span class="label">总爬升 (m)</span><span class="delta" id="delta-elev"></span></div>
               </div>
               <div class="loading" id="loading"><div class="spinner"></div><br>加载中...</div>
+              <div class="insight" id="insight"></div>
 
               <div class="year-pills" id="year-pills"></div>
 
@@ -293,7 +301,7 @@ module Workouts
               function typeColor(t) { return CAT_COLORS[t] || '#888'; }
               function srcColor(s) { return SRC_COLORS[s] || '#888'; }
 
-              var state = { activities: [], filtered: [], map: null, chart: null, chartSmall: null, activeId: null, chartReady: false, monthFilter: null, sortBy: 'date', sortDesc: true, polylineMap: {} };
+              var state = { activities: [], stats: null, filtered: [], map: null, chart: null, chartSmall: null, activeId: null, chartReady: false, monthFilter: null, sortBy: 'date', sortDesc: true, polylineMap: {} };
 
     function init() {
       Promise.all([
@@ -307,6 +315,7 @@ module Workouts
         })
       ]).then(function(results) {
         state.activities = results[0];
+        state.stats = results[1];
         var stats = results[1];
         document.getElementById('loading').style.display = 'none';
         initFilters(stats);
@@ -432,6 +441,47 @@ module Workouts
                 renderList();
               }
 
+              function renderInsight(count, dist, time, elev) {
+                var el = document.getElementById('insight');
+                var msgs = [];
+                var activePill = document.querySelector('.year-pill.active');
+                var year = activePill ? activePill.dataset.year : 'all';
+
+                if (year !== 'all' && state.stats && state.stats.yearly) {
+                  var y = parseInt(year);
+                  var prevYr = null, thisYr = null;
+                  state.stats.yearly.forEach(function(yr) {
+                    if (yr.year === y) thisYr = yr;
+                    if (yr.year === y - 1) prevYr = yr;
+                  });
+                  if (thisYr && prevYr && thisYr.count > prevYr.count * 1.5) {
+                    msgs.push(year + '年已运动<em>' + thisYr.count + '次</em>，是' + (y-1) + '年的' + Math.round(thisYr.count/prevYr.count) + '倍');
+                  }
+                  if (thisYr && prevYr && prevYr.count > 0 && thisYr.distance_km > prevYr.distance_km * 2) {
+                    msgs.push('总距离<em>' + thisYr.distance_km.toFixed(0) + 'km</em>，已超过去年全年总和');
+                  }
+                }
+
+                if (state.stats && state.stats.streaks && state.stats.streaks.all_time > 7) {
+                  msgs.push('最长连续运动 <em>' + state.stats.streaks.all_time + '天</em>');
+                }
+
+                if (state.monthFilter && state.stats && state.stats.monthly) {
+                  var ym = state.monthFilter;
+                  var thisMonth = null;
+                  state.stats.monthly.forEach(function(m) {
+                    var mk = m.year + '-' + String(m.month).padStart(2,'0');
+                    if (mk === ym) thisMonth = m;
+                  });
+                  if (thisMonth) {
+                    msgs.push(ym + '月度距离 <em>' + thisMonth.distance_km.toFixed(0) + 'km</em>，' + thisMonth.count + '次活动');
+                  }
+                }
+
+                if (msgs.length === 0) { el.textContent = ''; return; }
+                el.innerHTML = msgs.join(' \u00B7 ');
+              }
+
               function setSort(field) {
                 if (state.sortBy === field) { state.sortDesc = !state.sortDesc; }
                 else { state.sortBy = field; state.sortDesc = true; }
@@ -475,6 +525,60 @@ module Workouts
                 document.getElementById('list-count').textContent = count + ' 项';
                 var hint = document.getElementById('filter-hint');
                 hint.textContent = count + ' / ' + state.activities.length + ' 活动';
+
+                renderDeltas(count, dist, time, elev);
+                renderInsight(count, dist, time, elev);
+              }
+
+              function renderDeltas(count, dist, time, elev) {
+                var activePill = document.querySelector('.year-pill.active');
+                var year = activePill ? activePill.dataset.year : null;
+                var prev = null;
+                if (year && year !== 'all' && state.stats && state.stats.yearly) {
+                  var y = parseInt(year);
+                  state.stats.yearly.forEach(function(yr) {
+                    if (yr.year === y - 1) prev = yr;
+                  });
+                }
+                var stats = [
+                  { id: 'count', val: count },
+                  { id: 'dist', val: dist / 1000 },
+                  { id: 'time', val: time / 3600 },
+                  { id: 'elev', val: elev }
+                ];
+                stats.forEach(function(s) {
+                  var el = document.getElementById('delta-' + s.id);
+                  if (!prev) {
+                    var comp = compareToPrevYear(s.id, s.val);
+                    if (comp) { showDelta(el, comp.val, comp.pct); return; }
+                    el.textContent = ''; return;
+                  }
+                  var prevVal = s.id === 'count' ? prev.count : s.id === 'dist' ? prev.distance_km : s.id === 'time' ? prev.moving_time_h : null;
+                  if (prevVal != null && prevVal > 0) showDelta(el, s.val - prevVal, ((s.val - prevVal) / prevVal) * 100);
+                  else el.textContent = '';
+                });
+              }
+
+              function compareToPrevYear(metric, val) {
+                if (!state.stats || !state.stats.yearly || state.stats.yearly.length < 2) return null;
+                var years = state.stats.yearly;
+                var last = years[years.length - 1];
+                var prev = years[years.length - 2];
+                var activePill = document.querySelector('.year-pill.active');
+                var year = activePill ? activePill.dataset.year : 'all';
+                if (year !== 'all') return null;
+                var prevVal = metric === 'count' ? prev.count : metric === 'dist' ? prev.distance_km : metric === 'time' ? prev.moving_time_h : null;
+                if (prevVal == null || prevVal <= 0) return null;
+                return { val: val - prevVal, pct: ((val - prevVal) / prevVal) * 100 };
+              }
+
+              function showDelta(el, diff, pct) {
+                if (Math.abs(diff) < 0.01) { el.textContent = ''; return; }
+                var arrow = diff > 0 ? '\u25B2' : '\u25BC';
+                var cls = diff > 0 ? 'up' : 'down';
+                var absPct = Math.abs(pct).toFixed(0);
+                el.className = 'delta ' + cls;
+                el.textContent = arrow + ' ' + absPct + '%';
               }
 
               function renderList() {
