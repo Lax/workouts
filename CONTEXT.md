@@ -273,6 +273,65 @@ docker compose run --rm workouts export json
 
 ---
 
+## 数据架构
+
+### 分层定义
+
+```
+Sync Stage                         Build Stage                 Deploy / Publish
+────────────────                  ──────────────────           ────────────────
+
+L1: data/raw/{source}/      L3 → L4: build/                  L6: Pages
+    {id}.{ext}                    index.html                         ─→ 网页
+    原始 API 数据                  activities.json
+                                  github.svg
+L2: data/std/{source}/
+    {id}.json                L4 → L5: upload artifact         L6: gpx_out/
+    标准化视图                                                      GPS 轨迹下载
+                                                                  ─→ 网页可下载
+L3: SQLite DB                L2 → L6: export gpx                ─→ 推送到第三方
+    activities
+    (summary_polyline)                                          L5 → L6: Pages artifact
+```
+
+### 各层说明
+
+| 层 | 名称 | 内容 | 阶段 | 格式 | 路径 |
+|---|---|---|---|---|---|
+| **L1** | 完整原始数据 | API 最小解码，不丢字段 | Sync | `.fit` / `.raw.json` | `data/raw/{source}/` |
+| **L2** | 标准化视图 | WGS-84 + 统一 schema，保留全部字段 | Sync | `.json` | `data/std/{source}/` |
+| **L3** | 数据库摘要 | polyline + 统计字段（距离/时间/心率等） | Sync | SQLite | `data/workouts.db` |
+| **L4** | 构建制品 | JSON/CSV/SVG/HTML 导出 | Build | `.json` / `.svg` / `.html` / `.csv` | `build/` |
+| **L5** | Pages 发布包 | GitHub Pages 部署 artifact | Build → Deploy | artifact | — |
+| **L6** | 网站 / GPX | 公开页面 + 轨迹文件下载 | Deploy / Export | HTML/CSS/SVG/JS / `.gpx` | Pages URL / `gpx_out/` |
+
+### 层间依赖
+
+```
+L1 ──→ L2 ──→ L3 ──→ L4 (build job)
+  │         │
+  │         └──→ L6 (export gpx 命令 → 网页可下载)
+  │
+  └── L1 是未来重建 L2 的源
+```
+
+### L1 → L2 转换规则
+
+1. 坐标转换（半圆→度数、GCJ-02→WGS-84）
+2. 时间归一化（FIT epoch / 毫秒 → Unix）
+3. 不丢弃字段、不做聚合、不做统计运算
+
+### 源适配矩阵
+
+| 源 | L1 | L2 | L3 | 状态 |
+|---|---|---|---|---|
+| **iGPSPORT** | `{id}.fit` ✅ | `std/igpsport/{id}.json` ✅ | ✅ | 本轮完成 |
+| **Keep（当前）** | ❌ 无 | `data/raw/keep/{id}.json`（过渡） | ✅ | 后续改进 |
+| **Keep（目标）** | `{id}.raw.json` | `std/keep/{id}.json` | ✅ | 后续 |
+| **未来新源** | 必须 | 必须 | 必须 | 强制 |
+
+---
+
 ## 关键技术决策
 
 | 决策 | 原因 |
@@ -392,8 +451,7 @@ RSpec 116 例，0 失败。覆盖：
 
 | 项 | 工作量 | 说明 |
 |---|---|---|---|
-| iGPSPORT 原始数据 | 4d | FIT 下载 + 解析 + polyline |
-| GPX 重新导出 | 1d | `export gpx` 从 `data/raw/` 文件导出，迁移 running_page 时考虑 |
+| GPX 重新导出 | 1d | `export gpx` 从 L2 文件生成（`data/std/`）|
 | Strava OAuth 交互式授权 | 1d | `auth strava` 启动本地 HTTP server 完成 OAuth 回调 |
 
 ### P2 — 工程完善
@@ -409,6 +467,8 @@ RSpec 116 例，0 失败。覆盖：
 |---|---|
 | Keep raw 数据持久化（838 条，21MB） | ✅ 已完成 |
 | iGPSPORT 原生 GPS 调研（FIT 方案选型完成） | ✅ 已完成（选定 mini_racer + JS SDK） |
+| iGPSPORT FIT raw 数据 pipeline（L1+L2+L3） | ✅ 已完成 |
+| L1/L2 数据架构设计（三层模型 + 源适配矩阵） | ✅ 已完成 |
 | 导出路径 `data/` → `build/`（源数据与制品分离） | ✅ 已完成 |
 | 3-job workflow（sync / build / deploy） | ✅ 已完成 |
 | 原始数据 GH Cache（替代 submodule） | ✅ 已完成 |
