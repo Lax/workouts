@@ -121,7 +121,7 @@ module Workouts
       end
 
       def write_standardized_json(wgs_points, ride_id)
-        dir = l2_dir
+        dir = std_dir
         FileUtils.mkdir_p(dir)
         tmp = File.join(dir, ".#{ride_id}.json.tmp")
         final = File.join(dir, "#{ride_id}.json")
