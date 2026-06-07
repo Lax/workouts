@@ -6,10 +6,12 @@ RSpec.describe Workouts::Sync::Keep do
 
   before do
     FileUtils.mkdir_p("data/raw/keep")
+    FileUtils.mkdir_p("data/std/keep")
   end
 
   after do
     FileUtils.rm_rf("data/raw/keep")
+    FileUtils.rm_rf("data/std/keep")
   end
 
   def create_test_db
@@ -147,7 +149,21 @@ RSpec.describe Workouts::Sync::Keep do
         path = "data/raw/keep/9223370458896850307.json"
         expect(File.exist?(path)).to be true
         content = JSON.parse(File.read(path))
+        expect(content).to be_a(Hash)
+        expect(content).to have_key("source")
+        expect(content).to have_key("geoPoints")
+        expect(content).to have_key("meta")
+      end
+
+      it "writes standardized view" do
+        keep.call
+        path = "data/std/keep/9223370458896850307.json"
+        expect(File.exist?(path)).to be true
+        content = JSON.parse(File.read(path))
         expect(content).to be_an(Array)
+        expect(content.first).to have_key("latitude")
+        expect(content.first).to have_key("longitude")
+        expect(content.first).to have_key("heartrate")
       end
     end
 
