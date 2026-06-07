@@ -20,7 +20,7 @@ module Workouts
 
           begin
             count = adapter.call
-            print "\r#{' ' * 60}\r"
+            print "\r#{' ' * 60}\r" if adapter.progress_reported
             say_status :done, "#{source}: #{count} activities", :green
           rescue => e
             print "\r#{' ' * 60}\r"
