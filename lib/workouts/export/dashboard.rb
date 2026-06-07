@@ -268,7 +268,7 @@ module Workouts
               function typeColor(t) { return CAT_COLORS[t] || '#888'; }
               function srcColor(s) { return SRC_COLORS[s] || '#888'; }
 
-              var state = { activities: [], filtered: [], map: null, polylines: [], chart: null, chartSmall: null, activeId: null };
+              var state = { activities: [], filtered: [], map: null, polylines: [], chart: null, chartSmall: null, activeId: null, chartReady: false, chartSmallReady: false };
 
               function init() {
                 Promise.all([
@@ -393,7 +393,7 @@ module Workouts
                 state.filtered.forEach(function(a) {
                   var c = typeColor(a.type);
                   var d = distKm(a);
-                  html += '<div class="act-item" data-id="' + a.run_id + '" onclick="showActivity(\'' + a.run_id.replace(/'/g,"\\'") + '\')">';
+                  html += '<div class="act-item" data-id="' + escAttr(a.run_id) + '">';
                   html += '<span class="dot" style="background:' + c + '"></span>';
                   html += '<div><div class="act-name">' + escHtml(a.name || '') + '<span class="src-badge">' + escHtml(a.source || '') + '</span></div>';
                   html += '<div class="act-date">' + fmtDate(a.start_date) + '</div></div>';
@@ -401,6 +401,10 @@ module Workouts
                   html += '</div>';
                 });
                 body.innerHTML = html || '<div style="padding:2rem;text-align:center;color:#666;">没有匹配的活动</div>';
+                body.onclick = function(e) {
+                  var item = e.target.closest('.act-item');
+                  if (item) showActivity(item.dataset.id);
+                };
               }
 
               function renderChart() {
@@ -420,14 +424,13 @@ module Workouts
                   series: [{ type: 'bar', data: data, itemStyle: { color: '#4DD2FF', borderRadius: [4,4,0,0] }, barMaxWidth: 32 }]
                 };
                 state.chart.setOption(option, true);
-                state.chart.on('click', function(p) {
-                  var m = months[p.dataIndex];
-                  var acts = state.filtered.filter(function(a) { return a.start_date && a.start_date.indexOf(m) === 0; });
-                  if (acts.length > 0) {
-                    var first = acts[0];
-                    showActivity(first.run_id);
-                  }
-                });
+                if (!state.chartReady) {
+                  state.chart.on('click', function(p) {
+                    var m = months[p.dataIndex];
+                    setYear(m.slice(0,4));
+                  });
+                  state.chartReady = true;
+                }
               }
 
               function renderChartSmall() {
@@ -436,7 +439,7 @@ module Workouts
                   var t = a.type || 'other';
                   byType[t] = (byType[t] || 0) + distKm(a);
                 });
-                var total = Object.values(byType).reduce(function(s, v) { return s + v; }, 0);
+                var total = Object.values(byType).reduce(function(s, v) { return s + v; }, 0) || 1;
                 var data = Object.keys(byType).sort().map(function(t) {
                   return { name: t, value: +byType[t].toFixed(1) };
                 });
@@ -479,7 +482,8 @@ module Workouts
                   allPoints = allPoints.concat(pts);
                 });
                 if (allPoints.length > 0) {
-                  try { state.map.fitBounds(L.latLngBounds(allPoints).pad(0.05)); } catch(e) {}
+                  var bounds = L.latLngBounds(allPoints);
+                  if (bounds.isValid()) { state.map.fitBounds(bounds.pad(0.05)); }
                 }
               }
 
@@ -533,8 +537,12 @@ module Workouts
                 if (!s) return '';
                 return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
               }
+              function escAttr(s) {
+                if (!s) return '';
+                return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/'/g,'&#39;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+              }
 
-              document.addEventListener('DOMContentLoaded', init);
+              init();
             })();
             </script>
           </body>
