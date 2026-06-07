@@ -335,7 +335,7 @@ L1 ──→ L2 ──→ L3 ──→ L4 (build job)
 
 | 决策 | 原因 |
 |---|---|
-| `Net::HTTP.new(host, port, nil*5)` 直连 | 绕过系统代理（`127.0.0.1:64540`） |
+| 默认使用系统代理（`HTTP_PROXY`/`HTTPS_PROXY`） | 不再强制绕过代理，XOSS/XingZhe 可通过代理访问中国境内服务 |
 | 内联 deploy job 而非 reusable workflow | 调用 `uses:` 在该仓库导致 `startup_failure` |
 | `__` 分隔 env var | 避免与 `garmin_cn` 等 key 中的 `_` 冲突 |
 | 保留 `upload-artifact` | Pages 部署稳定后再移除 |
