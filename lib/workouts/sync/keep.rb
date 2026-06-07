@@ -120,7 +120,7 @@ module Workouts
           break if time_expired?
 
           if raw_file_exists?(keep_id)
-            upsert_from_raw(keep_id) unless @existing_ids.include?("keep_#{keep_id}")
+            upsert_from_raw(compound_id) unless @existing_ids.include?("keep_#{keep_id}")
             next
           end
 
@@ -193,9 +193,10 @@ module Workouts
         false
       end
 
-      def upsert_from_raw(keep_id)
+      def upsert_from_raw(compound_id)
+        keep_id = extract_id(compound_id) || compound_id
         raw = JSON.parse(File.read(raw_path(keep_id)))
-        run_data = raw["meta"].merge("id" => keep_id.to_s)
+        run_data = raw["meta"].merge("id" => compound_id)
 
         wgs = load_wgs_points(keep_id, raw)
         return false unless wgs&.any?
