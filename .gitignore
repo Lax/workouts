@@ -5,6 +5,7 @@ data/*.json
 data/*.csv
 data/svg/
 data/raw/
+data/std/
 build/
 *.bak
 *.gem

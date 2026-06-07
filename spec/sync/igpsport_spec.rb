@@ -43,8 +43,15 @@ RSpec.describe Workouts::Sync::IGPSPORT do
         allow(igp).to receive(:fetch_page).with(1).and_return(activities)
         allow(igp).to receive(:fetch_page).with(2).and_return([])
         allow(igp).to receive(:get_download_url).and_return("https://example.com/fit")
-        allow(igp).to receive(:download_fit).and_return(true)
-        allow(igp).to receive(:fit_to_polyline).and_return("polyline_string")
+        allow(igp).to receive(:download_fit).and_wrap_original { |_m, _url, id|
+          dir = "data/raw/igpsport"
+          FileUtils.mkdir_p(dir)
+          File.write("#{dir}/#{id}.fit", "")
+        }
+        allow(Workouts::FIT::Decoder).to receive(:decode).and_return([
+          { "positionLat" => 31.0, "positionLong" => 121.0, "timestamp" => 1149593880 }
+        ])
+        allow(igp).to receive(:write_standardized_json)
         allow(igp).to receive(:report_progress)
       end
 
@@ -59,7 +66,7 @@ RSpec.describe Workouts::Sync::IGPSPORT do
         expect(row[:run_id]).to match(/\Aigpsport_\d+\z/)
         expect(row[:source]).to eq("igpsport")
         expect(row[:sport_category]).to eq("ride")
-        expect(row[:summary_polyline]).to eq("polyline_string")
+        expect(row[:summary_polyline]).to eq("_ue|D_yoaV")
       end
 
       it "skips already synced activities" do
