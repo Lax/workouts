@@ -36,6 +36,10 @@ module Workouts
       @data[key]
     end
 
+    def dig(*keys)
+      @data.dig(*keys)
+    end
+
     def sync_config(source)
       @data.dig("sync", source) || {}
     end
