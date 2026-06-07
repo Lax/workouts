@@ -84,6 +84,7 @@ module Workouts
             <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
             <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
             <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+            <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/theme/dark.js"></script>
             <style>
               * { box-sizing: border-box; margin: 0; padding: 0; }
               body { background: #1a1a2e; color: #e0e0e0; font-family: -apple-system,BlinkMacSystemFont,sans-serif; min-height: 100vh; }
