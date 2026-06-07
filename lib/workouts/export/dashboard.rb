@@ -794,6 +794,14 @@ module Workouts
                   if (!a.polyline) return;
                   var pts = decodePolyline(a.polyline);
                   if (pts.length < 2) return;
+                  var minLat = pts[0][0], maxLat = pts[0][0], minLng = pts[0][1], maxLng = pts[0][1];
+                  for (var pi = 1; pi < pts.length; pi++) {
+                    if (pts[pi][0] < minLat) minLat = pts[pi][0];
+                    if (pts[pi][0] > maxLat) maxLat = pts[pi][0];
+                    if (pts[pi][1] < minLng) minLng = pts[pi][1];
+                    if (pts[pi][1] > maxLng) maxLng = pts[pi][1];
+                  }
+                  if (maxLat - minLat < 0.001 && maxLng - minLng < 0.001) return;
                   var color = state.colorMode === 'speed' ? speedColor(a.average_speed) : typeColor(a.type);
                   var yr = parseInt((a.start_date || '').slice(0,4));
                   var opacity = yr ? Math.max(0.12, 1 - (new Date().getFullYear() - yr) * 0.12) : 0.4;
