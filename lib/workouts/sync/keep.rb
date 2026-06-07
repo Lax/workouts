@@ -172,12 +172,17 @@ module Workouts
         return false unless run_data
 
         payload = decrypt_raw_payload(run_data)
+        keep_id = extract_id(run_data["id"])
+        return false unless keep_id
+
+        write_source_archive(payload, run_data, keep_id)
+
         wgs_points = compute_wgs_points(payload, run_data)
+        write_standardized_json(wgs_points, payload, run_data, keep_id)
 
         attrs = build_activity_from_wgs(run_data, wgs_points)
         return false unless attrs
 
-        write_raw_file(wgs_points, attrs[:run_id])
         upsert_activity(attrs)
         true
       rescue JSON::ParserError
@@ -260,18 +265,61 @@ module Workouts
         }
       end
 
-      def write_raw_file(wgs_points, run_id)
-        keep_id = run_id.sub("keep_", "")
+      def write_source_archive(payload, run_data, keep_id)
         dir = raw_dir
         FileUtils.mkdir_p(dir)
-        tmp = File.join(dir, ".#{keep_id}.#{KEEP_RAW_EXT}.tmp")
-        final = File.join(dir, "#{keep_id}.#{KEEP_RAW_EXT}")
-        File.write(tmp, JSON.generate(wgs_points.map { |lat, lng, alt, time, hr|
-          { latitude: lat, longitude: lng,
-            altitude: alt,
-            timestamp: time&.strftime("%Y-%m-%dT%H:%M:%SZ"),
-            heartrate: hr }
+        tmp = File.join(dir, ".#{keep_id}.json.tmp")
+        final = File.join(dir, "#{keep_id}.json")
+        File.write(tmp, JSON.generate({
+          source: "keep",
+          decodedAt: Time.now.utc.strftime("%Y-%m-%dT%H:%M:%SZ"),
+          meta: {
+            startTime: run_data["startTime"],
+            endTime: run_data["endTime"],
+            duration: run_data["duration"],
+            dataType: run_data["dataType"],
+            distance: run_data["distance"],
+            region: run_data["region"]
+          },
+          geoPoints: payload[:geo_points],
+          heartRates: payload[:hr_data]
         }))
+        File.rename(tmp, final)
+      end
+
+      def write_standardized_json(wgs_points, payload, run_data, keep_id)
+        geo_points = payload[:geo_points] || []
+        hr_data = payload[:hr_data]
+        start_time = run_data["startTime"]
+
+        extended = wgs_points.each_with_index.map do |pt, i|
+          orig = geo_points[i] || {}
+          ts = pt[3]
+          {
+            latitude: pt[0], longitude: pt[1], altitude: pt[2],
+            timestamp: ts&.strftime("%Y-%m-%dT%H:%M:%SZ"),
+            heartrate: pt[4],
+            speed: orig["speed"],
+            currentTotalDistance: orig["currentTotalDistance"],
+            currentTotalDuration: orig["currentTotalDuration"],
+            currentPace: orig["currentPace"],
+            pressure: orig["pressure"],
+            accuracyRadius: orig["accuracyRadius"],
+            verticalAccuracy: orig["verticalAccuracy"],
+            locationType: orig["locationType"],
+            isPause: orig["isPause"],
+            flags: orig["flags"],
+            processLabel: orig["processLabel"],
+            crossKmMark: orig["crossKmMark"],
+            currentTotalSteps: orig["currentTotalSteps"]
+          }
+        end
+
+        dir = std_dir
+        FileUtils.mkdir_p(dir)
+        tmp = File.join(dir, ".#{keep_id}.json.tmp")
+        final = File.join(dir, "#{keep_id}.json")
+        File.write(tmp, JSON.generate(extended))
         File.rename(tmp, final)
       end
 
