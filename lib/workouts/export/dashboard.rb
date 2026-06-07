@@ -108,13 +108,25 @@ module Workouts
               .filter-bar select:focus, .filter-bar input:focus { border-color: #4DD2FF; }
               .filter-bar select { cursor: pointer; min-width: 90px; }
               .filter-bar input[type="text"] { flex: 1; min-width: 150px; }
+              .filter-bar input[type="number"] { width: 60px; }
               .filter-bar .filter-label { color: #888; font-size: 0.75rem; margin-right: -4px; }
               .filter-bar .stat-hint { color: #4ECDC4; font-size: 0.8rem; margin-left: auto; white-space: nowrap; }
+              .filter-bar .dist-label { color: #888; font-size: 0.7rem; margin: 0 2px; }
+              .sort-btn { background: transparent; border: 1px solid #2a2a4a; color: #888; border-radius: 4px; padding: 2px 8px; font-size: 0.75rem; cursor: pointer; }
+              .sort-btn:hover { border-color: #4DD2FF; color: #4DD2FF; }
+              .sort-btn.active { border-color: #4DD2FF; color: #4DD2FF; }
 
-              .year-pills { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 1rem; }
+              .year-pills { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 1rem; align-items: center; }
               .year-pill { padding: 4px 14px; border-radius: 20px; border: 1px solid #2a2a4a; background: transparent; color: #888; cursor: pointer; font-size: 0.8rem; transition: all 0.2s; }
               .year-pill:hover { border-color: #4DD2FF; color: #4DD2FF; }
               .year-pill.active { background: #4DD2FF; color: #1a1a2e; border-color: #4DD2FF; font-weight: 600; }
+              .month-chip { padding: 4px 10px; border-radius: 20px; border: 1px solid #4ECDC4; background: transparent; color: #4ECDC4; cursor: pointer; font-size: 0.8rem; margin-left: 6px; }
+              .month-chip:hover { background: rgba(78,205,196,0.15); }
+              .month-chip .x { margin-left: 4px; font-weight: 700; }
+
+              .loading { text-align: center; padding: 3rem; color: #666; font-size: 0.9rem; }
+              .loading .spinner { display: inline-block; width: 24px; height: 24px; border: 3px solid #2a2a4a; border-top-color: #4DD2FF; border-radius: 50%; animation: spin 0.8s linear infinite; margin-bottom: 8px; }
+              @keyframes spin { to { transform: rotate(360deg); } }
 
               .main-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 1rem; }
               .chart-box { background: #16213e; border-radius: 12px; padding: 1rem; border: 1px solid #2a2a4a; min-height: 320px; }
@@ -136,6 +148,7 @@ module Workouts
               .act-item { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; padding: 10px 16px; border-bottom: 1px solid #222; cursor: pointer; transition: background 0.15s; align-items: center; }
               .act-item:hover { background: #0f3460; }
               .act-item.active { background: #1a3a6a; }
+              .act-item.hover { background: #1a3a6a; box-shadow: inset 3px 0 0 #4DD2FF; }
               .act-item .act-date { font-size: 0.75rem; color: #666; white-space: nowrap; min-width: 80px; }
               .act-item .act-name { font-size: 0.85rem; color: #ccc; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
               .act-item .act-name .src-badge { display: inline-block; font-size: 0.6rem; padding: 1px 6px; border-radius: 3px; margin-left: 6px; color: #888; background: #0f3460; }
@@ -179,6 +192,7 @@ module Workouts
                 <div class="stat-card"><span class="num" id="stat-time">0</span><span class="label">总时长 (h)</span></div>
                 <div class="stat-card"><span class="num" id="stat-elev">0</span><span class="label">总爬升 (m)</span></div>
               </div>
+              <div class="loading" id="loading"><div class="spinner"></div><br>加载中...</div>
 
               <div class="year-pills" id="year-pills"></div>
 
@@ -187,7 +201,12 @@ module Workouts
                 <select id="filter-type"><option value="all">全部</option></select>
                 <span class="filter-label">来源</span>
                 <select id="filter-source"><option value="all">全部</option></select>
-                <input type="text" id="filter-search" placeholder="搜索活动名称...">
+                <span class="filter-label">距离</span>
+                <input type="number" id="filter-dist-min" placeholder="0" min="0" step="0.5" value="">
+                <span class="dist-label">—</span>
+                <input type="number" id="filter-dist-max" placeholder="∞" min="0" step="0.5" value="">
+                <span class="dist-label">km</span>
+                <input type="text" id="filter-search" placeholder="搜索名称...">
                 <span class="stat-hint" id="filter-hint"></span>
               </div>
 
@@ -209,7 +228,12 @@ module Workouts
               <div class="list-box">
                 <div class="list-header">
                   <span>活动列表</span>
-                  <span class="count" id="list-count">0</span>
+                  <span style="display:flex;gap:4px;align-items:center">
+                    <button class="sort-btn active" data-sort="date" onclick="setSort('date')">日期</button>
+                    <button class="sort-btn" data-sort="dist" onclick="setSort('dist')">距离</button>
+                    <button class="sort-btn" data-sort="time" onclick="setSort('time')">时间</button>
+                    <span class="count" id="list-count" style="margin-left:6px">0</span>
+                  </span>
                 </div>
                 <div class="list-body" id="list-body"></div>
               </div>
@@ -269,7 +293,7 @@ module Workouts
               function typeColor(t) { return CAT_COLORS[t] || '#888'; }
               function srcColor(s) { return SRC_COLORS[s] || '#888'; }
 
-              var state = { activities: [], filtered: [], map: null, polylines: [], chart: null, chartSmall: null, activeId: null, chartReady: false, chartSmallReady: false };
+              var state = { activities: [], filtered: [], map: null, chart: null, chartSmall: null, activeId: null, chartReady: false, monthFilter: null, sortBy: 'date', sortDesc: true, polylineMap: {} };
 
     function init() {
       Promise.all([
@@ -284,6 +308,7 @@ module Workouts
       ]).then(function(results) {
         state.activities = results[0];
         var stats = results[1];
+        document.getElementById('loading').style.display = 'none';
         initFilters(stats);
         try {
           state.chart = echarts.init(document.getElementById('chart'), 'dark');
@@ -299,8 +324,9 @@ module Workouts
         applyFilters();
       }).catch(function(e) {
         console.error('Dashboard init error:', e);
+        document.getElementById('loading').style.display = 'none';
         var el = document.getElementById('stats-row');
-        if (el) el.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:2rem;color:#ff6b6b">Error loading data: ' + e.message + '</div>';
+        if (el) el.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:2rem;color:#ff6b6b">Error: ' + e.message + '</div>';
       });
     }
 
@@ -357,11 +383,16 @@ module Workouts
 
               function getFilters() {
                 var activePill = document.querySelector('.year-pill.active');
+                var distMin = parseFloat(document.getElementById('filter-dist-min').value) || 0;
+                var distMax = parseFloat(document.getElementById('filter-dist-max').value) || Infinity;
                 return {
                   year: activePill ? activePill.dataset.year : 'all',
                   type: document.getElementById('filter-type').value,
                   source: document.getElementById('filter-source').value,
-                  search: document.getElementById('filter-search').value.toLowerCase()
+                  search: document.getElementById('filter-search').value.toLowerCase(),
+                  month: state.monthFilter,
+                  distMin: distMin,
+                  distMax: distMax
                 };
               }
 
@@ -371,17 +402,61 @@ module Workouts
                   if (f.year !== 'all' && fmtYear(a.start_date) !== f.year) return false;
                   if (f.type !== 'all' && a.type !== f.type) return false;
                   if (f.source !== 'all' && a.source !== f.source) return false;
+                  if (f.month && (!a.start_date || a.start_date.indexOf(f.month) !== 0)) return false;
                   if (f.search) {
                     var name = (a.name || '').toLowerCase();
                     if (name.indexOf(f.search) === -1) return false;
                   }
+                  var dk = distKm(a);
+                  if (dk < f.distMin || dk > f.distMax) return false;
                   return true;
                 });
+                state.filtered.sort(function(a, b) {
+                  var va, vb;
+                  if (state.sortBy === 'date') {
+                    va = a.start_date || ''; vb = b.start_date || '';
+                    return state.sortDesc ? (va < vb ? 1 : va > vb ? -1 : 0) : (va < vb ? -1 : va > vb ? 1 : 0);
+                  } else if (state.sortBy === 'dist') {
+                    va = a.distance || 0; vb = b.distance || 0;
+                    return state.sortDesc ? vb - va : va - vb;
+                  } else {
+                    va = a.moving_time || 0; vb = b.moving_time || 0;
+                    return state.sortDesc ? vb - va : va - vb;
+                  }
+                });
+                renderMonthChip();
                 renderStats();
                 renderChart();
                 renderChartSmall();
                 renderMap();
                 renderList();
+              }
+
+              function setSort(field) {
+                if (state.sortBy === field) { state.sortDesc = !state.sortDesc; }
+                else { state.sortBy = field; state.sortDesc = true; }
+                document.querySelectorAll('.sort-btn').forEach(function(b) {
+                  b.classList.toggle('active', b.dataset.sort === field);
+                });
+                applyFilters();
+              }
+
+              function clearMonthFilter() {
+                state.monthFilter = null;
+                applyFilters();
+              }
+
+              function renderMonthChip() {
+                var container = document.getElementById('year-pills');
+                var existing = container.querySelector('.month-chip');
+                if (existing) existing.remove();
+                if (state.monthFilter) {
+                  var chip = document.createElement('span');
+                  chip.className = 'month-chip';
+                  chip.innerHTML = state.monthFilter + ' <span class="x" onclick="clearMonthFilter()">&times;</span>';
+                  chip.onclick = clearMonthFilter;
+                  container.appendChild(chip);
+                }
               }
 
               function renderStats() {
@@ -420,6 +495,27 @@ module Workouts
                   var item = e.target.closest('.act-item');
                   if (item) showActivity(item.dataset.id);
                 };
+                body.onmouseover = function(e) {
+                  var item = e.target.closest('.act-item');
+                  if (item) highlightMap(item.dataset.id);
+                };
+                body.onmouseout = function(e) {
+                  var item = e.target.closest('.act-item');
+                  if (item) unhighlightMap();
+                };
+              }
+
+              function highlightMap(id) {
+                Object.keys(state.polylineMap).forEach(function(k) {
+                  state.polylineMap[k].setStyle({ weight: 1.5, opacity: 0.2 });
+                });
+                var line = state.polylineMap[id];
+                if (line) line.setStyle({ weight: 4, opacity: 1, color: '#4DD2FF' });
+              }
+              function unhighlightMap() {
+                Object.keys(state.polylineMap).forEach(function(k) {
+                  state.polylineMap[k].setStyle({ weight: 1.5, opacity: 0.5 });
+                });
               }
 
               function renderChart() {
@@ -441,8 +537,11 @@ module Workouts
                 state.chart.setOption(option, true);
                 if (!state.chartReady) {
                   state.chart.on('click', function(p) {
+                    if (!p || !p.dataIndex) return;
                     var m = months[p.dataIndex];
-                    setYear(m.slice(0,4));
+                    if (!m) return;
+                    state.monthFilter = (state.monthFilter === m) ? null : m;
+                    applyFilters();
                   });
                   state.chartReady = true;
                 }
@@ -472,11 +571,9 @@ module Workouts
                 state.chartSmall.setOption(option, true);
               }
 
-              var mapPolylines = [];
-
               function renderMap() {
-                mapPolylines.forEach(function(l) { state.map.removeLayer(l); });
-                mapPolylines = [];
+                Object.keys(state.polylineMap).forEach(function(id) { state.map.removeLayer(state.polylineMap[id]); });
+                state.polylineMap = {};
                 if (state.filtered.length === 0) return;
                 var allPoints = [];
                 var maxLines = 500;
@@ -492,7 +589,9 @@ module Workouts
                   });
                   line.bindTooltip((a.name || '') + ' — ' + distKm(a).toFixed(1) + 'km', { direction: 'top' });
                   line.on('click', function() { showActivity(a.run_id); });
-                  mapPolylines.push(line);
+                  line.on('mouseover', function() { highlightList(a.run_id); });
+                  line.on('mouseout', function() { unhighlightList(); });
+                  state.polylineMap[a.run_id] = line;
                   line.addTo(state.map);
                   allPoints = allPoints.concat(pts);
                 });
@@ -500,6 +599,15 @@ module Workouts
                   var bounds = L.latLngBounds(allPoints);
                   if (bounds.isValid()) { state.map.fitBounds(bounds.pad(0.05)); }
                 }
+              }
+
+              function highlightList(id) {
+                document.querySelectorAll('.act-item').forEach(function(el) { el.classList.remove('hover'); });
+                var el = document.querySelector('.act-item[data-id="' + escAttr(id) + '"]');
+                if (el) el.classList.add('hover');
+              }
+              function unhighlightList() {
+                document.querySelectorAll('.act-item').forEach(function(el) { el.classList.remove('hover'); });
               }
 
               function showActivity(runId) {
@@ -537,16 +645,17 @@ module Workouts
                 }
               }
 
-              document.getElementById('modal-close').onclick = function() {
+              function closeModal() {
                 document.getElementById('modal').classList.remove('show');
                 if (state.modalMap) { state.modalMap.remove(); state.modalMap = null; }
-              };
+              }
+              document.getElementById('modal-close').onclick = closeModal;
               document.getElementById('modal').onclick = function(e) {
-                if (e.target === this) {
-                  this.classList.remove('show');
-                  if (state.modalMap) { state.modalMap.remove(); state.modalMap = null; }
-                }
+                if (e.target === this) closeModal();
               };
+              document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape') { closeModal(); }
+              });
 
               function escHtml(s) {
                 if (!s) return '';
