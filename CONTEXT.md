@@ -70,7 +70,7 @@ lib/workouts/cli/sync.rb         # 同步子模块（sync, auth）
 | **XingZhe** | imxingzhe.com (行者) | RSA 加密密码 + session Cookie | 行者国内版 |
 | **Garmin CN** | garmin.cn | SSO + OAuth1→OAuth2 | token 文件持久化 + OAuth1 自动 refresh |
 | **Garmin** | garmin.com | SSO + OAuth1→OAuth2（CF 429 封禁中）| 支持 garth secret_string 替代方案 |
-| **Strava** | strava.com | OAuth2 refresh_token | 待配置 |
+| **Strava** | strava.com | OAuth2 refresh_token | 已配置，含多源去重检测 |
 
 ### 数据流程
 
@@ -98,7 +98,28 @@ lib/workouts/cli/sync.rb         # 同步子模块（sync, auth）
 
 ### 去重机制
 
-基于 `run_id` 字段（格式：`{source}_{platform_id}`），每次同步前读取 DB 中已有 ID 列表，跳过重复。
+#### 一级去重：`run_id`
+
+基于 `run_id` 字段（格式：`{source}_{platform_id}`），每次同步前读取 DB 中已有 ID 列表，跳过完全重复的活动。这是第一道防线，防止同一活动的重复导入。
+
+#### 二级去重：多源置信度打分
+
+Strava 适配器在同步完成后会执行 `recheck_duplicates`，用置信度算法扫描 Strava 活动与其它来源（Keep、iGPSPORT 等）的匹配情况。算法考虑三个因子：
+
+- **时间相近度**（权重 40%）：开始时间差 ≤ 5 分钟，越近得分越高
+- **距离相近度**（权重 40%）：距离差 ≤ 较大值的 15%
+- **时长相近度**（权重 20%）：运动时长差 ≤ 较大值的 15%
+
+综合置信度 ≥ 0.15 即视为匹配，结果写入 `duplicate_info` 列（JSON 数组）：
+
+```json
+[{"source": "keep", "run_id": "keep_xxx", "confidence": 0.92, "flag": "derived"}]
+```
+
+- `confidence ≥ 0.85` → flag 为 `"derived"`（极可能是同一活动）
+- `0.15 ≤ confidence < 0.85` → flag 为 `"overlap"`（部分重叠，需人工判断）
+
+SVG 导出时，标注上会区分 derived（高置信度合并）和 overlap（低置信度重叠），鼠标悬停显示匹配来源和评分。
 
 ---
 
@@ -124,6 +145,7 @@ CREATE TABLE activities (
   average_speed REAL,                       -- m/s
   elevation_gain REAL,
   source       TEXT,                        -- 来源标识
+  duplicate_info TEXT,                      -- 去重匹配信息（JSON 数组）
   created_at   DATETIME,
   updated_at   DATETIME
 );
@@ -353,17 +375,17 @@ L1 ──→ L2 ──→ L3 ──→ L4 (build job)
 
 ## 项目状态
 
-### 数据库（971 条活动）
+### 数据库（1104 条活动）
 
 | 来源 | 数量 |
 |---|---|
-| Keep | 837（838 条原始 GPS 已备份，21MB） |
-| iGPSPORT | 56 |
+| Keep | 838 |
+| Strava | 131 |
+| iGPSPORT | 57 |
 | XOSS | 44 |
 | XingZhe | 34 |
 | Garmin CN | 0（已认证，账号无记录） |
 | Garmin 国际版 | CF 429 封禁 |
-| Strava | 待配置 |
 
 ### 原始 GPS 文件（GH Cache）
 
@@ -428,13 +450,16 @@ for record in messages["record_mesgs"]:
 
 ### 测试
 
-RSpec 116 例，0 失败。覆盖：
+RSpec 263 例，0 失败。覆盖：
 - Config（YAML 加载 + env var merge + 未知 key 警告）
 - Geo（坐标转换 3 套 + Polyline 编解码）
 - Privacy（起终点偏移过滤）
 - Parser（GPX + TCX 活动/轨迹/心率解析）
-- Export（JSON + CSV 输出格式）
+- Export（JSON + CSV + SVG 输出格式）
 - SportMapper（alias + keyword + Levenshtein）
+- Sync（每个适配器的 call/build_attrs/map_sport 测试）
+- Keep 解密管线（geo/HR/WGS 坐标转换）
+- FIT 解码器（GPS 坐标范围、字段保留）
 
 ---
 
@@ -458,7 +483,6 @@ RSpec 116 例，0 失败。覆盖：
 | 项 | 工作量 | 说明 |
 |---|---|---|
 | 统一错误处理 | 0.5d | 定义 `SyncError` 基类，统一 rescue 模式 |
-| README.md | 1d | 项目文档（安装/配置/使用/架构） |
 
 ### 已关闭
 
@@ -477,4 +501,7 @@ RSpec 116 例，0 失败。覆盖：
 | SVG footer rebrand | ✅ 已完成 |
 | LICENSE.txt + 移除 email 占位符 | ✅ 已完成 |
 | GitHub Pages 部署 | ✅ 已完成 |
+| 多源去重检测（confidence scoring + SVG 标注） | ✅ 已完成 |
+| Strava OAuth 自动 refresh + L1/L2/L3 数据链路 | ✅ 已完成 |
+| Strava 测试夹具 + 集成测试 | ✅ 已完成 |
 | 品牌一致性审计 | ✅ 已完成 |
