@@ -74,7 +74,15 @@ module Workouts
         return false unless url
 
         download_fit(url, ride_id)
-        polyline = fit_to_polyline(ride_id)
+
+        fit_path = raw_path(ride_id)
+        return false unless File.exist?(fit_path)
+
+        wgs_points = FIT::Decoder.decode(fit_path)
+        return false if wgs_points.empty?
+
+        write_standardized_json(wgs_points, ride_id)
+        polyline = Geo::Polyline.encode(wgs_points.map { |pt| [pt["positionLat"], pt["positionLong"]] })
 
         attrs = build_attrs(act, ride_id, polyline)
         return false unless attrs
@@ -109,7 +117,16 @@ module Workouts
         wgs_points = FIT::Decoder.decode(fit_path)
         return nil if wgs_points.empty?
 
-        Geo::Polyline.encode(wgs_points.map { |pt| [pt[0], pt[1]] })
+        Geo::Polyline.encode(wgs_points.map { |pt| [pt["positionLat"], pt["positionLong"]] })
+      end
+
+      def write_standardized_json(wgs_points, ride_id)
+        dir = l2_dir
+        FileUtils.mkdir_p(dir)
+        tmp = File.join(dir, ".#{ride_id}.json.tmp")
+        final = File.join(dir, "#{ride_id}.json")
+        File.write(tmp, JSON.generate(wgs_points))
+        File.rename(tmp, final)
       end
 
       def fetch_page(page)

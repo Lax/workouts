@@ -27,7 +27,9 @@ jobs:
       - uses: actions/cache/restore@v4
         id: raw-cache
         with:
-          path: data/raw/
+          path: |
+            data/raw/
+            data/std/
           key: workouts-raw-v1-${{ github.run_id }}
           restore-keys: workouts-raw-v1-
 
@@ -38,7 +40,7 @@ jobs:
       - name: Record raw digest
         id: raw-before
         run: |
-          count=$(find data/raw/ -type f 2>/dev/null | wc -l)
+          count=$(find data/raw/ data/std/ -type f 2>/dev/null | wc -l)
           echo "count=$count" >> $GITHUB_OUTPUT
 
       - name: Sync
@@ -115,7 +117,7 @@ jobs:
         id: raw-changed
         run: |
           before=${{ steps.raw-before.outputs.count }}
-          after=$(find data/raw/ -type f 2>/dev/null | wc -l)
+          after=$(find data/raw/ data/std/ -type f 2>/dev/null | wc -l)
           echo "changed=$([ "$before" != "$after" ] && echo true || echo false)" >> $GITHUB_OUTPUT
 
       - uses: actions/cache/save@v4
@@ -127,7 +129,9 @@ jobs:
       - uses: actions/cache/save@v4
         if: steps.raw-changed.outputs.changed == 'true'
         with:
-          path: data/raw/
+          path: |
+            data/raw/
+            data/std/
           key: ${{ steps.raw-cache.outputs.cache-primary-key }}
 
       - uses: actions/upload-artifact@v4
