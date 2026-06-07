@@ -51,7 +51,7 @@ module Workouts
       end
 
       def report_progress(count, total = nil)
-        return if skip_progress?(count, total)
+        return unless show_progress?(count, total)
 
         @progress_reported = true
         tally = Tally.new(count)
@@ -62,19 +62,17 @@ module Workouts
         $stdout.flush
       end
 
-      def skip_progress?(count, total)
-        return false if count <= 50
+      def show_progress?(count, total)
+        return true if count == 1
+        return true if total && (total - count) <= 50
 
-        remaining = total ? total - count : Float::INFINITY
-        return false if remaining <= 50
+        step = progress_step(total)
+        step <= 1 || count % step == 0
+      end
 
-        if count > 100 && remaining > 100
-          count % 10 != 0
-        elsif count > 50 && remaining > 50
-          count % 5 != 0
-        else
-          false
-        end
+      def progress_step(total)
+        return 1 unless total && total > 0
+        [1, (1.5 * (total ** 0.4)).to_i].max
       end
 
       def source_label
