@@ -1,0 +1,172 @@
+{
+  "resource_state": 3,
+  "athlete": {
+    "id": 47624555,
+    "resource_state": 1
+  },
+  "name": "晚上 骑行",
+  "distance": 1740.9,
+  "moving_time": 526,
+  "elapsed_time": 526,
+  "total_elevation_gain": 0.0,
+  "type": "Ride",
+  "sport_type": "Ride",
+  "workout_type": null,
+  "device_name": "XOSS SPRINT",
+  "id": 13695388943,
+  "start_date": "2025-02-22T13:09:21Z",
+  "start_date_local": "2025-02-22T21:09:21Z",
+  "timezone": "(GMT+08:00) Asia/Shanghai",
+  "utc_offset": 28800.0,
+  "location_city": null,
+  "location_state": null,
+  "location_country": null,
+  "achievement_count": 0,
+  "kudos_count": 0,
+  "comment_count": 0,
+  "athlete_count": 1,
+  "photo_count": 0,
+  "map": {
+    "id": "a13695388943",
+    "polyline": "_oj_Fisr|T@TM~AOZK@KF[DIAy@@eACuA?SC{AASCyA?s@ICOC_@BaBDYHCv@DrAEj@Ff@Mv@@h@AdBHHDJ@j@?t@BFBDJCvAFn@GTMNe@@}@GyA?[CkA?k@Ey@?MCe@?YCQ@]C]KECAY@eBB]@CJEX?XFzAGZHJ?z@OV?l@Bx@?h@F\\Hb@@NDBLC~ACREFDYD{A?QCG[GU?EBAHGjB?FD@",
+    "resource_state": 3,
+    "summary_polyline": "euj_Finr|TiBASC{AASCyA?s@ICOCe@B{ADYHCN?f@DT?NCl@Aj@Ff@Mv@@h@AdBHHDJ@hA@V@FBFPEpAFn@MZGHG@_AA[EyA?[CkA?k@Ey@?MCe@?YCQ@m@GSKAY@eBDa@JEX?XFzAG`@H"
+  },
+  "trainer": false,
+  "commute": false,
+  "manual": false,
+  "private": false,
+  "visibility": "everyone",
+  "flagged": false,
+  "gear_id": null,
+  "start_latlng": [
+    36.759042,
+    114.952376
+  ],
+  "end_latlng": [
+    36.759707,
+    114.951872
+  ],
+  "average_speed": 3.31,
+  "max_speed": 4.32,
+  "average_temp": 11,
+  "has_heartrate": false,
+  "heartrate_opt_out": false,
+  "display_hide_heartrate_option": false,
+  "elev_high": 43.0,
+  "elev_low": 15.0,
+  "upload_id": 14615011580,
+  "upload_id_str": "14615011580",
+  "external_id": "cf685dac-3098-4af7-b6c6-9c0c7e0a03f2.fit",
+  "from_accepted_tag": false,
+  "pr_count": 0,
+  "total_photo_count": 0,
+  "has_kudoed": false,
+  "description": null,
+  "calories": 41.0,
+  "perceived_exertion": null,
+  "prefer_perceived_exertion": null,
+  "segment_efforts": [],
+  "splits_metric": [
+    {
+      "distance": 1002.3,
+      "elapsed_time": 300,
+      "elevation_difference": -16.0,
+      "moving_time": 300,
+      "split": 1,
+      "average_speed": 3.34,
+      "average_grade_adjusted_speed": null,
+      "pace_zone": 0
+    },
+    {
+      "distance": 738.6,
+      "elapsed_time": 226,
+      "elevation_difference": 2.0,
+      "moving_time": 226,
+      "split": 2,
+      "average_speed": 3.27,
+      "average_grade_adjusted_speed": null,
+      "pace_zone": 0
+    }
+  ],
+  "splits_standard": [
+    {
+      "distance": 1611.7,
+      "elapsed_time": 480,
+      "elevation_difference": -13.0,
+      "moving_time": 480,
+      "split": 1,
+      "average_speed": 3.36,
+      "average_grade_adjusted_speed": null,
+      "pace_zone": 0
+    },
+    {
+      "distance": 129.2,
+      "elapsed_time": 46,
+      "elevation_difference": -1.0,
+      "moving_time": 46,
+      "split": 2,
+      "average_speed": 2.81,
+      "average_grade_adjusted_speed": null,
+      "pace_zone": 0
+    }
+  ],
+  "laps": [
+    {
+      "id": 48457408094,
+      "resource_state": 2,
+      "name": "Lap 1",
+      "activity": {
+        "id": 13695388943,
+        "visibility": "everyone",
+        "resource_state": 1
+      },
+      "athlete": {
+        "id": 47624555,
+        "resource_state": 1
+      },
+      "elapsed_time": 526,
+      "moving_time": 526,
+      "start_date": "2025-02-22T13:09:21Z",
+      "start_date_local": "2025-02-22T21:09:21Z",
+      "distance": 1740.9,
+      "average_speed": 3.31,
+      "max_speed": 4.32,
+      "lap_index": 1,
+      "split": 1,
+      "start_index": 0,
+      "end_index": 340,
+      "total_elevation_gain": 27.0,
+      "device_watts": false
+    }
+  ],
+  "photos": {
+    "primary": null,
+    "count": 0
+  },
+  "stats_visibility": [
+    {
+      "type": "heart_rate",
+      "visibility": "everyone"
+    },
+    {
+      "type": "pace",
+      "visibility": "everyone"
+    },
+    {
+      "type": "power",
+      "visibility": "everyone"
+    },
+    {
+      "type": "speed",
+      "visibility": "everyone"
+    },
+    {
+      "type": "calories",
+      "visibility": "everyone"
+    }
+  ],
+  "hide_from_home": false,
+  "embed_token": "d41fdaae7342598018b374792067a4ed9c2db16c",
+  "available_zones": []
+}
