@@ -37,14 +37,14 @@ module Workouts
         File.exist?(raw_path(platform_id))
       end
 
-      def l2_dir
+      def std_dir
         src = self.class.name.split("::").last.downcase
         src = "garmin" if src.start_with?("garmin")
         File.join("data", "std", src)
       end
 
-      def l2_path(platform_id, ext = "json")
-        File.join(l2_dir, "#{platform_id}.#{ext}")
+      def std_path(platform_id, ext = "json")
+        File.join(std_dir, "#{platform_id}.#{ext}")
       end
 
       def report_progress(count, total = nil)
