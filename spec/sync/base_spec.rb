@@ -7,55 +7,37 @@ RSpec.describe Workouts::Sync::Base do
   let(:activity_filter) { nil }
   let(:time_budget) { nil }
 
-  describe "#skip_progress?" do
-    subject { adapter.send(:skip_progress?, count, total) }
+  describe "#show_progress?" do
+    subject { adapter.send(:show_progress?, count, total) }
     let(:total) { nil }
 
-    context "when count ≤ 50" do
-      let(:count) { 50 }
-      it { is_expected.to be false }
-    end
-
-    context "when count 51, remaining > 50" do
-      let(:count) { 51 }
-      let(:total) { 200 }
+    context "when count is 1" do
+      let(:count) { 1 }
       it { is_expected.to be true }
     end
 
-    context "when count 100, total 101 (remaining ≤ 50)" do
+    context "when remaining ≤ 50" do
       let(:count) { 100 }
       let(:total) { 101 }
-      it { is_expected.to be false }
-    end
-
-    context "when count 101, remaining > 100 (not divisible by 10)" do
-      let(:count) { 101 }
-      let(:total) { 300 }
       it { is_expected.to be true }
     end
 
-    context "when count 110, remaining > 100 (divisible by 10)" do
-      let(:count) { 110 }
-      let(:total) { 300 }
-      it { is_expected.to be false }
-    end
-
-    context "when count 57, remaining > 50 (not divisible by 5)" do
-      let(:count) { 57 }
+    context "when count is on step boundary" do
       let(:total) { 200 }
-      it { is_expected.to be true }
-    end
-
-    context "when count 55, total 60 (remaining ≤ 50)" do
-      let(:count) { 55 }
-      let(:total) { 60 }
-      it { is_expected.to be false }
-    end
-
-    context "when count 60, remaining > 50 (divisible by 5)" do
+      # step = max(1, 1.5 * 200^0.4) = 12
       let(:count) { 60 }
+      it { is_expected.to be true }
+    end
+
+    context "when count is off step boundary" do
       let(:total) { 200 }
+      let(:count) { 57 }
       it { is_expected.to be false }
+    end
+
+    context "when total is nil (infinite)" do
+      let(:count) { 50 }
+      it { is_expected.to be true }
     end
   end
 
