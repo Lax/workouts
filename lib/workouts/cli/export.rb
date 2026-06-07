@@ -80,11 +80,37 @@ module Workouts
       say_status :done, "Generated #{style} poster with #{count} activities → #{path}", :green
     end
 
+    desc "stats", "Export activity statistics"
+    option :output, type: :string, aliases: "-o", desc: "Output path"
+    option :activity, type: :array, desc: "Filter by sport type", aliases: "--act"
+    def stats
+      config = Workouts::Config.new
+      db = Workouts::DB::Connection.new(config.db_path).db
+      path = options[:output] || config.export_config.dig("stats", "path") || "build/stats.json"
+      filter = options[:activity]&.map(&:strip)&.map(&:downcase)
+      count = Export::Stats.new(db: db, output: path, activity_filter: filter).call
+      say_status :done, "Exported stats for #{count} activities → #{path}", :green
+    end
+
+    desc "html", "Generate HTML site (index + activity detail pages)"
+    option :output, type: :string, aliases: "-o", desc: "Output directory"
+    option :activity, type: :array, desc: "Filter by sport type", aliases: "--act"
+    def html
+      config = Workouts::Config.new
+      db = Workouts::DB::Connection.new(config.db_path).db
+      outdir = options[:output] || "build"
+      filter = options[:activity]&.map(&:strip)&.map(&:downcase)
+      Export::HTML.new(db: db, output: outdir, activity_filter: filter).call
+      say_status :done, "Generated HTML site → #{outdir}/", :green
+    end
+
     desc "all", "Export all formats"
     option :activity, type: :array, desc: "Filter by sport type", aliases: "--act"
     def all
       invoke :json, [], options
       invoke :csv, [], options
+      invoke :stats, [], options
+      invoke :html, [], options
       say_status :done, "All exports complete", :green
     end
   end
