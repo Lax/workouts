@@ -97,13 +97,12 @@ module Workouts
 
         private
 
-        # Dominant selection uses raw ratio (d / REF).
-        # Any monotonic transform would yield the same winner — no transform needed.
+        # Dominant selection uses effective length (duplicates reduced)
         def dominant_category(tracks_by_cat)
           best_cat = nil
           best_val = -1.0
           tracks_by_cat.each do |cat, tracks|
-            total_m = tracks.sum(&:length)
+            total_m = tracks.sum(&:effective_length)
             ref = REFERENCE[cat]
             next unless ref && ref > 0
             val = total_m / ref.to_f
@@ -113,13 +112,14 @@ module Workouts
             end
           end
           best_cat ||= tracks_by_cat.keys.first
-          total_m = tracks_by_cat[best_cat].sum(&:length)
+          total_m = tracks_by_cat[best_cat].sum(&:effective_length)
           [best_cat, total_m]
         end
 
         def group_by_date_and_category
           h = {}
           poster.tracks.each do |t|
+            next if t.skip?
             date_key = t.date.to_date.to_s
             cat = t.sport_category
             h[date_key] ||= {}
@@ -128,17 +128,11 @@ module Workouts
           h
         end
 
-        # Intensity transform: power^0.3
-        # Compared options for the skewed per-category distance distribution:
-        #   linear  — 82% of color scale wasted on tail outliers
-        #   log     — compresses low-end worse than power
-        #   CDF     — best visual distribution but unstable as data grows
-        # Power^0.3 is a pragmatic balance: simple, stable, good-enough low-end spread.
         def compute_per_category_max(track_by_date)
           maxes = Hash.new(0.0)
           track_by_date.each_value do |cats|
             cats.each do |cat, tracks|
-              len = tracks.sum(&:length)
+              len = tracks.sum(&:effective_length)
               maxes[cat] = len if len > maxes[cat]
             end
           end
@@ -149,14 +143,48 @@ module Workouts
           all = tracks_by_cat.values.flatten
           if all.size == 1
             t = all.first
-            "#{date_key}  #{t.sport_category}  #{format_dist(t.length)}  #{format_time(t.moving_time)}"
+            "#{date_key}  #{t.sport_category}  #{format_dist(t.effective_length)}  #{format_time(t.moving_time)}"
           else
             lines = [date_key]
+            imported = []
+            conflicts = []
+            normal = []
             all.each do |t|
-              lines << "  #{t.sport_category}  #{format_dist(t.length)}  #{format_time(t.moving_time)}"
+              if t.skip?
+                imported << t
+              elsif t.conflict?
+                conflicts << t
+              else
+                normal << t
+              end
+            end
+
+            normal.each do |t|
+              lines << "  #{source_short(t)} #{t.sport_category}  #{format_dist(t.effective_length)}  #{format_time(t.moving_time)}"
+            end
+            conflicts.each do |t|
+              dup_src = t.duplicate_source || "unknown"
+              lines << "  #{source_short(t)} #{t.sport_category}  #{format_dist(t.effective_length)}  #{format_time(t.moving_time)}  ⚠ overlap with #{dup_src}"
+            end
+            imported.each do |t|
+              dup_src = t.duplicate_source || "unknown"
+              lines << "  #{source_short(t)} #{t.sport_category}  #{format_dist(t.length)}  #{format_time(t.moving_time)}  ⚠ derived from #{dup_src}"
+            end
+
+            total_eff = all.sum(&:effective_length)
+            total_raw = all.sum(&:length)
+            excluded = total_raw - total_eff
+            if excluded > 0
+              lines << ""
+              lines << "  cell: #{format_dist(total_eff)}  excluded: #{format_dist(excluded)}"
             end
             lines.join("\n")
           end
+        end
+
+        def source_short(track)
+          run_id = track.instance_variable_get(:@run_id).to_s
+          run_id.sub(/_\d+\z/, "").sub(/_/, "")
         end
 
         def format_dist(meters)
@@ -175,7 +203,7 @@ module Workouts
 
         def total_length_by_year
           h = Hash.new(0.0)
-          poster.tracks.each { |t| h[t.year] += t.length }
+          poster.tracks.each { |t| h[t.year] += t.effective_length }
           h
         end
 

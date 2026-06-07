@@ -5,6 +5,7 @@ module Workouts
     class Strava < Base
       BASE_URL = "https://www.strava.com/api/v3"
       MAX_DETAIL_CALLS = 5
+      DUPLICATE_SOURCES = %w[keep xingzhe xoss igpsport garmin garmin_cn].freeze
 
       def call
         @start_time = Time.now
@@ -13,7 +14,9 @@ module Workouts
         access_token = refresh_access_token
         return 0 unless access_token
 
-        sync_activities(access_token)
+        count = sync_activities(access_token)
+        recheck_duplicates
+        count
       end
 
       private
@@ -65,6 +68,9 @@ module Workouts
       end
 
       def sync_activity(act, act_id, token)
+          dup_info = find_best_match(act["start_date"], act["distance"], act["moving_time"],
+                                   map_sport_type(act["type"], act["sport_type"]))
+
         detail = fetch_detail(act_id, token)
         return false unless detail
 
@@ -80,7 +86,7 @@ module Workouts
         type = map_sport_type(act["type"], act["sport_type"])
         return false if skip_type?(type)
 
-        attrs = build_attrs(act, type, polyline)
+        attrs = build_attrs(act, type, polyline, dup_info)
         upsert_activity(attrs)
         true
       end
@@ -160,7 +166,64 @@ module Workouts
         File.rename(tmp, final)
       end
 
-      def build_attrs(act, category, polyline = nil)
+      def recheck_duplicates
+        rows = @db[:activities].where(source: "strava").all
+        rows.each do |s|
+          next unless s[:distance] && s[:distance] > 100
+          best = find_best_match(s[:start_date], s[:distance], s[:moving_time], s[:sport_category])
+          new_json = best && best[:confidence] > 0.15 ? JSON.generate([best]) : nil
+          current = s[:duplicate_info]
+          next if new_json == current || (new_json && current && JSON.parse(new_json) == JSON.parse(current))
+          @db[:activities].where(run_id: s[:run_id]).update(duplicate_info: new_json)
+        end
+        nil
+      end
+
+      def find_best_match(start_date, distance, moving_time, category)
+        return nil unless distance && distance > 100
+
+        candidates = @db[:activities]
+          .where(source: DUPLICATE_SOURCES, sport_category: category)
+          .exclude(distance: nil)
+          .all
+
+        best = nil
+        best_conf = 0.0
+
+        candidates.each do |c|
+          t_diff = begin
+            (Time.parse(start_date) - Time.parse(c[:start_date].to_s)).abs
+          rescue
+            9999
+          end
+          next if t_diff > 300
+
+          max_dist = [distance, c[:distance] || 0].max
+          d_diff = (distance - (c[:distance] || 0)).abs
+          next if max_dist == 0 || d_diff > max_dist * 0.15
+
+          max_dur = [moving_time, c[:moving_time] || 0].max
+          dur_diff = (moving_time - (c[:moving_time] || 0)).abs
+
+          t_score = [1.0 - t_diff / 300.0, 0.0].max
+          d_score = max_dist > 0 ? [1.0 - d_diff / (max_dist * 0.15), 0.0].max : 0.0
+          dur_score = max_dur > 0 && dur_diff <= max_dur * 0.15 ? [1.0 - dur_diff / (max_dur * 0.15), 0.0].max : 0.0
+          conf = (t_score * 0.4 + d_score * 0.4 + dur_score * 0.2).round(4)
+
+          if conf > best_conf
+            best_conf = conf
+            best = { source: c[:source], run_id: c[:run_id], confidence: conf,
+                     primary_distance: c[:distance] }
+          end
+        end
+
+        return nil unless best && best_conf >= 0.15
+
+        best[:flag] = best_conf >= 0.85 ? "derived" : "overlap"
+        best
+      end
+
+      def build_attrs(act, category, polyline = nil, dup_info = nil)
         start_t = Time.parse(act["start_date"]) rescue nil
         local_t = Time.parse(act["start_date_local"]) rescue nil
 
@@ -179,6 +242,7 @@ module Workouts
           average_heartrate: act["average_heartrate"],
           average_speed: act["average_speed"],
           elevation_gain: act["total_elevation_gain"],
+          duplicate_info: dup_info ? JSON.generate([dup_info]) : nil,
           source: "strava"
         }
       end
