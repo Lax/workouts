@@ -100,18 +100,25 @@ module Workouts
       say_status :error, "Stats export failed: #{e.message}", :red
     end
 
-    desc "html", "Generate HTML site (index + activity detail pages)"
+    desc "dashboard", "Generate interactive dashboard (index.html + JSON data)"
     option :output, type: :string, aliases: "-o", desc: "Output directory"
     option :activity, type: :array, desc: "Filter by sport type", aliases: "--act"
-    def html
+    def dashboard
       config = Workouts::Config.new
       db = Workouts::DB::Connection.new(config.db_path).db
       outdir = options[:output] || "build"
       filter = options[:activity]&.map(&:strip)&.map(&:downcase)
-      Export::HTML.new(db: db, output: outdir, activity_filter: filter).call
-      say_status :done, "Generated HTML site → #{outdir}/", :green
+      count = Export::Dashboard.new(db: db, output: outdir, activity_filter: filter).call
+      say_status :done, "Generated interactive dashboard for #{count} activities → #{outdir}/", :green
     rescue => e
-      say_status :error, "HTML export failed: #{e.message}", :red
+      say_status :error, "Dashboard export failed: #{e.message}", :red
+    end
+
+    desc "html", "Generate HTML site (delegates to dashboard)"
+    option :output, type: :string, aliases: "-o", desc: "Output directory"
+    option :activity, type: :array, desc: "Filter by sport type", aliases: "--act"
+    def html
+      invoke :dashboard, [], options
     end
 
     desc "all", "Export all formats"
@@ -120,7 +127,7 @@ module Workouts
       invoke :json, [], options
       invoke :csv, [], options
       invoke :stats, [], options
-      invoke :html, [], options
+      invoke :dashboard, [], options
       say_status :done, "All exports complete", :green
     rescue => e
       say_status :error, "Export failed: #{e.message}", :red
