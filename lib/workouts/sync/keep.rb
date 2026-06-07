@@ -118,7 +118,11 @@ module Workouts
         all_ids.each do |compound_id|
           keep_id = extract_id(compound_id) || compound_id
           break if time_expired?
-          next  if raw_file_exists?(keep_id)
+
+          if raw_file_exists?(keep_id)
+            upsert_from_raw(keep_id) unless @existing_ids.include?("keep_#{keep_id}")
+            next
+          end
 
           synced += 1 if sync_single_run_with_raw(compound_id, sport)
           report_progress(synced, total)
@@ -187,6 +191,38 @@ module Workouts
         true
       rescue JSON::ParserError
         false
+      end
+
+      def upsert_from_raw(keep_id)
+        raw = JSON.parse(File.read(raw_path(keep_id)))
+        run_data = raw["meta"].merge("id" => keep_id.to_s)
+
+        wgs = load_wgs_points(keep_id, raw)
+        return false unless wgs&.any?
+
+        if raw["heartRates"]&.any?
+          vals = raw["heartRates"].map { |h| h["value"] }.compact
+          run_data["heartRate"] = { "averageHeartRate" => vals.sum / vals.size } if vals.any?
+        end
+
+        attrs = build_activity_from_wgs(run_data, wgs)
+        return false unless attrs
+
+        upsert_activity(attrs)
+        true
+      end
+
+      def load_wgs_points(keep_id, raw)
+        std_path = File.join(std_dir, "#{keep_id}.json")
+        if File.exist?(std_path)
+          pts = JSON.parse(File.read(std_path))
+          pts.map { |pt| [pt["latitude"], pt["longitude"], pt["altitude"],
+                          pt["timestamp"] ? Time.parse(pt["timestamp"]) : nil, pt["heartrate"]] }
+        else
+          payload = { geo_points: raw["geoPoints"], hr_data: raw["heartRates"] }
+          run_data = raw["meta"]
+          compute_wgs_points(payload, run_data)
+        end
       end
 
       def decrypt_raw_payload(run_data)
