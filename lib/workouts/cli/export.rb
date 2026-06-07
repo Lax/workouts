@@ -12,6 +12,8 @@ module Workouts
       filter = options[:activity]&.map(&:strip)&.map(&:downcase)
       count = Export::JSON.new(db: db, output: path, activity_filter: filter).call
       say_status :done, "Exported #{count} activities to #{path}", :green
+    rescue => e
+      say_status :error, "JSON export failed: #{e.message}", :red
     end
 
     desc "csv", "Export activities to CSV"
@@ -24,6 +26,8 @@ module Workouts
       filter = options[:activity]&.map(&:strip)&.map(&:downcase)
       Export::CSV.new(db: db, output: path, activity_filter: filter).call
       say_status :done, "Exported to #{path}", :green
+    rescue => e
+      say_status :error, "CSV export failed: #{e.message}", :red
     end
 
     desc "svg", "Generate SVG poster"
@@ -78,6 +82,8 @@ module Workouts
 
       count = svg_gen.call
       say_status :done, "Generated #{style} poster with #{count} activities → #{path}", :green
+    rescue => e
+      say_status :error, "SVG export failed: #{e.message}", :red
     end
 
     desc "stats", "Export activity statistics"
@@ -90,6 +96,8 @@ module Workouts
       filter = options[:activity]&.map(&:strip)&.map(&:downcase)
       count = Export::Stats.new(db: db, output: path, activity_filter: filter).call
       say_status :done, "Exported stats for #{count} activities → #{path}", :green
+    rescue => e
+      say_status :error, "Stats export failed: #{e.message}", :red
     end
 
     desc "html", "Generate HTML site (index + activity detail pages)"
@@ -102,6 +110,8 @@ module Workouts
       filter = options[:activity]&.map(&:strip)&.map(&:downcase)
       Export::HTML.new(db: db, output: outdir, activity_filter: filter).call
       say_status :done, "Generated HTML site → #{outdir}/", :green
+    rescue => e
+      say_status :error, "HTML export failed: #{e.message}", :red
     end
 
     desc "all", "Export all formats"
@@ -112,6 +122,8 @@ module Workouts
       invoke :stats, [], options
       invoke :html, [], options
       say_status :done, "All exports complete", :green
+    rescue => e
+      say_status :error, "Export failed: #{e.message}", :red
     end
   end
 end
