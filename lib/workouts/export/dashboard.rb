@@ -806,8 +806,15 @@ module Workouts
                   line.addTo(state.map);
                   allPoints = allPoints.concat(pts);
                 });
-                if (allPoints.length > 0) {
-                  var bounds = L.latLngBounds(allPoints);
+                if (allPoints.length > 10) {
+                  var lats = allPoints.map(function(p) { return p[0]; }).sort(function(a,b){return a-b;});
+                  var lngs = allPoints.map(function(p) { return p[1]; }).sort(function(a,b){return a-b;});
+                  var medLat = lats[Math.floor(lats.length/2)];
+                  var medLng = lngs[Math.floor(lngs.length/2)];
+                  var filtered = allPoints.filter(function(p) {
+                    return Math.abs(p[0]-medLat) < 15 && Math.abs(p[1]-medLng) < 15;
+                  });
+                  var bounds = L.latLngBounds(filtered.length > 10 ? filtered : allPoints);
                   if (bounds.isValid()) { state.map.fitBounds(bounds.pad(0.05)); }
                 }
               }
