@@ -1,6 +1,7 @@
 .bundle/
 vendor/
 data/*.db
+db/*.db
 data/*.json
 data/*.csv
 data/svg/

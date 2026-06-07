@@ -2,7 +2,8 @@ module Workouts
   module Export
     module SVG
       class Track
-        attr_reader :date, :year, :length, :polyline, :sport_category, :sport_type, :moving_time
+        attr_reader :date, :year, :length, :effective_length, :polyline,
+                    :sport_category, :sport_type, :moving_time, :duplicate_info
 
         def initialize(activity, colors, special_distance)
           @date = Time.parse(activity[:start_date]) rescue Time.now
@@ -15,6 +16,21 @@ module Workouts
           @run_id = activity[:run_id]
           @colors = colors
           @special_distance = special_distance
+          @duplicate_info = activity[:duplicate_info] ? JSON.parse(activity[:duplicate_info]) : []
+          @effective_length = compute_effective_length
+        end
+
+        def skip?
+          @duplicate_info.any? { |d| d["flag"] == "derived" }
+        end
+
+        def conflict?
+          @duplicate_info.any? { |d| d["flag"] == "overlap" }
+        end
+
+        def duplicate_source
+          info = @duplicate_info.first
+          info ? "#{info["source"]} #{info["run_id"]}" : nil
         end
 
         def special
@@ -46,6 +62,23 @@ module Workouts
 
         def start_time_local
           @date
+        end
+
+        private
+
+        def compute_effective_length
+          return @length if @duplicate_info.empty?
+          @duplicate_info.each do |d|
+            pd = d["primary_distance"]
+            next unless pd
+            if d["flag"] == "derived"
+              return 0.0
+            elsif d["flag"] == "overlap"
+              excess = @length - pd
+              return excess > 0 ? excess : 0.0
+            end
+          end
+          @length
         end
       end
     end
