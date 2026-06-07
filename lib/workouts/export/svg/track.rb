@@ -16,7 +16,7 @@ module Workouts
           @run_id = activity[:run_id]
           @colors = colors
           @special_distance = special_distance
-          @duplicate_info = activity[:duplicate_info] ? JSON.parse(activity[:duplicate_info]) : []
+          @duplicate_info = activity[:duplicate_info] ? ::JSON.parse(activity[:duplicate_info]) : []
           @effective_length = compute_effective_length
         end
 
