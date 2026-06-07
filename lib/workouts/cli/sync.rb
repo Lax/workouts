@@ -6,7 +6,7 @@ module Workouts
         sources = if options[:source]
                     [options[:source]]
                   else
-                    %w[strava garmin keep igpsport xoss xingzhe].select do |s|
+                    %w[igpsport keep xoss xingzhe garmin_cn garmin strava].select do |s|
                       source_configured?(s)
                     end
                   end
@@ -18,9 +18,14 @@ module Workouts
           adapter = build_sync_adapter(source, db, filter)
           next unless adapter
 
-          count = adapter.call
-          print "\r#{' ' * 60}\r"
-          say_status :done, "#{source}: #{count} activities", :green
+          begin
+            count = adapter.call
+            print "\r#{' ' * 60}\r"
+            say_status :done, "#{source}: #{count} activities", :green
+          rescue => e
+            print "\r#{' ' * 60}\r"
+            say_status :error, "#{source}: #{e.message}", :red
+          end
         end
       end
 
