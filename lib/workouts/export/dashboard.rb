@@ -728,6 +728,7 @@ module Workouts
               }
 
               function renderChart() {
+                if (!state.chart) return;
                 var byMonth = {};
                 state.filtered.forEach(function(a) {
                   if (!a.start_date) return;
@@ -747,7 +748,8 @@ module Workouts
                 if (!state.chartReady) {
                   state.chart.on('click', function(p) {
                     if (!p || !p.dataIndex) return;
-                    var m = months[p.dataIndex];
+                    var axis = state.chart.getOption().xAxis[0];
+                    var m = axis ? axis.data[p.dataIndex] : null;
                     if (!m) return;
                     state.monthFilter = (state.monthFilter === m) ? null : m;
                     applyFilters();
@@ -757,6 +759,7 @@ module Workouts
               }
 
               function renderChartSmall() {
+                if (!state.chartSmall) return;
                 var byType = {};
                 state.filtered.forEach(function(a) {
                   var t = a.type || 'other';
