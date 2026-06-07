@@ -64,13 +64,13 @@ module Workouts
         return nil if config.empty?
 
         klass = case source
-                when "strava" then Sync::Strava
-                when "garmin" then Sync::Garmin
-                when "garmin_cn" then Sync::GarminCN
-                when "keep" then Sync::Keep
-                when "igpsport" then Sync::IGPSPORT
-                when "xoss" then Sync::XOSS
-                when "xingzhe" then Sync::XingZhe
+                when "strava" then Workouts::Sync::Strava
+                when "garmin" then Workouts::Sync::Garmin
+                when "garmin_cn" then Workouts::Sync::GarminCN
+                when "keep" then Workouts::Sync::Keep
+                when "igpsport" then Workouts::Sync::IGPSPORT
+                when "xoss" then Workouts::Sync::XOSS
+                when "xingzhe" then Workouts::Sync::XingZhe
                 else
                   say_status :error, "Unknown source: #{source}", :red
                   return nil
