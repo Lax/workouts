@@ -10,7 +10,10 @@ module Workouts
         @privacy = privacy
         @time_budget = time_budget
         @start_time = nil
+        @progress_reported = false
       end
+
+      attr_reader :progress_reported
 
       def call
         raise NotImplementedError, "#{self.class} must implement #call"
@@ -50,6 +53,7 @@ module Workouts
       def report_progress(count, total = nil)
         return if skip_progress?(count, total)
 
+        @progress_reported = true
         tally = Tally.new(count)
         line = "#{source_label}: #{tally} (#{count}"
         line += "/#{total}" if total
