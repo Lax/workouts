@@ -28,6 +28,10 @@ module Workouts
       else
         super
       end
+    rescue Workouts::AuthError => e
+      say_status :error, "Auth failed: #{e.message}", :red
+    rescue => e
+      say_status :error, e.message, :red
     end
 
     no_commands do
@@ -51,6 +55,8 @@ module Workouts
     def migrate
       connect_db
       say_status :done, "Migrations up to date", :green
+    rescue => e
+      say_status :error, "Migration failed: #{e.message}", :red
     end
 
     desc "init", "Generate default config.yml"
@@ -104,6 +110,8 @@ module Workouts
         end
         say_status :done, "Saved #{activities.size} activities to database", :green
       end
+    rescue => e
+      say_status :error, "Parse failed: #{e.message}", :red
     end
 
     desc "version", "Show version"

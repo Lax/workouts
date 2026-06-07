@@ -68,8 +68,7 @@ module Workouts
         @auth_headers = { "Authorization" => "Bearer #{@access_token}", "Origin" => "xoss" }
         true
       rescue Net::OpenTimeout, Net::ReadTimeout => e
-        warn "XOSS login timeout: #{e.message}"
-        false
+        raise SyncError, "XOSS login timeout: #{e.message}"
       end
 
       def sync_activities
@@ -105,8 +104,7 @@ module Workouts
 
         JSON.parse(resp.body).dig("data", "results")
       rescue Net::OpenTimeout, Net::ReadTimeout => e
-        warn "XOSS fetch timeout: #{e.message}"
-        nil
+        raise SyncError, "XOSS fetch timeout: #{e.message}"
       end
 
       def process_activity(act)

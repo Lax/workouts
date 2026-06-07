@@ -88,4 +88,22 @@ RSpec.describe Workouts::Sync::Base do
     subject { adapter.send(:source_label) }
     it { is_expected.to eq("TestSyncAdapter") }
   end
+
+  describe "error classes" do
+    it "SyncError inherits from Workouts::Error" do
+      expect(Workouts::SyncError.new).to be_a(Workouts::Error)
+    end
+
+    it "AuthError inherits from Workouts::Error" do
+      expect(Workouts::AuthError.new).to be_a(Workouts::Error)
+    end
+
+    it "ConfigError inherits from Workouts::Error" do
+      expect(Workouts::ConfigError.new).to be_a(Workouts::Error)
+    end
+
+    it "ParseError inherits from Workouts::Error" do
+      expect(Workouts::ParseError.new).to be_a(Workouts::Error)
+    end
+  end
 end

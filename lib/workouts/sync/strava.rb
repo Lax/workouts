@@ -36,7 +36,7 @@ module Workouts
             grant_type: "refresh_token"
           }
         end
-        raise "Strava token refresh failed: #{resp.status}" unless resp.success?
+        raise SyncError, "Strava token refresh failed: #{resp.status}" unless resp.success?
         JSON.parse(resp.body)["access_token"]
       end
 

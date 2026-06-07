@@ -55,6 +55,8 @@ module Workouts
         else
           say_status :error, "Authentication failed", :red
         end
+      rescue Workouts::AuthError => e
+        say_status :error, "Authentication failed: #{e.message}", :red
       end
 
       private
