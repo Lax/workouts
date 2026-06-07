@@ -270,24 +270,38 @@ module Workouts
 
               var state = { activities: [], filtered: [], map: null, polylines: [], chart: null, chartSmall: null, activeId: null, chartReady: false, chartSmallReady: false };
 
-              function init() {
-                Promise.all([
-                  fetch('activities.json').then(function(r) { return r.json(); }),
-                  fetch('stats.json').then(function(r) { return r.json(); })
-                ]).then(function(results) {
-                  state.activities = results[0];
-                  var stats = results[1];
-                  initFilters(stats);
-                  state.chart = echarts.init(document.getElementById('chart'), 'dark');
-                  state.chartSmall = echarts.init(document.getElementById('chart-small'), 'dark');
-                  state.map = L.map('map', { zoomControl: true }).setView([30, 110], 4);
-                  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-                    attribution: '&copy; <a href="https://carto.com/">CARTO</a>',
-                    maxZoom: 19
-                  }).addTo(state.map);
-                  applyFilters();
-                });
-              }
+    function init() {
+      Promise.all([
+        fetch('activities.json').then(function(r) {
+          if (!r.ok) throw new Error('fetch activities.json: ' + r.status);
+          return r.json();
+        }),
+        fetch('stats.json').then(function(r) {
+          if (!r.ok) throw new Error('fetch stats.json: ' + r.status);
+          return r.json();
+        })
+      ]).then(function(results) {
+        state.activities = results[0];
+        var stats = results[1];
+        initFilters(stats);
+        try {
+          state.chart = echarts.init(document.getElementById('chart'), 'dark');
+          state.chartSmall = echarts.init(document.getElementById('chart-small'), 'dark');
+        } catch(e) { console.error('ECharts init:', e); }
+        try {
+          state.map = L.map('map', { zoomControl: true }).setView([30, 110], 4);
+          L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; <a href="https://carto.com/">CARTO</a>',
+            maxZoom: 19
+          }).addTo(state.map);
+        } catch(e) { console.error('Map init:', e); }
+        applyFilters();
+      }).catch(function(e) {
+        console.error('Dashboard init error:', e);
+        var el = document.getElementById('stats-row');
+        if (el) el.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:2rem;color:#ff6b6b">Error loading data: ' + e.message + '</div>';
+      });
+    }
 
               function initFilters(stats) {
                 var years = {};
