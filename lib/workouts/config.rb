@@ -60,7 +60,8 @@ module Workouts
 
     def validate!
       @data.each_key do |k|
-        warn "Config: unknown top-level key '#{k}'" unless KNOWN_TOP_KEYS.include?(k)
+        next if k.empty? || KNOWN_TOP_KEYS.include?(k)
+        warn "Config: unknown top-level key '#{k}'"
       end
     end
 
@@ -73,6 +74,7 @@ module Workouts
       ENV.each do |key, value|
         parts = key.downcase.split(ENV_SEPARATOR)
         next unless parts.size > 1
+        next if parts.any?(&:empty?)
 
         set_nested(@data, parts, value) if key == key.upcase
       end
