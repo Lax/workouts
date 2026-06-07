@@ -11,6 +11,10 @@ require "securerandom"
 
 module Workouts
   class Error < StandardError; end
+  class SyncError < Error; end
+  class AuthError < Error; end
+  class ConfigError < Error; end
+  class ParseError < Error; end
 end
 
 require_relative "workouts/version"

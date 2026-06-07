@@ -49,9 +49,6 @@ module Workouts
         @access_token = exchange_oauth2
         save_tokens
         true
-      rescue => e
-        puts "Garmin auth error: #{e.message}"
-        false
       end
 
       private
@@ -78,8 +75,7 @@ module Workouts
         save_tokens
         true
       rescue => e
-        puts "Invalid garth secret: #{e.message}"
-        false
+        raise AuthError, "Invalid garth secret: #{e.message}"
       end
 
       def refresh_oauth2_via_oauth1
@@ -89,8 +85,8 @@ module Workouts
         @access_token["expires_at"] = Time.now.to_i + (@access_token["expires_in"] || 21600).to_i
         save_tokens
         true
-      rescue
-        false
+      rescue => e
+        raise AuthError, "Garmin OAuth refresh failed: #{e.message}"
       end
 
       def fetch_oauth_consumer
