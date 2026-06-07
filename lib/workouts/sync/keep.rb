@@ -69,7 +69,7 @@ module Workouts
         req = Net::HTTP::Post.new(uri)
         headers.each { |k, v| req[k] = v }
         req.body = body.is_a?(Hash) ? URI.encode_www_form(body) : body
-        http = Net::HTTP.new(uri.host, uri.port, nil, nil, nil, nil)
+        http = Net::HTTP.new(uri.host, uri.port)
         http.use_ssl = uri.scheme == "https"
         http.open_timeout = 30
         http.read_timeout = 60
@@ -80,7 +80,7 @@ module Workouts
         uri = URI(url)
         req = Net::HTTP::Get.new(uri)
         headers.each { |k, v| req[k] = v }
-        http = Net::HTTP.new(uri.host, uri.port, nil, nil, nil, nil)
+        http = Net::HTTP.new(uri.host, uri.port)
         http.use_ssl = uri.scheme == "https"
         http.open_timeout = 30
         http.read_timeout = 60

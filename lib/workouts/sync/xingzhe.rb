@@ -40,7 +40,7 @@ module Workouts
         headers.each { |k, v| req[k] = v }
         req.body = body if body
 
-        http = Net::HTTP.new(uri.host, uri.port, nil, nil, nil, nil)
+        http = Net::HTTP.new(uri.host, uri.port)
         http.use_ssl = true
         http.open_timeout = 30
         http.read_timeout = 60
