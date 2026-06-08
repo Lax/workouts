@@ -1,4 +1,7 @@
+# frozen_string_literal: true
+
 require_relative "base"
+require "fileutils"
 require "openssl"
 
 module Workouts
@@ -7,6 +10,7 @@ module Workouts
       BASE_HOST = "www.imxingzhe.com"
       LOGIN_PATH = "/api/v1/user/login/"
       WORKOUTS_PATH = "/api/v1/pgworkout/"
+      STREAM_PATH = "/api/v1/pgworkout/"
       DETAIL_PATH = "/api/v1/pgworkout/"
       RSA_PUBKEY = "MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDmuQkBbijudDAJgfffDeeIButqWHZvUwcRuvWdg89393FSdz3IJUHc0rgI/S3WuU8N0VePJLmVAZtCOK4qe4FY/eKmWpJmn7JfXB4HTMWjPVoyRZmSYjW4L8GrWmh51Qj7DwpTADadF3aq04o+s1b8LXJa8r6+TIqqL5WUHtRqmQIDAQAB"
 
@@ -15,6 +19,8 @@ module Workouts
         5 => "swim", 6 => "walk", 11 => "ski", 13 => "workout"
       }.freeze
 
+      RAW_EXT = "json"
+
       def initialize(...)
         super
         @email = @config["email"]
@@ -22,6 +28,7 @@ module Workouts
       end
 
       def call
+        @start_time = Time.now
         return 0 if @email.nil? || @password.nil?
         return 0 unless login
         sync_activities
@@ -91,7 +98,8 @@ module Workouts
 
           acts.each do |act|
             aid = act["id"].to_s
-            next if existing.include?(aid)
+            next if existing.include?(aid) && raw_file_exists?(aid)
+            break if time_expired?
 
             type = map_sport(act["sport"])
             next if skip_type?(type)
@@ -117,18 +125,16 @@ module Workouts
       end
 
       def process_activity(act, type)
+        aid = act["id"].to_s
         start_t = Time.at(act["start_time"] / 1000.0).utc rescue nil
         return false unless start_t
 
-        distance = act["distance"].to_f
-        moving_time = act["duration"].to_i
-
         attrs = {
-          run_id: "xingzhe_#{act["id"]}",
+          run_id: "xingzhe_#{aid}",
           name: act["title"] || "XingZhe Activity",
-          distance: distance,
-          moving_time: moving_time > 0 ? moving_time : nil,
-          elapsed_time: moving_time > 0 ? moving_time : nil,
+          distance: act["distance"].to_f,
+          moving_time: (t = act["duration"].to_i) > 0 ? t : nil,
+          elapsed_time: t > 0 ? t : nil,
           sport_category: type,
           sport_type: act["sport"].to_s,
           start_date: start_t.strftime("%Y-%m-%d %H:%M:%S"),
@@ -138,13 +144,73 @@ module Workouts
           source: "xingzhe"
         }
 
-        if (detail = fetch_activity_detail(act["id"])) && (segments = detail["segments_km"])
+        stream = fetch_stream(aid)
+        if stream
+          locs = stream["location"] || []
+          if locs.size >= 2
+            write_raw(stream, aid)
+            pts = locs.map { |lng, lat| [lat, lng] }
+            write_std(pts, stream, aid)
+            attrs[:summary_polyline] = Geo::Polyline.encode(pts)
+          end
+        elsif (detail = fetch_activity_detail(aid)) && (segments = detail["segments_km"])
           pts = segments.map { |s| [s["latitude"], s["longitude"]] }
           attrs[:summary_polyline] = Geo::Polyline.encode(pts) if pts.size >= 2
         end
 
         upsert_activity(attrs)
         true
+      end
+
+      def raw_path(platform_id)
+        File.join(raw_dir, "#{platform_id}.#{RAW_EXT}")
+      end
+
+      def fetch_stream(id)
+        resp = http_request(:get, "#{STREAM_PATH}#{id}/stream/")
+        return nil unless resp.code.to_i == 200
+
+        JSON.parse(resp.body).dig("data")
+      rescue JSON::ParserError
+        nil
+      end
+
+      def write_raw(stream, id)
+        dir = raw_dir
+        FileUtils.mkdir_p(dir)
+        tmp = File.join(dir, ".#{id}.json.tmp")
+        final = File.join(dir, "#{id}.json")
+        File.write(tmp, JSON.generate({
+          source: "xingzhe",
+          fetchedAt: Time.now.utc.strftime("%Y-%m-%dT%H:%M:%SZ"),
+          stream: stream
+        }))
+        File.rename(tmp, final)
+      end
+
+      def write_std(pts, stream, id)
+        dir = std_dir
+        FileUtils.mkdir_p(dir)
+        ts_arr = stream["timestamp"] || []
+        alt_arr = stream["altitude"] || []
+        spd_arr = stream["speed"] || []
+        dst_arr = stream["distance"] || []
+
+        extended = pts.each_with_index.map do |(lat, lng), i|
+          ts_val = ts_arr[i]
+          {
+            latitude: lat, longitude: lng,
+            altitude: alt_arr[i],
+            timestamp: ts_val ? Time.at(ts_val).utc.strftime("%Y-%m-%dT%H:%M:%SZ") : nil,
+            speed: spd_arr[i],
+            distance: dst_arr[i]
+          }
+        end
+
+        tmp = File.join(dir, ".#{id}.json.tmp")
+        final = File.join(dir, "#{id}.json")
+        File.write(tmp, JSON.generate(extended))
+        File.rename(tmp, final)
       end
 
       def fetch_activity_detail(id)
