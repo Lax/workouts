@@ -386,6 +386,11 @@ module Workouts
           L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
             maxZoom: 19
           }).addTo(state.map);
+          state.map.on('zoomend', function() {
+            var z = state.map.getZoom();
+            var w = z < 8 ? 4 : z < 11 ? 3 : 2;
+            Object.values(state.polylineMap).forEach(function(l) { l.setStyle({ weight: w }); });
+          });
         } catch(e) { console.error('Map init:', e); }
         applyFilters();
       }).catch(function(e) {
@@ -804,8 +809,10 @@ module Workouts
                   if (maxLat - minLat < 0.001 && maxLng - minLng < 0.001) return;
                   var color = state.colorMode === 'speed' ? speedColor(a.average_speed) : typeColor(a.type);
                   var yr = parseInt((a.start_date || '').slice(0,4));
-                  var opacity = yr ? Math.max(0.12, 1 - (new Date().getFullYear() - yr) * 0.12) : 0.4;
-                  var line = L.polyline(pts, { color: color, weight: 2, opacity: opacity });
+                  var opacity = yr ? Math.max(0.35, 1 - (new Date().getFullYear() - yr) * 0.06) : 0.5;
+                  var z = state.map ? state.map.getZoom() : 6;
+                  var w = z < 8 ? 4 : z < 11 ? 3 : 2;
+                  var line = L.polyline(pts, { color: color, weight: w, opacity: opacity });
                   line.bindTooltip((a.name || '') + ' — ' + distKm(a).toFixed(1) + 'km', { direction: 'top' });
                   line.on('click', function() { showActivity(a.run_id); });
                   line.on('mouseover', function() { highlightList(a.run_id); });
