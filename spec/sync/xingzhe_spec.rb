@@ -134,6 +134,28 @@ RSpec.describe Workouts::Sync::XingZhe do
         end
       end
 
+      context "and stream returns single point with segments_km fallback" do
+        let(:detail_data) do
+          { "segments_km" => [
+            { "latitude" => 40.0, "longitude" => 116.0 },
+            { "latitude" => 40.001, "longitude" => 116.002 },
+          ] }
+        end
+
+        before do
+          allow(xz).to receive(:fetch_stream).with("4001")
+            .and_return({ "location" => [[116.0, 40.0]] })
+          allow(xz).to receive(:write_raw)
+          allow(xz).to receive(:fetch_activity_detail).with("4001").and_return(detail_data)
+        end
+
+        it "falls back to segments_km polyline (not blocked by stream if)" do
+          xz.call
+          row = db[:activities].first
+          expect(row[:summary_polyline]).not_to be_nil
+        end
+      end
+
       context "and stream returns nil (API failure)" do
         before do
           allow(xz).to receive(:fetch_stream).with("4001").and_return(nil)
@@ -221,10 +243,13 @@ RSpec.describe Workouts::Sync::XingZhe do
       end
 
       context "when DB exists but raw file missing (missing_raw backfill)" do
+        let(:stream_data) do
+          { "location" => [[116.0, 40.0], [116.002, 40.001]] }
+        end
+
         before do
           db[:activities].insert(run_id: "xingzhe_4001", source: "xingzhe")
-          allow(xz).to receive(:fetch_stream).with("4001")
-            .and_return({ "location" => [[116.0, 40.0], [116.002, 40.001]] })
+          allow(xz).to receive(:fetch_stream) { |arg| arg == "4001" ? stream_data : nil }
           allow(xz).to receive(:write_raw)
           allow(xz).to receive(:write_std)
         end
@@ -289,6 +314,59 @@ RSpec.describe Workouts::Sync::XingZhe do
   describe "#raw_path" do
     it "returns path with json extension" do
       expect(xz.send(:raw_path, "12345")).to end_with("12345.json")
+    end
+  end
+
+  describe "#stream_to_polyline" do
+    let(:raw_content) do
+      { "source" => "xingzhe", "stream" => {
+        "location" => [[116.0, 40.0], [116.002, 40.001]],
+        "timestamp" => [1000000.0, 1000010.0],
+        "altitude" => [10.0, 11.0]
+      } }
+    end
+
+    after { FileUtils.rm_rf("data/raw/xingzhe") }
+
+    it "reads raw file and returns encoded polyline" do
+      FileUtils.mkdir_p("data/raw/xingzhe")
+      File.write("data/raw/xingzhe/test999.json", JSON.generate(raw_content))
+      result = xz.send(:stream_to_polyline, "test999")
+      expect(result).to be_a(String)
+      expect(result).not_to be_empty
+    end
+
+    it "swaps [lng, lat] to [lat, lng]" do
+      FileUtils.mkdir_p("data/raw/xingzhe")
+      File.write("data/raw/xingzhe/test999.json", JSON.generate(raw_content))
+      result = xz.send(:stream_to_polyline, "test999")
+      decoded = Workouts::Geo::Polyline.decode(result)
+      expect(decoded[0][0]).to be_within(1e-5).of(40.0)
+      expect(decoded[0][1]).to be_within(1e-5).of(116.0)
+      expect(decoded[1][0]).to be_within(1e-5).of(40.001)
+      expect(decoded[1][1]).to be_within(1e-5).of(116.002)
+    end
+
+    it "returns nil when raw file missing" do
+      expect(xz.send(:stream_to_polyline, "nonexistent")).to be_nil
+    end
+
+    it "returns nil when single location point" do
+      content = raw_content.dup
+      content["stream"] = content["stream"].merge("location" => [[116.0, 40.0]])
+      FileUtils.mkdir_p("data/raw/xingzhe")
+      File.write("data/raw/xingzhe/test999.json", JSON.generate(content))
+      expect(xz.send(:stream_to_polyline, "test999")).to be_nil
+    end
+  end
+
+  describe "#fetch_stream" do
+    it "passes headers to http_request" do
+      resp = instance_double(Net::HTTPResponse, code: "401")
+      expect(xz).to receive(:http_request)
+        .with(:get, "/api/v1/pgworkout/12345/stream/", headers: instance_of(Hash))
+        .and_return(resp)
+      xz.send(:fetch_stream, "12345")
     end
   end
 
