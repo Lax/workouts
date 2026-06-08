@@ -7,6 +7,7 @@ module Workouts
       BASE_HOST = "www.imxingzhe.com"
       LOGIN_PATH = "/api/v1/user/login/"
       WORKOUTS_PATH = "/api/v1/pgworkout/"
+      DETAIL_PATH = "/api/v1/pgworkout/"
       RSA_PUBKEY = "MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDmuQkBbijudDAJgfffDeeIButqWHZvUwcRuvWdg89393FSdz3IJUHc0rgI/S3WuU8N0VePJLmVAZtCOK4qe4FY/eKmWpJmn7JfXB4HTMWjPVoyRZmSYjW4L8GrWmh51Qj7DwpTADadF3aq04o+s1b8LXJa8r6+TIqqL5WUHtRqmQIDAQAB"
 
       SPORT_MAP = {
@@ -122,7 +123,7 @@ module Workouts
         distance = act["distance"].to_f
         moving_time = act["duration"].to_i
 
-        upsert_activity({
+        attrs = {
           run_id: "xingzhe_#{act["id"]}",
           name: act["title"] || "XingZhe Activity",
           distance: distance,
@@ -135,8 +136,23 @@ module Workouts
           average_speed: (act["avg_speed"].to_f / 3.6).round(2).nonzero?,
           elevation_gain: act["elevation_gain"].to_f.nonzero?,
           source: "xingzhe"
-        })
+        }
+
+        if (detail = fetch_activity_detail(act["id"])) && (segments = detail["segments_km"])
+          pts = segments.map { |s| [s["latitude"], s["longitude"]] }
+          attrs[:summary_polyline] = Geo::Polyline.encode(pts) if pts.size >= 2
+        end
+
+        upsert_activity(attrs)
         true
+      end
+
+      def fetch_activity_detail(id)
+        resp = http_request(:get, "#{DETAIL_PATH}#{id}/")
+        return nil unless resp.code.to_i == 200
+
+        data = JSON.parse(resp.body)
+        data.dig("data", "workout")
       end
 
       def map_sport(sport)

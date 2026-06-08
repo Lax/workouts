@@ -62,6 +62,58 @@ RSpec.describe Workouts::Sync::XingZhe do
         expect(row[:source]).to eq("xingzhe")
         expect(row[:sport_category]).to eq("hike")
       end
+
+      context "and detail api returns segments_km" do
+        let(:detail_data) do
+          { "segments_km" => [
+            { "latitude" => 40.0, "longitude" => 116.0 },
+            { "latitude" => 40.001, "longitude" => 116.002 },
+            { "latitude" => 40.003, "longitude" => 116.005 }
+          ] }
+        end
+
+        before do
+          allow(xz).to receive(:fetch_activity_detail).with(4001).and_return(detail_data)
+        end
+
+        it "generates summary_polyline from segments_km" do
+          xz.call
+          row = db[:activities].first
+          expect(row[:summary_polyline]).not_to be_nil
+          expect(row[:summary_polyline]).not_to be_empty
+
+          decoded = Workouts::Geo::Polyline.decode(row[:summary_polyline])
+          expect(decoded.size).to eq(3)
+          expect(decoded[0][0]).to be_within(1e-5).of(40.0)
+          expect(decoded[0][1]).to be_within(1e-5).of(116.0)
+          expect(decoded[2][0]).to be_within(1e-5).of(40.003)
+          expect(decoded[2][1]).to be_within(1e-5).of(116.005)
+        end
+      end
+
+      context "and detail api returns without segments_km" do
+        before do
+          allow(xz).to receive(:fetch_activity_detail).with(4001).and_return({})
+        end
+
+        it "inserts without summary_polyline" do
+          xz.call
+          row = db[:activities].first
+          expect(row[:summary_polyline]).to be_nil
+        end
+      end
+
+      context "and detail api fails" do
+        before do
+          allow(xz).to receive(:fetch_activity_detail).with(4001).and_return(nil)
+        end
+
+        it "inserts without summary_polyline" do
+          xz.call
+          row = db[:activities].first
+          expect(row[:summary_polyline]).to be_nil
+        end
+      end
     end
   end
 
