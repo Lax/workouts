@@ -406,7 +406,7 @@ module Workouts
         try {
           state.map = L.map('map', { zoomControl: false, attributionControl: false }).setView([30, 110], 4);
           L.control.zoom({ position: 'topright' }).addTo(state.map);
-          L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+          L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', {
             maxZoom: 19
           }).addTo(state.map);
           state.map.on('zoomend', function() {
@@ -902,7 +902,7 @@ module Workouts
                 if (a.polyline && a.polyline.length > 0) {
                   if (state.detailMap) { state.detailMap.remove(); }
                   state.detailMap = L.map(mapContainer, { zoomControl: false }).setView([30, 110], 13);
-                  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 19 }).addTo(state.detailMap);
+                  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', { maxZoom: 19 }).addTo(state.detailMap);
                   var pts = decodePolyline(a.polyline);
                   if (pts.length >= 2) {
                     var line = L.polyline(pts, { color: '#4DD2FF', weight: 3, opacity: 0.8 }).addTo(state.detailMap);
