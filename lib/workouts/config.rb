@@ -8,7 +8,8 @@ module Workouts
       "export" => {
         "json" => { "path" => "build/activities.json" },
         "svg" => { "dir" => "build/svg" },
-        "csv" => { "path" => "build/workouts.csv" }
+        "csv" => { "path" => "build/workouts.csv" },
+        "gpx" => { "path" => "build/gpx_out" }
       },
       "privacy" => {
         "start_end_range" => 200
