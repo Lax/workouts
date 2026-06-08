@@ -150,7 +150,7 @@ module Workouts
           if (locs = stream["location"]) && locs.size >= 2
             pts = locs.map { |lng, lat| [lat, lng] }
             write_std(pts, stream, aid)
-            attrs[:summary_polyline] = Geo::Polyline.encode(pts)
+            attrs[:summary_polyline] = stream_to_polyline(aid)
           end
         end
 
