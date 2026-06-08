@@ -216,15 +216,29 @@ module Workouts
               ::-webkit-scrollbar-track { background: transparent; }
               ::-webkit-scrollbar-thumb { background: #2a2a4a; border-radius: 3px; }
 
+              @media (min-width: 1024px) {
+                .drawer { left: auto; right: 0; bottom: auto; top: 50%; transform: translateY(-50%) translateX(calc(100% - 48px)); width: auto; border-radius: 12px 0 0 12px; height: auto; max-height: 80vh; border: 1px solid #2a2a4a; border-right: none; overflow: hidden; }
+                .drawer.open { transform: translateY(-50%) translateX(0); }
+                .drawer-collapsed { width: 48px; flex-direction: column; height: auto; padding: 10px 4px; gap: 8px; border: none; border-radius: 12px 0 0 12px; }
+                .drawer.open .drawer-collapsed { display: none; }
+                .drawer-body { width: 380px; max-height: 80vh; border: none; }
+                .drawer-body { height: auto; }
+                .drawer-handle { border-radius: 0; border: none; }
+                .drawer-handle .bar { transform: rotate(90deg); }
+                .stat-pill { flex-direction: column; gap: 0; text-align: center; font-size: 0.65rem; }
+                .stat-pill strong { font-size: 0.8rem; }
+                .spacer { display: none; }
+              }
+              @media (max-width: 1023px) {
+                .ol-lc { position: fixed; left: 10px; top: 36px; bottom: auto; transform: none; }
+                .year-pills { flex-direction: row; flex-wrap: wrap; gap: 3px; }
+              }
               @media (max-width: 640px) {
                 .drawer-body { height: 55vh; }
                 .detail-panel .grid { grid-template-columns: 1fr 1fr; }
                 .charts-panel { width: 96%; padding: 0.8rem; }
                 .year-pill { font-size: 0.7rem; padding: 2px 8px; }
-                .ol-tl { top: 8px; left: 8px; }
                 .ol-bl { bottom: 62px; left: 8px; }
-                .year-pills { flex-direction: row; flex-wrap: wrap; gap: 3px; }
-                .ol-lc { position: static; transform: none; }
                 .stat-pill { font-size: 0.68rem; }
               }
             </style>
