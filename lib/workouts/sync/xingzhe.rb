@@ -146,14 +146,15 @@ module Workouts
 
         stream = fetch_stream(aid)
         if stream
-          locs = stream["location"] || []
-          if locs.size >= 2
-            write_raw(stream, aid)
+          write_raw(stream, aid)
+          if (locs = stream["location"]) && locs.size >= 2
             pts = locs.map { |lng, lat| [lat, lng] }
             write_std(pts, stream, aid)
             attrs[:summary_polyline] = Geo::Polyline.encode(pts)
           end
-        elsif (detail = fetch_activity_detail(aid)) && (segments = detail["segments_km"])
+        end
+
+        if attrs[:summary_polyline].nil? && (detail = fetch_activity_detail(aid)) && (segments = detail["segments_km"])
           pts = segments.map { |s| [s["latitude"], s["longitude"]] }
           attrs[:summary_polyline] = Geo::Polyline.encode(pts) if pts.size >= 2
         end
@@ -167,7 +168,7 @@ module Workouts
       end
 
       def fetch_stream(id)
-        resp = http_request(:get, "#{STREAM_PATH}#{id}/stream/")
+        resp = http_request(:get, "#{STREAM_PATH}#{id}/stream/", headers: @headers || {})
         return nil unless resp.code.to_i == 200
 
         JSON.parse(resp.body).dig("data")
@@ -211,6 +212,17 @@ module Workouts
         final = File.join(dir, "#{id}.json")
         File.write(tmp, JSON.generate(extended))
         File.rename(tmp, final)
+      end
+
+      def stream_to_polyline(id)
+        raw = JSON.parse(File.read(raw_path(id)))
+        locs = raw.dig("stream", "location") || []
+        return nil if locs.size < 2
+
+        pts = locs.map { |lng, lat| [lat, lng] }
+        Geo::Polyline.encode(pts)
+      rescue Errno::ENOENT, JSON::ParserError
+        nil
       end
 
       def fetch_activity_detail(id)
