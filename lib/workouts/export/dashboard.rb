@@ -94,16 +94,18 @@ module Workouts
               #map { width: 100%; height: 100%; }
 
               .overlay { position: fixed; z-index: 1; pointer-events: none; }
-              .overlay > * { pointer-events: auto; }
+              .overlay > * { pointer-events: auto; touch-action: manipulation; }
 
-              .ol-tl { top: 12px; left: 12px; display: flex; flex-direction: column; gap: 6px; }
-              .ol-tr { top: 12px; right: 12px; display: flex; flex-direction: column; gap: 6px; align-items: flex-end; }
+              .ol-tl { top: 10px; left: 10px; }
+              .ol-bl { bottom: 12px; left: 10px; display: flex; flex-direction: column; gap: 4px; align-items: flex-start; }
+              .ol-lc { position: fixed; left: 6px; top: 50%; z-index: 1; transform: translateY(-50%); pointer-events: none; }
+              .ol-lc > * { pointer-events: auto; touch-action: manipulation; }
 
               .brand { font-size: 0.85rem; color: #888; letter-spacing: 1px; }
               .brand strong { color: #4DD2FF; font-weight: 700; }
 
-              .year-pills { display: flex; gap: 4px; flex-wrap: wrap; }
-              .year-pill { padding: 3px 10px; border-radius: 14px; border: 1px solid #2a2a4a; background: rgba(22,33,62,0.85); color: #888; cursor: pointer; font-size: 0.75rem; transition: all 0.15s; backdrop-filter: blur(4px); }
+              .year-pills { display: flex; flex-direction: column; gap: 3px; }
+              .year-pill { padding: 2px 8px; border-radius: 12px; border: 1px solid #2a2a4a; background: rgba(22,33,62,0.85); color: #888; cursor: pointer; font-size: 0.7rem; transition: all 0.15s; backdrop-filter: blur(4px); }
               .year-pill:hover { border-color: #4DD2FF; color: #4DD2FF; }
               .year-pill.active { background: #4DD2FF; color: #1a1a2e; border-color: #4DD2FF; font-weight: 600; }
               .month-chip { padding: 3px 10px; border-radius: 14px; border: 1px solid #4ECDC4; background: rgba(78,205,196,0.15); color: #4ECDC4; cursor: pointer; font-size: 0.75rem; display: inline-flex; align-items: center; gap: 4px; }
@@ -220,7 +222,9 @@ module Workouts
                 .charts-panel { width: 96%; padding: 0.8rem; }
                 .year-pill { font-size: 0.7rem; padding: 2px 8px; }
                 .ol-tl { top: 8px; left: 8px; }
-                .ol-tr { top: 8px; right: 8px; }
+                .ol-bl { bottom: 62px; left: 8px; }
+                .year-pills { flex-direction: row; flex-wrap: wrap; gap: 3px; }
+                .ol-lc { position: static; transform: none; }
                 .stat-pill { font-size: 0.68rem; }
               }
             </style>
@@ -230,14 +234,18 @@ module Workouts
 
             <div class="overlay ol-tl">
               <div class="brand"><strong>Workouts</strong> #{years_range}</div>
+            </div>
+
+            <div class="overlay ol-lc">
               <div class="year-pills" id="year-pills"></div>
             </div>
 
-            <div class="overlay ol-tr">
+            <div class="overlay ol-bl">
               <div class="legend-toggle">
                 <button class="legend-btn active" data-mode="speed" onclick="setColorMode('speed')">速度</button>
                 <button class="legend-btn" data-mode="type" onclick="setColorMode('type')">类型</button>
               </div>
+
               <div class="speed-legend" id="speed-legend"><span class="sl-blue"></span><span class="sl-green"></span><span class="sl-yellow"></span><span class="sl-red"></span></div>
             </div>
 
@@ -382,7 +390,8 @@ module Workouts
         var stats = results[1];
         initFilters(stats);
         try {
-          state.map = L.map('map', { zoomControl: true, attributionControl: false }).setView([30, 110], 4);
+          state.map = L.map('map', { zoomControl: false, attributionControl: false }).setView([30, 110], 4);
+          L.control.zoom({ position: 'topright' }).addTo(state.map);
           L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
             maxZoom: 19
           }).addTo(state.map);
@@ -390,6 +399,10 @@ module Workouts
             var z = state.map.getZoom();
             var w = z < 8 ? 4 : z < 11 ? 3 : 2;
             Object.values(state.polylineMap).forEach(function(l) { l.setStyle({ weight: w }); });
+          });
+          document.querySelectorAll('.overlay, .drawer').forEach(function(el) {
+            el.addEventListener('click', function(e) { e.stopPropagation(); });
+            el.addEventListener('touchstart', function(e) { e.stopPropagation(); });
           });
         } catch(e) { console.error('Map init:', e); }
         applyFilters();
@@ -694,6 +707,15 @@ module Workouts
               function toggleDrawer() {
                 state.drawerOpen = !state.drawerOpen;
                 document.getElementById('app-drawer').classList.toggle('open', state.drawerOpen);
+                if (state.drawerOpen) {
+                  state.map.scrollWheelZoom.disable();
+                  state.map.dragging.disable();
+                  state.map.touchZoom.disable();
+                } else {
+                  state.map.scrollWheelZoom.enable();
+                  state.map.dragging.enable();
+                  state.map.touchZoom.enable();
+                }
                 setTimeout(function() { if (state.map) state.map.invalidateSize(); }, 350);
               }
 
