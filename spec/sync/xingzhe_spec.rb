@@ -76,11 +76,11 @@ RSpec.describe Workouts::Sync::XingZhe do
 
         before do
           allow(xz).to receive(:fetch_stream).with("4001").and_return(stream_data)
-          allow(xz).to receive(:write_raw)
-          allow(xz).to receive(:write_std)
         end
 
-        it "generates summary_polyline from stream location" do
+        after { FileUtils.rm_rf("data/raw/xingzhe") }
+
+        it "generates summary_polyline from stream location via L1 file" do
           xz.call
           row = db[:activities].first
           expect(row[:summary_polyline]).not_to be_nil
@@ -92,9 +92,10 @@ RSpec.describe Workouts::Sync::XingZhe do
           expect(decoded[0][1]).to be_within(1e-5).of(116.0)
         end
 
-        it "calls write_raw with stream data" do
-          expect(xz).to receive(:write_raw).with(stream_data, "4001")
+        it "writes raw file to L1" do
+          expect(xz).to receive(:write_raw).with(stream_data, "4001").and_call_original
           xz.call
+          expect(File.exist?("data/raw/xingzhe/4001.json")).to be true
         end
 
         it "calls write_std with swapped lat/lng" do
@@ -250,9 +251,10 @@ RSpec.describe Workouts::Sync::XingZhe do
         before do
           db[:activities].insert(run_id: "xingzhe_4001", source: "xingzhe")
           allow(xz).to receive(:fetch_stream) { |arg| arg == "4001" ? stream_data : nil }
-          allow(xz).to receive(:write_raw)
           allow(xz).to receive(:write_std)
         end
+
+        after { FileUtils.rm_rf("data/raw/xingzhe") }
 
         it "re-processes and updates polyline" do
           expect(xz.call).to eq(1)
