@@ -108,6 +108,7 @@ RSpec.describe Workouts::Sync::XingZhe do
 
       context "and stream returns empty location" do
         before do
+          allow(xz).to receive(:write_raw)
           allow(xz).to receive(:fetch_stream).with("4001").and_return({ "location" => [] })
           allow(xz).to receive(:fetch_activity_detail).with("4001").and_return(nil)
         end
