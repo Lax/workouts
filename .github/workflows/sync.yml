@@ -1,7 +1,8 @@
 name: Sync Workouts
 on:
   schedule:
-    - cron: '0 2 */3 * *'
+    # NOTE: */1 not * — sed below matches /\d+ \* \* to update interval
+    - cron: '0 2 */1 * *'
   workflow_dispatch:
 
 jobs:
@@ -102,6 +103,9 @@ jobs:
           sed -i "s|/\\([0-9]\\) \\* \\*|/${NEW_N} * *|" .github/workflows/sync.yml
           git config user.name "workouts-bot"
           git config user.email "bot@workouts"
+          # PAT required: GITHUB_TOKEN cannot modify .github/workflows/
+          # sed matches /{N} * * from cron line above
+          git remote set-url origin https://x-access-token:${{ secrets.WORKOUTS_RAW_PAT }}@github.com/Lax/workouts.git
           git add .github/workflows/sync.yml
           git diff --cached --quiet || \
             git commit -m "chore: sync interval N=$NEW_N"
