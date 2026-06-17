@@ -21,6 +21,13 @@ jobs:
           ruby-version: '3.4'
           bundler-cache: true
 
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Python deps (curl_cffi for Strategy A)
+        run: pip install curl_cffi
+
       - uses: actions/cache/restore@v4
         id: db-cache
         with:
@@ -47,6 +54,13 @@ jobs:
           count=$(find data/raw/ data/std/ -type f 2>/dev/null | wc -l)
           echo "count=$count" >> $GITHUB_OUTPUT
 
+      - uses: actions/cache/restore@v4
+        id: garmin-tokens-cache
+        with:
+          path: data/cache/garmin_garmin_com_tokens.json
+          key: garmin-tokens-v1-garmin-${{ github.run_id }}
+          restore-keys: garmin-tokens-v1-garmin-
+
       - name: Sync
         env:
           SYNC__KEEP__PHONE: ${{ secrets.SYNC_KEEP_PHONE }}
@@ -62,7 +76,6 @@ jobs:
           SYNC__GARMIN_CN__SECRET: ${{ secrets.SYNC_GARMIN_CN_SECRET }}
           SYNC__GARMIN__EMAIL: ${{ secrets.SYNC_GARMIN_EMAIL }}
           SYNC__GARMIN__PASSWORD: ${{ secrets.SYNC_GARMIN_PASSWORD }}
-          SYNC__GARMIN__SECRET: ${{ secrets.SYNC_GARMIN_SECRET }}
           SYNC__STRAVA__CLIENT_ID: ${{ secrets.SYNC_STRAVA_CLIENT_ID }}
           SYNC__STRAVA__CLIENT_SECRET: ${{ secrets.SYNC_STRAVA_CLIENT_SECRET }}
           SYNC__STRAVA__REFRESH_TOKEN: ${{ secrets.SYNC_STRAVA_REFRESH_TOKEN }}
@@ -127,6 +140,12 @@ jobs:
           before=${{ steps.source-before.outputs.count }}
           after=$(find data/raw/ data/std/ -type f 2>/dev/null | wc -l)
           echo "changed=$([ "$before" != "$after" ] && echo true || echo false)" >> $GITHUB_OUTPUT
+
+      - uses: actions/cache/save@v4
+        if: always()
+        with:
+          path: data/cache/garmin_garmin_com_tokens.json
+          key: ${{ steps.garmin-tokens-cache.outputs.cache-primary-key }}
 
       - uses: actions/cache/save@v4
         if: steps.db-changed.outputs.changed == 'true'
