@@ -72,8 +72,8 @@ lib/workouts/cli/sync.rb         # 同步子模块（sync, auth）
 | **iGPSPORT** | prod.zh.igpsport.com | 手机+密码 | FIT 原始格式，使用 mini_racer + @garmin/fitsdk 解析 |
 | **XOSS** | backend.xoss.co (国际版) | email+JWT | 局部 SPORT_MAP 哈希表 |
 | **XingZhe** | imxingzhe.com (行者) | RSA 加密密码 + session Cookie | 行者国内版 |
-| **Garmin CN** | garmin.cn | SSO + OAuth1→OAuth2 | token 文件持久化 + OAuth1 自动 refresh |
-| **Garmin** | garmin.com | SSO + OAuth1→OAuth2（CF 429 封禁中）| 支持 garth secret_string 替代方案 |
+| **Garmin CN** | garmin.cn | SSO + OAuth1→OAuth2 | token 文件持久化 + OAuth1 自动 refresh（不受 CF 影响）|
+| **Garmin** | garmin.com | DI OAuth2（cache token + email/password）| curl_cffi (Strategy A) + Playwright (Strategy B) 降级链，token GH Cache |
 | **Strava** | strava.com | OAuth2 refresh_token | 已配置，含多源去重检测 |
 
 ### 数据流程
@@ -349,7 +349,7 @@ L1 raw → L2 标准化 GPS → L3 SQLite 摘要 → L4 构建制品 → L5 部�
 | XOSS | 44 |
 | XingZhe | 34 |
 | Garmin CN | 0（已认证，账号无记录） |
-| Garmin 国际版 | CF 429 封禁 |
+| Garmin 国际版 | DI OAuth2 (3 commits: Phase 1-4) — 待 CI 验证 |
 
 ### 原始 GPS 文件（GH Cache）
 
@@ -423,9 +423,7 @@ RSpec 325 例，0 失败。覆盖：
 
 ### P0 — 当前痛点
 
-| 项 | 工作量 | 说明 |
-|---|---|---|
-| Garmin access_token 环境变量 | 0.5h | `SYNC__GARMIN__ACCESS_TOKEN` 直接使用 bearer token 跳过 SSO |
+_无_
 
 ### P1 — 功能扩展
 
@@ -461,6 +459,7 @@ _无_
 | GPX 重新导出（`export gpx` from L2） | ✅ 已完成（lib/workouts/export/gpx.rb）|
 | Strava OAuth 交互式授权（`auth strava`本地HTTP） | ✅ 已完成（lib/workouts/auth/strava.rb）|
 | FIT 解析 pipeline（mini_racer + @garmin/fitsdk） | ✅ 已完成（lib/workouts/fit/decoder.rb）|
+| Garmin DI OAuth2 认证（curl_cffi + Playwright 降级链） | ✅ 已完成（lib/workouts/sync/garmin.rb）|
 
 ---
 

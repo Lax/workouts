@@ -1,8 +1,73 @@
 # Garmin OAuth Auth — Design
 
-Garmin Connect API 用两层 OAuth: OAuth1（长期凭证）+ OAuth2（短期令牌）。
+Garmin Connect API uses two auth paths depending on domain:
 
-## Credentials
+- **garmin.com** (international): DI OAuth2 (since CF block, Mar 2026)
+- **garmin_cn** (China): Original OAuth1→OAuth2 chain (unaffected by CF)
+
+## garmin.com: DI OAuth2 Flow
+
+| Token | Source | TTL | Use |
+|---|---|---|---|
+| DI OAuth2 access_token | SSO → CAS → DI exchange | ~18h | Authorization: Bearer |
+| DI OAuth2 refresh_token | same exchange | ~30d sliding | renew access_token |
+
+### Auth priority chain (Garmin#authenticate → authenticate_di)
+
+```
+① DI token cache (data/cache/garmin_garmin_com_tokens.json, GH Cache)
+   DI access_token valid? → use directly.
+   expired? → di_refresh (POST diauth.garmin.com) → new token → save cache.
+   refresh fail? → remove stale cache.
+
+② Strategy A: curl_cffi subprocess (scripts/garmin_auth.py)
+   portal+cffi: /portal/api/login (5 TLS fingerprints, 30-45s delay)
+   mobile+cffi: /mobile/api/login (Safari TLS, fallback)
+   → CAS ticket → DI OAuth2 exchange → save cache.
+
+③ Strategy B: Playwright subprocess (scripts/garmin_auth_playwright.py)
+   Headless Chromium → widget/portal form login → ticket → DI exchange
+   Session cookies cached (~1 year) to avoid repeat MFA.
+   Fallback only — heavier deps (~500MB Chromium).
+
+④ Failure → false (no SSO in CI)
+```
+
+### CI cache design
+
+| Cache | Key | Path |
+|---|---|---|
+| DI token | `garmin-tokens-v1-garmin-{run_id}` | `data/cache/garmin_garmin_com_tokens.json` |
+| Playwright browser (optional) | `garmin-playwright-browser-v1-{os}` | `~/.cache/ms-playwright` |
+
+Email + password live in GitHub Secrets (`SYNC_GARMIN_EMAIL`, `SYNC_GARMIN_PASSWORD`).
+Token lives only in GH Cache (not in repo, not in GitHub Secrets).
+
+### Subprocess interface
+
+Both `garmin_auth.py` and `garmin_auth_playwright.py`:
+- Input: `GARMIN_EMAIL`, `GARMIN_PASSWORD`, `GARMIN_DOMAIN` env vars
+- Output: JSON DI OAuth2 token to stdout, exit 0 on success
+- MFA: `GARMIN_MFA_CODE` env var (optional)
+
+## garmin_cn: OAuth1→OAuth2 Chain (unchanged)
+
+```
+① secret (config.yml / env SYNC__{SOURCE}__SECRET)
+   Base64([OAuth1 JSON, OAuth2 JSON]) — garth dumps() compatible.
+   Parse → OAuth2 valid? → use directly.
+   OAuth2 expired? → OAuth1 refresh → new OAuth2.
+   Fail → degrade.
+
+② token file (~/.workouts/garmin_tokens.json)
+   Same logic. Fail → delete stale.
+
+③ SSO login (email+password, interactive, MFA supported)
+   On success: dump_secret → verify_access_token.
+   Verify pass → save_secret_to_config + save_tokens.
+```
+
+### Credentials
 
 | Credential | Source | TTL | Use |
 |---|---|---|---|
@@ -10,39 +75,13 @@ Garmin Connect API 用两层 OAuth: OAuth1（长期凭证）+ OAuth2（短期令
 | OAuth2 access_token | OAuth1 signed POST /exchange/user/2.0 | ~6h | Authorization: Bearer |
 | OAuth2 refresh_token | same as access_token | ~90d | new access_token |
 
-## Auth priority chain (GarminBase#authenticate)
+## Architecture
 
 ```
-① secret (config.yml / env SYNC__{SOURCE}__SECRET)
-   Base64([OAuth1 JSON, OAuth2 JSON]) — garth dumps() compatible.
-   Parse -> OAuth2 valid? -> use directly.
-   OAuth2 expired? -> OAuth1 refresh -> new OAuth2.
-   Fail (parse / OAuth1 expired) -> degrade.
-
-② token file (~/.workouts/garmin_tokens.json)
-   Same logic as ①.
-   Fail -> delete stale file -> degrade.
-
-③ SSO login (email+password, interactive, MFA supported)
-   On success: dump_secret -> verify_access_token (API probe).
-   Verify pass -> save_secret_to_config (back to config.yml) + save_tokens.
-   Verify fail -> discard, raise AuthError (no infinite loop).
+GarminBase#authenticate
+  ├── @domain == "garmin.com"? → authenticate_di (DI OAuth2)
+  └── else                    → authenticate_oauth1 (original OAuth1 chain)
 ```
 
-## Why secret first
-
-OAuth1 is long-lived. Generate once via garth or `auth garmin_cn`.
-CI environment uses only secret (env var, no interactive SSO).
-OAuth2 auto-refresh every ~6h. OAuth1 stays same -> no secret rewrite.
-
-Secrets `SYNC__GARMIN_CN__SECRET` and `SYNC__GARMIN__SECRET` are GitHub repo secrets.
-`SYNC__{SOURCE}__EMAIL` / `SYNC__{SOURCE}__PASSWORD` exist as fallback only.
-
-## CI failure modes
-
-| Condition | Behavior |
-|---|---|
-| secret exists | parse + use, OAuth2 expired -> auto refresh |
-| OAuth2 refresh ok | continue sync |
-| OAuth1 expired (rare) | no SSO (interactive unavailable), sync returns 0 |
-| Fix | local `auth garmin_cn` -> new secret -> update GitHub Secret |
+`Garmin` (< 20 lines) sets `@domain = "garmin.com"`, inherit all DI logic.
+`GarminCN` (< 20 lines) sets `@domain = "garmin.cn"`, inherit all OAuth1 logic.
