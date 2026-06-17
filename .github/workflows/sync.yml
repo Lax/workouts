@@ -58,6 +58,7 @@ jobs:
           SYNC__XINGZHE__PASSWORD: ${{ secrets.SYNC_XINGZHE_PASSWORD }}
           SYNC__GARMIN_CN__EMAIL: ${{ secrets.SYNC_GARMIN_CN_EMAIL }}
           SYNC__GARMIN_CN__PASSWORD: ${{ secrets.SYNC_GARMIN_CN_PASSWORD }}
+          SYNC__GARMIN_CN__SECRET: ${{ secrets.SYNC_GARMIN_CN_SECRET }}
           SYNC__GARMIN__EMAIL: ${{ secrets.SYNC_GARMIN_EMAIL }}
           SYNC__GARMIN__PASSWORD: ${{ secrets.SYNC_GARMIN_PASSWORD }}
           SYNC__GARMIN__SECRET: ${{ secrets.SYNC_GARMIN_SECRET }}

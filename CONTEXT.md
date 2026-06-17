@@ -123,6 +123,46 @@ SVG 导出时，标注上会区分 derived（高置信度合并）和 overlap（
 
 ---
 
+### Garmin OAuth 认证机制
+
+#### 概念
+
+| 凭证 | 获取方式 | 有效期 | 用途 |
+|---|---|---|---|
+| **OAuth1** token + secret | SSO 登录后 `GET /preauthorized` | 长期（月~年） | 签名换取 OAuth2 |
+| **OAuth2** access_token | OAuth1 签名 `POST /exchange/user/2.0` | ~6h | `Authorization: Bearer` 调 API |
+| **OAuth2** refresh_token | 同上 | ~90d | 换新 access_token |
+
+#### 认证优先级（`GarminBase#authenticate`）
+
+```
+① secret（config.yml / env）
+   Base64([OAuth1, OAuth2]) — 与 garth dumps() 格式一致
+   parse → OAuth2 有效? → 直接使用
+   parse → OAuth2 过期? → OAuth1 refresh → 新 OAuth2
+   失败（解析/OAuth1 过期）→ 降级
+
+② token 文件（~/.workouts/garmin_tokens.json）
+   同上逻辑
+
+③ SSO 登录（交互式，支持 MFA）
+   成功后 dump_secret → 写回 config.yml（下次走 ①）
+   → save_tokens（写 token 文件，下次走 ②）
+```
+
+#### CI 策略
+
+| 条件 | 行为 |
+|---|---|
+| `SYNC__{SOURCE}__SECRET` 存在 | 解析后直接用，OAuth2 过期则自动 refresh |
+| OAuth2 refresh 成功 | 继续 sync |
+| OAuth1 过期（罕见） | 不做 SSO（交互式不可用），sync 返回 0 |
+| 解决方案 | 本地 `auth garmin_cn` → 新 secret → 更新 GitHub Secret |
+
+`SYNC__{SOURCE}__SECRET` 与 `SYNC__{SOURCE}__EMAIL` / `SYNC__{SOURCE}__PASSWORD` 不互斥。secret 优先，email+password 只作为 SSO 保底。
+
+---
+
 ## 数据库
 
 ### Schema

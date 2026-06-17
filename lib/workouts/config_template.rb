@@ -25,9 +25,13 @@ module Workouts
           #   # secret: "base64_garth_token"   # alternative to email+password
 
           # --- Garmin China (garmin.cn) ---
+          # Use either email+password OR secret (garth token string).
+          # Generate token from reachable network via:
+          #   python3 -c "import garth; garth.configure(domain='garmin.cn', ssl_verify=False); garth.login('email','password'); print(garth.client.dumps())"
           # garmin_cn:
           #   email: "13800138000"             # placeholder
           #   password: "your_password"        # placeholder
+          #   # secret: "base64_garth_token"   # alternative to email+password
 
           # keep:
           #   phone: "13800138000"      # placeholder

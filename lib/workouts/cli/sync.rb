@@ -29,6 +29,9 @@ module Workouts
         end
       end
 
+      # auth garmin/garmin_cn:
+      #   adapter.authenticate → SSO 成功?
+      #   → 打印 GitHub Secrets 粘贴指引（secret/email/password）
       def auth(source)
         sources = %w[garmin garmin_cn xoss xingzhe]
         unless sources.include?(source)
@@ -52,6 +55,17 @@ module Workouts
         say_status :auth, "Logging in to #{source}...", :green
         if adapter.authenticate
           say_status :done, "#{source} authenticated successfully", :green
+          if adapter.respond_to?(:generated_secret) && (secret = adapter.generated_secret)
+            puts ""
+            puts "GitHub Actions Secrets:"
+            puts "  SYNC_#{source.upcase}_SECRET = #{secret}"
+            puts "  SYNC_#{source.upcase}_EMAIL  = #{config["email"]}"
+            puts "  SYNC_#{source.upcase}_PASSWORD = #{config["password"]}"
+            puts ""
+            puts "Local config:"
+            puts "  #{source}:"
+            puts "    secret: (已自动写入 config/config.yml)"
+          end
         else
           say_status :error, "Authentication failed", :red
         end

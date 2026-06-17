@@ -6,6 +6,7 @@ module Workouts
       def initialize(...)
         super
         @domain = "garmin.cn"
+        @ssl_verify = @config.key?("ssl_verify") ? @config["ssl_verify"] : false
       end
     end
   end
