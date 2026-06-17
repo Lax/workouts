@@ -13,7 +13,7 @@
 ## CLI 命令
 
 | 命令 | 说明 |
-|---|---|---|
+|---|---|
 | `sync [--source S] [--act TYPE]` | 同步所有配置源（`--source` 指定单一源，`--act` 按运动类型过滤） |
 | `auth <garmin\|garmin_cn>` | 交互式 Garmin SSO 登录 |
 | `export json [--output]` | 导出 JSON |
@@ -133,7 +133,6 @@ SVG 导出时，标注上会区分 derived（高置信度合并）和 overlap（
 
 ---
 
-
 ## 数据库
 
 ### Schema
@@ -168,9 +167,9 @@ CREATE TABLE activities (
 
 ### 配置层级（优先级：高→低）
 
-1. 环境变量 `SYNC__SOURCE__KEY`（`__` 双下划线分隔层级）
-2. `config/config.yml`（自动加载）
-3. `Config::DEFAULTS` 硬编码默认值
+1. 环境变量 `` SYNC__{SOURCE}__KEY ``（`__` 双下划线分隔层级）
+2. `` config/config.yml ``（自动加载）
+3. `` Config::DEFAULTS `` 硬编码默认值
 
 ### 环境变量命名
 
@@ -201,7 +200,7 @@ Secrets 名用单 `_`（`SYNC_KEEP_PHONE`），Workflow env 块映射为 `SYNC__
 ```
 
 - 精确别名：`running` → `run`, `cycling` → `ride`
-- 关键词：`mountaineering` → `hike`, `jogging` → `run`  
+- 关键词：`mountaineering` → `hike`, `jogging` → `run`
 - Levenshtein：`swiming` → `swim`, `runing` → `run`
 
 各适配器保留自己的整数 SPORT_MAP（平台特有 code 体系不可统一）。
@@ -312,7 +311,7 @@ docker compose run --rm workouts export json
 
 详见 [docs/data-architecture.md](docs/data-architecture.md)
 
-L1 raw → L2 standardized GPS → L3 SQLite summary → L4 build artifacts → L5 deploy.
+L1 raw → L2 标准化 GPS → L3 SQLite 摘要 → L4 构建制品 → L5 部署。
 转换规则: 坐标归一化、时间归一化、不丢字段。
 每个新源必须实现 L1+L2+L3。
 
