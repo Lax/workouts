@@ -143,11 +143,14 @@ SVG 导出时，标注上会区分 derived（高置信度合并）和 overlap（
    失败（解析/OAuth1 过期）→ 降级
 
 ② token 文件（~/.workouts/garmin_tokens.json）
-   同上逻辑
+   逻辑同 ①
+   失败 → 删除陈旧文件 → 降级
 
 ③ SSO 登录（交互式，支持 MFA）
-   成功后 dump_secret → 写回 config.yml（下次走 ①）
-   → save_tokens（写 token 文件，下次走 ②）
+   成功后 dump_secret → verify_access_token（API 验证）
+   验证通过 → save_secret_to_config（写回 config.yml）
+            → save_tokens（写 token 文件）
+   验证失败 → 不保存，抛出 AuthError
 ```
 
 #### CI 策略
