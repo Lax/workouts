@@ -407,7 +407,7 @@ module Workouts
           moving_time: moving_time,
           elapsed_time: elapsed_time,
           sport_category: type,
-          sport_type: (act_data["activityType"] || "").downcase,
+          sport_type: type_str(act_data["activityType"]),
           start_date: start_t&.strftime("%Y-%m-%d %H:%M:%S"),
           start_date_local: start_t&.strftime("%Y-%m-%d %H:%M:%S"),
           location_country: loc_data["locationName"],
@@ -425,9 +425,15 @@ module Workouts
         nil
       end
 
+      def type_str(val)
+        return "" unless val
+        val.is_a?(Hash) ? (val["typeKey"] || "").downcase : val.to_s.downcase
+      end
+
       def map_type(activity_type)
-        return "other" unless activity_type
-        case activity_type.downcase
+        ts = type_str(activity_type)
+        return "other" if ts.empty?
+        case ts
         when /running/ then "run"
         when /cycling/, /biking/ then "ride"
         when /hiking/ then "hike"
