@@ -8,9 +8,27 @@ require "net/http"
 require "uri"
 require "cgi"
 require "http/cookie_jar"
+require "yaml"
 
 module Workouts
   module Sync
+    # Garmin OAuth 认证基类（garmin.com / garmin.cn 共用）
+    #
+    # 认证优先级（依次降级）:
+    #   ① secret: config.yml 或 env SYNC__{SOURCE}__SECRET
+    #      格式 Base64([OAuth1 JSON, OAuth2 JSON])，与 garth dumps() 兼容
+    #      解析后 OAuth2 未过期 → 直接用; 过期 → OAuth1 refresh
+    #      失败 → 降级
+    #   ② token 文件: ~/.workouts/garmin_tokens.json
+    #      文件持久化，逻辑同 ①
+    #   ③ SSO 登录: email + password，交互式，支持 MFA
+    #      成功后 dump_secret → save_secret_to_config（写回 config.yml）
+    #      → save_tokens（写 token 文件）
+    #
+    # CI 环境:
+    #   secret 由 env 注入，不走 SSO
+    #   OAuth2 每 6h 自动 refresh，OAuth1 长期有效
+    #   OAuth1 过期 → 本地重新 auth，更新 GitHub Secret
     class GarminBase < Base
       CLIENT_ID = "GCM_ANDROID_DARK"
       OAUTH_CONSUMER_URL = "https://thegarth.s3.amazonaws.com/oauth_consumer.json"
@@ -27,26 +45,43 @@ module Workouts
         @email = @config["email"]
         @password = @config["password"]
         @secret = @config["secret"]
+        @ssl_verify = @config.key?("ssl_verify") ? @config["ssl_verify"] : true
       end
 
+      attr_reader :generated_secret
+
       def call
-        return 0 if @email.to_s.empty? || @password.to_s.empty?
+        return 0 if @email.to_s.empty? && @secret.to_s.empty?
 
         return 0 unless authenticate
 
         sync_activities
       end
 
+      # 认证优先级链: secret → token 文件 → SSO 登录
       def authenticate
         @oauth_consumer = fetch_oauth_consumer
 
-        return true if @secret && parse_secret_string(@secret)
+        if @secret
+          if parse_secret_string(@secret)
+            return true if access_token_valid?
+            begin
+              return true if refresh_oauth2_via_oauth1
+            rescue AuthError
+            end
+          end
+        end
+
         return true if load_tokens && access_token_valid?
         return true if load_tokens && refresh_oauth2_via_oauth1
+
+        return false if @email.to_s.empty? || @password.to_s.empty?
 
         ticket = sso_login
         @oauth1_token = fetch_oauth1_token(ticket)
         @access_token = exchange_oauth2
+        @generated_secret = dump_secret
+        save_secret_to_config
         save_tokens
         true
       end
@@ -60,24 +95,55 @@ module Workouts
         expires_at.nil? || Time.now.to_i < expires_at - 60
       end
 
+      # Base64 → [OAuth1 JSON, OAuth2 JSON], 兼容 garth dumps()
       def parse_secret_string(secret)
         decoded = JSON.parse(Base64.strict_decode64(secret))
         o1 = decoded[0]
         o2 = decoded[1]
 
+        secret_domain = o1["domain"]
+        @domain = secret_domain if secret_domain
         @oauth1_token = OpenStruct.new(
           oauth_token: o1["oauth_token"],
           oauth_token_secret: o1["oauth_token_secret"],
           mfa_token: o1["mfa_token"],
-          domain: o1["domain"] || @domain
+          domain: @domain
         )
         @access_token = o2
         save_tokens
         true
-      rescue => e
-        raise AuthError, "Invalid garth secret: #{e.message}"
+      rescue
+        false
       end
 
+      # [OAuth1, OAuth2] → JSON → Base64, garth dumps() 镜像
+      def dump_secret
+        o1 = {
+          oauth_token: @oauth1_token.oauth_token,
+          oauth_token_secret: @oauth1_token.oauth_token_secret,
+          mfa_token: @oauth1_token.mfa_token,
+          mfa_expiration_timestamp: nil,
+          domain: @oauth1_token.domain
+        }
+        JSON.generate([o1, @access_token]).then { |s| Base64.strict_encode64(s) }
+      end
+
+      # SSO 成功后写 secret 到 config.yml，下次走 ①
+      def save_secret_to_config
+        path = "config/config.yml"
+        return unless File.exist?(path)
+
+        cfg = YAML.safe_load(File.read(path)) || {}
+        source = @domain == "garmin.cn" ? "garmin_cn" : "garmin"
+        cfg["sync"] ||= {}
+        cfg["sync"][source] ||= {}
+        cfg["sync"][source]["secret"] = @generated_secret
+        File.write(path, YAML.dump(cfg))
+      rescue => e
+        puts "Warning: failed to save secret to config.yml: #{e.message}"
+      end
+
+      # OAuth2 过期: 用 OAuth1 签名换新 OAuth2
       def refresh_oauth2_via_oauth1
         return false unless @oauth1_token&.oauth_token
 
@@ -282,6 +348,7 @@ module Workouts
       def send_http(uri, request)
         http = Net::HTTP.new(uri.host, uri.port)
         http.use_ssl = true
+        http.verify_mode = OpenSSL::SSL::VERIFY_NONE unless @ssl_verify
         http.open_timeout = 30
         http.read_timeout = 60
         http.start { |h| h.request(request) }
@@ -354,7 +421,8 @@ module Workouts
           oauth1: {
             oauth_token: @oauth1_token.oauth_token,
             oauth_token_secret: @oauth1_token.oauth_token_secret,
-            mfa_token: @oauth1_token.mfa_token
+            mfa_token: @oauth1_token.mfa_token,
+            domain: @oauth1_token.domain || @domain
           },
           oauth2: @access_token
         }))
@@ -368,6 +436,8 @@ module Workouts
 
         data = JSON.parse(File.read(path))
         o1 = data["oauth1"]
+        saved_domain = o1["domain"]
+        @domain = saved_domain if saved_domain
         @oauth1_token = OpenStruct.new(
           oauth_token: o1["oauth_token"],
           oauth_token_secret: o1["oauth_token_secret"],
