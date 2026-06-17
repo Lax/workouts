@@ -218,7 +218,18 @@ module Workouts
       end
 
       def strategy_b_login
-        nil # Phase 3: subprocess Playwright
+        script = File.expand_path("../../../scripts/garmin_auth_playwright.py", __dir__)
+        return nil unless File.exist?(script)
+
+        stdout, stderr, status = Open3.capture3(
+          {"GARMIN_EMAIL" => @email, "GARMIN_PASSWORD" => @password, "GARMIN_DOMAIN" => @domain},
+          "python3", script
+        )
+        warn stderr unless stderr.empty?
+        JSON.parse(stdout) if status.success?
+      rescue => e
+        puts "Strategy B (Playwright) failed: #{e.message}"
+        nil
       end
 
       # -- OAuth1 methods (garmin_cn) --
