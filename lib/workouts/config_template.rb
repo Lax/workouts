@@ -15,16 +15,15 @@ module Workouts
           #   refresh_token: ""
 
           # --- Garmin International (garmin.com) ---
-          # Use either email+password OR secret (garth token string).
-          # SSO login is currently blocked by Cloudflare 429 globally.
-          # Workaround: generate token from reachable network via:
-          #   python3 -c "import garth; garth.login('email','pw'); print(garth.client.dumps())"
+          # DI OAuth2 auth flow. Token cached via GH Actions cache.
+          # Email + password stored in GitHub Secrets.
           # garmin:
           #   email: "your@email.com"          # placeholder
           #   password: "your_password"        # placeholder
-          #   # secret: "base64_garth_token"   # alternative to email+password
+          #   # token cached at data/cache/garmin_garmin_com_tokens.json
 
           # --- Garmin China (garmin.cn) ---
+          # Uses OAuth1 token chain (unaffected by garmin.com CF block).
           # Use either email+password OR secret (garth token string).
           # Generate token from reachable network via:
           #   python3 -c "import garth; garth.configure(domain='garmin.cn', ssl_verify=False); garth.login('email','password'); print(garth.client.dumps())"

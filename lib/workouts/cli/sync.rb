@@ -80,7 +80,9 @@ module Workouts
         case source
         when "strava"
           config["client_id"].to_s != "" && config["client_secret"].to_s != "" && config["refresh_token"].to_s != ""
-        when "garmin", "garmin_cn"
+        when "garmin"
+          config["email"].to_s != "" && config["password"].to_s != ""
+        when "garmin_cn"
           (config["email"].to_s != "" && config["password"].to_s != "") || config["secret"].to_s != ""
         when "keep"
           (config["phone"] || config["mobile"]).to_s != "" && config["password"].to_s != ""

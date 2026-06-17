@@ -7,6 +7,7 @@ data/*.csv
 data/svg/
 data/raw/
 data/std/
+data/cache/
 build/
 *.bak
 *.gem
