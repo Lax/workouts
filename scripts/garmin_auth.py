@@ -83,8 +83,11 @@ def _di_exchange(domain, ticket):
 
 def _handle_mfa(sess, base_url, method, mfa_params, mfa_headers, mfa_data):
     mfa_code = os.environ.get("SYNC__GARMIN__MFA_CODE")
+    if not mfa_code and sys.stdin.isatty():
+        print("Enter MFA code: ", file=sys.stderr, end="", flush=True)
+        mfa_code = sys.stdin.readline()
     if not mfa_code:
-        raise RuntimeError("MFA required but SYNC__GARMIN__MFA_CODE env var not set")
+        raise RuntimeError("MFA required but SYNC__GARMIN__MFA_CODE env var not set and stdin unavailable")
 
     code = mfa_code.strip()
     if not code:
@@ -239,20 +242,7 @@ def main():
 
     errors = []
 
-    # Strategy 1: portal+cffi (5 TLS fingerprints)
-    try:
-        ticket = portal_login(domain, email, password)
-        token = _di_exchange(domain, ticket)
-        token["expires_at"] = int(time.time()) + token.get("expires_in", 64800)
-        if "refresh_token_expires_in" in token:
-            token["refresh_token_expires_at"] = int(time.time()) + token["refresh_token_expires_in"]
-        json.dump(token, sys.stdout)
-        return 0
-    except RuntimeError as e:
-        errors.append(f"portal+cffi: {e}")
-        print(f"[garmin_auth] {errors[-1]}", file=sys.stderr)
-
-    # Strategy 2: mobile+cffi
+    # Strategy 1: mobile+cffi (Safari TLS — proven path)
     try:
         ticket = mobile_login(domain, email, password)
         token = _di_exchange(domain, ticket)
@@ -263,6 +253,19 @@ def main():
         return 0
     except RuntimeError as e:
         errors.append(f"mobile+cffi: {e}")
+        print(f"[garmin_auth] {errors[-1]}", file=sys.stderr)
+
+    # Strategy 2: portal+cffi (5 TLS fingerprints)
+    try:
+        ticket = portal_login(domain, email, password)
+        token = _di_exchange(domain, ticket)
+        token["expires_at"] = int(time.time()) + token.get("expires_in", 64800)
+        if "refresh_token_expires_in" in token:
+            token["refresh_token_expires_at"] = int(time.time()) + token["refresh_token_expires_in"]
+        json.dump(token, sys.stdout)
+        return 0
+    except RuntimeError as e:
+        errors.append(f"portal+cffi: {e}")
         print(f"[garmin_auth] {errors[-1]}", file=sys.stderr)
 
     print(f"[garmin_auth] All strategies exhausted: {'; '.join(errors)}", file=sys.stderr)

@@ -15,12 +15,12 @@ module Workouts
           #   refresh_token: ""
 
           # --- Garmin International (garmin.com) ---
-          # DI OAuth2 auth flow. Token cached via GH Actions cache.
-          # Email + password stored in GitHub Secrets.
+          # DI OAuth2 auth flow. Run ./scripts/garmin_auth_local.sh once
+          # to get the initial refresh_token. CI auto-refreshes via di_refresh.
           # garmin:
           #   email: "your@email.com"          # placeholder
           #   password: "your_password"        # placeholder
-          #   # token cached at data/cache/garmin_garmin_com_tokens.json
+          #   refresh_token: "base64_di_token" # auto-written by auth_local.sh
 
           # --- Garmin China (garmin.cn) ---
           # Uses OAuth1 token chain (unaffected by garmin.com CF block).
