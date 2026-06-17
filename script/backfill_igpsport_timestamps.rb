@@ -18,14 +18,16 @@ db[:activities].where(source: "igpsport").each do |row|
 
   begin
     points = Workouts::FIT::Decoder.decode(fit_path)
-    if points.empty?
-      warn "no GPS records in #{fit_path}"
-      errors += 1
-      next
+    first_ts = if points.any?
+      points.first["timestamp"]
+    else
+      Workouts::FIT::Decoder.first_timestamp(fit_path)
     end
 
-    first_ts = points.first["timestamp"]
-    next unless first_ts
+    unless first_ts
+      warn "skip #{ride_id}: empty FIT or no timestamp"
+      next
+    end
 
     t = Time.at(FIT_EPOCH + first_ts)
     utc = t.utc.strftime("%Y-%m-%d %H:%M:%S")
