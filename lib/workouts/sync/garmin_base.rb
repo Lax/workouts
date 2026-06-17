@@ -21,9 +21,12 @@ module Workouts
     #      失败 → 降级
     #   ② token 文件: ~/.workouts/garmin_tokens.json
     #      文件持久化，逻辑同 ①
+    #      失败 → 删除陈旧文件 → 降级
     #   ③ SSO 登录: email + password，交互式，支持 MFA
-    #      成功后 dump_secret → save_secret_to_config（写回 config.yml）
+    #      成功后 dump_secret → verify_access_token
+    #      → save_secret_to_config（写回 config.yml）
     #      → save_tokens（写 token 文件）
+    #      验证失败 → 不保存，抛出 AuthError
     #
     # CI 环境:
     #   secret 由 env 注入，不走 SSO
@@ -72,8 +75,12 @@ module Workouts
           end
         end
 
-        return true if load_tokens && access_token_valid?
-        return true if load_tokens && refresh_oauth2_via_oauth1
+        begin
+          return true if load_tokens && access_token_valid?
+          return true if load_tokens && refresh_oauth2_via_oauth1
+        rescue AuthError
+          remove_stale_tokens
+        end
 
         return false if @email.to_s.empty? || @password.to_s.empty?
 
@@ -81,6 +88,10 @@ module Workouts
         @oauth1_token = fetch_oauth1_token(ticket)
         @access_token = exchange_oauth2
         @generated_secret = dump_secret
+        unless verify_access_token
+          @generated_secret = nil
+          raise AuthError, "New tokens failed API verify — SSO result invalid"
+        end
         save_secret_to_config
         save_tokens
         true
@@ -110,7 +121,6 @@ module Workouts
           domain: @domain
         )
         @access_token = o2
-        save_tokens
         true
       rescue
         false
@@ -141,6 +151,22 @@ module Workouts
         File.write(path, YAML.dump(cfg))
       rescue => e
         puts "Warning: failed to save secret to config.yml: #{e.message}"
+      end
+
+      # SSO 后验证新 token: 拉一条活动确认 API 可访问
+      def verify_access_token
+        api_get("/activitylist-service/activities/search/activities?start=0&limit=1")
+        true
+      rescue
+        false
+      end
+
+      # 删除陈旧 token 文件，避免下次重试同一过期凭证
+      def remove_stale_tokens
+        path = token_path
+        File.delete(path) if File.exist?(path)
+      rescue => e
+        puts "Warning: failed to remove stale tokens: #{e.message}"
       end
 
       # OAuth2 过期: 用 OAuth1 签名换新 OAuth2
