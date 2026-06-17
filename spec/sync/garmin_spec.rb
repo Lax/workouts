@@ -329,6 +329,52 @@ RSpec.describe Workouts::Sync::Garmin do
     end
   end
 
+  describe "#strategy_b_login" do
+    let(:adapter) do
+      config = { "email" => "test@gb.com", "password" => "pw", "di_token_path" => File.join(tmpdir, "garmin_tokens.json") }
+      Class.new(described_class) do
+        def fetch_oauth_consumer; {}; end
+        def strategy_a_login; nil; end
+      end.new(config:, db:, activity_filter: nil)
+    end
+
+    it "returns nil when script file does not exist" do
+      expect(adapter.send(:strategy_b_login)).to be nil
+    end
+
+    it "calls python3 subprocess with env vars and parses JSON on success" do
+      token = di_token_json
+      stdout = JSON.generate(token)
+      status = double("Process::Status", success?: true)
+      resolved = File.expand_path("scripts/garmin_auth_playwright.py", Dir.pwd)
+      allow(File).to receive(:exist?).with(resolved).and_return(true)
+      allow(Open3).to receive(:capture3).with(
+        hash_including("GARMIN_EMAIL" => "test@gb.com", "GARMIN_PASSWORD" => "pw", "GARMIN_DOMAIN" => "garmin.com"),
+        "python3", resolved
+      ).and_return([stdout, "", status])
+
+      result = adapter.send(:strategy_b_login)
+      expect(result["access_token"]).to eq("di_test_at")
+    end
+
+    it "returns nil on subprocess failure" do
+      status = double("Process::Status", success?: false)
+      resolved = File.expand_path("scripts/garmin_auth_playwright.py", Dir.pwd)
+      allow(File).to receive(:exist?).with(resolved).and_return(true)
+      allow(Open3).to receive(:capture3).and_return(["", "error", status])
+
+      expect(adapter.send(:strategy_b_login)).to be nil
+    end
+
+    it "returns nil on subprocess exception" do
+      resolved = File.expand_path("scripts/garmin_auth_playwright.py", Dir.pwd)
+      allow(File).to receive(:exist?).with(resolved).and_return(true)
+      allow(Open3).to receive(:capture3).and_raise(Errno::ENOENT, "python3 not found")
+
+      expect(adapter.send(:strategy_b_login)).to be nil
+    end
+  end
+
   describe "#call" do
     context "with email+password set" do
       subject(:adapter) { stub_di_adapter }
