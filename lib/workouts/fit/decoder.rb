@@ -25,6 +25,12 @@ module Workouts
         json = CTX.eval("FitDecoder.fitInfo(#{bytes.inspect})")
         JSON.parse(json)
       end
+
+      def self.first_timestamp(path)
+        bytes = File.read(path, mode: "rb").bytes
+        json = CTX.eval("FitDecoder.debugRecords(#{bytes.inspect})")
+        JSON.parse(json).dig("first", "timestamp")
+      end
     end
   end
 end
