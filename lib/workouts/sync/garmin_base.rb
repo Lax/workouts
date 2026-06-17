@@ -155,8 +155,8 @@ module Workouts
 
       # SSO 后验证新 token: 拉一条活动确认 API 可访问
       def verify_access_token
-        api_get("/activitylist-service/activities/search/activities?start=0&limit=1")
-        true
+        result = api_get("/activitylist-service/activities/search/activities?start=0&limit=1")
+        !result.nil?
       rescue
         false
       end
