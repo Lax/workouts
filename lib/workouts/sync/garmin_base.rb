@@ -9,6 +9,7 @@ require "uri"
 require "cgi"
 require "http/cookie_jar"
 require "yaml"
+require "open3"
 
 module Workouts
   module Sync
@@ -54,17 +55,55 @@ module Workouts
       attr_reader :generated_secret
 
       def call
-        return 0 if @email.to_s.empty? && @secret.to_s.empty?
+        if @domain == "garmin.com"
+          return 0 if (@email.to_s.empty? || @password.to_s.empty?) && !File.exist?(di_token_path)
+        else
+          return 0 if @email.to_s.empty? && @secret.to_s.empty?
+        end
 
         return 0 unless authenticate
 
         sync_activities
       end
 
-      # 认证优先级链: secret → token 文件 → SSO 登录
+      # 认证分发: garmin.com → DI OAuth2, garmin.cn → OAuth1
       def authenticate
         @oauth_consumer = fetch_oauth_consumer
+        if @domain == "garmin.com"
+          authenticate_di
+        else
+          authenticate_oauth1
+        end
+      end
 
+      def authenticate_di
+        if load_di_tokens
+          return true if access_token_valid?
+          begin
+            return true if di_refresh
+          rescue AuthError
+            remove_stale_di_tokens
+          end
+        end
+
+        return false if @email.to_s.empty? || @password.to_s.empty?
+
+        if (token = strategy_a_login)
+          @access_token = token
+          save_di_tokens
+          return true if verify_access_token
+        end
+
+        if (token = strategy_b_login)
+          @access_token = token
+          save_di_tokens
+          return true if verify_access_token
+        end
+
+        false
+      end
+
+      def authenticate_oauth1
         if @secret
           if parse_secret_string(@secret)
             return true if access_token_valid?
@@ -98,6 +137,91 @@ module Workouts
       end
 
       private
+
+      # -- DI OAuth2 methods (garmin.com) --
+
+      def di_auth_base
+        "https://diauth.#{@domain}"
+      end
+
+      def di_token_path
+        @config["di_token_path"] || File.join("data", "cache", "garmin_#{@domain.tr(".", "_")}_tokens.json")
+      end
+
+      def load_di_tokens
+        path = di_token_path
+        return false unless File.exist?(path)
+
+        data = JSON.parse(File.read(path))
+        @access_token = data
+        true
+      rescue => e
+        puts "Failed to load Garmin DI tokens: #{e.message}"
+        false
+      end
+
+      def save_di_tokens
+        return unless @access_token&.dig("access_token")
+
+        path = di_token_path
+        dir = File.dirname(path)
+        FileUtils.mkdir_p(dir)
+        File.write(path, JSON.pretty_generate(@access_token))
+      rescue => e
+        puts "Failed to save Garmin DI tokens: #{e.message}"
+      end
+
+      def remove_stale_di_tokens
+        path = di_token_path
+        File.delete(path) if File.exist?(path)
+      rescue => e
+        puts "Warning: failed to remove stale DI tokens: #{e.message}"
+      end
+
+      def di_refresh
+        return false unless @access_token&.dig("refresh_token")
+
+        uri = URI("#{di_auth_base}/di-oauth2-service/oauth/token")
+        req = Net::HTTP::Post.new(uri)
+        req["Content-Type"] = "application/x-www-form-urlencoded"
+        req.body = URI.encode_www_form(
+          grant_type: "refresh_token",
+          refresh_token: @access_token["refresh_token"]
+        )
+
+        resp = retry_on_429 { send_http(uri, req) }
+        raise AuthError, "DI refresh error: #{resp.code}" unless resp.code.to_i == 200
+
+        result = JSON.parse(resp.body)
+        result["expires_at"] = Time.now.to_i + (result["expires_in"] || 64800).to_i
+        if result["refresh_token_expires_in"]
+          result["refresh_token_expires_at"] = Time.now.to_i + result["refresh_token_expires_in"].to_i
+        end
+        @access_token = result
+        save_di_tokens
+        true
+      end
+
+      def strategy_a_login
+        script = File.expand_path("../../../scripts/garmin_auth.py", __dir__)
+        return nil unless File.exist?(script)
+
+        stdout, stderr, status = Open3.capture3(
+          {"GARMIN_EMAIL" => @email, "GARMIN_PASSWORD" => @password, "GARMIN_DOMAIN" => @domain},
+          "python3", script
+        )
+        warn stderr unless stderr.empty?
+        JSON.parse(stdout) if status.success?
+      rescue => e
+        puts "Strategy A (curl_cffi) failed: #{e.message}"
+        nil
+      end
+
+      def strategy_b_login
+        nil # Phase 3: subprocess Playwright
+      end
+
+      # -- OAuth1 methods (garmin_cn) --
 
       def access_token_valid?
         return false unless @access_token

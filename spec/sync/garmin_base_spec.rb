@@ -20,6 +20,10 @@ RSpec.describe Workouts::Sync::GarminBase do
   def stub_adapter(config_overrides: {})
     config = { "email" => "test@gb.com", "password" => "pw" }.merge(config_overrides)
     Class.new(described_class) do
+      def initialize(...)
+        super
+        @domain = "garmin.cn"
+      end
       def fetch_oauth_consumer; {}; end
       def sso_login; "test_ticket"; end
       def fetch_oauth1_token(...); OpenStruct.new(oauth_token: "new_o1", oauth_token_secret: "new_o1s", mfa_token: nil, domain: @domain); end
@@ -28,7 +32,7 @@ RSpec.describe Workouts::Sync::GarminBase do
   end
 
   # Construct garth-format base64 secret (all fields synthetic, no real data)
-  def build_secret(domain: "garmin.com", expires_at: Time.now.to_i + 3600)
+  def build_secret(domain: "garmin.cn", expires_at: Time.now.to_i + 3600)
     o1 = {
       "oauth_token" => "test_oauth_token",
       "oauth_token_secret" => "test_oauth_token_secret",
