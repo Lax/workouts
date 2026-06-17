@@ -55,6 +55,13 @@ jobs:
           echo "count=$count" >> $GITHUB_OUTPUT
 
       - uses: actions/cache/restore@v4
+        id: garmin-cn-tokens-cache
+        with:
+          path: data/cache/garmin_garmin_cn_tokens.json
+          key: garmin-tokens-v1-garmin_cn-${{ github.run_id }}
+          restore-keys: garmin-tokens-v1-garmin_cn-
+
+      - uses: actions/cache/restore@v4
         id: garmin-tokens-cache
         with:
           path: data/cache/garmin_garmin_com_tokens.json
@@ -140,6 +147,12 @@ jobs:
           before=${{ steps.source-before.outputs.count }}
           after=$(find data/raw/ data/std/ -type f 2>/dev/null | wc -l)
           echo "changed=$([ "$before" != "$after" ] && echo true || echo false)" >> $GITHUB_OUTPUT
+
+      - uses: actions/cache/save@v4
+        if: always()
+        with:
+          path: data/cache/garmin_garmin_cn_tokens.json
+          key: ${{ steps.garmin-cn-tokens-cache.outputs.cache-primary-key }}
 
       - uses: actions/cache/save@v4
         if: always()

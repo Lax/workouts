@@ -14,9 +14,9 @@ Flow:
 
 Session cookies persist ~1 year. Browser binary cached via GH Cache.
 
-Input:  GARMIN_EMAIL, GARMIN_PASSWORD, GARMIN_DOMAIN (default garmin.com)
-        GARMIN_MFA_CODE (optional, for MFA challenge)
-        GARMIN_PLAYWRIGHT_SESSION (path to session cookies file)
+Input:  SYNC__GARMIN__EMAIL, SYNC__GARMIN__PASSWORD, SYNC__GARMIN__DOMAIN (default garmin.com)
+        SYNC__GARMIN__MFA_CODE (optional, for MFA challenge)
+        SYNC__GARMIN__PLAYWRIGHT_SESSION (path to session cookies file)
 Output: JSON DI OAuth2 token to stdout, exit 0. Exit 1 on failure.
 """
 
@@ -138,7 +138,7 @@ def _login_widget(domain, email, password, mfa_code, page):
         url = page.url
         if "mfa" in url.lower() or "verify" in url.lower():
             if not mfa_code:
-                raise RuntimeError("MFA required but GARMIN_MFA_CODE not set")
+                raise RuntimeError("MFA required but SYNC__GARMIN__MFA_CODE not set")
             page.fill('input[id*="mfa"], input[name*="mfa"], input[type*="text"]', mfa_code, timeout=10000)
             # Try clicking submit button
             buttons = page.locator('button[type="submit"], input[type="submit"]').all()
@@ -200,12 +200,12 @@ def _try_portal_login_widget(domain, email, password, mfa_code, page):
 
 
 def main():
-    email = os.environ["GARMIN_EMAIL"]
-    password = os.environ["GARMIN_PASSWORD"]
-    domain = os.environ.get("GARMIN_DOMAIN", "garmin.com")
-    mfa_code = os.environ.get("GARMIN_MFA_CODE", "").strip() or None
+    email = os.environ["SYNC__GARMIN__EMAIL"]
+    password = os.environ["SYNC__GARMIN__PASSWORD"]
+    domain = os.environ.get("SYNC__GARMIN__DOMAIN", "garmin.com")
+    mfa_code = os.environ.get("SYNC__GARMIN__MFA_CODE", "").strip() or None
     session_path = os.environ.get(
-        "GARMIN_PLAYWRIGHT_SESSION",
+        "SYNC__GARMIN__PLAYWRIGHT_SESSION",
         os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "data", "cache", f"garmin_playwright_session_{domain.replace('.', '_')}.json"),
     )
     session_path = os.path.abspath(session_path)

@@ -6,11 +6,11 @@ Uses curl_cffi TLS impersonation with two strategies:
   1. portal+cffi: /portal/api/login (5 TLS fingerprints, primary)
   2. mobile+cffi: /mobile/api/login (Safari TLS, fallback)
 
-MFA threshold: supply GARMIN_MFA_CODE env var if account has MFA enabled.
+MFA threshold: supply SYNC__GARMIN__MFA_CODE env var if account has MFA enabled.
 30-45s random delay between SSO page GET and credential POST critical for
 Cloudflare WAF bypass.
 
-Input:  GARMIN_EMAIL, GARMIN_PASSWORD, GARMIN_DOMAIN (garmin.com default)
+Input:  SYNC__GARMIN__EMAIL, SYNC__GARMIN__PASSWORD, SYNC__GARMIN__DOMAIN (garmin.com default)
 Output: JSON DI OAuth2 token to stdout, exit 0. Exit 1 on failure.
 """
 
@@ -82,13 +82,13 @@ def _di_exchange(domain, ticket):
 
 
 def _handle_mfa(sess, base_url, method, mfa_params, mfa_headers, mfa_data):
-    mfa_code = os.environ.get("GARMIN_MFA_CODE")
+    mfa_code = os.environ.get("SYNC__GARMIN__MFA_CODE")
     if not mfa_code:
-        raise RuntimeError("MFA required but GARMIN_MFA_CODE env var not set")
+        raise RuntimeError("MFA required but SYNC__GARMIN__MFA_CODE env var not set")
 
     code = mfa_code.strip()
     if not code:
-        raise RuntimeError("GARMIN_MFA_CODE is empty")
+        raise RuntimeError("SYNC__GARMIN__MFA_CODE is empty")
 
     mfa_data["mfaVerificationCode"] = code
 
@@ -229,12 +229,12 @@ def mobile_login(domain, email, password):
 
 
 def main():
-    email = os.environ["GARMIN_EMAIL"]
-    password = os.environ["GARMIN_PASSWORD"]
-    domain = os.environ.get("GARMIN_DOMAIN", "garmin.com")
+    email = os.environ["SYNC__GARMIN__EMAIL"]
+    password = os.environ["SYNC__GARMIN__PASSWORD"]
+    domain = os.environ.get("SYNC__GARMIN__DOMAIN", "garmin.com")
 
     if not email.strip() or not password.strip():
-        print("[garmin_auth] GARMIN_EMAIL or GARMIN_PASSWORD not set", file=sys.stderr)
+        print("[garmin_auth] SYNC__GARMIN__EMAIL or SYNC__GARMIN__PASSWORD not set", file=sys.stderr)
         sys.exit(1)
 
     errors = []
