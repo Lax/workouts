@@ -20,7 +20,7 @@ module Workouts
           # garmin:
           #   email: "your@email.com"          # placeholder
           #   password: "your_password"        # placeholder
-          #   refresh_token: "base64_di_token" # auto-written by auth_local.sh
+          #   auth_seed: "base64_di_token" # auto-written by auth_local.sh
 
           # --- Garmin China (garmin.cn) ---
           # Uses OAuth1 token chain (unaffected by garmin.com CF block).

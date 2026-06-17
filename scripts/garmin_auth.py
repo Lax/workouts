@@ -3,8 +3,8 @@
 Garmin DI OAuth2 auth for CI.
 
 Uses curl_cffi TLS impersonation with two strategies:
-  1. portal+cffi: /portal/api/login (5 TLS fingerprints, primary)
-  2. mobile+cffi: /mobile/api/login (Safari TLS, fallback)
+  1. mobile+cffi: /mobile/api/login (Safari TLS, primary)
+  2. portal+cffi: /portal/api/login (5 TLS fingerprints, fallback)
 
 MFA threshold: supply SYNC__GARMIN__MFA_CODE env var if account has MFA enabled.
 30-45s random delay between SSO page GET and credential POST critical for
@@ -19,6 +19,7 @@ import os
 import random
 import sys
 import time
+import base64
 
 from curl_cffi import requests as cffi_requests
 
@@ -60,21 +61,32 @@ def _random_delay(label):
     time.sleep(delay)
 
 
-def _di_exchange(domain, ticket):
+def _di_exchange(domain, ticket, service_url):
     url = DI_TOKEN_URL.replace("garmin.com", domain)
     for cid in DI_CLIENT_IDS:
         try:
+            basic = base64.b64encode(f"{cid}:".encode()).decode()
             resp = cffi_requests.post(
                 url,
-                data={"grant_type": DI_GRANT_TYPE, "ticket": ticket, "client_id": cid},
+                data={
+                    "client_id": cid,
+                    "service_ticket": ticket,
+                    "grant_type": DI_GRANT_TYPE,
+                    "service_url": service_url,
+                },
                 headers={
+                    "Authorization": f"Basic {basic}",
+                    "Accept": "application/json,text/html;q=0.9,*/*;q=0.8",
                     "Content-Type": "application/x-www-form-urlencoded",
-                    "Accept": "application/json",
+                    "Cache-Control": "no-cache",
+                    "User-Agent": "GCM-Android-5.23",
                 },
                 timeout=30,
             )
             if resp.status_code == 200:
-                return resp.json()
+                token = resp.json()
+                token["di_client_id"] = cid
+                return token
             print(f"[garmin_auth] DI exchange {cid}: HTTP {resp.status_code}", file=sys.stderr)
         except Exception as e:
             print(f"[garmin_auth] DI exchange {cid}: {e}", file=sys.stderr)
@@ -174,7 +186,7 @@ def portal_login(domain, email, password):
                 resp_type = res.get("responseStatus", {}).get("type")
 
             if resp_type == "SUCCESSFUL":
-                return res["serviceTicketId"]
+                return res["serviceTicketId"], PORTAL_SERVICE
 
             if resp_type == "INVALID_USERNAME_PASSWORD":
                 raise RuntimeError("Invalid username or password")
@@ -223,7 +235,7 @@ def mobile_login(domain, email, password):
         resp_type = res.get("responseStatus", {}).get("type")
 
     if resp_type == "SUCCESSFUL":
-        return res["serviceTicketId"]
+        return res["serviceTicketId"], MOBILE_SERVICE
 
     if resp_type == "INVALID_USERNAME_PASSWORD":
         raise RuntimeError("Invalid username or password")
@@ -244,8 +256,8 @@ def main():
 
     # Strategy 1: mobile+cffi (Safari TLS — proven path)
     try:
-        ticket = mobile_login(domain, email, password)
-        token = _di_exchange(domain, ticket)
+        ticket, svc_url = mobile_login(domain, email, password)
+        token = _di_exchange(domain, ticket, svc_url)
         token["expires_at"] = int(time.time()) + token.get("expires_in", 64800)
         if "refresh_token_expires_in" in token:
             token["refresh_token_expires_at"] = int(time.time()) + token["refresh_token_expires_in"]
@@ -257,8 +269,8 @@ def main():
 
     # Strategy 2: portal+cffi (5 TLS fingerprints)
     try:
-        ticket = portal_login(domain, email, password)
-        token = _di_exchange(domain, ticket)
+        ticket, svc_url = portal_login(domain, email, password)
+        token = _di_exchange(domain, ticket, svc_url)
         token["expires_at"] = int(time.time()) + token.get("expires_in", 64800)
         if "refresh_token_expires_in" in token:
             token["refresh_token_expires_at"] = int(time.time()) + token["refresh_token_expires_in"]

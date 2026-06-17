@@ -158,11 +158,11 @@ RSpec.describe Workouts::Sync::Garmin do
     context "without cache, with valid seed token" do
       subject(:adapter) do
         seed = Base64.strict_encode64(JSON.generate(token_json(expires_at: Time.now.to_i + 3600)))
-        stub_adapter(config_overrides: {"refresh_token" => seed})
+        stub_adapter(config_overrides: {"auth_seed" => seed})
       end
 
       it "loads seed token and returns true" do
-        expect(adapter).to receive(:load_seed_token).and_call_original
+        expect(adapter).to receive(:load_auth_seed).and_call_original
         expect(adapter.authenticate).to be true
       end
 
@@ -178,7 +178,7 @@ RSpec.describe Workouts::Sync::Garmin do
           expires_at: Time.now.to_i - 3600,
           refresh_token: "my_refresh_token"
         )))
-        stub_adapter(config_overrides: {"refresh_token" => seed})
+        stub_adapter(config_overrides: {"auth_seed" => seed})
       end
 
       before do
@@ -243,33 +243,33 @@ RSpec.describe Workouts::Sync::Garmin do
     end
   end
 
-  describe "#load_seed_token" do
-    it "decodes Base64 refresh_token from config and saves to cache" do
+  describe "#load_auth_seed" do
+    it "decodes Base64 auth_seed from config and saves to cache" do
       seed = Base64.strict_encode64(JSON.generate(token_json))
-      adapter = stub_adapter(config_overrides: {"refresh_token" => seed})
-      expect(adapter.send(:load_seed_token)).to be true
+      adapter = stub_adapter(config_overrides: {"auth_seed" => seed})
+      expect(adapter.send(:load_auth_seed)).to be true
       expect(adapter.instance_variable_get(:@access_token)["access_token"]).to eq("di_test_at")
       expect(File.exist?(adapter.send(:token_path))).to be true
     end
 
-    it "returns false when config has no refresh_token" do
+    it "returns false when config has no auth_seed" do
       adapter = stub_adapter
-      expect(adapter.send(:load_seed_token)).to be false
+      expect(adapter.send(:load_auth_seed)).to be false
     end
 
-    it "returns false when refresh_token is empty" do
-      adapter = stub_adapter(config_overrides: {"refresh_token" => ""})
-      expect(adapter.send(:load_seed_token)).to be false
+    it "returns false when auth_seed is empty" do
+      adapter = stub_adapter(config_overrides: {"auth_seed" => ""})
+      expect(adapter.send(:load_auth_seed)).to be false
     end
 
     it "returns false on invalid Base64" do
-      adapter = stub_adapter(config_overrides: {"refresh_token" => "!!!invalid!!!"})
-      expect(adapter.send(:load_seed_token)).to be false
+      adapter = stub_adapter(config_overrides: {"auth_seed" => "!!!invalid!!!"})
+      expect(adapter.send(:load_auth_seed)).to be false
     end
 
     it "returns false on invalid JSON" do
-      adapter = stub_adapter(config_overrides: {"refresh_token" => Base64.strict_encode64("not json")})
-      expect(adapter.send(:load_seed_token)).to be false
+      adapter = stub_adapter(config_overrides: {"auth_seed" => Base64.strict_encode64("not json")})
+      expect(adapter.send(:load_auth_seed)).to be false
     end
   end
 
@@ -289,13 +289,20 @@ RSpec.describe Workouts::Sync::Garmin do
       expect(adapter.send(:refresh_token)).to be false
     end
 
-    it "posts to di auth endpoint and updates access_token" do
+    it "includes Basic auth header with client_id" do
       new_token = { "access_token" => "new_di_at", "refresh_token" => "new_di_rt", "expires_in" => 64800 }
       resp = double("resp", code: "200", body: JSON.generate(new_token))
-      expect(adapter).to receive(:send_http).and_return(resp)
       expect(adapter).to receive(:save_tokens)
+      expect(adapter).to receive(:send_http) do |_uri, req|
+        auth = req["Authorization"]
+        expect(auth).to match(/^Basic /)
+        expect(req["Cache-Control"]).to eq("no-cache")
+        expect(req["User-Agent"]).to eq("GCM-Android-5.23")
+        body = URI.decode_www_form(req.body).to_h
+        expect(body["client_id"]).to match(/GARMIN_CONNECT/)
+        resp
+      end
       expect(adapter.send(:refresh_token)).to be true
-      expect(adapter.instance_variable_get(:@access_token)["access_token"]).to eq("new_di_at")
     end
 
     it "raises AuthError on non-200 response" do

@@ -52,9 +52,9 @@ ruby -ryaml -e "
   cfg = YAML.safe_load(File.read(path)) || {}
   cfg['sync'] ||= {}
   cfg['sync']['garmin'] ||= {}
-  cfg['sync']['garmin']['refresh_token'] = '$B64'
+  cfg['sync']['garmin']['auth_seed'] = '$B64'
   File.write(path, YAML.dump(cfg))
-  puts 'sync.garmin.refresh_token updated in config.yml'
+  puts 'sync.garmin.auth_seed updated in config.yml'
 "
 
 # --- 5. Set GitHub Secret (multi-level permission check) ---
@@ -63,19 +63,19 @@ print_secret_help() {
   echo "" >&2
   echo "===========================================" >&2
   echo "  GitHub Actions Secret (one-time setup)" >&2
-  echo "  Name:   SYNC_GARMIN_REFRESH_TOKEN" >&2
+  echo "  Name:   SYNC_GARMIN_AUTH_SEED" >&2
   echo "===========================================" >&2
   echo "" >&2
   echo "Set manually at:" >&2
   echo "  https://github.com/Lax/workouts/settings/secrets/actions" >&2
   echo "" >&2
-  echo "Name:  SYNC_GARMIN_REFRESH_TOKEN" >&2
+  echo "Name:  SYNC_GARMIN_AUTH_SEED" >&2
   echo "Value: $B64" >&2
   echo "" >&2
 }
 
 REPO="Lax/workouts"
-SECRET="SYNC_GARMIN_REFRESH_TOKEN"
+SECRET="SYNC_GARMIN_AUTH_SEED"
 skipped=false
 
 # Level 0: gh CLI installed
