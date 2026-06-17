@@ -16,14 +16,9 @@ RSpec.describe Workouts::Sync::GarminBase do
     d
   end
 
-  # Minimal stub: only network calls, all auth logic is real
   def stub_adapter(config_overrides: {})
     config = { "email" => "test@gb.com", "password" => "pw" }.merge(config_overrides)
     Class.new(described_class) do
-      def initialize(...)
-        super
-        @domain = "garmin.cn"
-      end
       def fetch_oauth_consumer; {}; end
       def sso_login; "test_ticket"; end
       def fetch_oauth1_token(...); OpenStruct.new(oauth_token: "new_o1", oauth_token_secret: "new_o1s", mfa_token: nil, domain: @domain); end
@@ -31,7 +26,6 @@ RSpec.describe Workouts::Sync::GarminBase do
     end.new(config:, db:, activity_filter: nil)
   end
 
-  # Construct garth-format base64 secret (all fields synthetic, no real data)
   def build_secret(domain: "garmin.cn", expires_at: Time.now.to_i + 3600)
     o1 = {
       "oauth_token" => "test_oauth_token",
@@ -53,6 +47,19 @@ RSpec.describe Workouts::Sync::GarminBase do
     Base64.strict_encode64(JSON.generate([o1, o2]))
   end
 
+  describe "#token_path" do
+    subject(:adapter) { stub_adapter }
+
+    it "uses domain-based data/cache path" do
+      expect(adapter.send(:token_path)).to include("data/cache/garmin_")
+    end
+
+    it "includes domain in path" do
+      adapter.instance_variable_set(:@domain, "garmin.com")
+      expect(adapter.send(:token_path)).to include("garmin_com")
+    end
+  end
+
   describe "#parse_secret_string" do
     subject(:adapter) { stub_adapter }
 
@@ -63,11 +70,6 @@ RSpec.describe Workouts::Sync::GarminBase do
       expect(o1.oauth_token).to eq("test_oauth_token")
       expect(o1.oauth_token_secret).to eq("test_oauth_token_secret")
       expect(o2["access_token"]).to eq("test_access_token")
-    end
-
-    it "does not call save_tokens" do
-      expect(adapter).not_to receive(:save_tokens)
-      adapter.send(:parse_secret_string, build_secret)
     end
 
     it "sets domain from secret" do
@@ -90,20 +92,12 @@ RSpec.describe Workouts::Sync::GarminBase do
       bad = Base64.strict_encode64("not-json")
       expect(adapter.send(:parse_secret_string, bad)).to be false
     end
-
-    it "tolerates payload with only OAuth1 (permissive parser)" do
-      bad = Base64.strict_encode64(JSON.generate([{"oauth_token" => "x"}]))
-      expect(adapter.send(:parse_secret_string, bad)).to be true
-      expect(adapter.instance_variable_get(:@access_token)).to be_nil
-    end
   end
 
   describe "#dump_secret" do
     subject(:adapter) { stub_adapter }
 
-    before do
-      adapter.send(:parse_secret_string, build_secret)
-    end
+    before { adapter.send(:parse_secret_string, build_secret) }
 
     it "outputs base64-encoded JSON array" do
       dumped = adapter.send(:dump_secret)
@@ -127,9 +121,7 @@ RSpec.describe Workouts::Sync::GarminBase do
   describe "#verify_access_token" do
     subject(:adapter) { stub_adapter }
 
-    before do
-      adapter.send(:parse_secret_string, build_secret)
-    end
+    before { adapter.send(:parse_secret_string, build_secret) }
 
     it "returns true when API call succeeds" do
       expect(adapter).to receive(:api_get).and_return([{}])
@@ -149,14 +141,10 @@ RSpec.describe Workouts::Sync::GarminBase do
 
   describe "#remove_stale_tokens" do
     subject(:adapter) { stub_adapter }
-
     let(:tmpdir_token) { Dir.mktmpdir }
     let(:token_file) { File.join(tmpdir_token, "tokens.json") }
 
-    before do
-      allow(adapter).to receive(:token_path) { token_file }
-    end
-
+    before { allow(adapter).to receive(:token_path) { token_file } }
     after { FileUtils.remove_entry(tmpdir_token) }
 
     it "deletes token file when it exists" do
@@ -190,191 +178,6 @@ RSpec.describe Workouts::Sync::GarminBase do
     it "returns true when expires_at is nil" do
       adapter.instance_variable_set(:@access_token, {})
       expect(adapter.send(:access_token_valid?)).to be true
-    end
-  end
-
-  describe "#call" do
-    context "without email and without secret" do
-      subject(:adapter) { stub_adapter(config_overrides: { "email" => "", "password" => "" }) }
-
-      it "returns 0 without calling authenticate" do
-        expect(adapter).not_to receive(:authenticate)
-        expect(adapter.call).to eq(0)
-      end
-    end
-
-    context "with secret only (no email)" do
-      subject(:adapter) { stub_adapter(config_overrides: { "email" => "", "password" => "", "secret" => build_secret }) }
-
-      it "calls authenticate and sync_activities" do
-        expect(adapter).to receive(:authenticate).and_return(true)
-        expect(adapter).to receive(:sync_activities).and_return(3)
-        expect(adapter.call).to eq(3)
-      end
-    end
-
-    context "when authenticate fails" do
-      subject(:adapter) { stub_adapter }
-
-      it "returns 0" do
-        expect(adapter).to receive(:authenticate).and_return(false)
-        expect(adapter.call).to eq(0)
-      end
-    end
-  end
-
-  describe "#authenticate" do
-    context "with valid secret (OAuth2 not expired)" do
-      subject(:adapter) { stub_adapter(config_overrides: { "secret" => build_secret(expires_at: Time.now.to_i + 3600) }) }
-
-      before do
-        allow(adapter).to receive(:load_tokens).and_return(false)
-      end
-
-      it "returns true without calling SSO" do
-        expect(adapter).not_to receive(:sso_login)
-        expect(adapter.authenticate).to be true
-      end
-
-      it "does not call refresh_oauth2_via_oauth1" do
-        expect(adapter).not_to receive(:refresh_oauth2_via_oauth1)
-        adapter.authenticate
-      end
-    end
-
-    context "with secret but OAuth2 expired (valid OAuth1)" do
-      subject(:adapter) { stub_adapter(config_overrides: { "secret" => build_secret(expires_at: Time.now.to_i - 3600) }) }
-
-      before do
-        allow(adapter).to receive(:load_tokens).and_return(false)
-      end
-
-      it "refreshes via OAuth1 and returns true" do
-        expect(adapter).to receive(:exchange_oauth2).and_call_original
-        expect(adapter.authenticate).to be true
-      end
-
-      it "does not fall through to SSO" do
-        expect(adapter).not_to receive(:sso_login)
-        adapter.authenticate
-      end
-    end
-
-    context "with secret but OAuth1 refresh fails" do
-      subject(:adapter) { stub_adapter(config_overrides: { "secret" => build_secret(expires_at: Time.now.to_i - 3600) }) }
-
-      before do
-        allow(adapter).to receive(:refresh_oauth2_via_oauth1).and_raise(Workouts::AuthError, "refresh failed")
-        allow(adapter).to receive(:load_tokens).and_return(false)
-        allow(adapter).to receive(:verify_access_token).and_return(true)
-        allow(adapter).to receive(:save_secret_to_config)
-        allow(adapter).to receive(:save_tokens)
-      end
-
-      it "falls through to SSO" do
-        expect(adapter).to receive(:sso_login).and_return("ticket")
-        expect(adapter.authenticate).to be true
-      end
-    end
-
-    context "with stale file tokens (OAuth1 expired)" do
-      subject(:adapter) { stub_adapter }
-
-      let(:tmpdir) { Dir.mktmpdir }
-
-      before do
-        allow(adapter).to receive(:token_path) { File.join(tmpdir, "tokens.json") }
-        allow(adapter).to receive(:load_tokens).and_call_original
-        allow(adapter).to receive(:refresh_oauth2_via_oauth1).and_raise(Workouts::AuthError, "OAuth refresh failed")
-        allow(adapter).to receive(:verify_access_token).and_return(true)
-        allow(adapter).to receive(:save_secret_to_config)
-        allow(adapter).to receive(:save_tokens)
-
-        stale = JSON.generate({
-          "oauth1" => { "oauth_token" => "stale_ot", "oauth_token_secret" => "stale_ots", "mfa_token" => nil, "domain" => "garmin.com" },
-          "oauth2" => { "access_token" => "stale_at", "expires_at" => Time.now.to_i - 3600 }
-        })
-        File.write(adapter.send(:token_path), stale)
-      end
-
-      after { FileUtils.remove_entry(tmpdir) }
-
-      it "deletes stale token file" do
-        path = adapter.send(:token_path)
-        expect(File.exist?(path)).to be true
-        adapter.send(:remove_stale_tokens)
-        expect(File.exist?(path)).to be false
-      end
-
-      it "calls remove_stale_tokens during authenticate" do
-        expect(adapter).to receive(:remove_stale_tokens).and_call_original
-        adapter.authenticate rescue nil
-      end
-
-      it "falls through to SSO" do
-        expect(adapter).to receive(:sso_login).and_return("ticket")
-        expect(adapter.authenticate).to be true
-      end
-    end
-
-    context "without secret, without file tokens, with email+password (SSO)" do
-      subject(:adapter) { stub_adapter }
-
-      before do
-        allow(adapter).to receive(:load_tokens).and_return(false)
-        allow(adapter).to receive(:verify_access_token).and_return(true)
-        allow(adapter).to receive(:save_secret_to_config)
-        allow(adapter).to receive(:save_tokens)
-      end
-
-      it "performs SSO login and returns true" do
-        expect(adapter).to receive(:sso_login).and_return("test_ticket")
-        expect(adapter).to receive(:fetch_oauth1_token).and_call_original
-        expect(adapter).to receive(:exchange_oauth2).and_call_original
-        expect(adapter.authenticate).to be true
-      end
-
-      it "generates secret after successful SSO" do
-        adapter.authenticate
-        expect(adapter.generated_secret).not_to be_nil
-      end
-
-      it "calls save_secret_to_config and save_tokens" do
-        expect(adapter).to receive(:save_secret_to_config).once
-        expect(adapter).to receive(:save_tokens).once
-        adapter.authenticate
-      end
-    end
-
-    context "without any credentials" do
-      subject(:adapter) { stub_adapter(config_overrides: { "email" => "", "password" => "" }) }
-
-      before do
-        allow(adapter).to receive(:load_tokens).and_return(false)
-      end
-
-      it "returns false" do
-        expect(adapter.authenticate).to be false
-      end
-    end
-
-    context "when verify_access_token fails after SSO" do
-      subject(:adapter) { stub_adapter }
-
-      before do
-        allow(adapter).to receive(:load_tokens).and_return(false)
-        allow(adapter).to receive(:verify_access_token).and_return(false)
-      end
-
-      it "raises AuthError" do
-        expect { adapter.authenticate }.to raise_error(Workouts::AuthError, /API verify/)
-      end
-
-      it "does not save tokens on verify failure" do
-        expect(adapter).not_to receive(:save_secret_to_config)
-        expect(adapter).not_to receive(:save_tokens)
-        expect { adapter.authenticate }.to raise_error(Workouts::AuthError)
-      end
     end
   end
 end

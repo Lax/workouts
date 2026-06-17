@@ -72,8 +72,8 @@ lib/workouts/cli/sync.rb         # 同步子模块（sync, auth）
 | **iGPSPORT** | prod.zh.igpsport.com | 手机+密码 | FIT 原始格式，使用 mini_racer + @garmin/fitsdk 解析 |
 | **XOSS** | backend.xoss.co (国际版) | email+JWT | 局部 SPORT_MAP 哈希表 |
 | **XingZhe** | imxingzhe.com (行者) | RSA 加密密码 + session Cookie | 行者国内版 |
-| **Garmin CN** | garmin.cn | SSO + OAuth1→OAuth2 | token 文件持久化 + OAuth1 自动 refresh（不受 CF 影响）|
-| **Garmin** | garmin.com | DI OAuth2（cache token + email/password）| curl_cffi (Strategy A) + Playwright (Strategy B) 降级链，token GH Cache |
+| **Garmin CN** | garmin.cn | SSO + OAuth1→OAuth2（不受 CF 影响）| token 文件持久化 + OAuth1 自动 refresh，GH Cache |
+| **Garmin Intl** | garmin.com | DI OAuth2（curl_cffi + Playwright 降级链）| token GH Cache，MFA 推荐 Playwright session 缓存 |
 | **Strava** | strava.com | OAuth2 refresh_token | 已配置，含多源去重检测 |
 
 ### 数据流程
@@ -349,7 +349,7 @@ L1 raw → L2 标准化 GPS → L3 SQLite 摘要 → L4 构建制品 → L5 部�
 | XOSS | 44 |
 | XingZhe | 34 |
 | Garmin CN | 0（已认证，账号无记录） |
-| Garmin 国际版 | DI OAuth2 (3 commits: Phase 1-4) — 待 CI 验证 |
+| Garmin 国际版 | DI OAuth2（5 commits: Phase 1-4 + 拆分 + 测试）— 待 MFA 处理 |
 
 ### 原始 GPS 文件（GH Cache）
 
