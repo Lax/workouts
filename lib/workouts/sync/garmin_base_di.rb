@@ -16,6 +16,15 @@ module Workouts
           end
         end
 
+        if load_seed_token
+          return true if access_token_valid?
+          begin
+            return true if refresh_token
+          rescue AuthError
+            @access_token = nil
+          end
+        end
+
         return false if @email.to_s.empty? || @password.to_s.empty?
 
         if (token = strategy_a_login)
@@ -74,6 +83,18 @@ module Workouts
         File.delete(path) if File.exist?(path)
       rescue => e
         puts "Warning: failed to remove stale tokens: #{e.message}"
+      end
+
+      def load_seed_token
+        seed = @config["refresh_token"]
+        return false unless seed && !seed.empty?
+
+        decoded = JSON.parse(Base64.strict_decode64(seed))
+        @access_token = decoded
+        save_tokens
+        true
+      rescue => e
+        false
       end
 
       def refresh_token

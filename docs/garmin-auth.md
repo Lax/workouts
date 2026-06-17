@@ -62,21 +62,23 @@ garmin.com 的 SSO 端点 `/mobile/api/login` 已被 Garmin 关闭（返回 400�
 
 ```
 ① DI token 缓存（data/cache/garmin_garmin_com_tokens.json, GH Cache）
-   access_token 有效 → 直接用。过期 → di_refresh（30d 滑动）。
+   access_token 有效 → 直接用。过期 → di_refresh。
    refresh 失败 → 清除缓存 → 降级
 
-② Strategy A: curl_cffi subprocess（scripts/garmin_auth.py）
-   两步： portal+cffi（5 TLS 指纹, 30-45s 反爬延迟）
-         mobile+cffi（Safari TLS, 降级）
+② Seed token（sync.garmin.refresh_token / SYNC__GARMIN__REFRESH_TOKEN）
+   Base64 DI OAuth2 JSON → decode → save_tokens → use / di_refresh
+   refresh 失败 → 清空 @access_token → 降级
+
+③ Strategy A: curl_cffi subprocess（scripts/garmin_auth.py）
+   mobile+cffi（Safari TLS, 优先）→ portal+cffi（5 指纹, 降级）
    → CAS ticket → DI OAuth2 交换 → 存缓存
-   限制：账号有 MFA 时需要实时验证码（一次性，CI 不支持）
+   支持 MFA（env var SYNC__GARMIN__MFA_CODE 或 stdin）
 
-③ Strategy B: Playwright subprocess（scripts/garmin_auth_playwright.py）
-   Headless Chromium → SSO form 登录 → ticket → DI 交换
-   首次 MFA 交互，session cookies 持久化 ~1 年（data/cache/）
-   后续运行从 cookies 恢复，跳过 SSO
+④ Strategy B: Playwright subprocess（scripts/garmin_auth_playwright.py）
+   Headless Chromium → SSO form → ticket → DI 交换
+   Session cookies 持久化 ~1 年（data/cache/）
 
-④ 全部失败 → false（无交互式 SSO）
+⑤ 全部失败 → false
 ```
 
 ### Token lifetimes
@@ -100,6 +102,13 @@ garmin.com 的 SSO 端点 `/mobile/api/login` 已被 Garmin 关闭（返回 400�
 - 账号 MFA 已启用 → 认证在 MFA 步骤中断
 - `portal+cffi` 5 指纹中 Safari/Edge/Chrome 返回无响应（疑似 TCP 层阻断），safari_ios/chrome120 返回 403
 - 结论：curl_cffi 对无 MFA 账号可全自动；有 MFA 账号需 Playwright 缓存 session
+
+### 首次设置（有 MFA）
+
+```bash
+./scripts/garmin_auth_local.sh
+```
+自动做：读 `config.yml` → 跑 `garmin_auth.py`（穿透 CF ~60s）→ 提示输入 MFA → Base64 编码 → 写回 `config.yml`（`sync.garmin.refresh_token`）→ 尝试 `gh secret set`
 
 ### MFA 处理
 

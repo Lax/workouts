@@ -154,6 +154,42 @@ RSpec.describe Workouts::Sync::Garmin do
         expect(adapter.authenticate).to be false
       end
     end
+
+    context "without cache, with valid seed token" do
+      subject(:adapter) do
+        seed = Base64.strict_encode64(JSON.generate(token_json(expires_at: Time.now.to_i + 3600)))
+        stub_adapter(config_overrides: {"refresh_token" => seed})
+      end
+
+      it "loads seed token and returns true" do
+        expect(adapter).to receive(:load_seed_token).and_call_original
+        expect(adapter.authenticate).to be true
+      end
+
+      it "saves seed token to cache" do
+        adapter.authenticate
+        expect(File.exist?(adapter.send(:token_path))).to be true
+      end
+    end
+
+    context "without cache, with expired seed token (refreshable)" do
+      subject(:adapter) do
+        seed = Base64.strict_encode64(JSON.generate(token_json(
+          expires_at: Time.now.to_i - 3600,
+          refresh_token: "my_refresh_token"
+        )))
+        stub_adapter(config_overrides: {"refresh_token" => seed})
+      end
+
+      before do
+        allow(adapter).to receive(:refresh_token).and_return(true)
+      end
+
+      it "falls through to refresh_token and returns true" do
+        expect(adapter).to receive(:refresh_token).and_return(true)
+        expect(adapter.authenticate).to be true
+      end
+    end
   end
 
   describe "#load_tokens" do
@@ -204,6 +240,36 @@ RSpec.describe Workouts::Sync::Garmin do
 
     it "does not raise when file does not exist" do
       expect { adapter.send(:remove_stale_tokens) }.not_to raise_error
+    end
+  end
+
+  describe "#load_seed_token" do
+    it "decodes Base64 refresh_token from config and saves to cache" do
+      seed = Base64.strict_encode64(JSON.generate(token_json))
+      adapter = stub_adapter(config_overrides: {"refresh_token" => seed})
+      expect(adapter.send(:load_seed_token)).to be true
+      expect(adapter.instance_variable_get(:@access_token)["access_token"]).to eq("di_test_at")
+      expect(File.exist?(adapter.send(:token_path))).to be true
+    end
+
+    it "returns false when config has no refresh_token" do
+      adapter = stub_adapter
+      expect(adapter.send(:load_seed_token)).to be false
+    end
+
+    it "returns false when refresh_token is empty" do
+      adapter = stub_adapter(config_overrides: {"refresh_token" => ""})
+      expect(adapter.send(:load_seed_token)).to be false
+    end
+
+    it "returns false on invalid Base64" do
+      adapter = stub_adapter(config_overrides: {"refresh_token" => "!!!invalid!!!"})
+      expect(adapter.send(:load_seed_token)).to be false
+    end
+
+    it "returns false on invalid JSON" do
+      adapter = stub_adapter(config_overrides: {"refresh_token" => Base64.strict_encode64("not json")})
+      expect(adapter.send(:load_seed_token)).to be false
     end
   end
 
