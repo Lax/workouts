@@ -21,7 +21,7 @@ module Workouts
       super
     end
 
-    desc "auth SOURCE", "Authenticate with a sync source (strava, garmin, garmin_cn)"
+    desc "auth SOURCE", "Authenticate with a sync source (strava, garmin, garmin_cn, xoss, xingzhe)"
     def auth(source)
       if source == "strava"
         Auth::Strava.new(options, workouts_config).call

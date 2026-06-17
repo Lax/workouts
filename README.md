@@ -54,6 +54,10 @@ docker compose run --rm workouts export svg --style github
 | `export json` | 导出 JSON |
 | `export csv` | 导出 CSV |
 | `export svg --style github` | 生成 SVG 海报 |
+| `export stats` | 导出统计摘要 |
+| `export dashboard` | 导出自定义仪表盘 HTML |
+| `export gpx` | 从 L2 重新导出 GPX |
+| `export all` | 执行所有导出 |
 | `parse activity.gpx --save` | 解析本地 GPX/TCX 并写入 DB |
 | `init` | 生成默认配置 |
 | `migrate` | 运行数据库迁移 |
@@ -63,13 +67,7 @@ SVG 支持 5 种风格：`github`、`grid`、`circular`、`month-of-life`、`yea
 
 ## 数据架构
 
-```
-L1: data/raw/{source}/{id}.ext    原始 API 响应（GPS 点阵备份）
-L2: data/std/{source}/{id}.json   规整后的标准格式
-L3: SQLite                        摘要库（polyline + 统计字段）
-L4: build/                        导出制品（JSON / CSV / SVG / HTML）
-L5: GitHub Pages                  运动数据展示页
-```
+详见 [docs/data-architecture.md](docs/data-architecture.md)。
 
 ## 配置
 
