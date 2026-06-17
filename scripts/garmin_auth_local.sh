@@ -57,24 +57,69 @@ ruby -ryaml -e "
   puts 'sync.garmin.refresh_token updated in config.yml'
 "
 
-# --- 5. Print GitHub Secret instructions ---
-echo "" >&2
-echo "===========================================" >&2
-echo "  GitHub Actions Secret (one-time setup)" >&2
-echo "  Name:   SYNC_GARMIN_REFRESH_TOKEN" >&2
-echo "===========================================" >&2
-echo "" >&2
+# --- 5. Set GitHub Secret (multi-level permission check) ---
 
-if command -v gh &>/dev/null && gh auth status &>/dev/null 2>&1; then
-  echo "$B64" | gh secret set SYNC_GARMIN_REFRESH_TOKEN
-  echo "GitHub Secret set via gh CLI." >&2
-else
+print_secret_help() {
+  echo "" >&2
+  echo "===========================================" >&2
+  echo "  GitHub Actions Secret (one-time setup)" >&2
+  echo "  Name:   SYNC_GARMIN_REFRESH_TOKEN" >&2
+  echo "===========================================" >&2
+  echo "" >&2
   echo "Set manually at:" >&2
   echo "  https://github.com/Lax/workouts/settings/secrets/actions" >&2
   echo "" >&2
   echo "Name:  SYNC_GARMIN_REFRESH_TOKEN" >&2
   echo "Value: $B64" >&2
+  echo "" >&2
+}
+
+REPO="Lax/workouts"
+SECRET="SYNC_GARMIN_REFRESH_TOKEN"
+skipped=false
+
+# Level 0: gh CLI installed
+if ! command -v gh &>/dev/null; then
+  echo "" >&2
+  echo "⚠️  gh CLI not found — run: brew install gh (or visit the URL below)" >&2
+  print_secret_help
+  skipped=true
 fi
 
-echo "" >&2
+# Level 1: gh CLI authenticated
+if ! $skipped && ! gh auth status &>/dev/null 2>&1; then
+  echo "" >&2
+  echo "⚠️  gh CLI not authenticated — run: gh auth login" >&2
+  print_secret_help
+  skipped=true
+fi
+
+# Level 2: repo access
+if ! $skipped && ! gh repo view "$REPO" &>/dev/null 2>&1; then
+  echo "" >&2
+  echo "⚠️  No access to $REPO — token only written to config.yml" >&2
+  print_secret_help
+  skipped=true
+fi
+
+# Level 3: secret write permission
+if ! $skipped && ! gh secret list -R "$REPO" &>/dev/null 2>&1; then
+  echo "" >&2
+  echo "⚠️  No permission to write GitHub Secrets on $REPO" >&2
+  print_secret_help
+  skipped=true
+fi
+
+# Level 4: all checks passed — set secret
+if ! $skipped; then
+  if echo "$B64" | gh secret set "$SECRET" -R "$REPO" 2>/dev/null; then
+    echo "" >&2
+    echo "✅  GitHub Secret set: $SECRET" >&2
+  else
+    echo "" >&2
+    echo "❌  Failed to set GitHub Secret (unexpected error)" >&2
+    print_secret_help
+  fi
+fi
+
 echo "Done. Token cached in config.yml. CI will auto-refresh via di_refresh (30d sliding)." >&2
