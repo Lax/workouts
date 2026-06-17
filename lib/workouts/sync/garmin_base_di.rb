@@ -4,6 +4,12 @@ require "open3"
 module Workouts
   module Sync
     class GarminBaseDI < GarminBase
+      DI_CLIENT_IDS = %w[
+        GARMIN_CONNECT_MOBILE_ANDROID_DI_2025Q2
+        GARMIN_CONNECT_MOBILE_ANDROID_DI_2024Q4
+        GARMIN_CONNECT_MOBILE_ANDROID_DI
+      ].freeze
+
       def authenticate
         @oauth_consumer = fetch_oauth_consumer
 
@@ -16,7 +22,7 @@ module Workouts
           end
         end
 
-        if load_seed_token
+        if load_auth_seed
           return true if access_token_valid?
           begin
             return true if refresh_token
@@ -85,8 +91,8 @@ module Workouts
         puts "Warning: failed to remove stale tokens: #{e.message}"
       end
 
-      def load_seed_token
-        seed = @config["refresh_token"]
+      def load_auth_seed
+        seed = @config["auth_seed"]
         return false unless seed && !seed.empty?
 
         decoded = JSON.parse(Base64.strict_decode64(seed))
@@ -100,11 +106,18 @@ module Workouts
       def refresh_token
         return false unless @access_token&.dig("refresh_token")
 
+        client_id = @access_token["di_client_id"] || DI_CLIENT_IDS.first
+        basic = Base64.strict_encode64("#{client_id}:")
+
         uri = URI("#{auth_base}/di-oauth2-service/oauth/token")
         req = Net::HTTP::Post.new(uri)
+        req["Authorization"] = "Basic #{basic}"
         req["Content-Type"] = "application/x-www-form-urlencoded"
+        req["Cache-Control"] = "no-cache"
+        req["User-Agent"] = "GCM-Android-5.23"
         req.body = URI.encode_www_form(
           grant_type: "refresh_token",
+          client_id: client_id,
           refresh_token: @access_token["refresh_token"]
         )
 

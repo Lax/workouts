@@ -65,7 +65,7 @@ garmin.com 的 SSO 端点 `/mobile/api/login` 已被 Garmin 关闭（返回 400�
    access_token 有效 → 直接用。过期 → di_refresh。
    refresh 失败 → 清除缓存 → 降级
 
-② Seed token（sync.garmin.refresh_token / SYNC__GARMIN__REFRESH_TOKEN）
+② auth_seed（sync.garmin.auth_seed / SYNC__GARMIN__AUTH_SEED, GitHub Secret）
    Base64 DI OAuth2 JSON → decode → save_tokens → use / di_refresh
    refresh 失败 → 清空 @access_token → 降级
 
@@ -108,7 +108,7 @@ garmin.com 的 SSO 端点 `/mobile/api/login` 已被 Garmin 关闭（返回 400�
 ```bash
 ./scripts/garmin_auth_local.sh
 ```
-自动做：读 `config.yml` → 跑 `garmin_auth.py`（穿透 CF ~60s）→ 提示输入 MFA → Base64 编码 → 写回 `config.yml`（`sync.garmin.refresh_token`）→ 尝试 `gh secret set`
+自动做：读 `config.yml` → 跑 `garmin_auth.py`（穿透 CF ~60s）→ 提示输入 MFA → Base64 编码 → 写回 `config.yml`（`sync.garmin.auth_seed`）→ 尝试 `gh secret set`
 
 ### MFA 处理
 
@@ -123,3 +123,126 @@ MFA 验证码通过 env var `SYNC__GARMIN__MFA_CODE` 传入 Python 脚本。**�
 | DI token | `garmin-tokens-v1-garmin-{run_id}` | `data/cache/garmin_garmin_com_tokens.json` |
 | CN token | `garmin-tokens-v1-garmin_cn-{run_id}` | `data/cache/garmin_garmin_cn_tokens.json` |
 | Playwright browser（可选） | `garmin-playwright-browser-v1-{os}` | `~/.cache/ms-playwright` |
+
+---
+
+## 附录：数据传输链与关键格式
+
+### 数据格式
+
+#### ① CAS Service Ticket
+
+| 属性 | 值 |
+|---|---|
+| 格式 | `ST-XXXXXXXXXXXXXXXXXXXXXXXXXXXX`（40+ 字符） |
+| 来源 | SSO 登录成功：`response.serviceTicketId` |
+| 去向 | 作为 `service_ticket` 参数 POST 到 DI token exchange |
+| 有效期 | 一次性，换完即废 |
+| 存储 | 仅内存，不落盘 |
+
+#### ② DI OAuth2 Token JSON
+
+```json
+{
+  "access_token": "eyJ...",
+  "refresh_token": "eyJ...",
+  "expires_in": 64800,
+  "scope": "DI_COACHING_WRITE ...",
+  "token_type": "Bearer",
+  "di_client_id": "GARMIN_CONNECT_MOBILE_ANDROID_DI_2025Q2"
+}
+```
+
+| 字段 | 来自 | 去向 | 设计原因 |
+|---|---|---|---|
+| `access_token` | `diauth.garmin.com` 响应 | `Authorization: Bearer` 请求头 | OAuth2 bearer token，~18h |
+| `refresh_token` | 同一次响应 | refresh 请求 body | 30d 滑动窗口，每次 refresh 旋转续期 |
+| `di_client_id` | JWT payload 的 `client_id` 声明 | refresh 的 `client_id` 参数 + Basic auth | **refresh 时必须用签发 token 的那个 client_id**（Garmin 季度轮换），用错返回 401 |
+| `expires_at` | 脚本/Ruby 计算 | `access_token_valid?` 判断 | `time() + expires_in` |
+
+#### ③ DI Token Exchange 请求
+
+```
+POST https://diauth.garmin.com/di-oauth2-service/oauth/token
+Authorization: Basic base64(client_id + ":")   ← ""空 secret，DI 协议要求
+Content-Type: application/x-www-form-urlencoded
+Cache-Control: no-cache                          ← 阻止 CF 缓存 stale token
+User-Agent: GCM-Android-5.23                    ← Android app UA
+
+client_id=GARMIN_CONNECT_MOBILE_ANDROID_DI_2025Q2
+service_ticket=ST-XXXX                            ← 不是 "ticket"！
+grant_type=https://connectapi.garmin.com/.../service_ticket
+service_url=https://mobile.integration.garmin.com/gcm/android  ← 必须匹配 SSO 登录的 service
+```
+
+#### ④ auth_seed 编码链
+
+```
+DI Token JSON (来自 diauth.garmin.com)
+  │  JSON.dump
+  ▼
+JSON 文本
+  │  Base64.strict_encode64
+  ▼
+Base64 文本 → config.yml（sync.garmin.auth_seed）
+           → GitHub Secret（SYNC_GARMIN_AUTH_SEED）
+           → env var（SYNC__GARMIN__AUTH_SEED）
+
+CI 中 decode:
+  Base64.strict_decode64 → JSON.parse → @access_token → save_tokens(data/cache/)
+```
+
+### 传输链
+
+```
+用户邮箱+密码
+  ▼
+SSO: POST /mobile/api/login（或 /portal/api/login）
+  │  ← MFA? stdin 输入验证码
+  ▼
+CAS Service Ticket (ST-XXXX)
+  ▼
+POST diauth.garmin.com/di-oauth2-service/oauth/token
+  Headers: Authorization: Basic + Garmin-UA + Cache-Control
+  Body: client_id + service_ticket + grant_type + service_url
+  │  ← service_url 必须与 SSO 登录一致（混用返回 400）
+  ▼
+DI OAuth2 Token JSON
+  ├─ access_token → data/cache/ → Ruby api_get
+  ├─ refresh_token → refresh_token()
+  └─ di_client_id → refresh Basic auth
+  ▼
+┌────────── 每日 CI ──────────┐
+│ load_tokens(data/cache/)    │
+│ access_token 有效?          │
+│ ├─ 是 → api_get              │
+│ └─ 否 → refresh_token() →   │
+│      新 token → save_tokens │
+│      30d 滑动窗口            │
+└────────────────────────────┘
+  ▼
+Garmin API: Authorization: Bearer eyJ...
+```
+
+### 设计决策
+
+| 决策 | 原因 |
+|---|---|
+| `Authorization: Basic base64(client_id:)` | DI OAuth2 协议，client_id 作用户名，空串作密码。与 OAuth1 consumer secret 签名无关 |
+| `service_url` 必须匹配 SSO | Garmin 验证 ticket 和 exchange 来自同一流程。mobile 用 `mobile.integration.garmin.com`，portal 用 `connect.garmin.com/app` |
+| `service_ticket` 不是 `ticket` | Garmin 的特定参数命名（与其他 SSO API 不一致） |
+| `Cache-Control: no-cache` | 防止 Cloudflare 缓存过期 token |
+| `di_client_id` 存入 token JSON | 刷新时**必须用签发 token 的那个 client_id**，不能写死 |
+| 30d refresh_token 滑动窗口 | 每次 refresh 返回新 refresh_token 并旋转旧 token。连续 30 天未刷新则失效，需重新用 `auth_seed` 或 SSO 引导 |
+| `auth_seed`（非 `refresh_token`）命名 | 因为它存的是**整个 DI OAuth2 token JSON 的 Base64**（access + refresh + client_id），不是单一 refresh_token 字符串。与 Strava 的 `refresh_token`（真刷新令牌）语义分离 |
+
+### DI Exchange 故障排查
+
+| HTTP | 可能原因 |
+|---|---|
+| 400 | `service_ticket` 参数名写错（写成了 `ticket`） |
+| 400 | 缺失 `service_url` 参数 |
+| 400 | 缺失 `Authorization: Basic` 请求头 |
+| 401 | DI client_id 已作废（Garmin 季度轮换） |
+| 401 | `service_url` 与 SSO 登录时使用的不一致 |
+| 429 | CF 速率限制（增加 delay） |
