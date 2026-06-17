@@ -349,7 +349,7 @@ L1 raw → L2 标准化 GPS → L3 SQLite 摘要 → L4 构建制品 → L5 部�
 | XOSS | 44 |
 | XingZhe | 34 |
 | Garmin CN | 0（已认证，账号无记录） |
-| Garmin 国际版 | DI OAuth2（5 commits: Phase 1-4 + 拆分 + 测试）— 待 MFA 处理 |
+| Garmin 国际版 | DI OAuth2（9 commits）— ✅ 已认证，已同步 2 条活动 |
 
 ### 原始 GPS 文件（GH Cache）
 
