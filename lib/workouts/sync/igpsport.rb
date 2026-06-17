@@ -81,6 +81,14 @@ module Workouts
         wgs_points = FIT::Decoder.decode(fit_path)
         return false if wgs_points.empty?
 
+        first_ts = wgs_points.first["timestamp"]
+        if first_ts
+          fit_epoch = Time.new(1989, 12, 31, 0, 0, 0, "+00:00").to_i
+          t = Time.at(fit_epoch + first_ts)
+          @fit_start_utc = t.utc
+          @fit_start_local = t.getlocal("+08:00")
+        end
+
         write_standardized_json(wgs_points, ride_id)
         polyline = Geo::Polyline.encode(wgs_points.map { |pt| [pt["positionLat"], pt["positionLong"]] })
 
@@ -140,7 +148,8 @@ module Workouts
 
       def build_attrs(act, ride_id, polyline = nil)
         type = map_sport(act["exerciseType"])
-        start_t = parse_date(act["startTime"])
+        start_t = @fit_start_utc || parse_date(act["startTime"])
+        start_t_local = @fit_start_local || start_t
         distance = act["rideDistance"].to_f
         moving_time = (act["totalMovingTime"] || act["recordTime"]).to_i
         avg_speed = act["avgSpeed"].to_f
@@ -153,8 +162,8 @@ module Workouts
           elapsed_time: moving_time > 0 ? moving_time : nil,
           sport_category: type,
           sport_type: EXERCISE_MAP[act["exerciseType"]] || "ride",
-          start_date: start_t,
-          start_date_local: start_t,
+          start_date: start_t.strftime("%Y-%m-%d %H:%M:%S"),
+          start_date_local: start_t_local.strftime("%Y-%m-%d %H:%M:%S"),
           location_country: nil,
           average_heartrate: nil,
           average_speed: avg_speed > 0 ? avg_speed : nil,
