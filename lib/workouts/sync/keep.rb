@@ -5,6 +5,8 @@ require "time"
 
 module Workouts
   module Sync
+    # Keep protocol: AES-128-CBC + zlib decrypt, GCJ-02 → WGS84, HR nearest-match.
+    # API returns encrypted JSON body, not FIT. Summary only, no raw GPS archive.
     class Keep < Base
       LOGIN_URL = "https://api.gotokeep.com/v1.1/users/login"
       STATS_URL = "https://api.gotokeep.com/pd/v3/stats/detail?dateUnit=all&type=%{sport}&lastDate=%{last_date}"

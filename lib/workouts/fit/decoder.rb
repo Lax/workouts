@@ -3,6 +3,8 @@ require "json"
 
 module Workouts
   module FIT
+    # Decode Garmin FIT binary via mini_racer + @garmin/fitsdk JS bundle.
+    # Coordinates arrive as semicircles (range -1..1) → multiply by 180 for degrees.
     class Decoder
       JS_CODE = File.read(File.join(__dir__, "decoder.js")).freeze
       CTX = MiniRacer::Context.new.tap { |c| c.eval(JS_CODE) }

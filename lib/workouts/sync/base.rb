@@ -2,6 +2,8 @@ require_relative "tally"
 
 module Workouts
   module Sync
+    # Adapter abstract. Each source must implement: call, raw_path.
+    # Contract: upsert_activity + skip_type provided. time_budget honored.
     class Base
       def initialize(config:, db:, activity_filter: nil, privacy: nil, time_budget: nil)
         @config = config

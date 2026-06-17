@@ -29,7 +29,7 @@ module Workouts
         end
       end
 
-      # auth garmin/garmin_cn:
+      # auth garmin/garmin_cn/xoss/xingzhe:
       #   adapter.authenticate → SSO 成功?
       #   → 打印 GitHub Secrets 粘贴指引（secret/email/password）
       def auth(source)

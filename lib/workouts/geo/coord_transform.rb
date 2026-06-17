@@ -1,5 +1,7 @@
 module Workouts
   module Geo
+    # 3 coordinate systems: WGS84 (GPS native), GCJ-02 (China offset), BD-09 (Baidu).
+    # Keep data arrives GCJ-02 → iterative approx to WGS84. A/EE = China ellipsoid params.
     module CoordTransform
       A = 6378245.0
       EE = 0.00669342162296594323

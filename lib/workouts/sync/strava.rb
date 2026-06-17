@@ -2,6 +2,8 @@ require_relative "base"
 
 module Workouts
   module Sync
+    # Strava OAuth2: refresh_token auto-refresh, full L1/L2/L3 pipeline.
+    # Dual dedup: run_id (hard) + confidence scoring (soft, via recheck_duplicates).
     class Strava < Base
       BASE_URL = "https://www.strava.com/api/v3"
       MAX_DETAIL_CALLS = 5

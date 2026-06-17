@@ -13,16 +13,20 @@
 ## CLI 命令
 
 | 命令 | 说明 |
-|---|---|
+|---|---|---|
 | `sync [--source S] [--act TYPE]` | 同步所有配置源（`--source` 指定单一源，`--act` 按运动类型过滤） |
 | `auth <garmin\|garmin_cn>` | 交互式 Garmin SSO 登录 |
 | `export json [--output]` | 导出 JSON |
 | `export csv [--output]` | 导出 CSV |
 | `export svg --style <style>` | 生成 SVG 海报（5 种风格） |
+| `export stats [--output]` | 导出统计摘要 |
+| `export dashboard [--output]` | 导出自定义仪表盘 HTML |
+| `export gpx [--output]` | 从 L2 文件重新导出 GPX |
+| `export html` | 导出 HTML（同 dashboard）|
+| `export all` | 执行所有导出 |
 | `parse <file.gpx\|file.tcx> [--save]` | 解析本地 GPX/TCX 文件，可选写入 DB |
 | `init` | 生成默认 config.yml |
 | `migrate` | 运行数据库迁移 |
-| `raw polyline` | 从 `data/raw/` 重新生成 `summary_polyline`（算法变更时用）|
 | `version` | 版本号 |
 
 ---
@@ -65,8 +69,8 @@ lib/workouts/cli/sync.rb         # 同步子模块（sync, auth）
 | 适配器 | 源域名 | 认证 | 特点 |
 |---|---|---|---|
 | **Keep** | api.gotokeep.com | 手机+密码 | AES-128-CBC 解密，zlib 解压，GCJ-02→WGS84，HR 最近匹配 |
-| **iGPSPORT** | prod.zh.igpsport.com | 手机+密码 | FIT 原始格式，使用摘要 API（跳过 FIT 解析）|
-| **XOSS** | backend.xoss.co (国际版) | email+JWT | 三层 SportMapper |
+| **iGPSPORT** | prod.zh.igpsport.com | 手机+密码 | FIT 原始格式，使用 mini_racer + @garmin/fitsdk 解析 |
+| **XOSS** | backend.xoss.co (国际版) | email+JWT | 局部 SPORT_MAP 哈希表 |
 | **XingZhe** | imxingzhe.com (行者) | RSA 加密密码 + session Cookie | 行者国内版 |
 | **Garmin CN** | garmin.cn | SSO + OAuth1→OAuth2 | token 文件持久化 + OAuth1 自动 refresh |
 | **Garmin** | garmin.com | SSO + OAuth1→OAuth2（CF 429 封禁中）| 支持 garth secret_string 替代方案 |
@@ -125,46 +129,10 @@ SVG 导出时，标注上会区分 derived（高置信度合并）和 overlap（
 
 ### Garmin OAuth 认证机制
 
-#### 概念
-
-| 凭证 | 获取方式 | 有效期 | 用途 |
-|---|---|---|---|
-| **OAuth1** token + secret | SSO 登录后 `GET /preauthorized` | 长期（月~年） | 签名换取 OAuth2 |
-| **OAuth2** access_token | OAuth1 签名 `POST /exchange/user/2.0` | ~6h | `Authorization: Bearer` 调 API |
-| **OAuth2** refresh_token | 同上 | ~90d | 换新 access_token |
-
-#### 认证优先级（`GarminBase#authenticate`）
-
-```
-① secret（config.yml / env）
-   Base64([OAuth1, OAuth2]) — 与 garth dumps() 格式一致
-   parse → OAuth2 有效? → 直接使用
-   parse → OAuth2 过期? → OAuth1 refresh → 新 OAuth2
-   失败（解析/OAuth1 过期）→ 降级
-
-② token 文件（~/.workouts/garmin_tokens.json）
-   逻辑同 ①
-   失败 → 删除陈旧文件 → 降级
-
-③ SSO 登录（交互式，支持 MFA）
-   成功后 dump_secret → verify_access_token（API 验证）
-   验证通过 → save_secret_to_config（写回 config.yml）
-            → save_tokens（写 token 文件）
-   验证失败 → 不保存，抛出 AuthError
-```
-
-#### CI 策略
-
-| 条件 | 行为 |
-|---|---|
-| `SYNC__{SOURCE}__SECRET` 存在 | 解析后直接用，OAuth2 过期则自动 refresh |
-| OAuth2 refresh 成功 | 继续 sync |
-| OAuth1 过期（罕见） | 不做 SSO（交互式不可用），sync 返回 0 |
-| 解决方案 | 本地 `auth garmin_cn` → 新 secret → 更新 GitHub Secret |
-
-`SYNC__{SOURCE}__SECRET` 与 `SYNC__{SOURCE}__EMAIL` / `SYNC__{SOURCE}__PASSWORD` 不互斥。secret 优先，email+password 只作为 SSO 保底。
+详见 [docs/garmin-auth.md](docs/garmin-auth.md)
 
 ---
+
 
 ## 数据库
 
@@ -294,8 +262,10 @@ build job (needs: sync):
   4. export json → build/activities.json
   5. export svg → build/svg/github.svg
   6. validate SVG
-  7. generate index.html → build/index.html
-  8. upload build artifact
+  7. export stats → build/stats.json
+  8. export dashboard → build/
+  9. generate index.html → build/index.html
+  10. upload build artifact
 
 deploy job (needs: build):
   1. download build artifact
@@ -340,59 +310,11 @@ docker compose run --rm workouts export json
 
 ## 数据架构
 
-### 分层定义
+详见 [docs/data-architecture.md](docs/data-architecture.md)
 
-```
-Sync Stage                         Build Stage                 Deploy / Publish
-────────────────                  ──────────────────           ────────────────
-
-L1: data/raw/{source}/      L3 → L4: build/                  L5: 运动主页
-    {id}.{ext}                    index.html                         ─→ 网页
-    原始 API 数据                  activities.json
-                                  github.svg
-L2: data/std/{source}/
-    {id}.json                L4 → L5: upload + deploy         L5: gpx_out/
-    规整数据                                                         GPS 轨迹下载
-                                                                  ─→ 运动主页可下载
-L3: SQLite DB                L2 → L5: export gpx                ─→ 推送到第三方
-    activities
-    (summary_polyline)
-```
-
-### 各层说明
-
-| 层 | 名称 | 内容 | 阶段 | 格式 | 路径 |
-|---|---|---|---|---|---|
-| **L1** | 源始档案 | API 最小解码，不丢字段 | Sync | `.fit` / `.raw.json` | `data/raw/{source}/` |
-| **L2** | 规整数据 | WGS-84 + 统一 schema，保留全部字段 | Sync | `.json` | `data/std/{source}/` |
-| **L3** | 摘要库 | polyline + 统计字段（距离/时间/心率等） | Sync | SQLite | `data/workouts.db` |
-| **L4** | 发布素材 | JSON/CSV/SVG/HTML 导出 | Build | `.json` / `.svg` / `.html` / `.csv` | `build/` |
-| **L5** | 运动主页 | 运动数据网站 + GPX 轨迹下载 | Deploy / Export | HTML/CSS/SVG/JS / `.gpx` | Pages URL / `gpx_out/` |
-
-### 层间依赖
-
-```
-L1 ──→ L2 ──→ L3 ──→ L4 (build job)
-  │         │
-  │         └──→ L6 (export gpx 命令 → 网页可下载)
-  │
-  └── L1 是未来重建 L2 的源
-```
-
-### L1 → L2 转换规则
-
-1. 坐标转换（半圆→度数、GCJ-02→WGS-84）
-2. 时间归一化（FIT epoch / 毫秒 → Unix）
-3. 不丢弃字段、不做聚合、不做统计运算
-
-### 源适配矩阵
-
-| 源 | L1 | L2 | L3 | 状态 |
-|---|---|---|---|---|
-| **iGPSPORT** | `{id}.fit` ✅ | `std/igpsport/{id}.json` ✅ | ✅ | 本轮完成 |
-| **Keep（当前）** | ❌ 无 | `data/raw/keep/{id}.json`（过渡） | ✅ | 后续改进 |
-| **Keep（目标）** | `{id}.raw.json` | `std/keep/{id}.json` | ✅ | 后续 |
-| **未来新源** | 必须 | 必须 | 必须 | 强制 |
+L1 raw → L2 standardized GPS → L3 SQLite summary → L4 build artifacts → L5 deploy.
+转换规则: 坐标归一化、时间归一化、不丢字段。
+每个新源必须实现 L1+L2+L3。
 
 ---
 
@@ -404,7 +326,7 @@ L1 ──→ L2 ──→ L3 ──→ L4 (build job)
 | 内联 deploy job 而非 reusable workflow | 调用 `uses:` 在该仓库导致 `startup_failure` |
 | `__` 分隔 env var | 避免与 `garmin_cn` 等 key 中的 `_` 冲突 |
 | 保留 `upload-artifact` | Pages 部署稳定后再移除 |
-| Keep 用摘要数据 | FIT 格式无解析器 |
+| Keep 用摘要数据 | Keep API 不提供 FIT，iGPSPORT 使用 mini_racer + @garmin/fitsdk 解析 FIT |
 | `data/raw/{source}/` 平面目录 | 与 running_page `GPX_OUT/` 兼容，symlink 级桥接 |
 | Keep raw 存 decrypt JSON | 保留原始 HR 序列和相对时间戳，polyline 生成可重跑 |
 | 统一列表：new_ids + missing_raw | 一次 API 调用完成 summary + raw，省 50% API 开销 |
@@ -475,25 +397,17 @@ for record in messages["record_mesgs"]:
 | C SDK + Ruby FFI | 3d | `fit-c-sdk` + gcc 编译 | ⚠️ 需 CI 编译步骤 |
 | **JS SDK + mini_racer** | **~4d** | **`mini_racer` gem + JS bundle** | **✅ 纯 Ruby 依赖，无额外运行时** |
 
-**选定：`mini_racer` + `@garmin/fitsdk`**
+**选定实现：`mini_racer` + `@garmin/fitsdk`** ✅
 
-- JS SDK 是 Garmin 官方包（npm `@garmin/fitsdk`，77⭐）
-- `mini_racer` 是 Ruby gem（预编译 V8 引擎，无额外运行时）
-- Webpack 打包为单文件 `lib/workouts/fit/decoder.js`（~150KB）
-- CI 无额外步骤——`mini_racer` 是 gem 依赖，JS decoder 是静态文件
-
-**实现计划（4 Phase）：**
-
-| Phase | 内容 | 产出 |
-|---|---|---|
-| 1 | webpack 打包 JS SDK | `lib/workouts/fit/decoder.js` |
-| 2 | Ruby `FIT::Decoder` 类 | `lib/workouts/fit/decoder.rb` |
-| 3 | iGPSPORT raw 数据链路（下载 + 解析 + polyline） | `igpsport.rb` 新增方法 |
-| 4 | 测试（FIT fixture + spec） | 测试覆盖 |
+- JS 解码器: `lib/workouts/fit/decoder.js`（Webpack 打包 @garmin/fitsdk，~150KB）
+- Ruby 入口: `lib/workouts/fit/decoder.rb`（`FIT::Decoder.decode` / `.info`）
+- iGPSPORT 集成: `igpsport.rb` 下载 raw FIT → 解码 → L1/L2/L3
+- 测试: `spec/fit/decoder_spec.rb`
+- CI 无额外步骤 — `mini_racer` 是 gem，decoder.js 是静态文件
 
 ### 测试
 
-RSpec 263 例，0 失败。覆盖：
+RSpec 325 例，0 失败。覆盖：
 - Config（YAML 加载 + env var merge + 未知 key 警告）
 - Geo（坐标转换 3 套 + Polyline 编解码）
 - Privacy（起终点偏移过滤）
@@ -516,10 +430,7 @@ RSpec 263 例，0 失败。覆盖：
 
 ### P1 — 功能扩展
 
-| 项 | 工作量 | 说明 |
-|---|---|---|---|
-| GPX 重新导出 | 1d | `export gpx` 从 L2 文件生成（`data/std/`）|
-| Strava OAuth 交互式授权 | 1d | `auth strava` 启动本地 HTTP server 完成 OAuth 回调 |
+_无_
 
 ### P2 — 工程完善
 
@@ -548,3 +459,20 @@ RSpec 263 例，0 失败。覆盖：
 | Strava OAuth 自动 refresh + L1/L2/L3 数据链路 | ✅ 已完成 |
 | Strava 测试夹具 + 集成测试 | ✅ 已完成 |
 | 品牌一致性审计 | ✅ 已完成 |
+| GPX 重新导出（`export gpx` from L2） | ✅ 已完成（lib/workouts/export/gpx.rb）|
+| Strava OAuth 交互式授权（`auth strava`本地HTTP） | ✅ 已完成（lib/workouts/auth/strava.rb）|
+| FIT 解析 pipeline（mini_racer + @garmin/fitsdk） | ✅ 已完成（lib/workouts/fit/decoder.rb）|
+
+---
+
+## 文档架构
+
+文档给人看也给 AI 看。原则：
+
+| 原则 | 说明 |
+|---|---|
+| 术语一致 | 代码 / 注释 / docs/ / CONTEXT.md 用同一组词。避免同义替换 |
+| 显式引用 | 跨文件引用写完整路径。不写"详见上节" |
+| 结构化 > 段落 | 表格 / 列表 > 自然段。AI 解析表格比段落可靠 |
+| 约定写出来 | `__` 分隔符、`SOURCE` 占位符含义、OAuth 术语，在注释里写清 |
+| 文件锚点 | 每个 `docs/` 文件以 `# <feature> — <summary>` 开头 |

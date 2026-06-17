@@ -1,6 +1,8 @@
 require "yaml"
 
 module Workouts
+  # Config 3-tier: env > YAML > DEFAULTS.
+  # Env uses __ as separator (SYNC__KEEP__PHONE) to avoid conflict with key _.
   class Config
     DEFAULTS = {
       "database" => { "path" => "data/workouts.db" },
