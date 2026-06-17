@@ -49,7 +49,7 @@ module Workouts
       end
 
       def call
-        return 0 if (@email.to_s.empty? || @password.to_s.empty?) && !File.exist?(token_path)
+        return 0 if @config["auth_seed"].to_s.empty? && @email.to_s.empty? && !File.exist?(token_path)
 
         return 0 unless authenticate
 

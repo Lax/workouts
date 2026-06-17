@@ -81,7 +81,7 @@ module Workouts
         when "strava"
           config["client_id"].to_s != "" && config["client_secret"].to_s != "" && config["refresh_token"].to_s != ""
         when "garmin"
-          config["email"].to_s != "" && config["password"].to_s != ""
+          config["auth_seed"].to_s != ""
         when "garmin_cn"
           (config["email"].to_s != "" && config["password"].to_s != "") || config["secret"].to_s != ""
         when "keep"
