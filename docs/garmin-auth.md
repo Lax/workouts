@@ -98,17 +98,45 @@ garmin.com 的 SSO 端点 `/mobile/api/login` 已被 Garmin 关闭（返回 400�
 
 ### 实测结果（2026-06-17）
 
-- curl_cffi `mobile+cffi` Safari TLS 成功穿透 CF
-- 账号 MFA 已启用 → 认证在 MFA 步骤中断
-- `portal+cffi` 5 指纹中 Safari/Edge/Chrome 返回无响应（疑似 TCP 层阻断），safari_ios/chrome120 返回 403
-- 结论：curl_cffi 对无 MFA 账号可全自动；有 MFA 账号需 Playwright 缓存 session
+- `mobile+cffi` Safari TLS 成功穿透 CF
+- MFA 交互式认证成功 → DI OAuth2 token 交换成功 → 同步 2 条活动
+- `portal+cffi` 5 指纹中 Safari/Edge/Chrome 返回无响应，safari_ios/chrome120 返回 403
+- `auth_seed` Base64 已写入 config.yml + GitHub Secret
+- 结论：curl_cffi `mobile+cffi` 对无 MFA/有 MFA 账号均可用（MFA 通过 stdin 交互）
 
 ### 首次设置（有 MFA）
 
 ```bash
 ./scripts/garmin_auth_local.sh
 ```
-自动做：读 `config.yml` → 跑 `garmin_auth.py`（穿透 CF ~60s）→ 提示输入 MFA → Base64 编码 → 写回 `config.yml`（`sync.garmin.auth_seed`）→ 尝试 `gh secret set`
+静态 `auth_seed` 引导 CI 完成第一次认证 → 后续 CI 使用 `data/cache/` 中的工作副本自旋。
+
+脚本自动做：读 `config.yml` → `mobile+cffi` 穿透 CF（~60s）→ 提示输入 MFA → DI OAuth2 token 交换 → Base64 编码 → 写入 `config.yml`（`sync.garmin.auth_seed`）→ 尝试 `gh secret set SYNC_GARMIN_AUTH_SEED`
+
+### 日常 token 同步
+
+```bash
+./scripts/garmin_auth_local.sh --sync
+```
+
+**为什么需要 `--sync`：**
+
+1. 本地执行 `workouts sync --source garmin` 后，CI 中使用的 refresh_token **被旋转**（每次 refresh_token 调用旋转 token，旧 token 永久失效）。
+2. 此时 `SYNC_GARMIN_AUTH_SEED` 中保存的旧 auth_seed 已包含被旋转过的 refresh_token。
+3. 下一次 CI 运行，若 GH Cache miss（7 天缓存或 cache 全部失效），CI 回退到 `load_auth_seed` → `refresh_token()` → **失败**（refresh_token 已被本地旋转）→ 降级到 Strategy A/B
+4. `auth_seed` 是 CI 冷启动的最后防线；只要 auth_seed 中的 refresh_token 比 CI 的 cache 更新即可。
+
+**`--sync` 解决的问题：** 在后续本地完成 sync（`data/cache/garmin_garmin_com_tokens.json` 已更新）后，调用 `--sync` 将最新的 cache token 升格为下一个 auth_seed。
+这确保 CI 在任何 cache miss 时都能降级到最新的 refresh_token。
+
+**用法：** 本地 sync 后执行 `--sync`
+
+```
+scripts/garmin_auth_local.sh --sync
+# 读取 data/cache/garmin_garmin_com_tokens.json
+# Base64 编码 → 写 config.yml（sync.garmin.auth_seed）
+# → gh secret set SYNC_GARMIN_AUTH_SEED
+```
 
 ### MFA 处理
 
