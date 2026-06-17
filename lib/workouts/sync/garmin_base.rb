@@ -1,4 +1,5 @@
 require_relative "base"
+require_relative "../fit/decoder"
 require "ostruct"
 require "base64"
 require "oauth"
@@ -9,6 +10,8 @@ require "uri"
 require "cgi"
 require "http/cookie_jar"
 require "yaml"
+require "fileutils"
+require "zip"
 
 module Workouts
   module Sync
@@ -325,19 +328,31 @@ module Workouts
         start = 0
         limit = 100
         count = 0
+        @start_time = Time.now
 
         loop do
           activities = fetch_activity_list(start, limit)
           break if activities.nil? || activities.empty?
 
           activities.each do |act|
+            break if time_expired?
+
+            act_id = act["activityId"].to_s
             type = map_type(act["activityType"])
             next if skip_type?(type)
 
-            details = fetch_activity_detail(act["activityId"])
+            details = fetch_activity_detail(act_id)
             next unless details
 
-            attrs = build_attrs(details, act["activityId"], type)
+            polyline = fetch_summary_polyline(act_id)
+
+            unless raw_file_exists?(act_id)
+              download_fit_raw(act_id)
+              l2 = fit_to_l2(act_id)
+              write_standardized_json(l2, act_id) if l2
+            end
+
+            attrs = build_attrs(details, act_id, type, polyline)
             upsert_activity(attrs)
             count += 1
             report_progress(count)
@@ -391,10 +406,8 @@ module Workouts
         end
       end
 
-      def build_attrs(detail, activity_id, type)
+      def build_attrs(detail, activity_id, type, polyline = nil)
         summary = detail["summaryDTO"] || {}
-        act_data = detail["activityDTO"] || {}
-        loc_data = detail["locationDTO"] || {}
 
         start_t = parse_garmin_time(summary["startTimeGMT"])
         moving_time = summary["movingDuration"]&.to_i || summary["duration"]&.to_i
@@ -402,15 +415,16 @@ module Workouts
 
         {
           run_id: "garmin_#{activity_id}",
-          name: act_data["activityName"] || "Garmin Activity",
+          name: detail["activityName"] || "Garmin Activity",
           distance: summary["distance"]&.to_f,
           moving_time: moving_time,
           elapsed_time: elapsed_time,
           sport_category: type,
-          sport_type: type_str(act_data["activityType"]),
+          sport_type: type_str(detail["activityTypeDTO"]),
           start_date: start_t&.strftime("%Y-%m-%d %H:%M:%S"),
           start_date_local: start_t&.strftime("%Y-%m-%d %H:%M:%S"),
-          location_country: loc_data["locationName"],
+          location_country: detail["locationName"],
+          summary_polyline: polyline,
           average_heartrate: summary["averageHR"]&.to_f,
           average_speed: summary["averageSpeed"]&.to_f,
           elevation_gain: summary["elevationGain"]&.to_f,
@@ -486,6 +500,91 @@ module Workouts
 
       def token_path
         @config["token_path"] || File.join("data", "cache", "garmin_#{@domain.tr(".", "_")}_tokens.json")
+      end
+
+      # ── L1/L2 pipeline ──────────────────────────────────────────
+
+      FIT_EPOCH = 631_065_600
+
+      def raw_path(platform_id)
+        File.join(raw_dir, "#{platform_id}.fit")
+      end
+
+      def fetch_summary_polyline(activity_id)
+        gps = api_get("/activity-service/activity/#{activity_id}/details")
+        gps&.dig("geoPolylineDTO", "polyline")
+      rescue
+        nil
+      end
+
+      def download_fit_raw(activity_id)
+        uri = URI("#{connectapi_base}/download-service/files/activity/#{activity_id}")
+        req = Net::HTTP::Get.new(uri)
+        req["Authorization"] = "Bearer #{@access_token.fetch("access_token")}"
+        req["User-Agent"] = "GCM-iOS-5.22.1.4"
+        resp = retry_on_429 { send_http(uri, req) }
+        return false unless resp.code.to_i == 200
+
+        tmp = "#{raw_path(activity_id)}.tmp"
+        dir = raw_dir
+        FileUtils.mkdir_p(dir)
+
+        zip_data = resp.body
+        fit_data = nil
+        Zip::File.open_buffer(zip_data) do |zip|
+          entry = zip.entries.first
+          fit_data = entry.get_input_stream.read if entry
+        end
+
+        return false unless fit_data
+
+        File.write(tmp, fit_data, mode: "wb")
+        File.rename(tmp, raw_path(activity_id))
+        true
+      rescue => e
+        puts "Failed to download FIT for #{activity_id}: #{e.message}"
+        false
+      end
+
+      def fit_to_l2(activity_id)
+        fit_path = raw_path(activity_id)
+        return nil unless File.exist?(fit_path)
+
+        records = FIT::Decoder.decode(fit_path)
+        return nil if records.empty?
+
+        records.map do |r|
+          lat = r["positionLat"]
+          lng = r["positionLong"]
+          next unless lat && lng && lat != 0.0 && lng != 0.0
+
+          ts = r["timestamp"]
+          abs_ts = ts ? Time.at(FIT_EPOCH + ts).utc.xmlschema : nil
+
+          {
+            positionLat: lat,
+            positionLong: lng,
+            altitude: r["altitude"],
+            heartRate: r["heartRate"],
+            speed: r["speed"],
+            timestamp: abs_ts,
+            distance: r["distance"],
+            temperature: r["temperature"]
+          }.compact
+        end.compact
+      rescue => e
+        puts "Failed to decode FIT for #{activity_id}: #{e.message}"
+        nil
+      end
+
+      def write_standardized_json(l2, activity_id)
+        return unless l2
+
+        dir = std_dir
+        FileUtils.mkdir_p(dir)
+        tmp = File.join(dir, ".#{activity_id}.json.tmp")
+        File.write(tmp, JSON.generate(l2))
+        File.rename(tmp, std_path(activity_id))
       end
     end
   end
