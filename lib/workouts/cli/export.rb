@@ -131,14 +131,16 @@ module Workouts
     desc "igpsport_to_garmin", "Upload iGPSPORT activities to Garmin Connect (International)"
     option :dry, type: :boolean, default: false, desc: "List activities without uploading"
     option :since, type: :string, desc: "Upload only activities since date (YYYY-MM-DD)"
+    option :limit, type: :numeric, desc: "Max activities to upload per run"
     def igpsport_to_garmin
       config = Workouts::Config.new
       db = Workouts::DB::Connection.new(config.db_path).db
       garmin_config = config.sync_config("garmin")
       since = options[:since]
+      limit = options[:limit] || ENV["SYNC__IGP2GARMIN__LIMIT"]&.to_i || 10
       migrator = Export::IGPSportToGarmin.new(
         db: db, config: garmin_config, target: :intl,
-        dry: options[:dry], since: since
+        dry: options[:dry], since: since, limit: limit
       )
       count = migrator.call
       if options[:dry]
@@ -153,14 +155,16 @@ module Workouts
     desc "igpsport_to_garmin_cn", "Upload iGPSPORT activities to Garmin Connect (China)"
     option :dry, type: :boolean, default: false, desc: "List activities without uploading"
     option :since, type: :string, desc: "Upload only activities since date (YYYY-MM-DD)"
+    option :limit, type: :numeric, desc: "Max activities to upload per run"
     def igpsport_to_garmin_cn
       config = Workouts::Config.new
       db = Workouts::DB::Connection.new(config.db_path).db
       garmin_config = config.sync_config("garmin_cn")
       since = options[:since]
+      limit = options[:limit] || ENV["SYNC__IGP2GARMIN_CN__LIMIT"]&.to_i || 10
       migrator = Export::IGPSportToGarmin.new(
         db: db, config: garmin_config, target: :cn,
-        dry: options[:dry], since: since
+        dry: options[:dry], since: since, limit: limit
       )
       count = migrator.call
       if options[:dry]
