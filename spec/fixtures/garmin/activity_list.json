@@ -1,0 +1,16 @@
+[
+  {
+    "activityId": 11111,
+    "activityName": "Morning Ride [iGPSPORT]",
+    "startTimeGMT": "2025-06-01 01:00:00",
+    "distance": 30000,
+    "activityType": {"typeKey": "cycling"}
+  },
+  {
+    "activityId": 22222,
+    "activityName": "Evening Run",
+    "startTimeGMT": "2025-06-02 10:00:00",
+    "distance": 10000,
+    "activityType": {"typeKey": "running"}
+  }
+]

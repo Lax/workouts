@@ -1,0 +1,38 @@
+[
+  {
+    "positionLat": 31.230391,
+    "positionLong": 121.473701,
+    "altitude": 5.0,
+    "heartRate": 145,
+    "cadence": 85,
+    "power": 200,
+    "speed": 5.2,
+    "distance": 1000,
+    "timestamp": 1149593880,
+    "temperature": 25
+  },
+  {
+    "positionLat": 31.230416,
+    "positionLong": 121.473702,
+    "altitude": 5.5,
+    "heartRate": 148,
+    "cadence": 86,
+    "power": 210,
+    "speed": 5.3,
+    "distance": 1010,
+    "timestamp": 1149593885,
+    "temperature": 25
+  },
+  {
+    "positionLat": 31.230440,
+    "positionLong": 121.473703,
+    "altitude": 6.0,
+    "heartRate": 150,
+    "cadence": 87,
+    "power": 215,
+    "speed": 5.4,
+    "distance": 1020,
+    "timestamp": 1149593890,
+    "temperature": 26
+  }
+]
