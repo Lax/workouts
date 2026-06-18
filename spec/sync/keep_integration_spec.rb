@@ -30,6 +30,13 @@ RSpec.describe Workouts::Sync::Keep do
       String :location_country
       String :summary_polyline, text: true
       Float :average_heartrate
+      Float :max_heartrate
+      Float :average_cadence
+      Float :max_cadence
+      Float :average_power
+      Float :max_power
+      Integer :calories
+      Float :average_temperature
       Float :average_speed
       Float :elevation_gain
       String :source
