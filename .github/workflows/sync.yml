@@ -35,24 +35,9 @@ jobs:
           key: workouts-db-v1-${{ hashFiles('db/migrations/*.rb') }}-${{ github.run_id }}
           restore-keys: workouts-db-v1-${{ hashFiles('db/migrations/*.rb') }}-
 
-      - uses: actions/cache/restore@v4
-        id: source-cache
-        with:
-          path: |
-            data/raw/
-            data/std/
-          key: workouts-source-v1-${{ github.run_id }}
-          restore-keys: workouts-source-v1-
-
       - name: Record DB digest
         id: db-before
         run: echo "digest=$(md5sum data/workouts.db 2>/dev/null | cut -d' ' -f1 || echo 'none')" >> $GITHUB_OUTPUT
-
-      - name: Record source digest
-        id: source-before
-        run: |
-          count=$(find data/raw/ data/std/ -type f 2>/dev/null | wc -l)
-          echo "count=$count" >> $GITHUB_OUTPUT
 
       - uses: actions/cache/restore@v4
         id: garmin-cn-tokens-cache
@@ -67,6 +52,48 @@ jobs:
           path: data/cache/garmin_garmin_com_tokens.json
           key: garmin-tokens-v1-garmin-${{ github.run_id }}
           restore-keys: garmin-tokens-v1-garmin-
+
+      - id: cache-keep
+        uses: ./.github/actions/source-cache
+        with:
+          source: keep
+          phase: restore
+
+      - id: cache-igpsport
+        uses: ./.github/actions/source-cache
+        with:
+          source: igpsport
+          phase: restore
+
+      - id: cache-xoss
+        uses: ./.github/actions/source-cache
+        with:
+          source: xoss
+          phase: restore
+
+      - id: cache-xingzhe
+        uses: ./.github/actions/source-cache
+        with:
+          source: xingzhe
+          phase: restore
+
+      - id: cache-garmin
+        uses: ./.github/actions/source-cache
+        with:
+          source: garmin
+          phase: restore
+
+      - id: cache-garmin-cn
+        uses: ./.github/actions/source-cache
+        with:
+          source: garmin_cn
+          phase: restore
+
+      - id: cache-strava
+        uses: ./.github/actions/source-cache
+        with:
+          source: strava
+          phase: restore
 
       - name: Sync
         env:
@@ -142,13 +169,6 @@ jobs:
           [ "${{ steps.db-before.outputs.digest }}" != "$new" ] && echo "changed=true" || echo "changed=false"
           echo "changed=$([ "${{ steps.db-before.outputs.digest }}" != "$new" ] && echo true || echo false)" >> $GITHUB_OUTPUT
 
-      - name: Check source changed
-        id: source-changed
-        run: |
-          before=${{ steps.source-before.outputs.count }}
-          after=$(find data/raw/ data/std/ -type f 2>/dev/null | wc -l)
-          echo "changed=$([ "$before" != "$after" ] && echo true || echo false)" >> $GITHUB_OUTPUT
-
       - uses: actions/cache/save@v4
         if: always()
         with:
@@ -167,13 +187,47 @@ jobs:
           path: data/workouts.db
           key: ${{ steps.db-cache.outputs.cache-primary-key }}
 
-      - uses: actions/cache/save@v4
-        if: steps.source-changed.outputs.changed == 'true'
+      - uses: ./.github/actions/source-cache
         with:
-          path: |
-            data/raw/
-            data/std/
-          key: ${{ steps.source-cache.outputs.cache-primary-key }}
+          source: keep
+          phase: save
+          before_digest: ${{ steps.cache-keep.outputs.before_digest }}
+
+      - uses: ./.github/actions/source-cache
+        with:
+          source: igpsport
+          phase: save
+          before_digest: ${{ steps.cache-igpsport.outputs.before_digest }}
+
+      - uses: ./.github/actions/source-cache
+        with:
+          source: xoss
+          phase: save
+          before_digest: ${{ steps.cache-xoss.outputs.before_digest }}
+
+      - uses: ./.github/actions/source-cache
+        with:
+          source: xingzhe
+          phase: save
+          before_digest: ${{ steps.cache-xingzhe.outputs.before_digest }}
+
+      - uses: ./.github/actions/source-cache
+        with:
+          source: garmin
+          phase: save
+          before_digest: ${{ steps.cache-garmin.outputs.before_digest }}
+
+      - uses: ./.github/actions/source-cache
+        with:
+          source: garmin_cn
+          phase: save
+          before_digest: ${{ steps.cache-garmin-cn.outputs.before_digest }}
+
+      - uses: ./.github/actions/source-cache
+        with:
+          source: strava
+          phase: save
+          before_digest: ${{ steps.cache-strava.outputs.before_digest }}
 
       - uses: actions/upload-artifact@v4
         if: steps.db-changed.outputs.changed == 'true'

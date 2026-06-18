@@ -52,7 +52,7 @@ lib/workouts/cli/sync.rb         # 同步子模块（sync, auth）
 │ XOSS (xoss) │     └───┬───┬──────┘
 │ XingZhe     │         │   │
 └─────────────┘         │   └───▶ data/raw/{source}/
-                        │           (原始 GPS 点阵备份, GH Cache)
+                        │           (原始 GPS 点阵备份, 每源独立 GH Cache)
                         ▼
                     ┌──────────────────┐
                     │   SQLite DB      │
@@ -75,6 +75,22 @@ lib/workouts/cli/sync.rb         # 同步子模块（sync, auth）
 | **Garmin CN** | garmin.cn | SSO + OAuth1→OAuth2（不受 CF 影响）| token 文件持久化 + OAuth1 自动 refresh，GH Cache |
 | **Garmin Intl** | garmin.com | DI OAuth2（Playwright primary — session cookies 365d, curl_cffi fallback）| Playwright session cookies 365d, token GH Cache，MFA 首次后零交互 |
 | **Strava** | strava.com | OAuth2 refresh_token | 已配置，含多源去重检测 |
+
+### 数据源标识
+
+`run_id` 格式为 `{source_prefix}_{平台ID}`（如 `garmin_12345`、`strava_98765`）。每个源有独立的 L1/L2 文件目录：
+
+| 适配器 | `source_prefix` | L1 `raw_dir` | L2 `std_dir` |
+|---|---|---|---|
+| Keep | `keep` | `data/raw/keep/` | `data/std/keep/` |
+| iGPSPORT | `igpsport` | `data/raw/igpsport/` | `data/std/igpsport/` |
+| XOSS | `xoss` | `data/raw/xoss/` | `data/std/xoss/` |
+| XingZhe | `xingzhe` | `data/raw/xingzhe/` | `data/std/xingzhe/` |
+| Garmin Intl | `garmin` | `data/raw/garmin/` | `data/std/garmin/` |
+| Garmin CN | `garmin_cn` | `data/raw/garmin_cn/` | `data/std/garmin_cn/` |
+| Strava | `strava` | `data/raw/strava/` | `data/std/strava/` |
+
+每源通过 `scripts/source-digest.sh` 计算内容 md5 作为 digest，用于 CI cache 的变更检测。`before_digest` 在 restore 阶段记录，sync 后比对，仅 digest 变化时写回 cache。
 
 ### 数据流程
 
@@ -130,6 +146,20 @@ SVG 导出时，标注上会区分 derived（高置信度合并）和 overlap（
 ### Garmin OAuth 认证机制
 
 详见 [docs/garmin-auth.md](docs/garmin-auth.md)
+
+### Garmin Intl vs CN 目录/标识隔离
+
+两个 Garmin 源共享 `GarminBase`，通过子类覆写隔离文件目录和 DB 标识：
+
+| 属性 | Intl (`Garmin`) | CN (`GarminCN`) |
+|---|---|---|
+| `raw_dir` | `data/raw/garmin/` | `data/raw/garmin_cn/` |
+| `std_dir` | `data/std/garmin/` | `data/std/garmin_cn/` |
+| `source_prefix` → `run_id` | `garmin_#{id}` | `garmin_cn_#{id}` |
+| DB `source` | `"garmin"` | `"garmin_cn"` |
+
+`source_prefix` 方法定义在 `GarminBase`（返回 `"garmin"`），`GarminCN` 覆写返回 `"garmin_cn"`。
+`build_attrs` 通过 `source_prefix` 生成 `run_id` 和 `source`，确保 DB 层无冲突。
 
 ---
 
@@ -254,13 +284,15 @@ sync job:
   1. checkout
   2. setup Ruby + bundle
   3. restore DB cache
-  4. restore raw cache (data/raw/)
-  5. record digests (DB + raw)
-  6. workouts sync (受 SYNC__TIME_BUDGET 限制)
-  7. check changed (DB + raw)
-  8. save cache (DB + raw, if changed)
-  9. upload DB artifact (for build job)
-  10. 读 N → 算 f → 可能改 cron
+  4. record DB digest
+  5. restore Garmin token caches
+  6. restore per-source caches (7 源, 各自独立 GH Cache)
+  7. workouts sync (受 SYNC__TIME_BUDGET 限制)
+  8. 读 N → 算 f → 可能改 cron
+  9. check DB changed
+  10. save DB cache + Garmin token caches
+  11. save per-source caches (仅变动的源)
+  12. upload DB artifact (for build job)
 
 build job (needs: sync):
   1. checkout + setup Ruby
@@ -327,7 +359,7 @@ L1 raw → L2 标准化 GPS → L3 SQLite 摘要 → L4 构建制品 → L5 部�
 | 统一列表：new_ids + missing_raw | 一次 API 调用完成 summary + raw，省 50% API 开销 |
 | 时间预算在循环顶部 break | 避免写了 summary 但没写 raw 的不一致状态 |
 | temp→rename 原子写入 raw 文件 | 崩溃恢复时 `raw_file_exists?` 不误判 |
-| `data/raw/` 使用 GH Cache | 零认证问题，7 天保留，21MB ~1s restore |
+| Per-source 独立 GH Cache | 每源独立 cache key (`workouts-raw-v1-{source}-{run_id}`)，通过 `scripts/source-digest.sh` 计算内容 md5 检测变化，仅变动的源写 cache。通过 `.github/actions/source-cache/` composite action 封装。数据目录示例: `data/raw/{garmin,garmin_cn,igpsport,...}/`, `data/std/{...}/` |
 | 导出默认路径 `data/` → `build/` | 源数据与生成制品分离，gitignored |
 | `mini_racer` + `@garmin/fitsdk` 解析 FIT | V8 引擎在 Ruby 进程中执行 JS SDK，纯 gem 依赖，无需外部运行时 |
 

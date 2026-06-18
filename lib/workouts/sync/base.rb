@@ -30,7 +30,6 @@ module Workouts
 
       def raw_dir
         src = self.class.name.split("::").last.downcase
-        src = "garmin" if src.start_with?("garmin")
         File.join("data", "raw", src)
       end
 
@@ -44,7 +43,6 @@ module Workouts
 
       def std_dir
         src = self.class.name.split("::").last.downcase
-        src = "garmin" if src.start_with?("garmin")
         File.join("data", "std", src)
       end
 

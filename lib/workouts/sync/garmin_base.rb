@@ -410,6 +410,10 @@ module Workouts
         end
       end
 
+      def source_prefix
+        "garmin"
+      end
+
       def build_attrs(detail, activity_id, type, polyline = nil)
         summary = detail["summaryDTO"] || {}
 
@@ -418,7 +422,7 @@ module Workouts
         elapsed_time = summary["elapsedDuration"]&.to_i || summary["duration"]&.to_i
 
         {
-          run_id: "garmin_#{activity_id}",
+          run_id: "#{source_prefix}_#{activity_id}",
           name: detail["activityName"] || "Garmin Activity",
           distance: summary["distance"]&.to_f,
           moving_time: moving_time,
@@ -439,7 +443,7 @@ module Workouts
           average_temperature: summary["avgTemperature"]&.to_f,
           average_speed: summary["averageSpeed"]&.to_f,
           elevation_gain: summary["elevationGain"]&.to_f,
-          source: "garmin"
+          source: source_prefix
         }
       end
 
