@@ -15,12 +15,12 @@ module Workouts
           #   refresh_token: ""
 
           # --- Garmin International (garmin.com) ---
-          # DI OAuth2 auth flow. Run ./scripts/garmin_auth_local.sh once
-          # to get the initial refresh_token. CI auto-refreshes via di_refresh.
+          # DI OAuth2 flow. Run ./scripts/garmin_auth_local.sh for MFA login.
+          # CI uses auth_seed only — email/password not needed or recommended.
           # garmin:
-          #   email: "your@email.com"          # placeholder
-          #   password: "your_password"        # placeholder
-          #   auth_seed: "base64_di_token" # auto-written by auth_local.sh
+          #   auth_seed: "base64_di_token"    # auto-written by auth_local.sh
+          #   email: "your@email.com"         # ⚠️ only for local script (garmin_auth.py)
+          #   password: "your_password"       # ⚠️ only for local script (garmin_auth.py)
 
           # --- Garmin China (garmin.cn) ---
           # Uses OAuth1 token chain (unaffected by garmin.com CF block).

@@ -176,6 +176,7 @@ CREATE TABLE activities (
 ```
 SYNC__KEEP__PHONE       → sync.keep.phone
 SYNC__GARMIN_CN__EMAIL  → sync.garmin_cn.email
+SYNC__GARMIN__AUTH_SEED → sync.garmin.auth_seed
 SYNC__STRAVA_CLIENT_ID  → sync.strava.client_id
 SYNC__TIME_BUDGET       → sync.time_budget           # 全局 sync 配置
 ```
@@ -349,7 +350,7 @@ L1 raw → L2 标准化 GPS → L3 SQLite 摘要 → L4 构建制品 → L5 部�
 | XOSS | 44 |
 | XingZhe | 34 |
 | Garmin CN | 0（已认证，账号无记录） |
-| Garmin 国际版 | DI OAuth2（9 commits）— ✅ 已认证，已同步 2 条活动 |
+| Garmin 国际版 | DI OAuth2（11 commits）— ✅ 已认证，已同步 2 条活动，L1 FIT raw + L2 decode |
 
 ### 原始 GPS 文件（GH Cache）
 
