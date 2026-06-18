@@ -514,10 +514,22 @@ module Workouts
         File.join(raw_dir, "#{platform_id}.fit")
       end
 
+      # Garmin API 返回两种格式:
+      #   OAuth1 路径 (garmin.cn) → 字符串 (Google Polyline 编码)
+      #   DI OAuth2 路径 (garmin.com) → 坐标对象数组 [{lat, lon, time, speed, ...}, ...]
+      # Array 需编码为 Polyline 字符串再入库。
       def fetch_summary_polyline(activity_id)
         gps = api_get("/activity-service/activity/#{activity_id}/details")
-        gps&.dig("geoPolylineDTO", "polyline")
-      rescue
+        polyline = gps&.dig("geoPolylineDTO", "polyline")
+
+        if polyline.is_a?(Array)
+          points = polyline.map { |pt| [pt["lat"], pt["lon"]] }
+          Geo::Polyline.encode(points) if points.size >= 2
+        else
+          polyline
+        end
+      rescue => e
+        puts "Warning: failed to encode polyline for #{activity_id}: #{e.message}"
         nil
       end
 
