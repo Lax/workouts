@@ -91,11 +91,18 @@ RSpec.describe Workouts::Migrate::IGPSportToGarmin do
   end
 
   describe "L1 dedup — upload_map" do
-    let(:map_dir) { File.join("data", "migrate", "igpsport_to_garmin") }
+    let(:tmpdir) { Dir.mktmpdir("igp2garmin_spec") }
+    let(:map_dir) { File.join(tmpdir, "igpsport_to_garmin") }
     let(:map_path) { File.join(map_dir, "uploads.json") }
 
+    before do
+      allow(migrator).to receive(:upload_map_dir).and_return(map_dir)
+      allow(migrator).to receive(:upload_map_path).and_return(map_path)
+      allow(migrator).to receive(:authenticate).and_return(false)
+    end
+
     after do
-      FileUtils.rm_rf("data/migrate")
+      FileUtils.remove_entry(tmpdir)
     end
 
     it "returns empty map when file missing" do
@@ -116,6 +123,7 @@ RSpec.describe Workouts::Migrate::IGPSportToGarmin do
       File.write(map_path, JSON.generate({
         "uploads" => { "igpsport_12345" => { "garmin_activity_id" => "987" } }
       }))
+      allow(migrator).to receive(:authenticate).and_call_original
       expect(migrator.call).to eq(0)
     end
   end
@@ -142,36 +150,34 @@ RSpec.describe Workouts::Migrate::IGPSportToGarmin do
   end
 
   describe "#authenticate" do
-    context "DI (international)" do
-      subject(:m) { described_class.new(db: db, config: {}) }
-
-      before do
-        allow(m).to receive(:token_path).and_return(fixture_path("garmin/di_tokens.json"))
-      end
-
-      it "loads valid DI tokens" do
-        expect(m.send(:authenticate)).to be true
-      end
-
-      it "sets @access_token from file" do
-        m.send(:authenticate)
-        expect(m.instance_variable_get(:@access_token)).to eq("di_test_access_token")
-      end
-
-      it "returns false when token file missing" do
-        m2 = described_class.new(db: db, config: {})
-        allow(m2).to receive(:token_path).and_return("/nonexistent/tokens.json")
-        expect(m2.send(:authenticate)).to be false
-      end
+    it "calls Auth::GarminToken.for_intl" do
+      expect(Workouts::Auth::GarminToken).to receive(:for_intl)
+        .with(config)
+        .and_return(access_token: "at", domain: "garmin.com")
+      expect(migrator.send(:authenticate)).to be true
     end
 
-    context "CN (OAuth1)" do
-      subject(:m) { Workouts::Migrate::IGPSportToGarminCN.new(db: db, config: { "secret" => "" }) }
+    it "returns false when token fetch fails" do
+      expect(Workouts::Auth::GarminToken).to receive(:for_intl).and_return(nil)
+      expect(migrator.send(:authenticate)).to be false
+    end
 
-      it "returns false without tokens or secret" do
-        allow(m).to receive(:token_path).and_return("/nonexistent/tokens.json")
-        expect(m.send(:authenticate)).to be false
-      end
+    it "sets @access_token and @domain" do
+      expect(Workouts::Auth::GarminToken).to receive(:for_intl)
+        .and_return(access_token: "my_token", domain: "garmin.com")
+      migrator.send(:authenticate)
+      expect(migrator.instance_variable_get(:@access_token)).to eq("my_token")
+      expect(migrator.instance_variable_get(:@domain)).to eq("garmin.com")
+    end
+  end
+
+  describe "#authenticate (CN)" do
+    it "calls Auth::GarminToken.for_cn" do
+      m = Workouts::Migrate::IGPSportToGarminCN.new(db: db, config: config)
+      expect(Workouts::Auth::GarminToken).to receive(:for_cn)
+        .with(config)
+        .and_return(access_token: "cn_at", domain: "garmin.cn")
+      expect(m.send(:authenticate)).to be true
     end
   end
 
@@ -267,22 +273,6 @@ RSpec.describe Workouts::Migrate::IGPSportToGarmin do
     it "uses igpsport_to_garmin_cn for cn" do
       m = Workouts::Migrate::IGPSportToGarminCN.new(db: db, config: {})
       expect(m.send(:upload_map_dir)).to eq("data/migrate/igpsport_to_garmin_cn")
-    end
-  end
-
-  describe "#token_expired?" do
-    it "returns false when @saved_expires_at is nil" do
-      expect(migrator.send(:token_expired?)).to be false
-    end
-
-    it "returns true when expired" do
-      migrator.instance_variable_set(:@saved_expires_at, Time.now.to_i - 3600)
-      expect(migrator.send(:token_expired?)).to be true
-    end
-
-    it "returns false when not expired" do
-      migrator.instance_variable_set(:@saved_expires_at, Time.now.to_i + 3600)
-      expect(migrator.send(:token_expired?)).to be false
     end
   end
 

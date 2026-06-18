@@ -2,7 +2,6 @@ require "fileutils"
 require "json"
 require "net/http"
 require "uri"
-require "base64"
 require "ostruct"
 require "faraday"
 require "faraday/multipart"
@@ -30,7 +29,6 @@ module Workouts
         @limit = limit
         @domain = "garmin.com"
         @access_token = nil
-        @saved_expires_at = nil
         @count = 0
         @garmin_cache = {}
       end
@@ -165,81 +163,15 @@ module Workouts
         "https://connectapi.#{@domain}#{UPLOAD_PATH}"
       end
 
-      # ── Auth (DI OAuth2 — International) ─────────────────────
+      # ── Auth (delegated to shared helper) ─────────────────────
 
       def authenticate
-        return false unless load_di_tokens
+        result = Auth::GarminToken.for_intl(@config)
+        return false unless result
 
-        return true unless token_expired?
-
-        refresh_di_token
-      end
-
-      def load_di_tokens
-        path = token_path
-        return false unless File.exist?(path)
-
-        data = JSON.parse(File.read(path))
-        @access_token = data["access_token"]
-        @saved_expires_at = data["expires_at"]
+        @access_token = result[:access_token]
+        @domain = result[:domain]
         true
-      rescue JSON::ParserError
-        false
-      end
-
-      def refresh_di_token
-        path = token_path
-        return false unless File.exist?(path)
-
-        data = JSON.parse(File.read(path))
-        rt = data["refresh_token"]
-        return false unless rt
-
-        client_id = data["di_client_id"] || "GARMIN_CONNECT_MOBILE_ANDROID_DI_2025Q2"
-        basic = Base64.strict_encode64("#{client_id}:")
-
-        uri = URI("https://diauth.#{@domain}/di-oauth2-service/oauth/token")
-        req = Net::HTTP::Post.new(uri)
-        req["Authorization"] = "Basic #{basic}"
-        req["Content-Type"] = "application/x-www-form-urlencoded"
-        req["Cache-Control"] = "no-cache"
-        req["User-Agent"] = "GCM-Android-5.23"
-        req.body = URI.encode_www_form(
-          grant_type: "refresh_token",
-          client_id: client_id,
-          refresh_token: rt
-        )
-
-        resp = send_http(uri, req)
-        return false unless resp.code.to_i == 200
-
-        result = JSON.parse(resp.body)
-        result["expires_at"] = Time.now.to_i + (result["expires_in"] || 64800).to_i
-        @access_token = result["access_token"]
-        @saved_expires_at = result["expires_at"]
-        FileUtils.mkdir_p(File.dirname(path))
-        File.write(path, JSON.pretty_generate(result))
-        true
-      rescue => e
-        puts "  DI token refresh failed: #{e.message}"
-        false
-      end
-
-      def token_expired?
-        return false unless @saved_expires_at
-        Time.now.to_i >= @saved_expires_at - 60
-      end
-
-      def token_path
-        @config["token_path"] || File.join("data", "cache", "garmin_garmin_com_tokens.json")
-      end
-
-      def send_http(uri, request)
-        http = Net::HTTP.new(uri.host, uri.port)
-        http.use_ssl = true
-        http.open_timeout = 30
-        http.read_timeout = 60
-        http.start { |h| h.request(request) }
       end
 
       # ── L2 Dedup ──────────────────────────────────────────────
@@ -405,6 +337,14 @@ module Workouts
 
       def fmt_coord(v)
         format("%.6f", v.to_f)
+      end
+
+      def send_http(uri, request)
+        http = Net::HTTP.new(uri.host, uri.port)
+        http.use_ssl = true
+        http.open_timeout = 30
+        http.read_timeout = 60
+        http.start { |h| h.request(request) }
       end
     end
   end

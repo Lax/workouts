@@ -393,6 +393,8 @@ L1 raw → L2 标准化 GPS → L3 SQLite 摘要 → L4 构建制品 → L5 部�
 | 约定写出来 | `__` 分隔符、`SOURCE` 占位符含义、OAuth 术语，在注释里写清 |
 | 文件锚点 | 每个 `docs/` 文件以 `# <feature> — <summary>` 开头 |
 | 不列测试数量 | 文档中不出现测试用例数量、耗时等数字。测试相关仅写 `测试（全 stub、零网络）` |
+| 测试不用 rm_rf | Spec 不得用 `FileUtils.rm_rf` 删除生产目录。用 `Dir.mktmpdir` 管理临时文件 |
+| 不重复 OAuth | OAuth token 管理集中在 `Auth::GarminToken`，其他类不得包含 OAuth 客户端逻辑 |
 
 ## 错误消息约定
 
