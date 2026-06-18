@@ -22,6 +22,8 @@
 | `export stats [--output]` | 导出统计摘要 |
 | `export dashboard [--output]` | 导出自定义仪表盘 HTML |
 | `export gpx [--output]` | 从 L2 文件重新导出 GPX |
+| `export igpsport_to_garmin [--limit]` | 上传 iGPSPORT 数据至 Garmin |
+| `export igpsport_to_garmin_cn [--limit]` | 上传 iGPSPORT 数据至 Garmin CN |
 | `export html` | 导出 HTML（同 dashboard）|
 | `export all` | 执行所有导出 |
 | `parse <file.gpx\|file.tcx> [--save]` | 解析本地 GPX/TCX 文件，可选写入 DB |
@@ -390,6 +392,7 @@ L1 raw → L2 标准化 GPS → L3 SQLite 摘要 → L4 构建制品 → L5 部�
 | 结构化 > 段落 | 表格 / 列表 > 自然段。AI 解析表格比段落可靠 |
 | 约定写出来 | `__` 分隔符、`SOURCE` 占位符含义、OAuth 术语，在注释里写清 |
 | 文件锚点 | 每个 `docs/` 文件以 `# <feature> — <summary>` 开头 |
+| 不列测试数量 | 文档中不出现测试用例数量、耗时等数字。测试相关仅写 `测试（全 stub、零网络）` |
 
 ## 错误消息约定
 

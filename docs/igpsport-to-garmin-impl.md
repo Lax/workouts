@@ -13,7 +13,7 @@ workouts export igpsport_to_garmin_cn   [--dry] [--since=YYYY-MM-DD] [--limit=N]
 |---|---|
 | `lib/workouts/export/igpsport_to_garmin.rb` | 核心上传器 |
 | `lib/workouts/cli/export.rb` | CLI 命令注册（`igpsport_to_garmin` / `igpsport_to_garmin_cn`） |
-| `spec/lib/export/igpsport_to_garmin_spec.rb` | 32 个测试，零网络，< 0.04s |
+| `spec/lib/export/igpsport_to_garmin_spec.rb` | 测试（全 stub、零网络） |
 | `spec/fixtures/garmin/upload_{success,failure}.json` | 上传 API fixture |
 | `spec/fixtures/garmin/activity_list.json` | 活动列表 fixture（含 `[iGPSPORT]` 后缀条目） |
 | `spec/fixtures/garmin/di_tokens.json` | DI OAuth2 token fixture |
@@ -91,8 +91,6 @@ DB activities (source='igpsport')
 }
 ```
 
-## 限制 / 后续
-
 ## 批量控制
 
 通过 `--limit=N` 控制每次上传数量，默认 10。分别由两个 env var 控制：
@@ -117,10 +115,4 @@ env:
 | DB `upload_targets` 列 | 后续 |
 | 活动 GPX 回退缺少 FIT 时自动构建 | 已实现（从 L2 JSON） |
 
-## 测试性能
 
-全部 34 个测试在 0.04 秒完成。策略：
-- 无网络请求（stub Faraday response / stub 文件读取）
-- 内存 SQLite（无 I/O）
-- 小 fixture（3 个 trackpoints）
-- 无 sleep / retry
