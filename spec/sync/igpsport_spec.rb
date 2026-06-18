@@ -121,6 +121,70 @@ RSpec.describe Workouts::Sync::IGPSPORT do
       expect(attrs[:start_date]).to be_a(String)
       expect(attrs[:start_date]).to match(/\A\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\z/)
     end
+
+    it "reads HR from API when avgHrm present" do
+      row_with_hr = row.merge("avgHrm" => 152, "maxHrm" => 178)
+      a = igp.send(:build_attrs, row_with_hr, "1", nil)
+      expect(a[:average_heartrate]).to eq(152)
+      expect(a[:max_heartrate]).to eq(178)
+    end
+
+    it "leaves HR nil when avgHrm absent" do
+      expect(attrs[:average_heartrate]).to be_nil
+      expect(attrs[:max_heartrate]).to be_nil
+    end
+
+    it "passes sensor summary into attrs" do
+      sensor = { average_cadence: 78, max_cadence: 95, average_power: 180, max_power: 420, average_temperature: 24, calories: nil }
+      a = igp.send(:build_attrs, row, "1", nil, sensor)
+      expect(a[:average_cadence]).to eq(78)
+      expect(a[:max_cadence]).to eq(95)
+      expect(a[:average_power]).to eq(180)
+      expect(a[:max_power]).to eq(420)
+      expect(a[:average_temperature]).to eq(24)
+      expect(a[:calories]).to be_nil
+    end
+  end
+
+  describe "#compute_sensor_summary" do
+    it "returns averages and maxes from decoded FIT records" do
+      records = [
+        { "cadence" => 80, "power" => 200, "temperature" => 25 },
+        { "cadence" => 85, "power" => 250, "temperature" => 26 },
+        { "cadence" => 90, "power" => 300, "temperature" => 27 }
+      ]
+      result = igp.send(:compute_sensor_summary, records)
+      expect(result[:average_cadence]).to eq(85.0)
+      expect(result[:max_cadence]).to eq(90)
+      expect(result[:average_power]).to eq(250.0)
+      expect(result[:max_power]).to eq(300)
+      expect(result[:average_temperature]).to eq(26.0)
+    end
+
+    it "handles partial sensor data (some nil)" do
+      records = [
+        { "cadence" => 80, "power" => nil, "temperature" => nil },
+        { "cadence" => nil, "power" => 200, "temperature" => nil },
+        { "cadence" => nil, "power" => nil, "temperature" => 25 }
+      ]
+      result = igp.send(:compute_sensor_summary, records)
+      expect(result[:average_cadence]).to eq(80.0)
+      expect(result[:max_cadence]).to eq(80)
+      expect(result[:average_power]).to eq(200.0)
+      expect(result[:max_power]).to eq(200)
+      expect(result[:average_temperature]).to eq(25.0)
+    end
+
+    it "returns empty hash for empty records" do
+      expect(igp.send(:compute_sensor_summary, [])).to eq({})
+    end
+
+    it "returns nil for missing sensor fields" do
+      records = [{ "positionLat" => 31.0, "positionLong" => 121.0 }]
+      result = igp.send(:compute_sensor_summary, records)
+      expect(result[:average_cadence]).to be_nil
+      expect(result[:average_power]).to be_nil
+    end
   end
 
   describe "#map_sport" do

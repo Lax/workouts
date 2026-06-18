@@ -50,4 +50,29 @@ RSpec.describe Workouts::Export::JSON do
     data = JSON.parse(File.read(output))
     expect(data[0]["moving_time"]).to eq("0:25:00")
   end
+
+  it "includes sensor fields" do
+    now = Time.now.utc
+    db[:activities].insert(
+      run_id: "sensor_1", name: "Sensor Ride", distance: 20000,
+      moving_time: 3600, sport_category: "ride",
+      start_date: "2024-06-01T00:00:00Z", start_date_local: "2024-06-01T00:00:00Z",
+      source: "strava", created_at: now, updated_at: now,
+      average_heartrate: 145, max_heartrate: 172,
+      average_cadence: 85, max_cadence: 95,
+      average_power: 210, max_power: 450,
+      calories: 680, average_temperature: 28
+    )
+    described_class.new(db: db, output: output).call
+    data = JSON.parse(File.read(output))
+    a = data.find { |x| x["run_id"] == "sensor_1" }
+    expect(a["average_heartrate"]).to eq(145)
+    expect(a["max_heartrate"]).to eq(172)
+    expect(a["average_cadence"]).to eq(85)
+    expect(a["max_cadence"]).to eq(95)
+    expect(a["average_power"]).to eq(210)
+    expect(a["max_power"]).to eq(450)
+    expect(a["calories"]).to eq(680)
+    expect(a["average_temperature"]).to eq(28)
+  end
 end

@@ -161,6 +161,46 @@ RSpec.describe Workouts::Sync::GarminBase do
     end
   end
 
+  describe "#build_attrs" do
+    subject(:adapter) { stub_adapter }
+    let(:detail) do
+      { "activityName" => "Morning Ride",
+        "activityTypeDTO" => { "typeKey" => "cycling" },
+        "locationName" => "Shanghai",
+        "summaryDTO" => {
+          "distance" => 30000, "movingDuration" => 5400,
+          "elapsedDuration" => 6000,
+          "startTimeGMT" => "2025-06-01 01:00:00",
+          "averageHR" => 148, "maxHR" => 175,
+          "avgCadence" => 82, "maxCadence" => 105,
+          "avgPower" => 195, "maxPower" => 520,
+          "calories" => 750, "avgTemperature" => 26,
+          "averageSpeed" => 5.56, "elevationGain" => 350
+        } }
+    end
+
+    it "maps sensor fields from summaryDTO" do
+      attrs = adapter.send(:build_attrs, detail, "1001", "ride")
+      expect(attrs[:average_heartrate]).to eq(148)
+      expect(attrs[:max_heartrate]).to eq(175)
+      expect(attrs[:average_cadence]).to eq(82)
+      expect(attrs[:max_cadence]).to eq(105)
+      expect(attrs[:average_power]).to eq(195)
+      expect(attrs[:max_power]).to eq(520)
+      expect(attrs[:calories]).to eq(750)
+      expect(attrs[:average_temperature]).to eq(26)
+    end
+
+    it "leaves sensor fields nil when summaryDTO missing them" do
+      bare = { "summaryDTO" => { "distance" => 5000 } }
+      attrs = adapter.send(:build_attrs, bare, "2002", "run")
+      expect(attrs[:max_heartrate]).to be_nil
+      expect(attrs[:average_cadence]).to be_nil
+      expect(attrs[:average_power]).to be_nil
+      expect(attrs[:calories]).to be_nil
+    end
+  end
+
   describe "#access_token_valid?" do
     subject(:adapter) { stub_adapter }
 
