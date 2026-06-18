@@ -19,16 +19,17 @@ module Workouts
       ACTIVITY_LIST_PATH = "/activitylist-service/activities/search/activities"
       SOURCE_SUFFIX = " [iGPSPORT]"
 
-      def initialize(db:, config:, target: :intl, dry: false, since: nil)
+      def initialize(db:, config:, target: :intl, dry: false, since: nil, limit: nil)
         @db = db
         @config = config
         @target = target
         @dry = dry
         @since = since
+        @limit = limit
         @domain = target == :cn ? "garmin.cn" : "garmin.com"
         @access_token = nil
         @count = 0
-        @garmin_cache = {} # date_str => [activity, ...]
+        @garmin_cache = {}
       end
 
       def call
@@ -81,6 +82,7 @@ module Workouts
       def load_igpsport_activities
         ds = @db[:activities].where(source: "igpsport").order(Sequel.desc(:start_date))
         ds = ds.where(Sequel.lit("start_date >= ?", @since)) if @since
+        ds = ds.limit(@limit) if @limit&.positive?
         ds.all
       end
 
