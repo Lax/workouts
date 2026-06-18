@@ -2,17 +2,27 @@
 """
 Garmin DI OAuth2 auth via Playwright browser automation.
 
-Strategy B: Real browser TLS fingerprint (cannot be blocked by Cloudflare).
-Used as fallback when Strategy A (curl_cffi) is exhausted.
+Strategy B: Real browser TLS fingerprint via Playwright APIRequestContext.
+Used as fallback when Strategy A (curl_cffi) is exhausted or unavailable.
+
+Garmin SSO web pages are behind Cloudflare WAF which blocks headless browsers
+(HTTP 429 / "Access denied"). This script bypasses CF by calling the mobile
+API login endpoints directly through Playwright's browser-context HTTP stack,
+which carries Chrome's real TLS fingerprint.
 
 Flow:
-  1. Attempt to restore saved session cookies (cache file)
-  2. If cookies are valid (no SSO redirect), skip login
-  3. If cookies expired: open headless browser, fill form, handle MFA
-  4. After success: extract DI OAuth2 token, save session cookies
-  5. Replay DI token via a browser fetch call
+  1. Restore saved session cookies (optional, may help CF bypass)
+  2. GET mobile sign-in page (establishes CF cookies)
+  3. 30-45s random delay (critical for CF WAF bypass)
+  4. POST /mobile/api/login (credentials)
+  5. If MFA required: prompt or read SYNC__GARMIN__MFA_CODE env var
+  6. POST /mobile/api/mfa/verifyCode
+  7. DI ticket exchange via diauth.garmin.com
+  8. Output DI OAuth2 token JSON to stdout
 
-Session cookies persist ~1 year. Browser binary cached via GH Cache.
+Session cookies benefit: stored cookies reduce CF scrutiny on subsequent runs,
+but SSO login is always required since we cannot verify session validity
+without navigating to CF-blocked web pages.
 
 Input:  SYNC__GARMIN__EMAIL, SYNC__GARMIN__PASSWORD, SYNC__GARMIN__DOMAIN (default garmin.com)
         SYNC__GARMIN__MFA_CODE (optional, for MFA challenge)
@@ -22,18 +32,19 @@ Output: JSON DI OAuth2 token to stdout, exit 0. Exit 1 on failure.
 
 import json
 import os
-import re
+import random
 import sys
 import time
-import urllib.parse
 
-from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeout
+from playwright.sync_api import sync_playwright
 
 MOBILE_UA = (
     "Mozilla/5.0 (Linux; Android 13; sdk_gphone64_arm64 Build/TE1A.220922.025; wv) "
     "AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/132.0.0.0 "
     "Mobile Safari/537.36"
 )
+MOBILE_CLIENT_ID = "GCM_ANDROID_DARK"
+MOBILE_SERVICE = "https://mobile.integration.garmin.com/gcm/android"
 DI_TOKEN_URL = "https://diauth.garmin.com/di-oauth2-service/oauth/token"
 DI_GRANT_TYPE = "https://connectapi.garmin.com/di-oauth2-service/oauth/grant/service_ticket"
 DI_CLIENT_IDS = [
@@ -41,6 +52,14 @@ DI_CLIENT_IDS = [
     "GARMIN_CONNECT_MOBILE_ANDROID_DI_2024Q4",
     "GARMIN_CONNECT_MOBILE_ANDROID_DI",
 ]
+LOGIN_DELAY_MIN = 30.0
+LOGIN_DELAY_MAX = 45.0
+
+
+def _random_delay(label):
+    delay = random.uniform(LOGIN_DELAY_MIN, LOGIN_DELAY_MAX)
+    print(f"[garmin_auth_pw] {label}: waiting {delay:.0f}s for Cloudflare...", file=sys.stderr)
+    time.sleep(delay)
 
 
 def _di_exchange(domain, ticket):
@@ -51,152 +70,134 @@ def _di_exchange(domain, ticket):
         try:
             resp = requests.post(
                 url,
-                data={"grant_type": DI_GRANT_TYPE, "ticket": ticket, "client_id": cid},
-                headers={"Content-Type": "application/x-www-form-urlencoded", "Accept": "application/json"},
+                data={
+                    "grant_type": DI_GRANT_TYPE,
+                    "service_ticket": ticket,
+                    "client_id": cid,
+                    "service_url": MOBILE_SERVICE,
+                },
+                headers={
+                    "Authorization": "Basic " + __import__("base64").b64encode(f"{cid}:".encode()).decode(),
+                    "Accept": "application/json,text/html;q=0.9,*/*;q=0.8",
+                    "Content-Type": "application/x-www-form-urlencoded",
+                    "Cache-Control": "no-cache",
+                    "User-Agent": "GCM-Android-5.23",
+                },
                 timeout=30,
             )
             if resp.status_code == 200:
-                return resp.json()
+                token = resp.json()
+                token["di_client_id"] = cid
+                return token
             print(f"[garmin_auth_pw] DI exchange {cid}: HTTP {resp.status_code}", file=sys.stderr)
         except Exception as e:
             print(f"[garmin_auth_pw] DI exchange {cid}: {e}", file=sys.stderr)
     raise RuntimeError("All DI client IDs failed for ticket exchange")
 
 
-def _extract_di_token_from_browser(page):
-    token = page.evaluate("""
-        async () => {
-            try {
-                const resp = await fetch(
-                    '/gc-api/activitylist-service/activities/search/activities?start=0&limit=1',
-                    { headers: { 'Accept': 'application/json' } }
-                );
-                if (resp.status === 200) {
-                    return { status: 'ok' };
-                }
-                return { status: resp.status };
-            } catch(e) {
-                return { status: 0, error: e.message };
-            }
-        }
-    """)
-    return token.get("status") == "ok"
+def _extract_ticket_from_url(url):
+    import re
+    m = re.search(r'[?&]ticket=(ST-[^&\s]+)', url)
+    return m.group(1) if m else None
 
 
-def _get_di_token_via_browser(page, domain):
-    """Extract DI OAuth2 token by replaying a fetch inside the browser context."""
-    token_json = page.evaluate("""
-        async () => {
-            try {
-                const data = new URLSearchParams();
-                data.append('grant_type', '""" + DI_GRANT_TYPE + """');
-                data.append('ticket', 'BROWSER_SESSION');
-                data.append('client_id', '""" + DI_CLIENT_IDS[0] + """');
-                const resp = await fetch('""" + DI_TOKEN_URL.replace("garmin.com", domain) + """', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                    body: data.toString()
-                });
-                if (resp.ok) return await resp.json();
-            } catch(e) {}
-            return null;
-        }
-    """)
-    return token_json
-
-
-def _login_widget(domain, email, password, mfa_code, page):
-    sso_base = f"https://sso.{domain}"
-    sso_embed = f"{sso_base}/embed"
-    embed_params = {
-        "id": "gauth-widget",
-        "embedWidget": "true",
-        "gauthHost": sso_base,
+def _mobile_api_login(domain, email, password, mfa_code, api, sso):
+    headers = {
+        "User-Agent": MOBILE_UA,
+        "Accept": "application/json, text/plain, */*",
+        "Content-Type": "application/json",
+        "Origin": sso,
+        "Accept-Language": "en-US,en;q=0.9",
     }
-    signin_params = {
-        **embed_params,
-        "gauthHost": sso_embed,
-        "service": sso_embed,
-        "source": sso_embed,
-        "redirectAfterAccountLoginUrl": sso_embed,
-        "redirectAfterAccountCreationUrl": sso_embed,
+    params = {"clientId": MOBILE_CLIENT_ID, "locale": "en-US", "service": MOBILE_SERVICE}
+    referer = f"{sso}/mobile/sso/en_US/sign-in?clientId={MOBILE_CLIENT_ID}&service={MOBILE_SERVICE}"
+
+    # Step 1: GET sign-in page. If valid session cookies exist, Garmin returns
+    # 302 redirect with a CAS ticket — skip login + MFA entirely.
+    print(f"[garmin_auth_pw] checking session (GET mobile sign-in)...", file=sys.stderr)
+    signin_resp = api.get(
+        f"{sso}/mobile/sso/en_US/sign-in",
+        params={"clientId": MOBILE_CLIENT_ID, "service": MOBILE_SERVICE},
+        headers={"User-Agent": MOBILE_UA, "Accept": "text/html,...", "Accept-Language": "en-US,en;q=0.9"},
+        max_redirects=0,
+    )
+
+    if signin_resp.status in (301, 302, 303, 307, 308):
+        location = signin_resp.headers.get("location", "")
+        ticket = _extract_ticket_from_url(location)
+        if ticket:
+            print(f"[garmin_auth_pw] session valid — ticket from redirect: {ticket[:20]}...", file=sys.stderr)
+            return ticket, MOBILE_SERVICE
+        print(f"[garmin_auth_pw] 302 redirect but no ticket in: {location[:80]}...", file=sys.stderr)
+
+    # Step 2: No valid session — POST login credentials
+    _random_delay("mobile")
+    print(f"[garmin_auth_pw] posting login credentials...", file=sys.stderr)
+    resp = api.post(
+        f"{sso}/mobile/api/login",
+        params=params,
+        headers={**headers, "Referer": referer},
+        data=json.dumps({
+            "username": email,
+            "password": password,
+            "rememberMe": True,
+            "captchaToken": "",
+        }),
+    )
+
+    if resp.status == 429:
+        raise RuntimeError("mobile API login 429 (rate limited by Cloudflare)")
+
+    data = resp.json()
+    resp_type = data.get("responseStatus", {}).get("type")
+
+    if resp_type == "INVALID_USERNAME_PASSWORD":
+        raise RuntimeError("Invalid username or password")
+
+    if resp_type == "SUCCESSFUL":
+        return data["serviceTicketId"], MOBILE_SERVICE
+
+    if resp_type != "MFA_REQUIRED":
+        raise RuntimeError(f"Unexpected login response: {resp_type}")
+
+    # --- MFA required ---
+    mfa_method = data.get("customerMfaInfo", {}).get("mfaLastMethodUsed", "email")
+    print(f"[garmin_auth_pw] MFA required (method: {mfa_method})", file=sys.stderr)
+
+    code = (mfa_code or "").strip()
+    if not code and sys.stdin.isatty():
+        print("Enter MFA code: ", file=sys.stderr, end="", flush=True)
+        code = sys.stdin.readline().strip()
+    if not code:
+        raise RuntimeError("MFA required but no code provided (set SYNC__GARMIN__MFA_CODE or use stdin)")
+
+    # Step 3: Verify MFA
+    print(f"[garmin_auth_pw] verifying MFA code...", file=sys.stderr)
+    mfa_data = {
+        "mfaMethod": mfa_method,
+        "mfaVerificationCode": code,
+        "rememberMyBrowser": True,
+        "reconsentList": [],
+        "mfaSetup": False,
     }
 
-    signin_url = f"{sso_base}/signin?{urllib.parse.urlencode(signin_params)}"
-    page.goto(signin_url, wait_until="domcontentloaded", timeout=30000)
+    resp = api.post(
+        f"{sso}/mobile/api/mfa/verifyCode",
+        params=params,
+        headers={**headers, "Referer": referer},
+        data=json.dumps(mfa_data),
+    )
 
-    # Fill credentials
-    page.fill('input[name="username"]', email, timeout=10000)
-    page.fill('input[name="password"]', password, timeout=10000)
-    page.click("#login-btn-signin", timeout=10000)
+    data = resp.json()
+    resp_type = data.get("responseStatus", {}).get("type")
 
-    # Wait for redirect (success = ticket redirect)
-    try:
-        page.wait_for_url("**/embed?ticket=**", timeout=60000)
-    except PlaywrightTimeout:
-        # Check for MFA
-        url = page.url
-        if "mfa" in url.lower() or "verify" in url.lower():
-            if not mfa_code:
-                raise RuntimeError("MFA required but SYNC__GARMIN__MFA_CODE not set")
-            page.fill('input[id*="mfa"], input[name*="mfa"], input[type*="text"]', mfa_code, timeout=10000)
-            # Try clicking submit button
-            buttons = page.locator('button[type="submit"], input[type="submit"]').all()
-            for btn in buttons:
-                try:
-                    btn.click(timeout=5000)
-                    break
-                except Exception:
-                    continue
-            try:
-                page.wait_for_url("**/embed?ticket=**", timeout=30000)
-            except PlaywrightTimeout:
-                current_url = page.url
-                if "ticket=" in current_url:
-                    pass  # Already at ticket URL
-                else:
-                    raise RuntimeError(f"MFA verification did not produce ticket redirect. URL: {current_url}")
-        elif "ticket=" in url:
-            pass  # Already at ticket URL
-        else:
-            raise RuntimeError(f"Login did not redirect to ticket URL. URL: {url}")
+    if resp_type == "SUCCESSFUL":
+        return data["serviceTicketId"], MOBILE_SERVICE
 
-    ticket_match = re.search(r'[?&]ticket=(ST-[^&\s]+)', page.url)
-    if not ticket_match:
-        raise RuntimeError(f"No CAS ticket found in URL: {page.url}")
-    return ticket_match.group(1)
+    if resp_type == "MFA_CODE_INVALID":
+        raise RuntimeError(f"MFA code invalid — {data.get('responseStatus', {}).get('message', 'unknown')}")
 
-
-def _try_portal_login_widget(domain, email, password, mfa_code, page):
-    sso = f"https://sso.{domain}"
-
-    signin_url = f"{sso}/portal/sso/en-US/sign-in?clientId=GarminConnect&service=https://connect.garmin.com/app"
-    page.goto(signin_url, wait_until="domcontentloaded", timeout=30000)
-
-    page.fill('input[name="username"], input[type="email"], input[id*="username"]', email, timeout=10000)
-    page.fill('input[name="password"], input[type="password"], input[id*="password"]', password, timeout=10000)
-
-    buttons = page.locator('button[type="submit"]').all()
-    for btn in buttons:
-        try:
-            btn.click(timeout=5000)
-            break
-        except Exception:
-            continue
-
-    try:
-        page.wait_for_url("**/embed?ticket=**", timeout=60000)
-    except PlaywrightTimeout:
-        url = page.url
-        if "ticket=" in url:
-            pass
-        else:
-            raise RuntimeError(f"Portal login did not produce ticket redirect. URL: {url}")
-
-    ticket_match = re.search(r'[?&]ticket=(ST-[^&\s]+)', page.url)
-    if ticket_match:
-        return ticket_match.group(1)
-    raise RuntimeError("No ticket in portal login redirect URL")
+    raise RuntimeError(f"Unexpected MFA response: {resp_type}")
 
 
 def main():
@@ -209,11 +210,12 @@ def main():
         os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "data", "cache", f"garmin_playwright_session_{domain.replace('.', '_')}.json"),
     )
     session_path = os.path.abspath(session_path)
+    sso = f"https://sso.{domain}"
 
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
 
-        # Restore session cookies
+        # Restore session cookies (optional — helps reduce CF scrutiny)
         session_state = None
         if os.path.exists(session_path):
             try:
@@ -229,79 +231,25 @@ def main():
             storage_state=session_path if session_state else None,
             viewport={"width": 375, "height": 812},
         )
-        page = context.new_page()
 
         try:
-            # Check if session is still valid
-            connect_url = f"https://connect.{domain}/modern/"
-            page.goto(connect_url, wait_until="domcontentloaded", timeout=30000)
-            time.sleep(2)
-            needs_login = "sso" in page.url.lower() or "signin" in page.url.lower()
+            # API-based mobile login (no web page navigation — CF blocks SSO pages)
+            ticket, service_url = _mobile_api_login(domain, email, password, mfa_code, context.request, sso)
+            print(f"[garmin_auth_pw] login successful, ticket: {ticket[:20]}...", file=sys.stderr)
 
-            ticket = None
-            if needs_login:
-                print("[garmin_auth_pw] session expired, performing login...", file=sys.stderr)
-
-                # Try portal login first
-                try:
-                    ticket = _try_portal_login_widget(domain, email, password, mfa_code, page)
-                except Exception as e:
-                    print(f"[garmin_auth_pw] portal login failed: {e}", file=sys.stderr)
-
-                # Fall back to widget flow
-                if not ticket:
-                    try:
-                        ticket = _login_widget(domain, email, password, mfa_code, page)
-                    except Exception as e:
-                        print(f"[garmin_auth_pw] widget login failed: {e}", file=sys.stderr)
-                        raise
-
-                # Save session cookies for reuse
-                os.makedirs(os.path.dirname(session_path), exist_ok=True)
-                state = context.storage_state()
-                state["saved_at"] = time.time()
-                with open(session_path, "w") as f:
-                    json.dump(state, f)
-                print(f"[garmin_auth_pw] session cookies saved to {session_path}", file=sys.stderr)
-            else:
-                print("[garmin_auth_pw] session cookies valid, skipping login", file=sys.stderr)
-
-            if ticket:
-                # Exchange ticket for DI token (HTTP, same as Strategy A)
-                token = _di_exchange(domain, ticket)
-            else:
-                # Session valid but no fresh ticket: trigger token exchange via browser fetch
-                # First call connectapi to verify
-                page.goto(f"https://connect.{domain}/modern/", wait_until="domcontentloaded", timeout=30000)
-                time.sleep(2)
-
-                # Extract a fresh access token by intercepting an API call
-                # We need a fresh DI token. The most reliable way is to replay the ticket exchange.
-                # But without a ticket, we call the API directly and let the browser handle auth.
-                token_raw = page.evaluate("""
-                    async () => {
-                        const resp = await fetch(
-                            '/gc-api/activitylist-service/activities/search/activities?start=0&limit=1',
-                            { headers: { 'Accept': 'application/json' } }
-                        );
-                        if (resp.ok) {
-                            const data = await resp.json();
-                            return { verified: true };
-                        }
-                        return { verified: false, status: resp.status };
-                    }
-                """)
-                if not token_raw.get("verified"):
-                    raise RuntimeError(f"Session appears valid but API call failed")
-
-                # Try to re-authenticate to get a fresh DI token
-                ticket = _try_portal_login_widget(domain, email, password, mfa_code, page)
-                token = _di_exchange(domain, ticket)
-
-            # Add computed timestamps
+            # Exchange CAS ticket for DI OAuth2 token
+            token = _di_exchange(domain, ticket)
             token["expires_at"] = int(time.time()) + token.get("expires_in", 64800)
             if "refresh_token_expires_in" in token:
                 token["refresh_token_expires_at"] = int(time.time()) + token["refresh_token_expires_in"]
+
+            # Save session cookies for next run
+            os.makedirs(os.path.dirname(session_path), exist_ok=True)
+            state = context.storage_state()
+            state["saved_at"] = time.time()
+            with open(session_path, "w") as f:
+                json.dump(state, f)
+            print(f"[garmin_auth_pw] session cookies saved to {session_path}", file=sys.stderr)
 
             json.dump(token, sys.stdout)
             return 0
