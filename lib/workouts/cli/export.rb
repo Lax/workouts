@@ -128,6 +128,50 @@ module Workouts
       say_status :error, "GPX export failed: #{e.message}", :red
     end
 
+    desc "igpsport_to_garmin", "Upload iGPSPORT activities to Garmin Connect (International)"
+    option :dry, type: :boolean, default: false, desc: "List activities without uploading"
+    option :since, type: :string, desc: "Upload only activities since date (YYYY-MM-DD)"
+    def igpsport_to_garmin
+      config = Workouts::Config.new
+      db = Workouts::DB::Connection.new(config.db_path).db
+      garmin_config = config.sync_config("garmin")
+      since = options[:since]
+      migrator = Export::IGPSportToGarmin.new(
+        db: db, config: garmin_config, target: :intl,
+        dry: options[:dry], since: since
+      )
+      count = migrator.call
+      if options[:dry]
+        say_status :done, "Listed #{count} activities", :green
+      else
+        say_status :done, "Uploaded #{count} iGPSPORT activities to Garmin", :green
+      end
+    rescue => e
+      say_status :error, "igpsport-to-garmin failed: #{e.message}", :red
+    end
+
+    desc "igpsport_to_garmin_cn", "Upload iGPSPORT activities to Garmin Connect (China)"
+    option :dry, type: :boolean, default: false, desc: "List activities without uploading"
+    option :since, type: :string, desc: "Upload only activities since date (YYYY-MM-DD)"
+    def igpsport_to_garmin_cn
+      config = Workouts::Config.new
+      db = Workouts::DB::Connection.new(config.db_path).db
+      garmin_config = config.sync_config("garmin_cn")
+      since = options[:since]
+      migrator = Export::IGPSportToGarmin.new(
+        db: db, config: garmin_config, target: :cn,
+        dry: options[:dry], since: since
+      )
+      count = migrator.call
+      if options[:dry]
+        say_status :done, "Listed #{count} activities", :green
+      else
+        say_status :done, "Uploaded #{count} iGPSPORT activities to Garmin CN", :green
+      end
+    rescue => e
+      say_status :error, "igpsport-to-garmin-cn failed: #{e.message}", :red
+    end
+
     desc "html", "Generate HTML site (delegates to dashboard)"
     option :output, type: :string, aliases: "-o", desc: "Output directory"
     option :activity, type: :array, desc: "Filter by sport type", aliases: "--act"

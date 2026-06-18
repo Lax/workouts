@@ -1,0 +1,13 @@
+{
+  "detailedImportResult": {
+    "successes": [
+      {
+        "internalId": 987654321,
+        "externalId": "a1b2c3d4",
+        "messages": ["Import processed successfully"]
+      }
+    ],
+    "failures": [],
+    "uploadId": "upload_abc123"
+  }
+}
