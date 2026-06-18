@@ -4,30 +4,33 @@ require "net/http"
 require "uri"
 require "base64"
 require "ostruct"
-require "oauth"
-require "oauth/request_proxy/net_http"
 require "faraday"
 require "faraday/multipart"
 require "nokogiri"
 
 module Workouts
-  module Export
+  module Migrate
     class IGPSportToGarmin
       JSON = ::JSON
-      OAUTH_CONSUMER_URL = "https://thegarth.s3.amazonaws.com/oauth_consumer.json"
       UPLOAD_PATH = "/upload-service/upload/"
       ACTIVITY_LIST_PATH = "/activitylist-service/activities/search/activities"
       SOURCE_SUFFIX = " [iGPSPORT]"
 
-      def initialize(db:, config:, target: :intl, dry: false, since: nil, limit: nil)
+      CATEGORY_MAP = {
+        "run" => "running", "ride" => "cycling", "walk" => "walking",
+        "hike" => "hiking", "swim" => "swimming", "ski" => "skiing",
+        "workout" => "other", "other" => "other"
+      }.freeze
+
+      def initialize(db:, config:, dry: false, since: nil, limit: nil)
         @db = db
         @config = config
-        @target = target
         @dry = dry
         @since = since
         @limit = limit
-        @domain = target == :cn ? "garmin.cn" : "garmin.com"
+        @domain = "garmin.com"
         @access_token = nil
+        @saved_expires_at = nil
         @count = 0
         @garmin_cache = {}
       end
@@ -51,7 +54,7 @@ module Workouts
 
           date_key = act[:start_date].to_s[0, 10]
           cached = fetch_garmin_activities(date_key)
-          match = find_name_prefix_match(cached)
+          match = find_name_suffix_match(cached)
           if match
             upload_map["uploads"][run_id] = {
               "garmin_activity_id" => match["activityId"].to_s,
@@ -115,7 +118,7 @@ module Workouts
         filename = File.basename(file_path)
         url = upload_url
         resp = multipart_post(url, file_path, "application/octet-stream", filename)
-        parse_upload_response(resp, act)
+        parse_upload_response(resp)
       end
 
       def upload_gpx(gpx_xml, act)
@@ -124,23 +127,19 @@ module Workouts
         url = upload_url
         resp = multipart_post(url, tmp, "application/gpx+xml", "#{act[:run_id]}.gpx")
         File.delete(tmp)
-        parse_upload_response(resp, act)
+        parse_upload_response(resp)
       end
 
       def multipart_post(url, file_path, content_type, filename)
         resp = Faraday.post(url) do |req|
           req.headers["Authorization"] = "Bearer #{@access_token}"
           req.headers["User-Agent"] = "GCM-iOS-5.22.1.4"
-          req.body = faraday_multipart(file_path, content_type, filename)
+          req.body = Faraday::UploadIO.new(file_path, content_type, filename)
         end
         resp
       end
 
-      def faraday_multipart(file_path, content_type, filename)
-        Faraday::UploadIO.new(file_path, content_type, filename)
-      end
-
-      def parse_upload_response(resp, act)
+      def parse_upload_response(resp)
         return nil unless resp.status == 200
 
         body = JSON.parse(resp.body)
@@ -166,28 +165,18 @@ module Workouts
         "https://connectapi.#{@domain}#{UPLOAD_PATH}"
       end
 
-      # ── Authentication ─────────────────────────────────────────────
+      # ── Auth (DI OAuth2 — International) ─────────────────────
 
       def authenticate
-        if @target == :intl
-          authenticate_di
-        else
-          authenticate_cn
-        end
-      end
-
-      def authenticate_di
         return false unless load_di_tokens
 
-        if token_expired?
-          return false unless refresh_di_token
-        end
+        return true unless token_expired?
 
-        true
+        refresh_di_token
       end
 
       def load_di_tokens
-        path = di_token_path
+        path = token_path
         return false unless File.exist?(path)
 
         data = JSON.parse(File.read(path))
@@ -199,7 +188,7 @@ module Workouts
       end
 
       def refresh_di_token
-        path = di_token_path
+        path = token_path
         return false unless File.exist?(path)
 
         data = JSON.parse(File.read(path))
@@ -236,129 +225,13 @@ module Workouts
         false
       end
 
-      def authenticate_cn
-        path = cn_token_path
-        if File.exist?(path)
-          data = JSON.parse(File.read(path))
-          @token_data = data
-          @access_token = data.dig("oauth2", "access_token")
-          @saved_expires_at = data.dig("oauth2", "expires_at")
-
-          return true unless token_expired?
-
-          if refresh_cn_token(data)
-            return true
-          end
-        end
-
-        secret = @config["secret"]
-        if secret && !secret.empty?
-          return true if parse_and_use_secret(secret)
-        end
-
-        puts "  Garmin CN: no valid token — run: bundle exec exe/workouts auth garmin_cn"
-        false
-      end
-
-      def parse_and_use_secret(secret)
-        decoded = JSON.parse(Base64.strict_decode64(secret))
-        o1 = decoded[0]
-        o2 = decoded[1]
-        @access_token = o2["access_token"]
-        @saved_expires_at = o2["expires_at"]
-
-        return true unless token_expired?
-
-        refresh_cn_token_via_oauth1(o1, o2)
-      rescue => e
-        puts "  Garmin CN secret parse failed: #{e.message}"
-        false
-      end
-
-      def refresh_cn_token(data)
-        o1 = data["oauth1"]
-        return false unless o1
-        refresh_cn_token_via_oauth1(o1, data["oauth2"])
-      end
-
-      def refresh_cn_token_via_oauth1(o1_data, o2_data)
-        oauth_consumer = fetch_oauth_consumer
-        return false unless oauth_consumer
-
-        saved_domain = o1_data["domain"]
-        @domain = saved_domain if saved_domain
-
-        token = OpenStruct.new(
-          oauth_token: o1_data["oauth_token"],
-          oauth_token_secret: o1_data["oauth_token_secret"],
-          mfa_token: o1_data["mfa_token"],
-          domain: @domain
-        )
-
-        new_o2 = exchange_oauth2(oauth_consumer, token)
-        return false unless new_o2
-
-        @access_token = new_o2["access_token"]
-        @saved_expires_at = new_o2["expires_at"]
-
-        save_cn_token(o1_data, new_o2)
-        true
-      rescue => e
-        puts "  Garmin CN OAuth refresh failed: #{e.message}"
-        false
-      end
-
-      def fetch_oauth_consumer
-        resp = Faraday.get(OAUTH_CONSUMER_URL)
-        JSON.parse(resp.body)
-      rescue => e
-        puts "  Failed to fetch OAuth consumer: #{e.message}"
-        nil
-      end
-
-      def exchange_oauth2(consumer, oauth1_token)
-        url = "https://connectapi.#{@domain}/oauth-service/oauth/exchange/user/2.0"
-
-        oauth_consumer = OAuth::Consumer.new(
-          consumer["consumer_key"], consumer["consumer_secret"],
-          site: "https://connectapi.#{@domain}",
-          scheme: :header, signature_method: "HMAC-SHA1"
-        )
-
-        token = OAuth::Token.new(oauth1_token.oauth_token, oauth1_token.oauth_token_secret)
-        req = Net::HTTP::Post.new(URI(url))
-        req["User-Agent"] = "com.garmin.android.apps.connectmobile"
-        req["Content-Type"] = "application/x-www-form-urlencoded"
-        body_params = { audience: "GARMIN_CONNECT_MOBILE_ANDROID_DI" }
-        body_params[:mfa_token] = oauth1_token.mfa_token if oauth1_token.mfa_token
-        req.body = URI.encode_www_form(body_params)
-        oauth_consumer.sign!(req, token)
-
-        resp = send_http(URI(url), req)
-        return nil unless resp.code.to_i == 200
-
-        result = JSON.parse(resp.body)
-        result["expires_at"] = Time.now.to_i + (result["expires_in"] || 21600).to_i
-        result
-      end
-
       def token_expired?
         return false unless @saved_expires_at
         Time.now.to_i >= @saved_expires_at - 60
       end
 
-      def save_cn_token(o1_data, o2_data)
-        path = cn_token_path
-        FileUtils.mkdir_p(File.dirname(path))
-        File.write(path, JSON.pretty_generate({ oauth1: o1_data, oauth2: o2_data }))
-      end
-
-      def di_token_path
+      def token_path
         @config["token_path"] || File.join("data", "cache", "garmin_garmin_com_tokens.json")
-      end
-
-      def cn_token_path
-        @config["token_path"] || File.join("data", "cache", "garmin_garmin_cn_tokens.json")
       end
 
       def send_http(uri, request)
@@ -369,7 +242,7 @@ module Workouts
         http.start { |h| h.request(request) }
       end
 
-      # ── L2 Dedup ───────────────────────────────────────────────────
+      # ── L2 Dedup ──────────────────────────────────────────────
 
       def fetch_garmin_activities(date_str)
         return @garmin_cache[date_str] if @garmin_cache.key?(date_str)
@@ -403,14 +276,14 @@ module Workouts
         JSON.parse(resp.body)
       end
 
-      def find_name_prefix_match(activities)
+      def find_name_suffix_match(activities)
         return nil if activities.empty?
 
         suffix_down = SOURCE_SUFFIX.downcase
         activities.find { |a| (a["activityName"] || "").downcase.end_with?(suffix_down) }
       end
 
-      # ── GPX Builder ────────────────────────────────────────────────
+      # ── GPX Builder ───────────────────────────────────────────
 
       def build_gpx(act, l2_records)
         name = esc(act[:name] || "Activity") + SOURCE_SUFFIX
@@ -478,12 +351,6 @@ module Workouts
         builder.to_xml
       end
 
-      CATEGORY_MAP = {
-        "run" => "running", "ride" => "cycling", "walk" => "walking",
-        "hike" => "hiking", "swim" => "swimming", "ski" => "skiing",
-        "workout" => "other", "other" => "other"
-      }.freeze
-
       def raw_igpsport_path(ride_id)
         File.join("data", "raw", "igpsport", "#{ride_id}.fit")
       end
@@ -497,11 +364,10 @@ module Workouts
         nil
       end
 
-      # ── Upload Map (L1 Dedup) ──────────────────────────────────────
+      # ── Upload Map (L1 Dedup) ─────────────────────────────────
 
       def upload_map_dir
-        src = @target == :cn ? "igpsport_garmin_cn" : "igpsport_garmin"
-        File.join("data", "export", src)
+        File.join("data", "migrate", "igpsport_to_garmin")
       end
 
       def upload_map_path
@@ -525,7 +391,7 @@ module Workouts
         File.rename(tmp, upload_map_path)
       end
 
-      # ── Helpers ────────────────────────────────────────────────────
+      # ── Helpers ───────────────────────────────────────────────
 
       def format_time(t_str)
         return nil unless t_str

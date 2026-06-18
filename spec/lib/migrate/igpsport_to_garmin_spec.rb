@@ -1,4 +1,4 @@
-RSpec.describe Workouts::Export::IGPSportToGarmin do
+RSpec.describe Workouts::Migrate::IGPSportToGarmin do
   let(:db) do
     d = Sequel.sqlite
     d.create_table(:activities) do
@@ -22,7 +22,7 @@ RSpec.describe Workouts::Export::IGPSportToGarmin do
   let(:config) { {} }
 
   subject(:migrator) do
-    described_class.new(db: db, config: config, target: :intl, dry: false)
+    described_class.new(db: db, config: config, dry: false)
   end
 
   def insert_igpsport_activity(overrides = {})
@@ -56,7 +56,7 @@ RSpec.describe Workouts::Export::IGPSportToGarmin do
     end
 
     it "filters by --since date" do
-      m = described_class.new(db: db, config: config, target: :intl, since: "2025-07-01")
+      m = described_class.new(db: db, config: config, since: "2025-07-01")
       insert_igpsport_activity(run_id: "igpsport_old", start_date: "2025-06-01 08:00:00")
       insert_igpsport_activity(run_id: "igpsport_new", start_date: "2025-08-01 08:00:00")
       activities = m.send(:load_igpsport_activities)
@@ -65,7 +65,7 @@ RSpec.describe Workouts::Export::IGPSportToGarmin do
     end
 
     it "limits by --limit" do
-      m = described_class.new(db: db, config: config, target: :intl, limit: 1)
+      m = described_class.new(db: db, config: config, limit: 1)
       insert_igpsport_activity(run_id: "igpsport_a", start_date: "2025-08-01 08:00:00")
       insert_igpsport_activity(run_id: "igpsport_b", start_date: "2025-08-02 08:00:00")
       activities = m.send(:load_igpsport_activities)
@@ -73,7 +73,7 @@ RSpec.describe Workouts::Export::IGPSportToGarmin do
     end
 
     it "ignores limit of 0" do
-      m = described_class.new(db: db, config: config, target: :intl, limit: 0)
+      m = described_class.new(db: db, config: config, limit: 0)
       insert_igpsport_activity(run_id: "igpsport_a", start_date: "2025-08-01 08:00:00")
       insert_igpsport_activity(run_id: "igpsport_b", start_date: "2025-08-02 08:00:00")
       activities = m.send(:load_igpsport_activities)
@@ -91,11 +91,11 @@ RSpec.describe Workouts::Export::IGPSportToGarmin do
   end
 
   describe "L1 dedup — upload_map" do
-    let(:map_dir) { File.join("data", "export", "igpsport_garmin") }
+    let(:map_dir) { File.join("data", "migrate", "igpsport_to_garmin") }
     let(:map_path) { File.join(map_dir, "uploads.json") }
 
     after do
-      FileUtils.rm_rf("data/export")
+      FileUtils.rm_rf("data/migrate")
     end
 
     it "returns empty map when file missing" do
@@ -123,7 +123,7 @@ RSpec.describe Workouts::Export::IGPSportToGarmin do
   describe "L2 dedup — name suffix match" do
     it "finds match by [iGPSPORT] suffix" do
       activities = JSON.parse(load_fixture("garmin/activity_list.json"))
-      result = migrator.send(:find_name_prefix_match, activities)
+      result = migrator.send(:find_name_suffix_match, activities)
       expect(result).not_to be_nil
       expect(result["activityId"]).to eq(11111)
     end
@@ -132,21 +132,21 @@ RSpec.describe Workouts::Export::IGPSportToGarmin do
       activities = [
         { "activityName" => "Morning Run", "activityId" => 33333 }
       ]
-      result = migrator.send(:find_name_prefix_match, activities)
+      result = migrator.send(:find_name_suffix_match, activities)
       expect(result).to be_nil
     end
 
     it "returns nil for empty list" do
-      expect(migrator.send(:find_name_prefix_match, [])).to be_nil
+      expect(migrator.send(:find_name_suffix_match, [])).to be_nil
     end
   end
 
   describe "#authenticate" do
     context "DI (international)" do
-      subject(:m) { described_class.new(db: db, config: {}, target: :intl) }
+      subject(:m) { described_class.new(db: db, config: {}) }
 
       before do
-        allow(m).to receive(:di_token_path).and_return(fixture_path("garmin/di_tokens.json"))
+        allow(m).to receive(:token_path).and_return(fixture_path("garmin/di_tokens.json"))
       end
 
       it "loads valid DI tokens" do
@@ -159,17 +159,17 @@ RSpec.describe Workouts::Export::IGPSportToGarmin do
       end
 
       it "returns false when token file missing" do
-        m2 = described_class.new(db: db, config: {}, target: :intl)
-        allow(m2).to receive(:di_token_path).and_return("/nonexistent/tokens.json")
+        m2 = described_class.new(db: db, config: {})
+        allow(m2).to receive(:token_path).and_return("/nonexistent/tokens.json")
         expect(m2.send(:authenticate)).to be false
       end
     end
 
     context "CN (OAuth1)" do
-      subject(:m) { described_class.new(db: db, config: { "secret" => "" }, target: :cn) }
+      subject(:m) { Workouts::Migrate::IGPSportToGarminCN.new(db: db, config: { "secret" => "" }) }
 
       it "returns false without tokens or secret" do
-        allow(m).to receive(:cn_token_path).and_return("/nonexistent/tokens.json")
+        allow(m).to receive(:token_path).and_return("/nonexistent/tokens.json")
         expect(m.send(:authenticate)).to be false
       end
     end
@@ -232,12 +232,10 @@ RSpec.describe Workouts::Export::IGPSportToGarmin do
   end
 
   describe "#parse_upload_response" do
-    let(:act) { double("act") }
-
     it "returns garmin_activity_id on success" do
       resp = instance_double(Faraday::Response, status: 200,
         body: load_fixture("garmin/upload_success.json"))
-      result = migrator.send(:parse_upload_response, resp, act)
+      result = migrator.send(:parse_upload_response, resp)
       expect(result["garmin_activity_id"]).to eq("987654321")
       expect(result["format"]).to eq("fit")
     end
@@ -245,12 +243,12 @@ RSpec.describe Workouts::Export::IGPSportToGarmin do
     it "returns nil on failure response" do
       resp = instance_double(Faraday::Response, status: 200,
         body: load_fixture("garmin/upload_failure.json"))
-      expect(migrator.send(:parse_upload_response, resp, act)).to be_nil
+      expect(migrator.send(:parse_upload_response, resp)).to be_nil
     end
 
     it "returns nil on non-200 status" do
       resp = instance_double(Faraday::Response, status: 500)
-      expect(migrator.send(:parse_upload_response, resp, act)).to be_nil
+      expect(migrator.send(:parse_upload_response, resp)).to be_nil
     end
   end
 
@@ -262,13 +260,13 @@ RSpec.describe Workouts::Export::IGPSportToGarmin do
   end
 
   describe "#upload_map_dir" do
-    it "uses igpsport_garmin for intl" do
-      expect(migrator.send(:upload_map_dir)).to eq("data/export/igpsport_garmin")
+    it "uses igpsport_to_garmin for intl" do
+      expect(migrator.send(:upload_map_dir)).to eq("data/migrate/igpsport_to_garmin")
     end
 
-    it "uses igpsport_garmin_cn for cn" do
-      m = described_class.new(db: db, config: {}, target: :cn)
-      expect(m.send(:upload_map_dir)).to eq("data/export/igpsport_garmin_cn")
+    it "uses igpsport_to_garmin_cn for cn" do
+      m = Workouts::Migrate::IGPSportToGarminCN.new(db: db, config: {})
+      expect(m.send(:upload_map_dir)).to eq("data/migrate/igpsport_to_garmin_cn")
     end
   end
 

@@ -22,13 +22,13 @@
 | `export stats [--output]` | 导出统计摘要 |
 | `export dashboard [--output]` | 导出自定义仪表盘 HTML |
 | `export gpx [--output]` | 从 L2 文件重新导出 GPX |
-| `export igpsport_to_garmin [--limit]` | 上传 iGPSPORT 数据至 Garmin |
-| `export igpsport_to_garmin_cn [--limit]` | 上传 iGPSPORT 数据至 Garmin CN |
 | `export html` | 导出 HTML（同 dashboard）|
 | `export all` | 执行所有导出 |
+| `migrate igpsport_to_garmin [--limit]` | 上传 iGPSPORT 数据至 Garmin |
+| `migrate igpsport_to_garmin_cn [--limit]` | 上传 iGPSPORT 数据至 Garmin CN |
+| `db migrate` | 运行数据库迁移 |
 | `parse <file.gpx\|file.tcx> [--save]` | 解析本地 GPX/TCX 文件，可选写入 DB |
 | `init` | 生成默认 config.yml |
-| `migrate` | 运行数据库迁移 |
 | `version` | 版本号 |
 
 ---
