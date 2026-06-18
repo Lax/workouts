@@ -116,7 +116,7 @@ garmin.com 的 SSO 端点 `/mobile/api/login` 已被 Garmin 关闭（返回 400�
 
 1. 本地执行 `workouts sync --source garmin` 后，CI 中使用的 refresh_token **被旋转**（每次 refresh_token 调用旋转 token，旧 token 永久失效）。
 2. 此时 `SYNC_GARMIN_AUTH_SEED` 中保存的旧 auth_seed 已包含被旋转过的 refresh_token。
-3. 下一次 CI 运行，若 GH Cache miss（7 天缓存或 cache 全部失效），CI 回退到 `load_auth_seed` → `refresh_token()` → **失败**（refresh_token 已被本地旋转）→ 降级到 Strategy A/B
+3. 下一次 CI 运行，若 GH Cache miss（7 天缓存或 cache 全部失效），CI 回退到 `load_auth_seed` → `refresh_token()` → **失败**（refresh_token 已被本地旋转）→ 需重新运行 `scripts/garmin_auth_local.sh` 更新 auth_seed
 4. `auth_seed` 是 CI 冷启动的最后防线；只要 auth_seed 中的 refresh_token 比 CI 的 cache 更新即可。
 
 **`--sync` 解决的问题：** 在后续本地完成 sync（`data/cache/garmin_garmin_com_tokens.json` 已更新）后，调用 `--sync` 将最新的 cache token 升格为下一个 auth_seed。
@@ -131,9 +131,109 @@ scripts/garmin_auth_local.sh --sync
 # → gh secret set SYNC_GARMIN_AUTH_SEED
 ```
 
-### MFA 处理
+### 本地 MFA 登录脚本
 
-MFA 由 `scripts/garmin_auth.py`（curl_cffi）处理，通过 `scripts/garmin_auth_local.sh` 调用，**不在 Ruby authenticate 流程内**。CI 不与 MFA 交互——仅使用 auth_seed + token 缓存。
+本地 MFA 登录通过 `scripts/` 下的 Python 脚本独立完成，**不在 Ruby authenticate 流程内**。
+Ruby 只消费脚本产出的 token（`data/cache/garmin_garmin_com_tokens.json`）+ 已编码的 `auth_seed`。
+CI 不与 MFA 交互——仅使用 auth_seed + token 缓存自旋。
+
+#### 调用关系
+
+```
+garmin_auth_local.sh               # Shell orchestrator, reads config.yml → dispatches
+  ├── --sync 模式                   # reads cache token → Base64 → writes auth_seed
+  └── SSO 模式 (without --sync)     # environment: SYNC__GARMIN__EMAIL + PASSWORD
+        ├── Strategy A              # garmin_auth.py (curl_cffi, default priority)
+        │     ├── mobile+cffi       # primary: Safari TLS, /mobile/api/login
+        │     └── portal+cffi       # fallback: 5 TLS fingerprints, /portal/api/login
+        └── Strategy B (not called) # garmin_auth_playwright.py (Playwright browser)
+```
+
+两种策略都是**独立的本地工具**，各打印 JSON DI OAuth2 token 到 stdout。
+脚本成功后自动完成：DI exchange → token JSON → Base64 → 写入 `config.yml`(`sync.garmin.auth_seed`) → 尝试 `gh secret set`。
+
+#### Strategy A: curl_cffi（`scripts/garmin_auth.py:258-284`）
+
+依赖 `curl_cffi` Python 包。通过对 TLS 指纹的精确模拟绕过 Cloudflare 检测。
+
+| 子策略 | 端点 | TLS 模拟 | 调用路径 |
+|---|---|---|---|
+| `mobile+cffi`（主） | `/mobile/api/login` | `safari` | Android WebView UA, 30-45s 随机延迟 |
+| `portal+cffi`（降级） | `/portal/api/login` | 5 指纹轮换：`safari`, `safari_ios`, `chrome120`, `edge101`, `chrome` | 桌面 UA, 每个指纹 30-45s 延迟 |
+
+流程：
+```
+mobile+cffi: GET signin page → random delay(30-45s) → POST credentials
+  → success: return serviceTicketId
+  → MFA_REQUIRED: stdin prompt "Enter MFA code:" → POST /mobile/api/mfa/verifyCode
+  → success: return serviceTicketId
+  → 429/error → fall to portal+cffi
+
+portal+cffi: for each of 5 TLS fingerprints:
+  GET signin → delay(30-45s) → POST credentials
+  → success: return serviceTicketId
+  → MFA_REQUIRED: stdin prompt → POST /portal/api/mfa/verifyCode
+  → 429 → continue to next fingerprint
+
+After ticket: _di_exchange(domain, ticket, service_url)
+  → POST diauth.garmin.com/di-oauth2-service/oauth/token
+  → 3 DI_CLIENT_IDS retry (quarterly rotation: 2025Q2, 2024Q4, base)
+```
+
+MFA 处理 (`_handle_mfa`, line 96-130):
+- 优先读 env var `SYNC__GARMIN__MFA_CODE`（自动化场景）
+- 否则 `stdin` 交互式提示 "Enter MFA code:"（交互式场景）
+- 先试 `portal/api/mfa/verifyCode`，失败再试 `mobile/api/mfa/verifyCode`
+
+实测结论 (2026-06-17):
+- `mobile+cffi` Safari TLS 成功穿透 CF（有/无 MFA 均可用）
+- `portal+cffi` 中 `safari_ios`/`chrome120` 返回 403，`safari`/`edge101`/`chrome` 无响应
+- 30-45s 随机延迟对 CF WAF bypass 至关重要
+
+#### Strategy B: Playwright（`scripts/garmin_auth_playwright.py:202-314`）
+
+依赖 `playwright` Python 包 + Chromium 浏览器。使用真实浏览器绕过所有 TLS 指纹检测。
+
+| 特性 | 详情 |
+|---|---|
+| 引擎 | Playwright Chromium, headless |
+| UA | Android WebView (same as mobile+cffi) |
+| Session 缓存 | `data/cache/garmin_playwright_session_{domain}.json`, ~1 年有效 |
+| MFA 处理 | 浏览器内表单交互（无 stdin）, 也支持 `SYNC__GARMIN__MFA_CODE` env var |
+
+流程：
+```
+1. Launch Chromium (headless)
+2. Restore session cookies from cache (if exists)
+3. Navigate to connect.garmin.com/modern/
+   → no SSO redirect: session valid, skip login
+   → SSO redirect detected: session expired, perform login
+
+4. Login (if needed):
+   → try portal login widget → fill form → submit → handle MFA in browser
+   → fallback: widget-based login flow
+   → save fresh session cookies to cache
+
+5. After ticket: _di_exchange(domain, ticket) → same as Strategy A
+
+6. Alternative (session valid but no ticket):
+   → browser fetch() to connectapi endpoint as auth verification
+   → replay portal login to get fresh DI token
+```
+
+Session 缓存优势:
+- 首次登录后 cookies 持久化，后续调用无需重新认证（~1 年）
+- 首次只需要人在 CI 中手动触发带 Secrets 的 workflow_dispatch
+- MFA 仅首次需要——session cookies 复用后续无 MFA
+
+#### 为什么不在 Ruby authenticate 中
+
+| 原因 | 说明 |
+|---|---|
+| CF TLS 检测 | Ruby `Net::HTTP` 被 Cloudflare 429/403。curl_cffi / Playwright 才具备 TLS 指纹模拟能力 |
+| 重依赖 | `curl_cffi` (C FFI + TLS 库) 和 `playwright` (Chromium 浏览器) 是 Python-only 的 |
+| MFA 交互 | stdin 交互式输入（"Enter MFA code:"）不适合 CI 的无人值守环境 |
+| 设计原则 | CI 通过 `auth_seed`（预先认证的 DI token）初始化，然后靠 token 缓存 + `refresh_token` 自旋。本地脚本一次性生成 `auth_seed`，编入 GitHub Secret |
 
 ### CI cache
 
