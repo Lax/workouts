@@ -210,7 +210,17 @@ module Workouts
               lines << tag("rect", { x: 65, y: y, width: 2.6, height: 2.6, fill: color })
               lines << tag("text", { x: 70, y: y + 2, fill: tc, style: sm },
                 "#{cat}  #{t.size}  #{format_float(poster.m2u(total))}#{poster.u}")
-              y += 3
+              if cat == "ride"
+                cad = t.map(&:average_cadence).compact
+                pow = t.map(&:average_power).compact
+                extras = []
+                extras << "#{format_float(cad.sum / cad.size)}rpm" if cad.any?
+                extras << "#{format_float(pow.sum / pow.size)}W" if pow.any?
+                unless extras.empty?
+                  lines << tag("text", { x: 70, y: y + 5, fill: tc, style: sm }, extras.join(" "))
+                end
+              end
+              y += cat == "ride" && t.any? { |tr| tr.average_cadence || tr.average_power } ? 6 : 3
             end
           end
 

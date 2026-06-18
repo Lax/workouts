@@ -60,6 +60,11 @@ module Workouts
           type: a[:sport_category],
           start_date: a[:start_date],
           average_heartrate: a[:average_heartrate],
+          max_heartrate: a[:max_heartrate],
+          average_cadence: a[:average_cadence],
+          average_power: a[:average_power],
+          calories: a[:calories],
+          average_temperature: a[:average_temperature],
           average_speed: a[:average_speed],
           elevation_gain: a[:elevation_gain],
           polyline: a[:summary_polyline],
@@ -327,6 +332,8 @@ module Workouts
                   <div class="item"><span class="v" id="detail-speed"></span><span class="l">均速 (km/h)</span></div>
                   <div class="item"><span class="v" id="detail-hr"></span><span class="l">平均心率</span></div>
                   <div class="item"><span class="v" id="detail-elev"></span><span class="l">爬升 (m)</span></div>
+                  <div class="item" id="detail-cadence-container" style="display:none"><span class="v" id="detail-cadence"></span><span class="l">踏频 (rpm)</span></div>
+                  <div class="item" id="detail-power-container" style="display:none"><span class="v" id="detail-power"></span><span class="l">平均功率 (W)</span></div>
                 </div>
                 <div id="detail-map"></div>
               </div>
@@ -896,6 +903,12 @@ module Workouts
                 document.getElementById('detail-speed').textContent = fmtSpeed(a);
                 document.getElementById('detail-hr').textContent = a.average_heartrate ? a.average_heartrate.toFixed(0) : '—';
                 document.getElementById('detail-elev').textContent = a.elevation_gain ? a.elevation_gain.toFixed(0) : '—';
+                var cadEl = document.getElementById('detail-cadence');
+                var powEl = document.getElementById('detail-power');
+                var cadContainer = document.getElementById('detail-cadence-container');
+                var powContainer = document.getElementById('detail-power-container');
+                if (a.average_cadence) { cadContainer.style.display = ''; cadEl.textContent = a.average_cadence.toFixed(0); } else { cadContainer.style.display = 'none'; }
+                if (a.average_power) { powContainer.style.display = ''; powEl.textContent = a.average_power.toFixed(0); } else { powContainer.style.display = 'none'; }
                 openDetail();
 
                 var mapContainer = document.getElementById('detail-map');
