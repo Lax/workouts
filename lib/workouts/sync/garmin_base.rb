@@ -430,6 +430,13 @@ module Workouts
           location_country: detail["locationName"],
           summary_polyline: polyline,
           average_heartrate: summary["averageHR"]&.to_f,
+          max_heartrate: summary["maxHR"]&.to_f,
+          average_cadence: summary["avgCadence"]&.to_f,
+          max_cadence: summary["maxCadence"]&.to_f,
+          average_power: summary["avgPower"]&.to_f,
+          max_power: summary["maxPower"]&.to_f,
+          calories: summary["calories"]&.to_i,
+          average_temperature: summary["avgTemperature"]&.to_f,
           average_speed: summary["averageSpeed"]&.to_f,
           elevation_gain: summary["elevationGain"]&.to_f,
           source: "garmin"
