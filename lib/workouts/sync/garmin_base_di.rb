@@ -31,25 +31,11 @@ module Workouts
           end
         end
 
-        return false if @email.to_s.empty? || @password.to_s.empty?
-
-        if (token = strategy_a_login)
-          @access_token = token
-          save_tokens
-          return true if verify_access_token
-        end
-
-        if (token = strategy_b_login)
-          @access_token = token
-          save_tokens
-          return true if verify_access_token
-        end
-
         false
       end
 
       def call
-        return 0 if @config["auth_seed"].to_s.empty? && @email.to_s.empty? && !File.exist?(token_path)
+        return 0 if @config["auth_seed"].to_s.empty? && !File.exist?(token_path)
 
         return 0 unless authenticate
 
@@ -134,6 +120,10 @@ module Workouts
         true
       end
 
+      # @deprecated Kept for local script reference only.
+      # email+password SSO strategies are not called by `authenticate`
+      # because garmin.com DI auth requires MFA, handled by
+      # scripts/garmin_auth_local.sh outside Ruby.
       def strategy_a_login
         script = File.expand_path("../../../scripts/garmin_auth.py", __dir__)
         return nil unless File.exist?(script)

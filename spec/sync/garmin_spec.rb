@@ -106,49 +106,7 @@ RSpec.describe Workouts::Sync::Garmin do
     end
 
     context "without cached token and without credentials" do
-      subject(:adapter) { stub_adapter(config_overrides: { "email" => "", "password" => "" }) }
-
-      it "returns false" do
-        expect(adapter.authenticate).to be false
-      end
-    end
-
-    context "without cached token, strategy A succeeds" do
-      subject(:adapter) { stub_adapter }
-
-      before do
-        allow(adapter).to receive(:strategy_a_login).and_return(token_json)
-      end
-
-      it "saves token and returns true" do
-        expect(adapter).to receive(:save_tokens).and_call_original
-        expect(adapter).to receive(:verify_access_token).and_return(true)
-        expect(adapter.authenticate).to be true
-      end
-    end
-
-    context "without cached token, strategy A fails but B succeeds" do
-      subject(:adapter) { stub_adapter }
-
-      before do
-        allow(adapter).to receive(:strategy_a_login).and_return(nil)
-        allow(adapter).to receive(:strategy_b_login).and_return(token_json)
-      end
-
-      it "saves token and returns true" do
-        expect(adapter).to receive(:save_tokens).and_call_original
-        expect(adapter).to receive(:verify_access_token).and_return(true)
-        expect(adapter.authenticate).to be true
-      end
-    end
-
-    context "without cached token, all strategies fail" do
-      subject(:adapter) { stub_adapter }
-
-      before do
-        allow(adapter).to receive(:strategy_a_login).and_return(nil)
-        allow(adapter).to receive(:strategy_b_login).and_return(nil)
-      end
+      subject(:adapter) { stub_adapter(config_overrides: { "auth_seed" => "" }) }
 
       it "returns false" do
         expect(adapter.authenticate).to be false
@@ -410,11 +368,10 @@ RSpec.describe Workouts::Sync::Garmin do
   end
 
   describe "#call" do
-    context "with email+password set" do
-      subject(:adapter) { stub_adapter }
+    context "with auth_seed set" do
+      subject(:adapter) { stub_adapter(config_overrides: { "auth_seed" => Base64.strict_encode64(JSON.generate(token_json)) }) }
 
       before do
-        write_token(adapter)
         allow(adapter).to receive(:sync_activities).and_return(5)
       end
 
@@ -423,8 +380,8 @@ RSpec.describe Workouts::Sync::Garmin do
       end
     end
 
-    context "without credentials but with cached token" do
-      subject(:adapter) { stub_adapter(config_overrides: { "email" => "", "password" => "" }) }
+    context "without auth_seed but with cached token" do
+      subject(:adapter) { stub_adapter(config_overrides: { "auth_seed" => "" }) }
 
       before do
         write_token(adapter, token_json(expires_at: Time.now.to_i + 3600))
@@ -436,8 +393,8 @@ RSpec.describe Workouts::Sync::Garmin do
       end
     end
 
-    context "without credentials and without cached token" do
-      subject(:adapter) { stub_adapter(config_overrides: { "email" => "", "password" => "" }) }
+    context "without auth_seed and without cached token" do
+      subject(:adapter) { stub_adapter(config_overrides: { "auth_seed" => "" }) }
 
       it "returns 0" do
         expect(adapter.call).to eq(0)
@@ -445,7 +402,7 @@ RSpec.describe Workouts::Sync::Garmin do
     end
 
     context "when authenticate fails" do
-      subject(:adapter) { stub_adapter }
+      subject(:adapter) { stub_adapter(config_overrides: { "auth_seed" => Base64.strict_encode64(JSON.generate(token_json)) }) }
 
       before do
         allow(adapter).to receive(:authenticate).and_return(false)

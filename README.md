@@ -41,7 +41,7 @@ docker compose run --rm workouts export svg --style github
 | XOSS | 邮箱 + JWT | ✅ | 摘要 |
 | XingZhe | 邮箱 + RSA 加密密码 | ✅ | 摘要 |
 | Garmin CN | SSO + OAuth | ✅ | 摘要 |
-| Garmin 国际版 | SSO + OAuth | ⚠️ CF 429 封禁中 | — |
+| Garmin 国际版 | DI OAuth2 (auth_seed) | ✅ | ✅ (FIT 下载+解码) |
 
 ## 常用命令
 

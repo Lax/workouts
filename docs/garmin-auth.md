@@ -11,7 +11,7 @@ GarminBase（OAuth1 纯基类）
 | 类 | 域 | 认证路径 | 代码文件 |
 |---|---|---|---|
 | `GarminBase` | - | 共享基类方法（parse_secret_string、dump_secret、api_get 等） | `garmin_base.rb` |
-| `GarminBaseDI` | - | DI OAuth2 方法（refresh_token、strategy_a/b_login） | `garmin_base_di.rb` |
+| `GarminBaseDI` | - | CI: token cache → auth_seed refresh | `garmin_base_di.rb` |
 | `Garmin` | garmin.com | authenticate_di → DI OAuth2 | `garmin.rb`（12 行） |
 | `GarminCN` | garmin.cn | authenticate → OAuth1→OAuth2 | `garmin_cn.rb`（13 行） |
 
@@ -58,7 +58,7 @@ garmin.cn 未受 CF 封锁影响，SSO 登录可正常工作。
 
 garmin.com 的 SSO 端点 `/mobile/api/login` 已被 Garmin 关闭（返回 400），OAuth1 `/preauthorized` 端点也返回 401。CF 对 TLS 指纹严格检测，普通 HTTP 库全部 429/403。
 
-### Auth priority chain（GarminBaseDI#authenticate）
+### Auth priority chain（GarminBaseDI#authenticate — CI only）
 
 ```
 ① DI token 缓存（data/cache/garmin_garmin_com_tokens.json, GH Cache）
@@ -67,18 +67,10 @@ garmin.com 的 SSO 端点 `/mobile/api/login` 已被 Garmin 关闭（返回 400�
 
 ② auth_seed（sync.garmin.auth_seed / SYNC__GARMIN__AUTH_SEED, GitHub Secret）
    Base64 DI OAuth2 JSON → decode → save_tokens → use / di_refresh
-   refresh 失败 → 清空 @access_token → 降级
+   refresh 失败 → 清空 @access_token → false
 
-③ Strategy A: curl_cffi subprocess（scripts/garmin_auth.py）
-   mobile+cffi（Safari TLS, 优先）→ portal+cffi（5 指纹, 降级）
-   → CAS ticket → DI OAuth2 交换 → 存缓存
-   支持 MFA（env var SYNC__GARMIN__MFA_CODE 或 stdin）
-
-④ Strategy B: Playwright subprocess（scripts/garmin_auth_playwright.py）
-   Headless Chromium → SSO form → ticket → DI 交换
-   Session cookies 持久化 ~1 年（data/cache/）
-
-⑤ 全部失败 → false
+本地 MFA 登录通过 scripts/garmin_auth_local.sh 独立完成，
+不在 Ruby authenticate 流程内。
 ```
 
 ### Token lifetimes
@@ -92,9 +84,10 @@ garmin.com 的 SSO 端点 `/mobile/api/login` 已被 Garmin 关闭（返回 400�
 
 | 来源 | CI 可用？ |
 |---|---|
-| `SYNC__GARMIN__EMAIL` + `SYNC__GARMIN__PASSWORD`（GitHub Secrets） | ✅ Strategy A/B 入口 |
+| `SYNC__GARMIN__AUTH_SEED`（GitHub Secret） | ✅ 唯一 CI 入口 |
 | DI token（GH Cache） | ✅ 日常续期 |
-| MFA code（`SYNC__GARMIN__MFA_CODE` env var） | ⚠️ 一次性码，无法预置。推荐用 Strategy B 缓存 session |
+
+本地 MFA 登录通过 `scripts/garmin_auth_local.sh` 独立于 Ruby 认证流程。
 
 ### 实测结果（2026-06-17）
 
@@ -140,9 +133,7 @@ scripts/garmin_auth_local.sh --sync
 
 ### MFA 处理
 
-MFA 验证码通过 env var `SYNC__GARMIN__MFA_CODE` 传入 Python 脚本。**此做法仅适用于本地调试或已知验证码的有效期内**，不适合 CI 自动化。
-
-**推荐路径：** Strategy B（Playwright）首次运行交互式 MFA 后，session cookies 缓存至 `data/cache/`，后续从 cookies 恢复无需 MFA。首次 requires 人工在 CI 中手动触发带 Secrets 的 workflow_dispatch。
+MFA 由 `scripts/garmin_auth.py`（curl_cffi）处理，通过 `scripts/garmin_auth_local.sh` 调用，**不在 Ruby authenticate 流程内**。CI 不与 MFA 交互——仅使用 auth_seed + token 缓存。
 
 ### CI cache
 
