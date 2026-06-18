@@ -91,8 +91,9 @@ module Workouts
 
         write_standardized_json(wgs_points, ride_id)
         polyline = Geo::Polyline.encode(wgs_points.map { |pt| [pt["positionLat"], pt["positionLong"]] })
+        sensor_summary = compute_sensor_summary(wgs_points)
 
-        attrs = build_attrs(act, ride_id, polyline)
+        attrs = build_attrs(act, ride_id, polyline, sensor_summary)
         return false unless attrs
 
         upsert_activity(attrs)
@@ -146,7 +147,7 @@ module Workouts
         JSON.parse(resp.body).dig("data", "rows")
       end
 
-      def build_attrs(act, ride_id, polyline = nil)
+      def build_attrs(act, ride_id, polyline = nil, sensor = {})
         type = map_sport(act["exerciseType"])
         start_t = @fit_start_utc || parse_date(act["startTime"])
         start_t_local = @fit_start_local || start_t
@@ -165,11 +166,35 @@ module Workouts
           start_date: start_t.strftime("%Y-%m-%d %H:%M:%S"),
           start_date_local: start_t_local.strftime("%Y-%m-%d %H:%M:%S"),
           location_country: nil,
-          average_heartrate: nil,
+          average_heartrate: act["avgHrm"]&.to_f&.nonzero?,
+          max_heartrate: act["maxHrm"]&.to_f&.nonzero?,
+          average_cadence: sensor[:average_cadence],
+          max_cadence: sensor[:max_cadence],
+          average_power: sensor[:average_power],
+          max_power: sensor[:max_power],
+          calories: sensor[:calories],
+          average_temperature: sensor[:average_temperature],
           average_speed: avg_speed > 0 ? avg_speed : nil,
           elevation_gain: act["totalAscent"].to_f.nonzero?,
           summary_polyline: polyline,
           source: "igpsport"
+        }
+      end
+
+      def compute_sensor_summary(records)
+        return {} if records.empty?
+
+        cad = records.map { |r| r["cadence"] }.compact
+        pow = records.map { |r| r["power"] }.compact
+        tmp = records.map { |r| r["temperature"] }.compact
+
+        {
+          average_cadence: cad.any? ? (cad.sum.to_f / cad.size).round(1) : nil,
+          max_cadence: cad.max,
+          average_power: pow.any? ? (pow.sum.to_f / pow.size).round(1) : nil,
+          max_power: pow.max,
+          average_temperature: tmp.any? ? (tmp.sum.to_f / tmp.size).round(1) : nil,
+          calories: nil
         }
       end
 
