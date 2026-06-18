@@ -146,6 +146,10 @@ module Workouts
       # email+password SSO strategies are not called by `authenticate`
       # because garmin.com DI auth requires MFA, handled by
       # scripts/garmin_auth_local.sh outside Ruby.
+      #
+      # Note: method naming (strategy_a = curl_cffi, strategy_b = Playwright) is
+      # historical. In scripts/garmin_auth_local.sh, Playwright runs first (cookies
+      # persist 365d → no repeat MFA), curl_cffi is the fallback.
       def strategy_a_login
         script = File.expand_path("../../../scripts/garmin_auth.py", __dir__)
         return nil unless File.exist?(script)
