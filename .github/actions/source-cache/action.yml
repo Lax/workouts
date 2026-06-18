@@ -1,0 +1,56 @@
+name: Source Cache
+description: Per-source cache restore/save with change detection
+inputs:
+  source:
+    description: 'Source name (keep, igpsport, xoss, xingzhe, garmin, garmin_cn, strava)'
+    required: true
+  phase:
+    description: 'restore or save'
+    required: true
+  before_digest:
+    description: 'Content digest before sync (for save phase)'
+    required: false
+    default: ''
+
+outputs:
+  before_digest:
+    description: 'Content digest before sync (restore phase)'
+    value: ${{ steps.before.outputs.digest }}
+  changed:
+    description: 'Whether source data changed (save phase)'
+    value: ${{ steps.check.outputs.changed }}
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/cache/restore@v4
+      if: inputs.phase == 'restore'
+      id: restore
+      with:
+        path: |
+          data/raw/${{ inputs.source }}/
+          data/std/${{ inputs.source }}/
+        key: workouts-raw-v1-${{ inputs.source }}-${{ github.run_id }}
+        restore-keys: workouts-raw-v1-${{ inputs.source }}-
+
+    - name: Record before digest
+      if: inputs.phase == 'restore'
+      id: before
+      shell: bash
+      run: |
+        echo "digest=$(scripts/source-digest.sh ${{ inputs.source }})" >> $GITHUB_OUTPUT
+
+    - name: Check changed
+      if: inputs.phase == 'save'
+      id: check
+      shell: bash
+      run: |
+        scripts/source-digest.sh ${{ inputs.source }} ${{ inputs.before_digest }} >> $GITHUB_OUTPUT
+
+    - uses: actions/cache/save@v4
+      if: inputs.phase == 'save' && steps.check.outputs.changed == 'true'
+      with:
+        path: |
+          data/raw/${{ inputs.source }}/
+          data/std/${{ inputs.source }}/
+        key: workouts-raw-v1-${{ inputs.source }}-${{ github.run_id }}
