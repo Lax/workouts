@@ -12,7 +12,10 @@ RSpec.describe Workouts::Sync::Strava do
       String :sport_category, null: false, default: "run"; String :sport_type
       String :start_date; String :start_date_local; String :location_country
       String :summary_polyline, text: true
-      Float :average_heartrate; Float :average_speed; Float :elevation_gain
+      Float :average_heartrate; Float :max_heartrate
+      Float :average_cadence; Float :max_cadence; Float :average_power; Float :max_power
+      Integer :calories; Float :average_temperature
+      Float :average_speed; Float :elevation_gain
       String :duplicate_info, text: true
       String :source
       DateTime :created_at, default: Sequel::CURRENT_TIMESTAMP
