@@ -49,11 +49,16 @@ module Workouts
           breakdown[cat][:moving_time_h] += t / 3600.0
         end
 
+        cadences = rows.map { |r| r[:average_cadence] }.compact
+        powers   = rows.map { |r| r[:average_power] }.compact
+
         {
           total_activities: rows.size,
           total_distance_km: total_dist / 1000.0,
           total_moving_time_h: total_time / 3600.0,
           total_elevation_gain_m: total_elev,
+          avg_cadence: cadences.any? ? (cadences.sum / cadences.size).round(1) : nil,
+          avg_power: powers.any? ? (powers.sum / powers.size).round(1) : nil,
           sport_breakdown: breakdown.sort_by { |_, v| -v[:count] }.map { |cat, v|
             { category: cat, count: v[:count], distance_km: v[:distance_km].round(1),
               moving_time_h: v[:moving_time_h].round(1) }
@@ -63,7 +68,9 @@ module Workouts
 
       def compute_monthly(rows)
         monthly = Hash.new { |h, k| h[k] = { count: 0, distance_km: 0.0, moving_time_h: 0.0,
-                                             total_hr: 0.0, hr_count: 0, total_elev: 0.0 } }
+                                             total_hr: 0.0, hr_count: 0, total_elev: 0.0,
+                                             total_cadence: 0.0, cadence_count: 0,
+                                             total_power: 0.0, power_count: 0 } }
 
         rows.each do |r|
           next unless r[:start_date]
@@ -82,6 +89,16 @@ module Workouts
             monthly[ym][:total_hr] += hr
             monthly[ym][:hr_count] += 1
           end
+          cad = r[:average_cadence]
+          pow = r[:average_power]
+          if cad && cad > 0
+            monthly[ym][:total_cadence] += cad
+            monthly[ym][:cadence_count] += 1
+          end
+          if pow && pow > 0
+            monthly[ym][:total_power] += pow
+            monthly[ym][:power_count] += 1
+          end
         end
 
         monthly.sort.map { |ym, v|
@@ -95,6 +112,8 @@ module Workouts
             moving_time_h: v[:moving_time_h].round(1),
             avg_pace: pace,
             avg_hr: v[:hr_count] > 0 ? (v[:total_hr] / v[:hr_count]).round(0) : nil,
+            avg_cadence: v[:cadence_count] > 0 ? (v[:total_cadence] / v[:cadence_count]).round(0) : nil,
+            avg_power: v[:power_count] > 0 ? (v[:total_power] / v[:power_count]).round(0) : nil,
             elevation_gain_m: v[:total_elev].round(0)
           }
         }

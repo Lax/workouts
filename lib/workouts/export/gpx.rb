@@ -47,7 +47,8 @@ module Workouts
 
         xml = +%{<?xml version="1.0" encoding="UTF-8"?>\n}
         xml << %{<gpx version="1.1" creator="Workouts CLI"\n}
-        xml << %{  xmlns="http://www.topografix.com/GPX/1/1">\n}
+        xml << %{  xmlns="http://www.topografix.com/GPX/1/1"\n}
+        xml << %{  xmlns:gpxtpx="http://www.garmin.com/xmlschemas/TrackPointExtension/v1">\n}
         xml << %{<metadata>\n  <name>#{name}</name>\n  <time>#{start_t}</time>\n</metadata>\n}
         xml << %{<trk>\n  <name>#{name}</name>\n  <type>#{type}</type>\n  <trkseg>\n}
 
@@ -55,6 +56,16 @@ module Workouts
           s = +%(  <trkpt lat="#{fmt(pt[:lat])}" lon="#{fmt(pt[:lon])}">\n)
           s << %(    <ele>#{fmt(pt[:ele])}</ele>\n) if pt[:ele]
           s << %(    <time>#{pt[:time]}</time>\n) if pt[:time]
+          if pt[:hr] || pt[:cad] || pt[:watts] || pt[:temp]
+            s << %(    <extensions>\n)
+            s << %(      <gpxtpx:TrackPointExtension>\n)
+            s << %(        <gpxtpx:hr>#{pt[:hr].to_i}</gpxtpx:hr>\n) if pt[:hr]
+            s << %(        <gpxtpx:cad>#{pt[:cad].to_i}</gpxtpx:cad>\n) if pt[:cad]
+            s << %(        <gpxtpx:watts>#{pt[:watts].to_i}</gpxtpx:watts>\n) if pt[:watts]
+            s << %(        <gpxtpx:temp>#{pt[:temp].to_i}</gpxtpx:temp>\n) if pt[:temp]
+            s << %(      </gpxtpx:TrackPointExtension>\n)
+            s << %(    </extensions>\n)
+          end
           s << %(  </trkpt>\n)
           xml << s
         end
@@ -85,7 +96,12 @@ module Workouts
                  when String then Time.parse(ts_raw) rescue nil
                  when Numeric then start_time ? start_time + ts_raw : nil
                  end
-          pts << { lat: lat, lon: lng, ele: ele, time: time&.utc&.xmlschema }
+          hr    = r["heartRate"] || r["heartrate"]
+          cad   = r["cadence"]
+          watts = r["power"] || r["watts"]
+          temp  = r["temperature"]
+          pts << { lat: lat, lon: lng, ele: ele, time: time&.utc&.xmlschema,
+                   hr: hr, cad: cad, watts: watts, temp: temp }
         end
         pts.size >= 2 ? pts : nil
       end
