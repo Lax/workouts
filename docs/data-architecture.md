@@ -28,6 +28,13 @@ L1 -> L2 -> L3 -> L4 (build job)
 - Time normalization (FIT epoch / millisecond -> Unix).
 - No field dropped, no aggregation, no stats computed.
 
+## GH Cache 辅助层
+
+`data/raw/` 通过 `actions/cache` 管理：
+- key: `workouts-raw-v1-<run_id>`，前缀回退 `workouts-raw-v1-`
+- 保留 7 天，仅新活动触发更新
+- cache miss → API 全量重拉（受 `time_budget` 限制，1-3 次 CI run 补齐）
+
 ## Source adapter matrix
 
 | Source | L1 | L2 | L3 | Status |

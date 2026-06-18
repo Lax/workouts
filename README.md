@@ -14,14 +14,14 @@ cd workouts
 bundle install
 
 # 生成配置模板，填入你的账号信息
-bin/workouts init
+exe/workouts init
 # 编辑 config/config.yml... 或者设置环境变量
 
 # 同步所有已配置的来源
-bin/workouts sync
+exe/workouts sync
 
 # 导出
-bin/workouts export svg --style github
+exe/workouts export svg --style github
 ```
 
 ### Docker

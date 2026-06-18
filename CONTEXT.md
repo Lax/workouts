@@ -73,7 +73,7 @@ lib/workouts/cli/sync.rb         # 同步子模块（sync, auth）
 | **XOSS** | backend.xoss.co (国际版) | email+JWT | 局部 SPORT_MAP 哈希表 |
 | **XingZhe** | imxingzhe.com (行者) | RSA 加密密码 + session Cookie | 行者国内版 |
 | **Garmin CN** | garmin.cn | SSO + OAuth1→OAuth2（不受 CF 影响）| token 文件持久化 + OAuth1 自动 refresh，GH Cache |
-| **Garmin Intl** | garmin.com | DI OAuth2（curl_cffi + Playwright 降级链）| token GH Cache，MFA 推荐 Playwright session 缓存 |
+| **Garmin Intl** | garmin.com | DI OAuth2（Playwright primary — session cookies 365d, curl_cffi fallback）| Playwright session cookies 365d, token GH Cache，MFA 首次后零交互 |
 | **Strava** | strava.com | OAuth2 refresh_token | 已配置，含多源去重检测 |
 
 ### 数据流程
@@ -273,18 +273,6 @@ deploy job (needs: build):
   3. deploy-pages@v4
 ```
 
-### GitHub Actions 用量
-
-| 指标 | 免费 (2000 min) | Pro (3000 min) |
-|---|---|---|
-| 日常 CI（30 × 10min） | 300 min ✅ | 300 min ✅ |
-| 批量回填（一次性 4 × 22min） | ~88 min ✅ | ~88 min ✅ |
-| 月度使用率 | ~15% | ~10% |
-
-缓存总计 ~300 MB（DB + raw），远低于 10GB 上限。
-
----
-
 ## Docker
 
 ```bash
@@ -336,137 +324,25 @@ L1 raw → L2 标准化 GPS → L3 SQLite 摘要 → L4 构建制品 → L5 部�
 | 导出默认路径 `data/` → `build/` | 源数据与生成制品分离，gitignored |
 | `mini_racer` + `@garmin/fitsdk` 解析 FIT | V8 引擎在 Ruby 进程中执行 JS SDK，纯 gem 依赖，无需外部运行时 |
 
----
-
-## 项目状态
-
-### 数据库（1104 条活动）
-
-| 来源 | 数量 |
-|---|---|
-| Keep | 838 |
-| Strava | 131 |
-| iGPSPORT | 57 |
-| XOSS | 44 |
-| XingZhe | 34 |
-| Garmin CN | 0（已认证，账号无记录） |
-| Garmin 国际版 | DI OAuth2（11 commits）— ✅ 已认证，已同步 2 条活动，L1 FIT raw + L2 decode |
-
-### 原始 GPS 文件（GH Cache）
-
-`data/raw/` 下存有原始 GPS JSON 文件（Keep 838 个，21MB），通过 `actions/cache` 管理：
-- `workouts-raw-v1-<run_id>` key + `workouts-raw-v1-` 前缀回退
-- 7 天保留期，仅在新活动时更新
-- cache miss → API 全量重拉（受 `time_budget` 限制，1-3 次 CI run 补齐）
-- 每个 JSON 包含完整的 GCJ-02→WGS-84 坐标转换后点阵、海拔、时间戳和逐点心率
-
-### iGPSPORT 原始数据调研
-
-调研日期：2026-06-06，参考：[yihong0618/running_page](https://github.com/yihong0618/running_page)
-
-#### API 端点
-
-| 端点 | 方式 | 结果 |
-|---|---|---|
-| `getDownloadUrl/{rideId}` | GET → OSS URL | ✅ 返回可下载的分享链接 |
-| 实际下载内容 | HTTP GET OSS URL | ✅ FIT 二进制（`.FIT` 签名，CRC 有效） |
-| `reqType=1`（GPX） | 同 URL | ❌ 返回相同 FIT 文件 |
-| `reqType=2`（TCX） | 活动列表为空 | ❌ 不支持 |
-
-**结论：仅 FIT 格式可用。** `reqType` 不影响 `getDownloadUrl` 输出，始终返回 FIT。
-
-#### 上游解析方式
-
-`running_page` 使用 Python 官方包 `garmin-fit-sdk` 直接解析 FIT，不转 GPX：
-
-```python
-from garmin_fit_sdk import Decoder, Stream
-stream = Stream.from_file(fit_path)
-messages, errors = decoder.read()
-for record in messages["record_mesgs"]:
-    if "position_lat" in record and "position_long" in record:
-        lat = record["position_lat"] / 2147483648.0
-        lng = record["position_long"] / 2147483648.0
-```
-
-#### FIT 解析方案选型
-
-| 方案 | 工作量 | 依赖 | 评价 |
-|---|---|---|---|
-| Python subprocess | 1d | python + `garmin-fit-sdk` | ❌ 增加 Python 运行时 |
-| C SDK + Ruby FFI | 3d | `fit-c-sdk` + gcc 编译 | ⚠️ 需 CI 编译步骤 |
-| **JS SDK + mini_racer** | **~4d** | **`mini_racer` gem + JS bundle** | **✅ 纯 Ruby 依赖，无额外运行时** |
-
-**选定实现：`mini_racer` + `@garmin/fitsdk`** ✅
-
-- JS 解码器: `lib/workouts/fit/decoder.js`（Webpack 打包 @garmin/fitsdk，~150KB）
-- Ruby 入口: `lib/workouts/fit/decoder.rb`（`FIT::Decoder.decode` / `.info`）
-- iGPSPORT 集成: `igpsport.rb` 下载 raw FIT → 解码 → L1/L2/L3
-- 测试: `spec/fit/decoder_spec.rb`
-- CI 无额外步骤 — `mini_racer` 是 gem，decoder.js 是静态文件
-
-### 测试
-
-RSpec 325 例，0 失败。覆盖：
-- Config（YAML 加载 + env var merge + 未知 key 警告）
-- Geo（坐标转换 3 套 + Polyline 编解码）
-- Privacy（起终点偏移过滤）
-- Parser（GPX + TCX 活动/轨迹/心率解析）
-- Export（JSON + CSV + SVG 输出格式）
-- SportMapper（alias + keyword + Levenshtein）
-- Sync（每个适配器的 call/build_attrs/map_sport 测试）
-- Keep 解密管线（geo/HR/WGS 坐标转换）
-- FIT 解码器（GPS 坐标范围、字段保留）
-
----
-
-## 后续规划
-
-### P0 — 当前痛点
-
-_无_
-
-### P1 — 功能扩展
-
-_无_
-
-### P2 — 工程完善
-
-| 项 | 工作量 | 说明 |
-|---|---|---|
-| 统一错误处理 | 0.5d | 定义 `SyncError` 基类，统一 rescue 模式 |
-
-### 已关闭
-
-| 项 | 状态 |
-|---|---|
-| Keep raw 数据持久化（838 条，21MB） | ✅ 已完成 |
-| iGPSPORT 原生 GPS 调研（FIT 方案选型完成） | ✅ 已完成（选定 mini_racer + JS SDK） |
-| iGPSPORT FIT raw 数据 pipeline（L1+L2+L3） | ✅ 已完成 |
-| L1/L2 数据架构设计（三层模型 + 源适配矩阵） | ✅ 已完成 |
-| 导出路径 `data/` → `build/`（源数据与制品分离） | ✅ 已完成 |
-| 3-job workflow（sync / build / deploy） | ✅ 已完成 |
-| 原始数据 GH Cache（替代 submodule） | ✅ 已完成 |
-| Keep spider_sleep 1s → 0.1s | ✅ 已完成 |
-| Config 未知 key 警告 | ✅ 已完成 |
-| SportMapper 三层回退 | ✅ 已完成 |
-| SVG footer rebrand | ✅ 已完成 |
-| LICENSE.txt + 移除 email 占位符 | ✅ 已完成 |
-| GitHub Pages 部署 | ✅ 已完成 |
-| 多源去重检测（confidence scoring + SVG 标注） | ✅ 已完成 |
-| Strava OAuth 自动 refresh + L1/L2/L3 数据链路 | ✅ 已完成 |
-| Strava 测试夹具 + 集成测试 | ✅ 已完成 |
-| 品牌一致性审计 | ✅ 已完成 |
-| GPX 重新导出（`export gpx` from L2） | ✅ 已完成（lib/workouts/export/gpx.rb）|
-| Strava OAuth 交互式授权（`auth strava`本地HTTP） | ✅ 已完成（lib/workouts/auth/strava.rb）|
-| FIT 解析 pipeline（mini_racer + @garmin/fitsdk） | ✅ 已完成（lib/workouts/fit/decoder.rb）|
-| Garmin DI OAuth2 认证（curl_cffi + Playwright 降级链） | ✅ 已完成（lib/workouts/sync/garmin.rb）|
-
----
-
 ## 文档架构
 
-文档给人看也给 AI 看。原则：
+### 文档分类
+
+每一个需求产出一组文档，共享前缀，后缀区分类型：
+
+| 类型 | 后缀 | 编写方式 | 内容 |
+|---|---|---|---|
+| 目标文档 | `-goal` | 用户主笔，AI 辅助 | 功能定义、验收标准、边界划分 |
+| 调研文档 | `-research` | 共同编写 | 技术调研历史、方案对比、关键决策依据 |
+| 实现文档 | `-impl` | 开发过程产出 | 遇到的问题、解决方案、注意事项、变更记录 |
+
+**命名示例：** `garmin-auth-goal.md` / `garmin-auth-research.md` / `garmin-auth-impl.md`
+
+> 已有文档（`data-architecture.md`, `garmin-auth.md`）保持原名不动，新增文档按此规范命名。
+
+### 编写原则
+
+文档给人看也给 AI 看。
 
 | 原则 | 说明 |
 |---|---|
