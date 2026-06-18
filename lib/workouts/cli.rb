@@ -1,5 +1,7 @@
 module Workouts
   require_relative "cli/export"
+  require_relative "cli/db"
+  require_relative "cli/migrate"
   require_relative "cli/sync"
 
   class CLI < Thor
@@ -51,13 +53,11 @@ module Workouts
     desc "export SUBCOMMAND", "Export activities to various formats"
     subcommand "export", ExportCLI
 
-    desc "migrate", "Run database migrations"
-    def migrate
-      connect_db
-      say_status :done, "Migrations up to date", :green
-    rescue => e
-      say_status :error, "Migration failed: #{e.message}", :red
-    end
+    desc "migrate SUBCOMMAND", "Migrate data between platforms"
+    subcommand "migrate", MigrateCLI
+
+    desc "db SUBCOMMAND", "Database operations"
+    subcommand "db", DbCLI
 
     desc "init", "Generate default config.yml"
     def init
@@ -70,15 +70,8 @@ module Workouts
     option :save, type: :boolean, desc: "Save parsed activities to database", aliases: "-s"
     option :dry, type: :boolean, default: true, desc: "Print parsed data without saving"
     def parse(file)
-      format = case file
-               when /\.gpx$/i then :gpx
-               when /\.tcx$/i then :tcx
-               else
-                 say_status :error, "Unsupported format (use .gpx or .tcx)", :red
-                 return
-               end
-
       content = File.read(file)
+      format = file.match?(/\.gpx$/i) ? :gpx : :tcx
       parser = format == :gpx ? Parser::GPX.new(source: "file") : Parser::TCX.new(source: "file")
       activities = parser.call(content)
 

@@ -25,7 +25,7 @@ module Workouts
 
     ENV_SEPARATOR = "__"
     DEFAULT_PATH = "config/config.yml"
-    KNOWN_TOP_KEYS = %w[database sync export privacy system].freeze
+    KNOWN_TOP_KEYS = %w[database sync export migrate privacy system].freeze
 
     def initialize(path = nil)
       @data = deep_dup(DEFAULTS)

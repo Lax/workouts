@@ -3,21 +3,28 @@
 ## 命令
 
 ```
-workouts export igpsport_to_garmin      [--dry] [--since=YYYY-MM-DD] [--limit=N]
-workouts export igpsport_to_garmin_cn   [--dry] [--since=YYYY-MM-DD] [--limit=N]
+workouts migrate igpsport_to_garmin      [--dry] [--since=YYYY-MM-DD] [--limit=N]
+workouts migrate igpsport_to_garmin_cn   [--dry] [--since=YYYY-MM-DD] [--limit=N]
+```
+
+## 类结构
+
+```
+Migrate::IGPSportToGarmin           ← 基类（DI OAuth2 认证 + 通用 upload/dedup/GPX）
+  └── Migrate::IGPSportToGarminCN   ← CN 子类（OAuth1→OAuth2 认证覆写）
 ```
 
 ## 文件
 
 | 路径 | 作用 |
 |---|---|
-| `lib/workouts/export/igpsport_to_garmin.rb` | 核心上传器 |
-| `lib/workouts/cli/export.rb` | CLI 命令注册（`igpsport_to_garmin` / `igpsport_to_garmin_cn`） |
-| `spec/lib/export/igpsport_to_garmin_spec.rb` | 测试（全 stub、零网络） |
-| `spec/fixtures/garmin/upload_{success,failure}.json` | 上传 API fixture |
-| `spec/fixtures/garmin/activity_list.json` | 活动列表 fixture（含 `[iGPSPORT]` 后缀条目） |
-| `spec/fixtures/garmin/di_tokens.json` | DI OAuth2 token fixture |
-| `spec/fixtures/igpsport/sample_l2.json` | L2 标准化数据（3 个 trackpoints） |
+| `lib/workouts/migrate/igpsport_to_garmin.rb` | 基类（含 International DI OAuth2 认证） |
+| `lib/workouts/migrate/igpsport_to_garmin_cn.rb` | CN 子类 |
+| `lib/workouts/cli/migrate.rb` | `MigrateCLI` 子命令注册 |
+| `lib/workouts/cli/db.rb` | `DbCLI` 子命令注册（DB migration） |
+| `spec/lib/migrate/igpsport_to_garmin_spec.rb` | 测试（全 stub、零网络） |
+| `spec/fixtures/garmin/*.json` | 上传 API / token / 活动列表 fixture |
+| `spec/fixtures/igpsport/sample_l2.json` | L2 标准化数据 |
 
 ## 数据流
 
@@ -25,7 +32,7 @@ workouts export igpsport_to_garmin_cn   [--dry] [--since=YYYY-MM-DD] [--limit=N]
 DB activities (source='igpsport')
   │
   ├─ L1: upload map 检查
-  │    data/export/igpsport_garmin/uploads.json  → 命中 → skip
+  │    data/migrate/igpsport_to_garmin/uploads.json  → 命中 → skip
   │
   ├─ L2: Garmin activity name 后缀匹配
   │    GET /activitylist-service/...  → 检查 activityName 含 "[iGPSPORT]"
@@ -38,25 +45,19 @@ DB activities (source='igpsport')
             L2 JSON → 构建 GPX（多路标识）→ 上传
 ```
 
-## Authentication
+## 目录
 
-### Garmin International (target: :intl)
+| | International | CN |
+|---|---|---|
+| 上传映射 | `data/migrate/igpsport_to_garmin/` | `data/migrate/igpsport_to_garmin_cn/` |
+| token 文件 | `data/cache/garmin_garmin_com_tokens.json` | `data/cache/garmin_garmin_cn_tokens.json` |
 
-复用 `data/cache/garmin_garmin_com_tokens.json`（DI OAuth2 token）：
+## 环境变量 / Repo Variable
 
-1. 加载 token 文件 → 检查 `expires_at`
-2. 未过期 → 直接使用
-3. 过期 → POST `diauth.garmin.com/di-oauth2-service/oauth/token` 刷新
-4. 刷新结果写回 token 文件
-
-### Garmin CN (target: :cn)
-
-复用 `data/cache/garmin_garmin_cn_tokens.json`（OAuth1 + OAuth2 token）：
-
-1. 加载 token 文件 → 提取 `oauth2.access_token`
-2. 未过期 → 直接使用
-3. 过期 → 从 `oauth1` 提取 OAuth1 token → HMAC-SHA1 签名的 OAuth2 exchange
-4. 更新 token 文件
+| 目标 | Env var | Repo Variable | 默认值 |
+|---|---|---|---|
+| International | `MIGRATE__IGPSPORT_TO_GARMIN__LIMIT` | `MIGRATE_IGPSPORT_TO_GARMIN_LIMIT` | 10 |
+| CN | `MIGRATE__IGPSPORT_TO_GARMIN_CN__LIMIT` | `MIGRATE_IGPSPORT_TO_GARMIN_CN_LIMIT` | 10 |
 
 ## GPX 多路标识
 
@@ -77,8 +78,6 @@ DB activities (source='igpsport')
 
 ## 上传映射文件
 
-`data/export/igpsport_garmin/uploads.json`：
-
 ```json
 {
   "uploads": {
@@ -91,19 +90,16 @@ DB activities (source='igpsport')
 }
 ```
 
-## 批量控制
+## CLI 树
 
-通过 `--limit=N` 控制每次上传数量，默认 10。分别由两个 env var 控制：
-
-| 目标 | Env var | Repo Variable | 默认值 |
-|---|---|---|---|
-| International | `SYNC__IGP2GARMIN__LIMIT` | `SYNC_IGP2GARMIN_LIMIT` | 10 |
-| CN | `SYNC__IGP2GARMIN_CN__LIMIT` | `SYNC_IGP2GARMIN_CN_LIMIT` | 10 |
-
-CLI 中可通过 Workflow env 传递，例如：
-```yaml
-env:
-  SYNC__IGP2GARMIN__LIMIT: ${{ vars.SYNC_IGP2GARMIN_LIMIT || 10 }}
+```
+workouts
+├── sync
+├── auth
+├── export (json / csv / stats / dashboard / gpx / svg / html / all)
+├── migrate (igpsport_to_garmin / igpsport_to_garmin_cn)
+├── db (migrate)
+├── init / parse / version
 ```
 
 ## 限制 / 后续
@@ -111,8 +107,5 @@ env:
 | 事项 | 计划 |
 |---|---|
 | L3 模糊匹配（时间+距离） | 后续 |
-| Fake Garmin device 注入 | 暂不实现（原始 FIT 可直接上传） |
+| Fake Garmin device 注入 | 暂不实现 |
 | DB `upload_targets` 列 | 后续 |
-| 活动 GPX 回退缺少 FIT 时自动构建 | 已实现（从 L2 JSON） |
-
-
