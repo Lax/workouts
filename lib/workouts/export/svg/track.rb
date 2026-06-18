@@ -3,7 +3,8 @@ module Workouts
     module SVG
       class Track
         attr_reader :date, :year, :length, :effective_length, :polyline,
-                    :sport_category, :sport_type, :moving_time, :duplicate_info
+                    :sport_category, :sport_type, :moving_time, :duplicate_info,
+                    :average_cadence, :average_power, :max_heartrate
 
         def initialize(activity, colors, special_distance)
           @date = Time.parse(activity[:start_date]) rescue Time.now
@@ -17,6 +18,9 @@ module Workouts
           @colors = colors
           @special_distance = special_distance
           @duplicate_info = activity[:duplicate_info] ? ::JSON.parse(activity[:duplicate_info]) : []
+          @average_cadence = activity[:average_cadence]
+          @average_power   = activity[:average_power]
+          @max_heartrate   = activity[:max_heartrate]
           @effective_length = compute_effective_length
         end
 
