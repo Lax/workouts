@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
 # Garmin DI OAuth2 — local auth + cache sync
 #
-# Default: reads email + password from config.yml, runs garmin_auth.py
-# with strategic MFA code over stdin, Base64-encodes the DI OAuth2
-# token, updates config.yml, and sets the GitHub Secret.
+# Default: reads email + password from config.yml, runs auth scripts
+# with priority: Strategy B (Playwright) → Strategy A (curl_cffi).
+# Playwright primary because session cookies persist ~1 year (no re-MFA).
+# On success, Base64-encodes the DI OAuth2 token, updates config.yml,
+# and sets the GitHub Secret.
 #
 # --sync: skips SSO, reads the latest cache token from
 # data/cache/garmin_garmin_com_tokens.json, Base64-encodes it,
@@ -16,7 +18,8 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 CONFIG="$ROOT/config/config.yml"
-SCRIPT="$ROOT/scripts/garmin_auth.py"
+SCRIPT_A="$ROOT/scripts/garmin_auth.py"              # curl_cffi (fallback)
+SCRIPT_B="$ROOT/scripts/garmin_auth_playwright.py"    # Playwright (primary)
 CACHE="$ROOT/data/cache/garmin_garmin_com_tokens.json"
 REPO="Lax/workouts"
 SECRET="SYNC_GARMIN_AUTH_SEED"
@@ -57,15 +60,41 @@ else
   echo "" >&2
   echo "=== Garmin DI OAuth2 Auth ===" >&2
   echo "" >&2
-  TOKEN_JSON=$(
-    SYNC__GARMIN__EMAIL="$EMAIL" \
-    SYNC__GARMIN__PASSWORD="$PWD" \
-    python3 "$SCRIPT"
-  )
 
-  # After SSO, the cache was just written by Ruby _di_exchange in the script.
-  # If auth succeeded but the script didn't write to cache (older scripts),
-  # Ruby load_auth_seed → save_tokens will create it on next sync run.
+  run_auth_script() {
+    local label="$1" script="$2"
+    echo "[auth_local] Strategy: $label" >&2
+    SYNC__GARMIN__EMAIL="$EMAIL" SYNC__GARMIN__PASSWORD="$PWD" \
+      SYNC__GARMIN__MFA_CODE="${SYNC__GARMIN__MFA_CODE:-}" \
+      python3 "$script"
+  }
+
+  # Strategy B (primary): Playwright — longer session persistence via browser context
+  if [ -x "$SCRIPT_B" ] || [ -f "$SCRIPT_B" ]; then
+    if TOKEN_JSON=$(run_auth_script "B (Playwright)" "$SCRIPT_B") && echo "$TOKEN_JSON" | python3 -c "import sys,json; json.load(sys.stdin)" 2>/dev/null; then
+      echo "[auth_local] Playwright succeeded" >&2
+    else
+      echo "[auth_local] Playwright failed, falling back to Strategy A..." >&2
+      TOKEN_JSON=""
+    fi
+  else
+    echo "[auth_local] Playwright script not found: $SCRIPT_B" >&2
+  fi
+
+  # Strategy A (fallback): curl_cffi — proven TLS impersonation path
+  if [ -z "${TOKEN_JSON:-}" ]; then
+    if [ -f "$SCRIPT_A" ]; then
+      if TOKEN_JSON=$(run_auth_script "A (curl_cffi)" "$SCRIPT_A") && echo "$TOKEN_JSON" | python3 -c "import sys,json; json.load(sys.stdin)" 2>/dev/null; then
+        echo "[auth_local] curl_cffi succeeded" >&2
+      else
+        echo "[auth_local] Both Playwright and curl_cffi strategies failed" >&2
+        exit 1
+      fi
+    else
+      echo "[auth_local] curl_cffi script not found: $SCRIPT_A" >&2
+      exit 1
+    fi
+  fi
 fi
 
 # --- Base64 encode ---
