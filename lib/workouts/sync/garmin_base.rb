@@ -125,7 +125,9 @@ module Workouts
         )
         @access_token = o2
         true
-      rescue
+      rescue => e
+        puts "Garmin: secret decode failed: #{e.message}"
+        puts "  Re-auth: bundle exec exe/workouts auth garmin_cn"
         false
       end
 
@@ -160,7 +162,8 @@ module Workouts
       def verify_access_token
         result = api_get("/activitylist-service/activities/search/activities?start=0&limit=1")
         !result.nil?
-      rescue
+      rescue => e
+        puts "Garmin: API verify failed — token invalid: #{e.message}"
         false
       end
 
@@ -181,7 +184,8 @@ module Workouts
         save_tokens
         true
       rescue => e
-        raise AuthError, "Garmin OAuth refresh failed: #{e.message}"
+        raise AuthError, "Garmin OAuth refresh failed: #{e.message}" +
+          " — re-auth: bundle exec exe/workouts auth garmin_cn"
       end
 
       def fetch_oauth_consumer

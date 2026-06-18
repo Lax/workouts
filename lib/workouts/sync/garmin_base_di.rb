@@ -31,11 +31,18 @@ module Workouts
           end
         end
 
+        puts "Garmin: no valid DI token found"
+        puts "  First time: ./scripts/garmin_auth_local.sh"
+        puts "  Refresh:    ./scripts/garmin_auth_local.sh --sync"
         false
       end
 
       def call
-        return 0 if @config["auth_seed"].to_s.empty? && !File.exist?(token_path)
+        if @config["auth_seed"].to_s.empty? && !File.exist?(token_path)
+          puts "Garmin: auth_seed not configured and no cached token"
+          puts "  Run: ./scripts/garmin_auth_local.sh"
+          return 0
+        end
 
         return 0 unless authenticate
 
@@ -85,7 +92,12 @@ module Workouts
         @access_token = decoded
         save_tokens
         true
+      rescue JSON::ParserError
+        puts "Garmin: auth_seed decode failed — invalid Base64 or JSON"
+        puts "  Fix: ./scripts/garmin_auth_local.sh --sync"
+        false
       rescue => e
+        puts "Garmin: auth_seed error: #{e.message}"
         false
       end
 
@@ -108,7 +120,17 @@ module Workouts
         )
 
         resp = retry_on_429 { send_http(uri, req) }
-        raise AuthError, "DI refresh error: #{resp.code}" unless resp.code.to_i == 200
+        unless resp.code.to_i == 200
+          msg = "DI refresh error: #{resp.code}"
+          if resp.code.to_i == 400
+            msg += " — refresh_token expired across rotation"
+            msg += ", re-run: scripts/garmin_auth_local.sh"
+          elsif resp.code.to_i == 401
+            msg += " — DI client_id rotated by Garmin"
+            msg += ", re-run: scripts/garmin_auth_local.sh"
+          end
+          raise AuthError, msg
+        end
 
         result = JSON.parse(resp.body)
         result["expires_at"] = Time.now.to_i + (result["expires_in"] || 64800).to_i
