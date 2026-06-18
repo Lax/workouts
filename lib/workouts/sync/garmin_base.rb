@@ -582,6 +582,8 @@ module Workouts
             positionLong: lng,
             altitude: r["altitude"],
             heartRate: r["heartRate"],
+            cadence: r["cadence"],
+            power: r["power"],
             speed: r["speed"],
             timestamp: abs_ts,
             distance: r["distance"],
