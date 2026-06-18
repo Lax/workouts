@@ -151,9 +151,16 @@ CREATE TABLE activities (
   start_date_local TEXT,
   location_country TEXT,
   summary_polyline TEXT,                    -- Google Polyline 编码
-  average_heartrate REAL,
+  average_heartrate REAL,                   -- bpm
+  max_heartrate REAL,                       -- bpm
+  average_cadence REAL,                     -- rpm
+  max_cadence REAL,                         -- rpm
+  average_power REAL,                       -- watts
+  max_power REAL,                           -- watts
+  average_temperature REAL,                 -- °C
+  calories INTEGER,                         -- kcal
   average_speed REAL,                       -- m/s
-  elevation_gain REAL,
+  elevation_gain REAL,                      -- m
   source       TEXT,                        -- 来源标识
   duplicate_info TEXT,                      -- 去重匹配信息（JSON 数组）
   created_at   DATETIME,
