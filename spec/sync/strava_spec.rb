@@ -105,7 +105,10 @@ RSpec.describe Workouts::Sync::Strava do
         "start_date" => "2025-06-01T08:00:00Z",
         "start_date_local" => "2025-06-01T16:00:00Z",
         "map" => { "summary_polyline" => "xyz" },
-        "total_elevation_gain" => 200.0 }
+        "average_heartrate" => 145, "max_heartrate" => 172,
+        "average_cadence" => 85, "average_watts" => 210,
+        "max_watts" => 450, "calories" => 680,
+        "average_temp" => 28, "total_elevation_gain" => 200.0 }
     end
     before { allow(strava).to receive(:credentials_present?).and_return(false) }
 
@@ -119,6 +122,27 @@ RSpec.describe Workouts::Sync::Strava do
 
     it "uses polyline parameter" do
       expect(attrs[:summary_polyline]).to eq("poly_abc")
+    end
+
+    it "maps sensor fields from API summary" do
+      expect(attrs[:average_heartrate]).to eq(145)
+      expect(attrs[:max_heartrate]).to eq(172)
+      expect(attrs[:average_cadence]).to eq(85)
+      expect(attrs[:max_cadence]).to be_nil
+      expect(attrs[:average_power]).to eq(210)
+      expect(attrs[:max_power]).to eq(450)
+      expect(attrs[:calories]).to eq(680)
+      expect(attrs[:average_temperature]).to eq(28)
+    end
+
+    it "leaves sensor fields nil when absent from API" do
+      minimal = { "id" => 3003, "type" => "Run" }
+      result = strava.send(:build_attrs, minimal, "run")
+      expect(result[:average_heartrate]).to be_nil
+      expect(result[:max_heartrate]).to be_nil
+      expect(result[:average_cadence]).to be_nil
+      expect(result[:average_power]).to be_nil
+      expect(result[:calories]).to be_nil
     end
   end
 

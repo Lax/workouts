@@ -36,6 +36,8 @@ RSpec.describe Workouts::Export::CSV do
     described_class.new(db: db, output: output).call
     headers = CSV.parse(File.read(output), headers: true).headers
     expect(headers).to include("run_id", "name", "distance", "sport_category")
+    expect(headers).to include("average_cadence", "max_cadence", "average_power", "max_power")
+    expect(headers).to include("max_heartrate", "calories", "average_temperature")
   end
 
   it "filters by sport category" do
