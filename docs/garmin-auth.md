@@ -89,13 +89,22 @@ garmin.com 的 SSO 端点 `/mobile/api/login` 已被 Garmin 关闭（返回 400�
 
 本地 MFA 登录通过 `scripts/garmin_auth_local.sh` 独立于 Ruby 认证流程。
 
-### 实测结果（2026-06-17）
+### 实测结果（2026-06-18 更新）
 
-- `mobile+cffi` Safari TLS 成功穿透 CF
-- MFA 交互式认证成功 → DI OAuth2 token 交换成功 → 同步 2 条活动
-- `portal+cffi` 5 指纹中 Safari/Edge/Chrome 返回无响应，safari_ios/chrome120 返回 403
-- `auth_seed` Base64 已写入 config.yml + GitHub Secret
-- 结论：curl_cffi `mobile+cffi` 对无 MFA/有 MFA 账号均可用（MFA 通过 stdin 交互）
+**Strategy B (Playwright) — primary**
+
+- `context.request` Chrome TLS 指纹通过 mobile API 端点 CF
+- 首次 SSO+MFA 后 Set-Cookie 返回 CASMFA `Max-Age=31536000`、`Expires=2027-06-18`（365 天）
+- DI OAuth2 token payload 内 `mfa_expiration_timestamp` 同为 `2027-06-18` — 双证据确认
+- 后续执行：GET signin → 302 redirect 直接返 ticket，无 MFA，秒级完成
+- CASTGC（Ticket Granting Cookie）无显式 Max-Age，Garmin 可能服务端提前吊销 — 待时间验证
+
+**Strategy A (curl_cffi) — fallback**
+
+- `mobile+cffi` Safari TLS 穿透 CF，无 cookie 持久化，每次 30-45s 延时 + MFA
+- `portal+cffi` 5 指纹中 safari_ios/chrome120 返回 403
+
+**选 B 优先的原因：** (1) cookie 服务端声明 365 天有效；(2) 首次后零交互；(3) 纯 Python 依赖无 C 编译。A 作为已验证的 TLS 指纹降级路径。
 
 ### 首次设置（有 MFA）
 
@@ -143,10 +152,11 @@ CI 不与 MFA 交互——仅使用 auth_seed + token 缓存自旋。
 garmin_auth_local.sh               # Shell orchestrator, reads config.yml → dispatches
   ├── --sync 模式                   # reads cache token → Base64 → writes auth_seed
   └── SSO 模式 (without --sync)     # environment: SYNC__GARMIN__EMAIL + PASSWORD
-        ├── Strategy A              # garmin_auth.py (curl_cffi, default priority)
-        │     ├── mobile+cffi       # primary: Safari TLS, /mobile/api/login
-        │     └── portal+cffi       # fallback: 5 TLS fingerprints, /portal/api/login
-        └── Strategy B (not called) # garmin_auth_playwright.py (Playwright browser)
+        ├── Strategy B (primary)    # garmin_auth_playwright.py (Playwright, ~1yr session cookies)
+        │     └── mobile API        # context.request → /mobile/api/login → /mobile/api/mfa/verifyCode
+        └── Strategy A (fallback)   # garmin_auth.py (curl_cffi, TLS impersonation)
+              ├── mobile+cffi       # Safari TLS, /mobile/api/login
+              └── portal+cffi       # 5 TLS fingerprints, /portal/api/login
 ```
 
 两种策略都是**独立的本地工具**，各打印 JSON DI OAuth2 token 到 stdout。
@@ -190,47 +200,45 @@ MFA 处理 (`_handle_mfa`, line 96-130):
 - `portal+cffi` 中 `safari_ios`/`chrome120` 返回 403，`safari`/`edge101`/`chrome` 无响应
 - 30-45s 随机延迟对 CF WAF bypass 至关重要
 
-#### Strategy B: Playwright（`scripts/garmin_auth_playwright.py:202-314`）
+#### Strategy B: Playwright（`scripts/garmin_auth_playwright.py`）
 
-依赖 `playwright` Python 包 + Chromium 浏览器。使用真实浏览器绕过所有 TLS 指纹检测。
+依赖 `playwright` Python 包 + Chromium 浏览器。使用真实浏览器的 APIRequestContext 调用 mobile API 端点绕过 Cloudflare。
+
+Garmin SSO **网页**（portal / widget / connect 页面）受 CF WAF 严格保护，headless Chromium 返回 429 / "Access denied"。但 `/mobile/api/login` 等 **API 端点** 接受真实 Chrome TLS 指纹，Playwright 的 `context.request` 可正常调用。
 
 | 特性 | 详情 |
 |---|---|
 | 引擎 | Playwright Chromium, headless |
+| 通信方式 | `context.request`（APIRequestContext），非页面导航 |
 | UA | Android WebView (same as mobile+cffi) |
-| Session 缓存 | `data/cache/garmin_playwright_session_{domain}.json`, ~1 年有效 |
-| MFA 处理 | 浏览器内表单交互（无 stdin）, 也支持 `SYNC__GARMIN__MFA_CODE` env var |
+| Session 缓存 | `data/cache/garmin_playwright_session_{domain}.json` — cookies 有助降低 CF 检测，但每次仍需重新 SSO 登录 |
+| MFA 处理 | stdin 交互 + `SYNC__GARMIN__MFA_CODE` env var |
+| 延时 | 30-45s 随机延时（与 Strategy A 一致） |
 
 流程：
 ```
 1. Launch Chromium (headless)
-2. Restore session cookies from cache (if exists)
-3. Navigate to connect.garmin.com/modern/
-   → no SSO redirect: session valid, skip login
-   → SSO redirect detected: session expired, perform login
-
-4. Login (if needed):
-   → try portal login widget → fill form → submit → handle MFA in browser
-   → fallback: widget-based login flow
-   → save fresh session cookies to cache
-
-5. After ticket: _di_exchange(domain, ticket) → same as Strategy A
-
-6. Alternative (session valid but no ticket):
-   → browser fetch() to connectapi endpoint as auth verification
-   → replay portal login to get fresh DI token
+2. Restore session cookies from cache (optional — helps CF bypass)
+3. GET /mobile/sso/en_US/sign-in (establish CF cookies)
+4. 30-45s random delay
+5. POST /mobile/api/login (credentials as JSON)
+   → SUCCESS: return CAS ticket
+   → MFA_REQUIRED: prompt code → POST /mobile/api/mfa/verifyCode
+6. _di_exchange(domain, ticket) — POST diauth.garmin.com
+7. Save session cookies + output DI OAuth2 JSON to stdout
 ```
 
-Session 缓存优势:
-- 首次登录后 cookies 持久化，后续调用无需重新认证（~1 年）
-- 首次只需要人在 CI 中手动触发带 Secrets 的 workflow_dispatch
-- MFA 仅首次需要——session cookies 复用后续无 MFA
+与 Strategy A 的区别:
+- Strategy A（curl_cffi）依赖 C 扩展的 TLS 指纹模拟，需编译 `curl_cffi` 包
+- Strategy B（Playwright）纯 Python 依赖（pip install playwright），部署更简单
+- 两者都使用相同的 mobile API 端点 + DI exchange 逻辑
+- Playwright 的 `context.request` 在浏览器进程的上下文中发请求，CF 看到真实 Chrome TLS 指纹
 
 #### 为什么不在 Ruby authenticate 中
 
 | 原因 | 说明 |
 |---|---|
-| CF TLS 检测 | Ruby `Net::HTTP` 被 Cloudflare 429/403。curl_cffi / Playwright 才具备 TLS 指纹模拟能力 |
+| CF TLS 检测 | Ruby `Net::HTTP` 被 Cloudflare 429/403。Playwright（APIRequestContext，真实 Chrome TLS）/ curl_cffi（TLS 指纹模拟）才具备穿透能力 |
 | 重依赖 | `curl_cffi` (C FFI + TLS 库) 和 `playwright` (Chromium 浏览器) 是 Python-only 的 |
 | MFA 交互 | stdin 交互式输入（"Enter MFA code:"）不适合 CI 的无人值守环境 |
 | 设计原则 | CI 通过 `auth_seed`（预先认证的 DI token）初始化，然后靠 token 缓存 + `refresh_token` 自旋。本地脚本一次性生成 `auth_seed`，编入 GitHub Secret |
