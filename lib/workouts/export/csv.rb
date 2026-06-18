@@ -7,7 +7,9 @@ module Workouts
         run_id name distance moving_time elapsed_time
         sport_category sport_type start_date start_date_local
         location_country summary_polyline
-        average_heartrate average_speed elevation_gain source
+        average_heartrate max_heartrate average_cadence max_cadence
+        average_power max_power calories average_temperature
+        average_speed elevation_gain source
       ].freeze
 
       def initialize(db:, output:, activity_filter: nil)

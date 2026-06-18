@@ -33,6 +33,13 @@ module Workouts
           location_country: a[:location_country],
           summary_polyline: a[:summary_polyline],
           average_heartrate: a[:average_heartrate],
+          max_heartrate: a[:max_heartrate],
+          average_cadence: a[:average_cadence],
+          max_cadence: a[:max_cadence],
+          average_power: a[:average_power],
+          max_power: a[:max_power],
+          calories: a[:calories],
+          average_temperature: a[:average_temperature],
           average_speed: a[:average_speed],
           elevation_gain: a[:elevation_gain]
         }
