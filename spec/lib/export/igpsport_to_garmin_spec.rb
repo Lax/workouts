@@ -63,6 +63,22 @@ RSpec.describe Workouts::Export::IGPSportToGarmin do
       expect(activities.size).to eq(1)
       expect(activities.first[:run_id]).to eq("igpsport_new")
     end
+
+    it "limits by --limit" do
+      m = described_class.new(db: db, config: config, target: :intl, limit: 1)
+      insert_igpsport_activity(run_id: "igpsport_a", start_date: "2025-08-01 08:00:00")
+      insert_igpsport_activity(run_id: "igpsport_b", start_date: "2025-08-02 08:00:00")
+      activities = m.send(:load_igpsport_activities)
+      expect(activities.size).to eq(1)
+    end
+
+    it "ignores limit of 0" do
+      m = described_class.new(db: db, config: config, target: :intl, limit: 0)
+      insert_igpsport_activity(run_id: "igpsport_a", start_date: "2025-08-01 08:00:00")
+      insert_igpsport_activity(run_id: "igpsport_b", start_date: "2025-08-02 08:00:00")
+      activities = m.send(:load_igpsport_activities)
+      expect(activities.size).to eq(2)
+    end
   end
 
   describe "#dry_run" do
