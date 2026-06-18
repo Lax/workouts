@@ -475,3 +475,18 @@ _无_
 | 结构化 > 段落 | 表格 / 列表 > 自然段。AI 解析表格比段落可靠 |
 | 约定写出来 | `__` 分隔符、`SOURCE` 占位符含义、OAuth 术语，在注释里写清 |
 | 文件锚点 | 每个 `docs/` 文件以 `# <feature> — <summary>` 开头 |
+
+## 错误消息约定
+
+每条 actionable 错误消息必须包含两个要素：
+
+| 要素 | 格式 | 示例 |
+|---|---|---|
+| 问题描述 | `<层级>: <失败原因>` | `Garmin: auth_seed decode failed — invalid Base64` |
+| 操作指引 | `  <动>: <命令>` | `  Fix: ./scripts/garmin_auth_local.sh --sync` |
+
+规则：
+1. 错误不吞 — 每层至少输出一行描述，`rescue` 不加原因视为 bug
+2. 操作命令可直接复制粘贴执行（先写 `Fix:`/`Re-auth:`/`Run:` 动词）
+3. `sync` count==0 时报 `warn`（黄色），不报 `done`（绿色），避免误认为成功
+4. 区分过期类型 — HTTP 400 是数据过期（refresh_token 旋转），HTTP 401 是权限吊销（client_id）

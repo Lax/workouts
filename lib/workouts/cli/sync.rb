@@ -21,7 +21,11 @@ module Workouts
           begin
             count = adapter.call
             print "\r#{' ' * 60}\r" if adapter.progress_reported
-            say_status :done, "#{source}: #{count} activities", :green
+            if count == 0
+              say_status :warn, "#{source}: 0 activities (see messages above)", :yellow
+            else
+              say_status :done, "#{source}: #{count} activities", :green
+            end
           rescue => e
             print "\r#{' ' * 60}\r"
             say_status :error, "#{source}: #{e.message}", :red
