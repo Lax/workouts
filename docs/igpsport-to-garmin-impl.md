@@ -3,8 +3,8 @@
 ## 命令
 
 ```
-workouts export igpsport_to_garmin      [--dry] [--since=YYYY-MM-DD]
-workouts export igpsport_to_garmin_cn   [--dry] [--since=YYYY-MM-DD]
+workouts export igpsport_to_garmin      [--dry] [--since=YYYY-MM-DD] [--limit=N]
+workouts export igpsport_to_garmin_cn   [--dry] [--since=YYYY-MM-DD] [--limit=N]
 ```
 
 ## 文件
@@ -93,6 +93,23 @@ DB activities (source='igpsport')
 
 ## 限制 / 后续
 
+## 批量控制
+
+通过 `--limit=N` 控制每次上传数量，默认 10。分别由两个 env var 控制：
+
+| 目标 | Env var | Repo Variable | 默认值 |
+|---|---|---|---|
+| International | `SYNC__IGP2GARMIN__LIMIT` | `SYNC_IGP2GARMIN_LIMIT` | 10 |
+| CN | `SYNC__IGP2GARMIN_CN__LIMIT` | `SYNC_IGP2GARMIN_CN_LIMIT` | 10 |
+
+CLI 中可通过 Workflow env 传递，例如：
+```yaml
+env:
+  SYNC__IGP2GARMIN__LIMIT: ${{ vars.SYNC_IGP2GARMIN_LIMIT || 10 }}
+```
+
+## 限制 / 后续
+
 | 事项 | 计划 |
 |---|---|
 | L3 模糊匹配（时间+距离） | 后续 |
@@ -102,7 +119,7 @@ DB activities (source='igpsport')
 
 ## 测试性能
 
-全部 32 个测试在 0.04 秒完成。策略：
+全部 34 个测试在 0.04 秒完成。策略：
 - 无网络请求（stub Faraday response / stub 文件读取）
 - 内存 SQLite（无 I/O）
 - 小 fixture（3 个 trackpoints）

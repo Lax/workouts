@@ -115,6 +115,8 @@ jobs:
           SYNC__STRAVA__CLIENT_SECRET: ${{ secrets.SYNC_STRAVA_CLIENT_SECRET }}
           SYNC__STRAVA__REFRESH_TOKEN: ${{ secrets.SYNC_STRAVA_REFRESH_TOKEN }}
           SYNC__TIME_BUDGET: ${{ vars.SYNC_TIME_BUDGET || '' }}
+          SYNC__IGP2GARMIN__LIMIT: ${{ vars.SYNC_IGP2GARMIN_LIMIT || 10 }}
+          SYNC__IGP2GARMIN_CN__LIMIT: ${{ vars.SYNC_IGP2GARMIN_CN_LIMIT || 10 }}
         run: bundle exec exe/workouts sync
 
       - id: cron
