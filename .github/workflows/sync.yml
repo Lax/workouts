@@ -15,6 +15,8 @@ jobs:
       db_changed: ${{ steps.db-changed.outputs.changed }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - uses: ruby/setup-ruby@v1
         with:
@@ -151,13 +153,17 @@ jobs:
         if: github.event_name == 'schedule'
         env:
           NEW_N: ${{ steps.decide.outputs.new_n }}
+          WORKOUTS_SYNC_PAT: ${{ secrets.WORKOUTS_SYNC_PAT }}
         run: |
           sed -i "s|/\\([0-9]\\) \\* \\*|/${NEW_N} * *|" .github/workflows/sync.yml
           git config user.name "workouts-bot"
           git config user.email "bot@workouts"
-          # PAT required: GITHUB_TOKEN cannot modify .github/workflows/
           # sed matches /{N} * * on both cron lines (same N, updates both)
-          git remote set-url origin https://x-access-token:${{ secrets.WORKOUTS_RAW_PAT }}@github.com/Lax/workouts.git
+          # persist-credentials: false → no extraheader written.
+          # Write bare PAT extraheader (no x-access-token: prefix)
+          # so server routes as PAT, not GitHub App.
+          git config --add http.https://github.com/.extraheader \
+            "AUTHORIZATION: basic $(printf '%s:' "$WORKOUTS_SYNC_PAT" | base64 -w0)"
           git add .github/workflows/sync.yml
           git diff --cached --quiet || \
             git commit -m "chore: sync interval N=$NEW_N"
