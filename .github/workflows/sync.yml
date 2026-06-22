@@ -148,7 +148,7 @@ jobs:
           ' >> $GITHUB_OUTPUT
 
       - name: Update cron (schedule only)
-        if: github.event_name == 'schedule'
+        #if: github.event_name == 'schedule'
         env:
           NEW_N: ${{ steps.decide.outputs.new_n }}
         run: |
@@ -157,7 +157,7 @@ jobs:
           git config user.email "bot@workouts"
           # PAT required: GITHUB_TOKEN cannot modify .github/workflows/
           # sed matches /{N} * * on both cron lines (same N, updates both)
-          git remote set-url origin https://x-access-token:${{ secrets.WORKOUTS_RAW_PAT }}@github.com/Lax/workouts.git
+          git remote set-url origin https://oauth2:${{ secrets.WORKOUTS_RAW_PAT }}@github.com/Lax/workouts.git
           git add .github/workflows/sync.yml
           git diff --cached --quiet || \
             git commit -m "chore: sync interval N=$NEW_N"
