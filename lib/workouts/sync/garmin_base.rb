@@ -359,7 +359,7 @@ module Workouts
             attrs = build_attrs(details, act_id, type, polyline)
             upsert_activity(attrs)
             count += 1
-            report_progress(count)
+            report_progress(count, nil, build_progress_info(attrs))
           end
 
           start += limit

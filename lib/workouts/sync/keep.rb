@@ -122,12 +122,19 @@ module Workouts
           break if time_expired?
 
           if raw_file_exists?(keep_id)
-            upsert_from_raw(compound_id) unless @existing_ids.include?("keep_#{keep_id}")
+            if !@existing_ids.include?("keep_#{keep_id}") && (attrs = upsert_from_raw(compound_id))
+              synced += 1
+              report_progress(synced, total, build_progress_info(attrs))
+            end
             next
           end
 
-          synced += 1 if sync_single_run_with_raw(compound_id, sport)
-          report_progress(synced, total)
+          if (attrs = sync_single_run_with_raw(compound_id, sport))
+            synced += 1
+            report_progress(synced, total, build_progress_info(attrs))
+          else
+            report_progress(synced, total)
+          end
         end
         synced
       end
@@ -190,9 +197,9 @@ module Workouts
         return false unless attrs
 
         upsert_activity(attrs)
-        true
+        attrs
       rescue JSON::ParserError
-        false
+        nil
       end
 
       def upsert_from_raw(compound_id)
@@ -212,7 +219,7 @@ module Workouts
         return false unless attrs
 
         upsert_activity(attrs)
-        true
+        attrs
       end
 
       def load_wgs_points(keep_id, raw)

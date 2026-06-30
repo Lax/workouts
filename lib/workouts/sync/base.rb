@@ -1,3 +1,4 @@
+require "date"
 require_relative "tally"
 
 module Workouts
@@ -50,14 +51,16 @@ module Workouts
         File.join(std_dir, "#{platform_id}.#{ext}")
       end
 
-      def report_progress(count, total = nil)
+      def report_progress(count, total = nil, info = nil)
         return unless show_progress?(count, total)
 
         @progress_reported = true
         tally = Tally.new(count)
         line = "#{source_label}: #{tally} (#{count}"
         line += "/#{total}" if total
-        line += ") "
+        line += ")"
+        line += " #{info}" if info
+        line += " "
         print "\r#{line}"
         $stdout.flush
       end
@@ -77,6 +80,36 @@ module Workouts
 
       def source_label
         self.class.name.split("::").last
+      end
+
+      def build_progress_info(attrs)
+        parts = []
+
+        if (sd = attrs["start_date"] || attrs[:start_date])
+          d = Date.parse(sd.to_s) rescue nil
+          if d
+            date_str = d.year == Date.today.year ? d.strftime("%m-%d") : d.strftime("%Y-%m-%d")
+            parts << date_str
+          end
+        end
+
+        type = attrs["sport_category"] || attrs[:sport_category]
+        parts << type if type
+
+        dist = attrs["distance"] || attrs[:distance]
+        if dist && dist.to_f > 0
+          parts << "#{format('%.1f', dist.to_f / 1000)}km"
+        end
+
+        source = attrs["source"] || attrs[:source] || source_label
+        name = attrs["name"] || attrs[:name]
+        display_name = name.to_s.strip
+        display_name = "#{source} Activity" if display_name.empty?
+        chars = display_name.chars
+        display_name = chars.first(30).join + "…" if chars.size > 30
+        parts << display_name
+
+        parts.join(" | ") unless parts.empty?
       end
 
       def upsert_activity(attrs)
