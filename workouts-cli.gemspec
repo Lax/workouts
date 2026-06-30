@@ -11,7 +11,7 @@ Gem::Specification.new do |s|
   s.bindir      = "exe"
   s.executables = ["workouts"]
 
-  s.required_ruby_version = ">= 3.1"
+  s.required_ruby_version = ">= 3.4"
 
   s.add_dependency "thor", "~> 1.3"
   s.add_dependency "sequel", "~> 5.0"

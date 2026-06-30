@@ -132,3 +132,66 @@ RSpec.describe Workouts::Export::SVG::GithubDrawer do
     end
   end
 end
+
+RSpec.describe Workouts::Export::SVG::Renderer do
+  let(:db) do
+    d = Sequel.sqlite
+    d.create_table(:activities) do
+      Integer :id, primary_key: true
+      String :run_id, null: false, unique: true
+      String :name; Float :distance; Integer :moving_time; Integer :elapsed_time
+      String :sport_category, null: false, default: "run"; String :sport_type
+      String :start_date; String :start_date_local; String :location_country
+      String :summary_polyline, text: true
+      Float :average_heartrate; Float :max_heartrate
+      Float :average_cadence; Float :max_cadence; Float :average_power; Float :max_power
+      Integer :calories; Float :average_temperature
+      Float :average_speed; Float :elevation_gain
+      String :source
+      DateTime :created_at, default: Sequel::CURRENT_TIMESTAMP
+      DateTime :updated_at, default: Sequel::CURRENT_TIMESTAMP
+    end
+    d
+  end
+
+  let(:output) { File.join(Dir.mktmpdir, "test.svg") }
+  subject(:renderer) { described_class.new(db:, style: "github", output:, title: "Test") }
+
+  before do
+    now = Time.now.utc
+    db[:activities].insert(
+      run_id: "r1", name: "Run", distance: 5000, moving_time: 1500,
+      sport_category: "run", start_date: "2024-06-15T01:00:00Z",
+      source: "test", created_at: now, updated_at: now
+    )
+  end
+
+  after { FileUtils.rm_rf(File.dirname(output)) }
+
+  it "returns activity count" do
+    expect(renderer.call).to eq(1)
+  end
+
+  it "outputs valid SVG" do
+    renderer.call
+    expect(File.exist?(output)).to be true
+    doc = Nokogiri::XML(File.read(output))
+    expect(doc.errors).to be_empty
+  end
+
+  it "outputs SVG with expected namespace" do
+    renderer.call
+    svg = File.read(output)
+    expect(svg).to include('xmlns="http://www.w3.org/2000/svg"')
+  end
+
+  it "returns 0 for empty DB" do
+    empty_db = Sequel.sqlite
+    empty_db.create_table(:activities) do
+      primary_key :id; String :run_id; String :start_date
+      String :sport_category
+    end
+    r = described_class.new(db: empty_db, style: "github", output: output)
+    expect(r.call).to eq(0)
+  end
+end
