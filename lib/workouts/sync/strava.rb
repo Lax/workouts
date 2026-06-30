@@ -58,9 +58,12 @@ module Workouts
             break if time_expired?
             break if detail_calls >= MAX_DETAIL_CALLS
 
-            count += 1 if sync_activity(act, act_id, token)
+            result = sync_activity(act, act_id, token)
+            if result
+              count += 1
+              report_progress(count, nil, build_progress_info(result))
+            end
             detail_calls += 1
-            report_progress(count)
           end
 
           page += 1
@@ -90,7 +93,7 @@ module Workouts
 
         attrs = build_attrs(act, type, polyline, dup_info)
         upsert_activity(attrs)
-        true
+        attrs
       end
 
       def fetch_activities(token, page)

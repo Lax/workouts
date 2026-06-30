@@ -58,9 +58,11 @@ module Workouts
             next if existing.include?(ride_id) && raw_file_exists?(ride_id)
             break if time_expired?
 
-            synced = sync_activity(act, ride_id)
-            count += 1 if synced
-            report_progress(count) if synced
+            result = sync_activity(act, ride_id)
+            if result
+              count += 1
+              report_progress(count, nil, build_progress_info(result))
+            end
           end
 
           page += 1
@@ -97,7 +99,7 @@ module Workouts
         return false unless attrs
 
         upsert_activity(attrs)
-        true
+        attrs
       end
 
       def get_download_url(ride_id)

@@ -198,9 +198,10 @@ RSpec.describe Workouts::Sync::Keep do
       allow(keep).to receive(:http_get).and_return(log_response)
     end
 
-    it "returns true on success" do
+    it "returns attrs on success" do
       result = keep.send(:sync_single_run_with_raw, compound_id, "running")
-      expect(result).to be true
+      expect(result).to be_a(Hash)
+      expect(result[:run_id]).to eq("keep_9223370458896850307")
     end
 
     it "writes raw file" do

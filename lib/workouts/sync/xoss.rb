@@ -85,8 +85,11 @@ module Workouts
             act_id = act["id"].to_s
             next if existing.include?(act_id)
 
-            count += 1 if process_activity(act)
-            report_progress(count)
+            result = process_activity(act)
+            if result
+              count += 1
+              report_progress(count, nil, build_progress_info(result))
+            end
           end
 
           offset += limit
@@ -136,7 +139,7 @@ module Workouts
         }
 
         upsert_activity(attrs)
-        true
+        attrs
       end
 
       def map_sport(sport)

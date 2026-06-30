@@ -104,8 +104,11 @@ module Workouts
             type = map_sport(act["sport"])
             next if skip_type?(type)
 
-            count += 1 if process_activity(act, type)
-            report_progress(count)
+            result = process_activity(act, type)
+            if result
+              count += 1
+              report_progress(count, nil, build_progress_info(result))
+            end
           end
 
           offset += limit
@@ -160,7 +163,7 @@ module Workouts
         end
 
         upsert_activity(attrs)
-        true
+        attrs
       end
 
       def raw_path(platform_id)
