@@ -2,6 +2,13 @@ RSpec.describe Workouts::Sync::IGPSPORT do
   let(:db) { create_test_db }
   let(:config) { { "phone" => "13800138000", "password" => "pw" } }
   subject(:igp) { described_class.new(config:, db:, activity_filter: nil) }
+  let(:tmpdir) { Dir.mktmpdir }
+
+  before do
+    allow(igp).to receive(:raw_dir).and_return(File.join(tmpdir, "raw"))
+  end
+
+  after { FileUtils.rm_rf(tmpdir) }
 
   def create_test_db
     d = Sequel.sqlite
@@ -47,7 +54,7 @@ RSpec.describe Workouts::Sync::IGPSPORT do
         allow(igp).to receive(:fetch_page).with(2).and_return([])
         allow(igp).to receive(:get_download_url).and_return("https://example.com/fit")
         allow(igp).to receive(:download_fit).and_wrap_original { |_m, _url, id|
-          dir = "data/raw/igpsport"
+          dir = File.join(tmpdir, "raw")
           FileUtils.mkdir_p(dir)
           File.write("#{dir}/#{id}.fit", "")
         }
@@ -74,8 +81,8 @@ RSpec.describe Workouts::Sync::IGPSPORT do
 
       it "skips already synced activities" do
         db[:activities].insert(run_id: "igpsport_50279925", source: "igpsport")
-        FileUtils.mkdir_p("data/raw/igpsport")
-        File.write("data/raw/igpsport/50279925.fit", "")
+        FileUtils.mkdir_p(File.join(tmpdir, "raw"))
+        File.write(File.join(tmpdir, "raw", "50279925.fit"), "")
         expect(igp.call).to eq(2)
       end
 

@@ -3,15 +3,15 @@ RSpec.describe Workouts::Sync::Keep do
   let(:config) { { "phone" => "13800138000", "password" => "test-pw" } }
   subject(:keep) { described_class.new(config:, db:, time_budget: nil) }
   let(:compound_id) { "userhash_9223370458896850307_rn" }
+  let(:tmpdir) { Dir.mktmpdir }
 
   before do
-    FileUtils.mkdir_p("data/raw/keep")
-    FileUtils.mkdir_p("data/std/keep")
+    allow(keep).to receive(:raw_dir).and_return(File.join(tmpdir, "raw"))
+    allow(keep).to receive(:std_dir).and_return(File.join(tmpdir, "std"))
   end
 
   after do
-    FileUtils.rm_rf("data/raw/keep")
-    FileUtils.rm_rf("data/std/keep")
+    FileUtils.rm_rf(tmpdir)
   end
 
   def create_test_db
@@ -153,7 +153,7 @@ RSpec.describe Workouts::Sync::Keep do
 
       it "preserves raw file" do
         keep.call
-        path = "data/raw/keep/9223370458896850307.json"
+        path = File.join(tmpdir, "raw", "9223370458896850307.json")
         expect(File.exist?(path)).to be true
         content = JSON.parse(File.read(path))
         expect(content).to be_a(Hash)
@@ -164,7 +164,7 @@ RSpec.describe Workouts::Sync::Keep do
 
       it "writes standardized view" do
         keep.call
-        path = "data/std/keep/9223370458896850307.json"
+        path = File.join(tmpdir, "std", "9223370458896850307.json")
         expect(File.exist?(path)).to be true
         content = JSON.parse(File.read(path))
         expect(content).to be_an(Array)
@@ -177,7 +177,8 @@ RSpec.describe Workouts::Sync::Keep do
     context "when activity already in DB and raw file exists" do
       before do
         db[:activities].insert(run_id: "keep_9223370458896850307", source: "keep")
-        File.write("data/raw/keep/9223370458896850307.json", "[]")
+        FileUtils.mkdir_p(File.join(tmpdir, "raw"))
+        File.write(File.join(tmpdir, "raw", "9223370458896850307.json"), "[]")
         allow(keep).to receive(:http_post).with(any_args).and_return(login_ok)
         empty = empty_stats
         allow(keep).to receive(:http_get).and_return(
@@ -206,7 +207,7 @@ RSpec.describe Workouts::Sync::Keep do
 
     it "writes raw file" do
       keep.send(:sync_single_run_with_raw, compound_id, "running")
-      path = "data/raw/keep/9223370458896850307.json"
+      path = File.join(tmpdir, "raw", "9223370458896850307.json")
       expect(File.exist?(path)).to be true
     end
 

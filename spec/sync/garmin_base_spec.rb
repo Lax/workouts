@@ -201,6 +201,28 @@ RSpec.describe Workouts::Sync::GarminBase do
     end
   end
 
+  describe "API response type handling" do
+    subject(:adapter) { stub_adapter }
+
+    it "build_attrs handles polyline as Array" do
+      detail = { "activityName" => "Test", "summaryDTO" => { "distance" => 5000 } }
+      expect { adapter.send(:build_attrs, detail, "1001", "run") }.not_to raise_error
+    end
+
+    it "build_attrs extracts sport_type from Hash activityTypeDTO" do
+      detail = { "activityName" => "Test",
+                 "activityTypeDTO" => { "typeKey" => "running" },
+                 "summaryDTO" => { "distance" => 5000 } }
+      attrs = adapter.send(:build_attrs, detail, "1001", "run")
+      expect(attrs[:sport_type]).to eq("running")
+    end
+
+    it "build_attrs handles missing summaryDTO gracefully" do
+      detail = { "activityName" => "Test" }
+      expect { adapter.send(:build_attrs, detail, "1001", "run") }.not_to raise_error
+    end
+  end
+
   describe "#access_token_valid?" do
     subject(:adapter) { stub_adapter }
 

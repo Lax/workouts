@@ -2,6 +2,14 @@ RSpec.describe Workouts::Sync::Strava do
   let(:db) { create_test_db }
   let(:config) { { "client_id" => "x", "client_secret" => "y", "refresh_token" => "z" } }
   subject(:strava) { described_class.new(config:, db:, activity_filter: nil) }
+  let(:tmpdir) { Dir.mktmpdir }
+
+  before do
+    allow(strava).to receive(:raw_dir).and_return(File.join(tmpdir, "raw"))
+    allow(strava).to receive(:std_dir).and_return(File.join(tmpdir, "std"))
+  end
+
+  after { FileUtils.rm_rf(tmpdir) }
 
   def create_test_db
     d = Sequel.sqlite
@@ -77,7 +85,7 @@ RSpec.describe Workouts::Sync::Strava do
 
       it "writes L1 raw file" do
         strava.call
-        path = "data/raw/strava/1001.json"
+        path = File.join(tmpdir, "raw", "1001.json")
         expect(File.exist?(path)).to be true
         content = JSON.parse(File.read(path))
         expect(content).to have_key("detail")
@@ -86,7 +94,7 @@ RSpec.describe Workouts::Sync::Strava do
 
       it "writes L2 standardized view" do
         strava.call
-        path = "data/std/strava/1001.json"
+        path = File.join(tmpdir, "std", "1001.json")
         expect(File.exist?(path)).to be true
         content = JSON.parse(File.read(path))
         expect(content).to be_an(Array)

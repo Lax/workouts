@@ -2,6 +2,14 @@ RSpec.describe Workouts::Sync::XingZhe do
   let(:db) { create_test_db }
   let(:config) { { "email" => "test@xz.com", "password" => "pw" } }
   subject(:xz) { described_class.new(config:, db:, activity_filter: nil) }
+  let(:tmpdir) { Dir.mktmpdir }
+
+  before do
+    allow(xz).to receive(:raw_dir).and_return(File.join(tmpdir, "raw"))
+    allow(xz).to receive(:std_dir).and_return(File.join(tmpdir, "std"))
+  end
+
+  after { FileUtils.rm_rf(tmpdir) }
 
   def create_test_db
     d = Sequel.sqlite
@@ -81,8 +89,6 @@ RSpec.describe Workouts::Sync::XingZhe do
           allow(xz).to receive(:fetch_stream).with("4001").and_return(stream_data)
         end
 
-        after { FileUtils.rm_rf("data/raw/xingzhe") }
-
         it "generates summary_polyline from stream location via L1 file" do
           xz.call
           row = db[:activities].first
@@ -98,7 +104,7 @@ RSpec.describe Workouts::Sync::XingZhe do
         it "writes raw file to L1" do
           expect(xz).to receive(:write_raw).with(stream_data, "4001").and_call_original
           xz.call
-          expect(File.exist?("data/raw/xingzhe/4001.json")).to be true
+          expect(File.exist?(File.join(tmpdir, "raw", "4001.json"))).to be true
         end
 
         it "calls write_std with swapped lat/lng" do
@@ -227,14 +233,10 @@ RSpec.describe Workouts::Sync::XingZhe do
       context "when both DB and raw file exist" do
         before do
           db[:activities].insert(run_id: "xingzhe_4001", source: "xingzhe")
-          FileUtils.mkdir_p("data/raw/xingzhe")
-          File.write("data/raw/xingzhe/4001.json", "{}")
+          FileUtils.mkdir_p(File.join(tmpdir, "raw"))
+          File.write(File.join(tmpdir, "raw", "4001.json"), "{}")
           allow(xz).to receive(:fetch_page).with(0, 50).and_return(activities)
           allow(xz).to receive(:fetch_page).with(50, 50).and_return(nil)
-        end
-
-        after do
-          FileUtils.rm_rf("data/raw/xingzhe")
         end
 
         it "skips the activity" do
@@ -257,8 +259,6 @@ RSpec.describe Workouts::Sync::XingZhe do
           allow(xz).to receive(:fetch_stream) { |arg| arg == "4001" ? stream_data : nil }
           allow(xz).to receive(:write_std)
         end
-
-        after { FileUtils.rm_rf("data/raw/xingzhe") }
 
         it "re-processes and updates polyline" do
           expect(xz.call).to eq(1)
@@ -332,19 +332,17 @@ RSpec.describe Workouts::Sync::XingZhe do
       } }
     end
 
-    after { FileUtils.rm_rf("data/raw/xingzhe") }
-
     it "reads raw file and returns encoded polyline" do
-      FileUtils.mkdir_p("data/raw/xingzhe")
-      File.write("data/raw/xingzhe/test999.json", JSON.generate(raw_content))
+      FileUtils.mkdir_p(File.join(tmpdir, "raw"))
+      File.write(File.join(tmpdir, "raw", "test999.json"), JSON.generate(raw_content))
       result = xz.send(:stream_to_polyline, "test999")
       expect(result).to be_a(String)
       expect(result).not_to be_empty
     end
 
     it "swaps [lng, lat] to [lat, lng]" do
-      FileUtils.mkdir_p("data/raw/xingzhe")
-      File.write("data/raw/xingzhe/test999.json", JSON.generate(raw_content))
+      FileUtils.mkdir_p(File.join(tmpdir, "raw"))
+      File.write(File.join(tmpdir, "raw", "test999.json"), JSON.generate(raw_content))
       result = xz.send(:stream_to_polyline, "test999")
       decoded = Workouts::Geo::Polyline.decode(result)
       expect(decoded[0][0]).to be_within(1e-5).of(40.0)
@@ -360,8 +358,8 @@ RSpec.describe Workouts::Sync::XingZhe do
     it "returns nil when single location point" do
       content = raw_content.dup
       content["stream"] = content["stream"].merge("location" => [[116.0, 40.0]])
-      FileUtils.mkdir_p("data/raw/xingzhe")
-      File.write("data/raw/xingzhe/test999.json", JSON.generate(content))
+      FileUtils.mkdir_p(File.join(tmpdir, "raw"))
+      File.write(File.join(tmpdir, "raw", "test999.json"), JSON.generate(content))
       expect(xz.send(:stream_to_polyline, "test999")).to be_nil
     end
   end
@@ -379,11 +377,9 @@ RSpec.describe Workouts::Sync::XingZhe do
   describe "#write_raw" do
     let(:stream) { { "location" => [[116.0, 40.0]] } }
 
-    after { FileUtils.rm_rf("data/raw/xingzhe") }
-
     it "writes JSON file with source and stream" do
       xz.send(:write_raw, stream, "test123")
-      path = "data/raw/xingzhe/test123.json"
+      path = File.join(tmpdir, "raw", "test123.json")
       expect(File.exist?(path)).to be true
       data = JSON.parse(File.read(path))
       expect(data["source"]).to eq("xingzhe")
@@ -401,11 +397,9 @@ RSpec.describe Workouts::Sync::XingZhe do
         "distance" => [0.0, 100.0] }
     end
 
-    after { FileUtils.rm_rf("data/std/xingzhe") }
-
     it "writes JSON array with lat/lng/alt/ts/speed/distance" do
       xz.send(:write_std, pts, stream, "test456")
-      path = "data/std/xingzhe/test456.json"
+      path = File.join(tmpdir, "std", "test456.json")
       expect(File.exist?(path)).to be true
       data = JSON.parse(File.read(path))
       expect(data.size).to eq(2)
@@ -422,7 +416,7 @@ RSpec.describe Workouts::Sync::XingZhe do
 
       it "writes with nil values" do
         xz.send(:write_std, pts, stream, "test789")
-        data = JSON.parse(File.read("data/std/xingzhe/test789.json"))
+        data = JSON.parse(File.read(File.join(tmpdir, "std", "test789.json")))
         expect(data[0]["altitude"]).to be_nil
         expect(data[0]["timestamp"]).to be_nil
         expect(data[0]["speed"]).to be_nil

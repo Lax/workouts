@@ -293,6 +293,22 @@ jobs:
       - name: Export dashboard
         run: bundle exec exe/workouts export dashboard --output build/
 
+      - name: Validate dashboard HTML
+        run: |
+          for id in map app-drawer chart chart-small detail-overlay charts-overlay; do
+            if ! grep -q "id=\"$id\"" build/index.html; then
+              echo "::error::Missing DOM id: $id"
+              exit 1
+            fi
+          done
+          echo "OK: All DOM IDs present"
+
+      - name: Validate dashboard JS syntax
+        run: |
+          awk '/<script>/,/<\/script>/' build/index.html | head -n -1 | tail -n +2 > /tmp/dashboard.js
+          node -e "new Function(require('fs').readFileSync('/tmp/dashboard.js','utf8'))"
+          echo "OK: Dashboard JS syntax valid"
+
       - uses: actions/upload-artifact@v4
         with:
           name: pages-assets
