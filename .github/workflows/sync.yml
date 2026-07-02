@@ -8,7 +8,8 @@ on:
 
 jobs:
   sync:
-    runs-on: self-hosted
+    # set RUNNER_LABEL=self-hosted → local runner
+    runs-on: ${{ vars.RUNNER_LABEL || 'ubuntu-latest' }}
     permissions:
       contents: write
     outputs:
@@ -19,18 +20,18 @@ jobs:
           persist-credentials: false
 
       - uses: ruby/setup-ruby@v1
-        if: runner.name == 'GitHub Actions'
+        if: vars.RUNNER_LABEL != 'self-hosted'
         with:
           ruby-version: '3.4'
           bundler-cache: true
 
       - uses: actions/setup-python@v5
-        if: runner.name == 'GitHub Actions'
+        if: vars.RUNNER_LABEL != 'self-hosted'
         with:
           python-version: '3.12'
 
       - name: Install Python deps (curl_cffi for Strategy A)
-        if: runner.name == 'GitHub Actions'
+        if: vars.RUNNER_LABEL != 'self-hosted'
         run: pip install curl_cffi
 
       - name: Restore DB cache
