@@ -63,6 +63,9 @@ runs:
       shell: bash
       run: |
         mkdir -p data
+        echo "Recording source digests..." >&2
         for src in keep igpsport xoss xingzhe garmin garmin_cn strava; do
           echo "$src $(scripts/source-digest.sh "$src")"
+          echo "  done: $src" >&2
         done > data/.source-digests
+        echo "Snapshot written to data/.source-digests" >&2

@@ -5,9 +5,10 @@ runs:
   steps:
     - name: Detect changed sources
       id: detect
-      shell: bash
+      shell: bash {0}
       run: |
         if [ ! -f data/.source-digests ]; then
+          echo "No digest snapshot — marking all sources as changed" >&2
           for src in keep igpsport xoss xingzhe garmin garmin_cn strava; do
             echo "changed_${src}=true"
           done >> "$GITHUB_OUTPUT"
@@ -15,10 +16,17 @@ runs:
         fi
         while read -r src before; do
           after=$(scripts/source-digest.sh "$src")
-          echo "changed_${src}=$([ "$before" != "$after" ] && echo true || echo false)"
+          if [ "$before" != "$after" ]; then
+            echo "  $src: CHANGED" >&2
+            echo "changed_${src}=true"
+          else
+            echo "  $src: unchanged" >&2
+            echo "changed_${src}=false"
+          fi
         done < data/.source-digests >> "$GITHUB_OUTPUT"
 
-    - uses: actions/cache/save@v4
+    - name: Save — keep
+      uses: actions/cache/save@v4
       if: steps.detect.outputs.changed_keep == 'true'
       with:
         path: |
@@ -26,7 +34,8 @@ runs:
           data/std/keep/
         key: workouts-raw-v1-keep-${{ github.run_id }}
 
-    - uses: actions/cache/save@v4
+    - name: Save — igpsport
+      uses: actions/cache/save@v4
       if: steps.detect.outputs.changed_igpsport == 'true'
       with:
         path: |
@@ -34,7 +43,8 @@ runs:
           data/std/igpsport/
         key: workouts-raw-v1-igpsport-${{ github.run_id }}
 
-    - uses: actions/cache/save@v4
+    - name: Save — xoss
+      uses: actions/cache/save@v4
       if: steps.detect.outputs.changed_xoss == 'true'
       with:
         path: |
@@ -42,7 +52,8 @@ runs:
           data/std/xoss/
         key: workouts-raw-v1-xoss-${{ github.run_id }}
 
-    - uses: actions/cache/save@v4
+    - name: Save — xingzhe
+      uses: actions/cache/save@v4
       if: steps.detect.outputs.changed_xingzhe == 'true'
       with:
         path: |
@@ -50,7 +61,8 @@ runs:
           data/std/xingzhe/
         key: workouts-raw-v1-xingzhe-${{ github.run_id }}
 
-    - uses: actions/cache/save@v4
+    - name: Save — garmin
+      uses: actions/cache/save@v4
       if: steps.detect.outputs.changed_garmin == 'true'
       with:
         path: |
@@ -58,7 +70,8 @@ runs:
           data/std/garmin/
         key: workouts-raw-v1-garmin-${{ github.run_id }}
 
-    - uses: actions/cache/save@v4
+    - name: Save — garmin_cn
+      uses: actions/cache/save@v4
       if: steps.detect.outputs.changed_garmin_cn == 'true'
       with:
         path: |
@@ -66,10 +79,20 @@ runs:
           data/std/garmin_cn/
         key: workouts-raw-v1-garmin_cn-${{ github.run_id }}
 
-    - uses: actions/cache/save@v4
+    - name: Save — strava
+      uses: actions/cache/save@v4
       if: steps.detect.outputs.changed_strava == 'true'
       with:
         path: |
           data/raw/strava/
           data/std/strava/
         key: workouts-raw-v1-strava-${{ github.run_id }}
+
+    - name: Source cache summary
+      if: always()
+      shell: bash
+      run: |
+        echo "=== Source digests after sync ==="
+        for src in keep igpsport xoss xingzhe garmin garmin_cn strava; do
+          echo "  $src: $(scripts/source-digest.sh "$src")"
+        done
