@@ -64,6 +64,26 @@ lib/workouts/cli/sync.rb         # 同步子模块（sync, auth）
 
 ---
 
+## 关键技术决策
+
+| 决策 | 原因 |
+|---|---|
+| 默认使用系统代理（`HTTP_PROXY`/`HTTPS_PROXY`） | 不再强制绕过代理，XOSS/XingZhe 可通过代理访问中国境内服务 |
+| 内联 deploy job 而非 reusable workflow | 调用 `uses:` 在该仓库导致 `startup_failure` |
+| `__` 分隔 env var | 避免与 `garmin_cn` 等 key 中的 `_` 冲突 |
+| 保留 `upload-artifact` | Pages 部署稳定后再移除 |
+| Keep 用摘要数据 | Keep API 不提供 FIT，iGPSPORT 使用 mini_racer + @garmin/fitsdk 解析 FIT |
+| `data/raw/{source}/` 平面目录 | 与 running_page `GPX_OUT/` 兼容，symlink 级桥接 |
+| Keep raw 存 decrypt JSON | 保留原始 HR 序列和相对时间戳，polyline 生成可重跑 |
+| 统一列表：new_ids + missing_raw | 一次 API 调用完成 summary + raw，省 50% API 开销 |
+| 时间预算在循环顶部 break | 避免写了 summary 但没写 raw 的不一致状态 |
+| temp→rename 原子写入 raw 文件 | 崩溃恢复时 `raw_file_exists?` 不误判 |
+| Per-source 独立 GH Cache | 每源独立 cache key (`workouts-raw-v1-{source}-{run_id}`)，通过 `scripts/source-digest.sh` 计算内容 md5 检测变化，仅变动的源写 cache。通过 `.github/actions/sources-cache/restore` + `sources-cache/save` 封装。数据目录示例: `data/raw/{garmin,garmin_cn,igpsport,...}/`, `data/std/{...}/` |
+| 导出默认路径 `data/` → `build/` | 源数据与生成制品分离，gitignored |
+| `mini_racer` + `@garmin/fitsdk` 解析 FIT | V8 引擎在 Ruby 进程中执行 JS SDK，纯 gem 依赖，无需外部运行时 |
+
+---
+
 ## 同步适配器
 
 ### 数据源
@@ -92,7 +112,7 @@ lib/workouts/cli/sync.rb         # 同步子模块（sync, auth）
 | Garmin CN | `garmin_cn` | `data/raw/garmin_cn/` | `data/std/garmin_cn/` |
 | Strava | `strava` | `data/raw/strava/` | `data/std/strava/` |
 
-每源通过 `scripts/source-digest.sh` 计算内容 md5 作为 digest，用于 CI cache 的变更检测。`before_digest` 在 restore 阶段记录，sync 后比对，仅 digest 变化时写回 cache。
+每源通过 `scripts/source-digest.sh` 计算内容 md5 作为 digest，用于 CI cache 的变更检测。restore 阶段写入 `data/.source-digests`（统一快照文件），sync 后比对，仅 digest 变化时写回 cache。
 
 ### 数据流程
 
@@ -222,6 +242,12 @@ SYNC__TIME_BUDGET       → sync.time_budget           # 全局 sync 配置
 
 `__` 作为层级分隔符 → key 自身可含单 `_`（如 `garmin_cn`）
 
+### GitHub Variables
+
+| 变量 | 作用 | 切换命令 |
+|---|---|---|
+| `vars.RUNNER_LABEL` | 控制 sync job 的 `runs-on`。默认 `ubuntu-latest`；设 `self-hosted` 切本地 runner，setup 步骤自动跳过 | `gh variable set RUNNER_LABEL --body self-hosted` |
+
 ### GitHub Secrets 命名
 
 Secrets 名用单 `_`（`SYNC_KEEP_PHONE`），Workflow env 块映射为 `SYNC__KEEP__PHONE`。
@@ -278,22 +304,23 @@ f > 2N+1 → N = min(7, N+1)    → 减速
 |---|---|
 | schedule `*/N` (自适应) | 同步 + 构建 + 部署 Pages |
 | workflow_dispatch | 手动触发，不改 cron |
+| `vars.RUNNER_LABEL` | 控制 runner 类型。默认 `ubuntu-latest`；设 `self-hosted` 切本地 |
 
 ### jobs
 
 ```
-sync job:
+sync job (runs-on: ${{ vars.RUNNER_LABEL || 'ubuntu-latest' }}):
   1. checkout
-  2. setup Ruby + bundle
+  2. setup Ruby + bundle (if: vars.RUNNER_LABEL != 'self-hosted')
   3. restore DB cache
   4. record DB digest
   5. restore Garmin token caches
-  6. restore per-source caches (7 源, 各自独立 GH Cache)
+  6. restore per-source caches (sources-cache/restore)
   7. workouts sync (受 SYNC__TIME_BUDGET 限制)
   8. 读 N → 算 f → 可能改 cron
   9. check DB changed
   10. save DB cache + Garmin token caches
-  11. save per-source caches (仅变动的源)
+  11. save per-source caches (sources-cache/save)
   12. upload DB artifact (for build job)
 
 build job (needs: sync):
@@ -314,7 +341,9 @@ deploy job (needs: build):
   3. deploy-pages@v4
 ```
 
-## Docker
+## 部署
+
+### Docker
 
 ```bash
 docker compose run --rm workouts sync
@@ -324,9 +353,7 @@ docker compose run --rm workouts export json
 
 数据卷：`./data:/app/data`
 
----
-
-## GitHub Pages
+### GitHub Pages
 
 | 项 | 值 |
 |---|---|
@@ -344,26 +371,6 @@ docker compose run --rm workouts export json
 L1 raw → L2 标准化 GPS → L3 SQLite 摘要 → L4 构建制品 → L5 部署。
 转换规则: 坐标归一化、时间归一化、不丢字段。
 每个新源必须实现 L1+L2+L3。
-
----
-
-## 关键技术决策
-
-| 决策 | 原因 |
-|---|---|
-| 默认使用系统代理（`HTTP_PROXY`/`HTTPS_PROXY`） | 不再强制绕过代理，XOSS/XingZhe 可通过代理访问中国境内服务 |
-| 内联 deploy job 而非 reusable workflow | 调用 `uses:` 在该仓库导致 `startup_failure` |
-| `__` 分隔 env var | 避免与 `garmin_cn` 等 key 中的 `_` 冲突 |
-| 保留 `upload-artifact` | Pages 部署稳定后再移除 |
-| Keep 用摘要数据 | Keep API 不提供 FIT，iGPSPORT 使用 mini_racer + @garmin/fitsdk 解析 FIT |
-| `data/raw/{source}/` 平面目录 | 与 running_page `GPX_OUT/` 兼容，symlink 级桥接 |
-| Keep raw 存 decrypt JSON | 保留原始 HR 序列和相对时间戳，polyline 生成可重跑 |
-| 统一列表：new_ids + missing_raw | 一次 API 调用完成 summary + raw，省 50% API 开销 |
-| 时间预算在循环顶部 break | 避免写了 summary 但没写 raw 的不一致状态 |
-| temp→rename 原子写入 raw 文件 | 崩溃恢复时 `raw_file_exists?` 不误判 |
-| Per-source 独立 GH Cache | 每源独立 cache key (`workouts-raw-v1-{source}-{run_id}`)，通过 `scripts/source-digest.sh` 计算内容 md5 检测变化，仅变动的源写 cache。通过 `.github/actions/sources-cache/restore` + `sources-cache/save` 封装。数据目录示例: `data/raw/{garmin,garmin_cn,igpsport,...}/`, `data/std/{...}/` |
-| 导出默认路径 `data/` → `build/` | 源数据与生成制品分离，gitignored |
-| `mini_racer` + `@garmin/fitsdk` 解析 FIT | V8 引擎在 Ruby 进程中执行 JS SDK，纯 gem 依赖，无需外部运行时 |
 
 ## 文档架构
 
