@@ -1,0 +1,68 @@
+name: Sources Cache Restore
+description: Restore all source raw caches
+runs:
+  using: composite
+  steps:
+    - uses: actions/cache/restore@v4
+      with:
+        path: |
+          data/raw/keep/
+          data/std/keep/
+        key: workouts-raw-v1-keep-${{ github.run_id }}
+        restore-keys: workouts-raw-v1-keep-
+
+    - uses: actions/cache/restore@v4
+      with:
+        path: |
+          data/raw/igpsport/
+          data/std/igpsport/
+        key: workouts-raw-v1-igpsport-${{ github.run_id }}
+        restore-keys: workouts-raw-v1-igpsport-
+
+    - uses: actions/cache/restore@v4
+      with:
+        path: |
+          data/raw/xoss/
+          data/std/xoss/
+        key: workouts-raw-v1-xoss-${{ github.run_id }}
+        restore-keys: workouts-raw-v1-xoss-
+
+    - uses: actions/cache/restore@v4
+      with:
+        path: |
+          data/raw/xingzhe/
+          data/std/xingzhe/
+        key: workouts-raw-v1-xingzhe-${{ github.run_id }}
+        restore-keys: workouts-raw-v1-xingzhe-
+
+    - uses: actions/cache/restore@v4
+      with:
+        path: |
+          data/raw/garmin/
+          data/std/garmin/
+        key: workouts-raw-v1-garmin-${{ github.run_id }}
+        restore-keys: workouts-raw-v1-garmin-
+
+    - uses: actions/cache/restore@v4
+      with:
+        path: |
+          data/raw/garmin_cn/
+          data/std/garmin_cn/
+        key: workouts-raw-v1-garmin_cn-${{ github.run_id }}
+        restore-keys: workouts-raw-v1-garmin_cn-
+
+    - uses: actions/cache/restore@v4
+      with:
+        path: |
+          data/raw/strava/
+          data/std/strava/
+        key: workouts-raw-v1-strava-${{ github.run_id }}
+        restore-keys: workouts-raw-v1-strava-
+
+    - name: Record source digests
+      shell: bash
+      run: |
+        mkdir -p data
+        for src in keep igpsport xoss xingzhe garmin garmin_cn strava; do
+          echo "$src $(scripts/source-digest.sh "$src")"
+        done > data/.source-digests

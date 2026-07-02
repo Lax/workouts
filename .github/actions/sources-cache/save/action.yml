@@ -1,0 +1,75 @@
+name: Sources Cache Save
+description: Save changed source raw caches
+runs:
+  using: composite
+  steps:
+    - name: Detect changed sources
+      id: detect
+      shell: bash
+      run: |
+        if [ ! -f data/.source-digests ]; then
+          for src in keep igpsport xoss xingzhe garmin garmin_cn strava; do
+            echo "changed_${src}=true"
+          done >> "$GITHUB_OUTPUT"
+          exit 0
+        fi
+        while read -r src before; do
+          after=$(scripts/source-digest.sh "$src")
+          echo "changed_${src}=$([ "$before" != "$after" ] && echo true || echo false)"
+        done < data/.source-digests >> "$GITHUB_OUTPUT"
+
+    - uses: actions/cache/save@v4
+      if: steps.detect.outputs.changed_keep == 'true'
+      with:
+        path: |
+          data/raw/keep/
+          data/std/keep/
+        key: workouts-raw-v1-keep-${{ github.run_id }}
+
+    - uses: actions/cache/save@v4
+      if: steps.detect.outputs.changed_igpsport == 'true'
+      with:
+        path: |
+          data/raw/igpsport/
+          data/std/igpsport/
+        key: workouts-raw-v1-igpsport-${{ github.run_id }}
+
+    - uses: actions/cache/save@v4
+      if: steps.detect.outputs.changed_xoss == 'true'
+      with:
+        path: |
+          data/raw/xoss/
+          data/std/xoss/
+        key: workouts-raw-v1-xoss-${{ github.run_id }}
+
+    - uses: actions/cache/save@v4
+      if: steps.detect.outputs.changed_xingzhe == 'true'
+      with:
+        path: |
+          data/raw/xingzhe/
+          data/std/xingzhe/
+        key: workouts-raw-v1-xingzhe-${{ github.run_id }}
+
+    - uses: actions/cache/save@v4
+      if: steps.detect.outputs.changed_garmin == 'true'
+      with:
+        path: |
+          data/raw/garmin/
+          data/std/garmin/
+        key: workouts-raw-v1-garmin-${{ github.run_id }}
+
+    - uses: actions/cache/save@v4
+      if: steps.detect.outputs.changed_garmin_cn == 'true'
+      with:
+        path: |
+          data/raw/garmin_cn/
+          data/std/garmin_cn/
+        key: workouts-raw-v1-garmin_cn-${{ github.run_id }}
+
+    - uses: actions/cache/save@v4
+      if: steps.detect.outputs.changed_strava == 'true'
+      with:
+        path: |
+          data/raw/strava/
+          data/std/strava/
+        key: workouts-raw-v1-strava-${{ github.run_id }}

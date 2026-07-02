@@ -361,7 +361,7 @@ L1 raw → L2 标准化 GPS → L3 SQLite 摘要 → L4 构建制品 → L5 部�
 | 统一列表：new_ids + missing_raw | 一次 API 调用完成 summary + raw，省 50% API 开销 |
 | 时间预算在循环顶部 break | 避免写了 summary 但没写 raw 的不一致状态 |
 | temp→rename 原子写入 raw 文件 | 崩溃恢复时 `raw_file_exists?` 不误判 |
-| Per-source 独立 GH Cache | 每源独立 cache key (`workouts-raw-v1-{source}-{run_id}`)，通过 `scripts/source-digest.sh` 计算内容 md5 检测变化，仅变动的源写 cache。通过 `.github/actions/source-cache/` composite action 封装。数据目录示例: `data/raw/{garmin,garmin_cn,igpsport,...}/`, `data/std/{...}/` |
+| Per-source 独立 GH Cache | 每源独立 cache key (`workouts-raw-v1-{source}-{run_id}`)，通过 `scripts/source-digest.sh` 计算内容 md5 检测变化，仅变动的源写 cache。通过 `.github/actions/sources-cache/restore` + `sources-cache/save` 封装。数据目录示例: `data/raw/{garmin,garmin_cn,igpsport,...}/`, `data/std/{...}/` |
 | 导出默认路径 `data/` → `build/` | 源数据与生成制品分离，gitignored |
 | `mini_racer` + `@garmin/fitsdk` 解析 FIT | V8 引擎在 Ruby 进程中执行 JS SDK，纯 gem 依赖，无需外部运行时 |
 

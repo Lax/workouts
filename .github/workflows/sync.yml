@@ -58,47 +58,7 @@ jobs:
           key: garmin-tokens-v1-garmin-${{ github.run_id }}
           restore-keys: garmin-tokens-v1-garmin-
 
-      - id: cache-keep
-        uses: ./.github/actions/source-cache
-        with:
-          source: keep
-          phase: restore
-
-      - id: cache-igpsport
-        uses: ./.github/actions/source-cache
-        with:
-          source: igpsport
-          phase: restore
-
-      - id: cache-xoss
-        uses: ./.github/actions/source-cache
-        with:
-          source: xoss
-          phase: restore
-
-      - id: cache-xingzhe
-        uses: ./.github/actions/source-cache
-        with:
-          source: xingzhe
-          phase: restore
-
-      - id: cache-garmin
-        uses: ./.github/actions/source-cache
-        with:
-          source: garmin
-          phase: restore
-
-      - id: cache-garmin-cn
-        uses: ./.github/actions/source-cache
-        with:
-          source: garmin_cn
-          phase: restore
-
-      - id: cache-strava
-        uses: ./.github/actions/source-cache
-        with:
-          source: strava
-          phase: restore
+      - uses: ./.github/actions/sources-cache/restore
 
       - name: Sync
         env:
@@ -198,47 +158,7 @@ jobs:
           path: data/workouts.db
           key: ${{ steps.db-cache.outputs.cache-primary-key }}
 
-      - uses: ./.github/actions/source-cache
-        with:
-          source: keep
-          phase: save
-          before_digest: ${{ steps.cache-keep.outputs.before_digest }}
-
-      - uses: ./.github/actions/source-cache
-        with:
-          source: igpsport
-          phase: save
-          before_digest: ${{ steps.cache-igpsport.outputs.before_digest }}
-
-      - uses: ./.github/actions/source-cache
-        with:
-          source: xoss
-          phase: save
-          before_digest: ${{ steps.cache-xoss.outputs.before_digest }}
-
-      - uses: ./.github/actions/source-cache
-        with:
-          source: xingzhe
-          phase: save
-          before_digest: ${{ steps.cache-xingzhe.outputs.before_digest }}
-
-      - uses: ./.github/actions/source-cache
-        with:
-          source: garmin
-          phase: save
-          before_digest: ${{ steps.cache-garmin.outputs.before_digest }}
-
-      - uses: ./.github/actions/source-cache
-        with:
-          source: garmin_cn
-          phase: save
-          before_digest: ${{ steps.cache-garmin-cn.outputs.before_digest }}
-
-      - uses: ./.github/actions/source-cache
-        with:
-          source: strava
-          phase: save
-          before_digest: ${{ steps.cache-strava.outputs.before_digest }}
+      - uses: ./.github/actions/sources-cache/save
 
       - uses: actions/upload-artifact@v4
         if: steps.db-changed.outputs.changed == 'true'
