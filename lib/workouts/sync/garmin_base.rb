@@ -329,6 +329,7 @@ module Workouts
       end
 
       def sync_activities
+        existing = existing_run_ids
         start = 0
         limit = 100
         count = 0
@@ -344,6 +345,7 @@ module Workouts
             act_id = act["activityId"].to_s
             type = map_type(act["activityType"])
             next if skip_type?(type)
+            next if existing.include?(act_id) && raw_file_exists?(act_id)
 
             details = fetch_activity_detail(act_id)
             next unless details
@@ -366,6 +368,11 @@ module Workouts
         end
 
         count
+      end
+
+      def existing_run_ids
+        @db[:activities].where(source: source_prefix).select_map(:run_id)
+          .map { |id| id.sub("#{source_prefix}_", "") }
       end
 
       def fetch_activity_list(start, limit)
