@@ -37,11 +37,13 @@ Step 4: git add -f -A（含所有变动，包括删除）
 
 ```bash
 EMPTY_TREE=$(git hash-object -t tree --stdin -w < /dev/null)
-COMMIT=$(git commit-tree -m "chore: init archive branch $BRANCH" "$EMPTY_TREE")
+COMMIT=$(git -c user.name=workouts-bot -c user.email=bot@workouts \
+  commit-tree -m "chore: init archive branch $BRANCH" "$EMPTY_TREE")
 git push origin "$COMMIT:refs/heads/$BRANCH"
 ```
 
 - 动态计算空树 hash（不同 git 版本计算结果不同，`commit-tree` 接受本地对象）
+- `commit-tree` 创建 commit 对象须指定作者身份（`-c user.name/email`）
 - 不碰 index、不碰 worktree、不切换 HEAD
 - Step 2 统一从 main 出发，fetch + checkout
 
@@ -64,12 +66,14 @@ git push origin "$COMMIT:refs/heads/$BRANCH"
 ### concurrency
 
 ```yaml
-concurrency:
-  group: archive-${{ matrix.source }}
-  cancel-in-progress: false
+jobs:
+  archive:
+    concurrency:
+      group: archive-${{ matrix.source }}
+      cancel-in-progress: false
 ```
 
-同源排队、不同源并行。防止首次创建分支的 race condition 和 push 冲突。
+`concurrency` 必须放在 job 内部而非 workflow 顶层，因为 `matrix.source` 只在 job 的 `strategy.matrix` 作用域内生效。同源排队、不同源并行。防止首次创建分支的 race condition 和 push 冲突。
 
 ## 文件结构
 
@@ -101,6 +105,34 @@ concurrency:
 | push 失败不重试 | 网络 / PAT 过期等极端情况 | 下次运行自动 catch up |
 | 极小概率 rename 误判 | `-M50%` 阈值设置 | 低相似度改名视为 D+A，旧文件保留、新文件新增 |
 | archive 永远不删除 | 纯删除被 `reset HEAD` 排除 | 源站已删的活动，archive 中仍保留历史快照 |
+
+## 实现记录
+
+### 迭代历史
+
+| 轮次 | 失败点 | 原因 | 修正 |
+|---|---|---|---|
+| 1 | workflow 解析失败 | `concurrency` 放在 workflow 顶层（`matrix.source` 未定义） | 移入 `jobs.archive.concurrency` |
+| 2 | `commit-tree` 报 Author identity unknown | `actions/checkout@v4` 的 Post-job cleanup 清空 git config（含 user.name/email） | 加 `-c user.name=workouts-bot -c user.email=bot@workouts` |
+| 3 | 全部通过 | — | — |
+
+### 验证结果（2026-07-03）
+
+首次手动触发 `workflow_dispatch` 后，7 个源全部成功归档，远程分支均已创建：
+
+| 分支 | 文件数 | 状态 |
+|---|---|---|
+| `data/_/keep` | 1738 | 成功 |
+| `data/_/igpsport` | 170 | 成功 |
+| `data/_/garmin` | 74 | 成功 |
+| `data/_/strava` | ~70 | 成功 |
+| `data/_/xingzhe` | 66 | 成功 |
+| `data/_/garmin_cn` | 2 | 成功 |
+| `data/_/xoss` | 0 | 无 cache 数据，正确 skip |
+
+### 对抗审查最终结论
+
+本地模拟 4 个核心场景（rename/delete/no-change/first-run），全部通过。
 
 ## 相关设计文档
 
