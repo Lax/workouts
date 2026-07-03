@@ -1,0 +1,79 @@
+{
+  "code": 0,
+  "data": {
+    "count": 44,
+    "next": "https://backend.xoss.co/api/v3/activity/?limit=2&offset=3",
+    "previous": "https://backend.xoss.co/api/v3/activity/?limit=2",
+    "results": [
+      {
+        "id": 3001,
+        "uuid": "00000000-0000-0000-0000-000000003001",
+        "sport": 2,
+        "sub_sport": 7,
+        "title": "下午 骑行",
+        "is_hidden": false,
+        "distance": 606.43,
+        "duration": 249.0,
+        "elevation_gain": 0.0,
+        "total_calories": 14.0,
+        "location_source": 15,
+        "cadence_source": 0,
+        "heartrate_source": 0,
+        "power_source": 0,
+        "start_timestamp": 1761892173,
+        "modify_timestamp": 1761894192,
+        "fit_file_hash": "00000000-0000-0000-0000-000000000000",
+        "thumbnail_url": "https://backend.xoss.co/api/v3/activity/3001/thumbnail/",
+        "third_party": {
+          "tp": 2721426,
+          "strava": 44817531,
+          "xz": null
+        },
+        "fileid": {
+          "number": 2748,
+          "product": 15,
+          "productName": "G N5",
+          "timeCreated": "2025-10-31T06:29:33Z",
+          "manufacturer": "Dabuziduo",
+          "serialNumber": 1071606
+        },
+        "device_name": "xingzhe_g2_n5"
+      },
+      {
+        "id": 3002,
+        "uuid": "00000000-0000-0000-0000-000000003002",
+        "sport": 2,
+        "sub_sport": 7,
+        "title": "傍晚 骑行",
+        "is_hidden": false,
+        "distance": 464.67,
+        "duration": 264.0,
+        "elevation_gain": 0.0,
+        "total_calories": 11.0,
+        "location_source": 15,
+        "cadence_source": 0,
+        "heartrate_source": 0,
+        "power_source": 0,
+        "start_timestamp": 1760874936,
+        "modify_timestamp": 1760882253,
+        "fit_file_hash": "00000000-0000-0000-0000-000000000000",
+        "thumbnail_url": "https://backend.xoss.co/api/v3/activity/3002/thumbnail/",
+        "third_party": {
+          "tp": 2706224,
+          "strava": 44563743,
+          "xz": null
+        },
+        "fileid": {
+          "number": 2748,
+          "product": 15,
+          "productName": "G N5",
+          "timeCreated": "2025-10-19T11:55:36Z",
+          "manufacturer": "Dabuziduo",
+          "serialNumber": 1071606
+        },
+        "device_name": "xingzhe_g2_n5"
+      }
+    ]
+  },
+  "msg": "Success"
+}
