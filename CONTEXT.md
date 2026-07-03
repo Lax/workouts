@@ -92,7 +92,7 @@ lib/workouts/cli/sync.rb         # 同步子模块（sync, auth）
 |---|---|---|---|
 | **Keep** | api.gotokeep.com | 手机+密码 | AES-128-CBC 解密，zlib 解压，GCJ-02→WGS84，HR 最近匹配 |
 | **iGPSPORT** | prod.zh.igpsport.com | 手机+密码 | FIT 原始格式，使用 mini_racer + @garmin/fitsdk 解析 |
-| **XOSS** | backend.xoss.co (国际版) | email+JWT | 局部 SPORT_MAP 哈希表 |
+| **XOSS** | backend.xoss.co (国际版) | email+JWT | FIT 下载 + mini_racer/fitsdk 解析，JWT token 缓存 7d |
 | **XingZhe** | imxingzhe.com (行者) | RSA 加密密码 + session Cookie | 行者国内版 |
 | **Garmin CN** | garmin.cn | SSO + OAuth1→OAuth2（不受 CF 影响）| token 文件持久化 + OAuth1 自动 refresh，GH Cache |
 | **Garmin Intl** | garmin.com | DI OAuth2（Playwright primary — session cookies 365d, curl_cffi fallback）| Playwright session cookies 365d, token GH Cache，MFA 首次后零交互 |
