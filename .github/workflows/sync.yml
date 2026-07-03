@@ -62,6 +62,14 @@ jobs:
           key: garmin-tokens-v1-garmin-${{ github.run_id }}
           restore-keys: garmin-tokens-v1-garmin-
 
+      - name: Restore XOSS tokens
+        uses: actions/cache/restore@v4
+        id: xoss-tokens-cache
+        with:
+          path: data/cache/xoss_tokens.json
+          key: xoss-tokens-v1-${{ github.run_id }}
+          restore-keys: xoss-tokens-v1-
+
       - uses: ./.github/actions/sources-cache/restore
 
       - name: Sync
@@ -157,6 +165,13 @@ jobs:
         with:
           path: data/cache/garmin_garmin_com_tokens.json
           key: ${{ steps.garmin-tokens-cache.outputs.cache-primary-key }}
+
+      - name: Save XOSS tokens
+        uses: actions/cache/save@v4
+        if: always()
+        with:
+          path: data/cache/xoss_tokens.json
+          key: ${{ steps.xoss-tokens-cache.outputs.cache-primary-key }}
 
       - name: Save DB cache
         uses: actions/cache/save@v4

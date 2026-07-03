@@ -1,6 +1,7 @@
 RSpec.describe Workouts::Sync::XOSS do
   let(:db) { create_test_db }
-  let(:config) { { "email" => "test@xoss.com", "password" => "pw" } }
+  let(:token_path) { File.join(Dir.mktmpdir, "xoss_tokens.json") }
+  let(:config) { { "email" => "test@xoss.com", "password" => "pw", "token_path" => token_path } }
   subject(:xoss) { described_class.new(config:, db:, activity_filter: nil) }
 
   def create_test_db
