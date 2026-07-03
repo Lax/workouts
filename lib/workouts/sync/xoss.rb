@@ -4,7 +4,8 @@ require "fileutils"
 module Workouts
   module Sync
     class XOSS < Base
-      BASE_URL = "https://backend.xoss.co/api"
+      FIT_FILE_PATH = "/api/v3/activity/%<id>s/fit_file/"
+      BASE_URL = "https://backend.xoss.co"
       LOGIN_PATH = "/api/v1/jwt-token/"
       REFRESH_PATH = "/api/v1/jwt-token/refresh/"
       ACTIVITIES_PATH = "/api/v3/activity/"
@@ -26,10 +27,9 @@ module Workouts
       end
 
       def call
+        @start_time = Time.now
         return 0 if @email.nil? || @password.nil?
-
         return 0 unless authenticate
-
         sync_activities
       end
 
@@ -39,12 +39,11 @@ module Workouts
         return true if load_tokens && access_token_valid?
         return true if refresh_access_token
         return true if login
-
         false
       end
 
       def http_request(method, path, body: nil, params: nil, headers: {})
-        uri = URI("https://backend.xoss.co#{path}")
+        uri = URI("#{BASE_URL}#{path}")
         uri.query = URI.encode_www_form(params) if params
 
         req = case method
@@ -64,16 +63,16 @@ module Workouts
         http.use_ssl = true
         http.open_timeout = 30
         http.read_timeout = 60
-        resp = http.start { |h| h.request(req) }
-        resp
+        http.start { |h| h.request(req) }
       end
 
       def proxy_uri
-        uri = URI(ENV["https_proxy"] || ENV["HTTPS_PROXY"] || ENV["http_proxy"] || ENV["HTTP_PROXY"] || "")
+        uri = URI(ENV["http_proxy"] || ENV["HTTP_PROXY"] || ENV["https_proxy"] || ENV["HTTPS_PROXY"] || "")
         uri.host ? uri : nil
       end
 
       def login
+        retries ||= 0
         resp = http_request(:post, LOGIN_PATH,
           body: JSON.generate({ email: @email, password: @password }),
           headers: { "Content-Type" => "application/json", "Origin" => "xoss" }
@@ -91,6 +90,10 @@ module Workouts
         save_tokens
         true
       rescue Net::OpenTimeout, Net::ReadTimeout => e
+        if (retries += 1) <= 2
+          sleep 2
+          retry
+        end
         raise SyncError, "XOSS login timeout: #{e.message}"
       end
 
@@ -134,7 +137,6 @@ module Workouts
       def access_token_valid?
         return false unless @access_token
         return false unless @expires_at
-
         Time.now.to_i < @expires_at - 60
       end
 
@@ -162,6 +164,10 @@ module Workouts
         raise SyncError, "XOSS token refresh timeout: #{e.message}"
       end
 
+      def raw_path(platform_id)
+        File.join(raw_dir, "#{platform_id}.fit")
+      end
+
       def sync_activities
         existing = existing_run_ids
         offset = 1
@@ -174,7 +180,11 @@ module Workouts
 
           activities.each do |act|
             act_id = act["id"].to_s
-            next if existing.include?(act_id)
+            next if existing.include?(act_id) && raw_file_exists?(act_id)
+            break if time_expired?
+
+            type = map_sport(act["sport"])
+            next if skip_type?(type)
 
             result = process_activity(act)
             if result
@@ -190,6 +200,7 @@ module Workouts
       end
 
       def fetch_page(offset, limit)
+        retries ||= 0
         resp = http_request(:get, ACTIVITIES_PATH,
           params: { offset: offset, limit: limit },
           headers: @auth_headers
@@ -198,6 +209,10 @@ module Workouts
 
         JSON.parse(resp.body).dig("data", "results")
       rescue Net::OpenTimeout, Net::ReadTimeout => e
+        if (retries += 1) <= 2
+          sleep 2
+          retry
+        end
         raise SyncError, "XOSS fetch timeout: #{e.message}"
       end
 
@@ -223,14 +238,83 @@ module Workouts
           start_date: start_t.strftime("%Y-%m-%d %H:%M:%S"),
           start_date_local: start_t.strftime("%Y-%m-%d %H:%M:%S"),
           location_country: nil,
-          average_heartrate: nil,
           average_speed: avg_speed,
           elevation_gain: act["elevation_gain"].to_f.nonzero?,
           source: "xoss"
         }
 
+        if act["fit_file_hash"]
+          fit_data = download_fit(act_id)
+          if fit_data
+            write_raw(fit_data, act_id)
+            wgs_points = FIT::Decoder.decode(raw_path(act_id))
+            if wgs_points.any?
+              write_std(wgs_points, act_id)
+              pts = wgs_points.map { |pt| [pt["positionLat"], pt["positionLong"]] }
+              attrs[:summary_polyline] = Geo::Polyline.encode(pts)
+              attrs.merge!(compute_sensor_summary(wgs_points))
+              attrs[:average_heartrate] = act["avg_heartrate"]&.to_f&.nonzero?
+              attrs[:average_cadence] ||= act["avg_cadence"]&.to_f&.nonzero?
+            end
+          end
+        end
+
         upsert_activity(attrs)
         attrs
+      end
+
+      def download_fit(act_id)
+        resp = http_request(:get, format(FIT_FILE_PATH, id: act_id), headers: @auth_headers)
+        return nil unless resp.code.to_i == 302
+
+        fit_uri = URI(resp["location"])
+        fit_http = Net::HTTP.new(fit_uri.host, fit_uri.port)
+        fit_http.use_ssl = fit_uri.scheme == "https"
+        fit_http.open_timeout = 60
+        fit_http.read_timeout = 180
+        fit_resp = fit_http.start { |h| h.request(Net::HTTP::Get.new(fit_uri)) }
+        return nil unless fit_resp.code.to_i == 200
+
+        fit_resp.body
+      rescue Net::OpenTimeout, Net::ReadTimeout => e
+        warn "XOSS: FIT download timeout for #{act_id}: #{e.message}"
+        nil
+      end
+
+      def write_raw(binary, act_id)
+        dir = raw_dir
+        FileUtils.mkdir_p(dir)
+        tmp = File.join(dir, ".#{act_id}.fit.tmp")
+        final = File.join(dir, "#{act_id}.fit")
+        File.write(tmp, binary, mode: "wb")
+        File.rename(tmp, final)
+      end
+
+      def write_std(points, act_id)
+        dir = std_dir
+        FileUtils.mkdir_p(dir)
+        tmp = File.join(dir, ".#{act_id}.json.tmp")
+        final = File.join(dir, "#{act_id}.json")
+        File.write(tmp, JSON.generate(points))
+        File.rename(tmp, final)
+      end
+
+      def compute_sensor_summary(records)
+        return {} if records.empty?
+
+        cad = records.map { |r| r["cadence"] }.compact
+        pow = records.map { |r| r["power"] }.compact
+        tmp = records.map { |r| r["temperature"] }.compact
+        hr = records.map { |r| r["heart_rate"] }.compact
+
+        {
+          average_cadence: cad.any? ? (cad.sum.to_f / cad.size).round(1) : nil,
+          max_cadence: cad.max,
+          average_power: pow.any? ? (pow.sum.to_f / pow.size).round(1) : nil,
+          max_power: pow.max,
+          average_temperature: tmp.any? ? (tmp.sum.to_f / tmp.size).round(1) : nil,
+          average_heartrate: hr.any? ? (hr.sum.to_f / hr.size).round(1) : nil
+        }
       end
 
       def map_sport(sport)
