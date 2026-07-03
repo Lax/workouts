@@ -170,6 +170,7 @@ RSpec.describe Workouts::Sync::XOSS do
     it "downloads and decodes FIT, writes std, produces polyline" do
       expect(xoss).to receive(:download_fit).with("3001").and_return(fit_bytes)
       expect(xoss).to receive(:write_raw).with(fit_bytes, "3001")
+      allow(Workouts::FIT::Decoder).to receive(:decode).and_return(wgs_points)
       expect(xoss).to receive(:write_std).with(wgs_points, "3001")
       result = xoss.send(:process_activity, activity)
       expect(result[:summary_polyline]).not_to be_nil
