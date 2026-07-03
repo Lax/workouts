@@ -341,6 +341,21 @@ deploy job (needs: build):
   3. deploy-pages@v4
 ```
 
+### archive.yml
+
+将 GH Actions cache 中的 raw/std 数据归档到独立 git branch。
+
+| 触发 | 操作 |
+|---|---|
+| schedule `0 6 * * 0` (每周日) | 每源 cache restore → `git add -A` → rename 检测 → 排除纯删除 → commit → push to `data/_/<source>` |
+| workflow_dispatch | 手动触发 |
+
+详见 [docs/archive-impl.md](docs/archive-impl.md)。
+
+#### 归档分支
+
+`data/_/<source>` — matrix 并发，per-source orphan branch。仅含 `data/{raw,std}/<source>/`，绕过 cache 7 天 LRU，保留全部历史快照（不删除）。
+
 ## 部署
 
 ### Docker
