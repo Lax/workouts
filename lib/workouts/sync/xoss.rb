@@ -9,6 +9,7 @@ module Workouts
       LOGIN_PATH = "/api/v1/jwt-token/"
       REFRESH_PATH = "/api/v1/jwt-token/refresh/"
       ACTIVITIES_PATH = "/api/v3/activity/"
+      ACCESS_TOKEN_TTL = 86400
 
       SPORT_MAP = {
         1 => "run",
@@ -122,7 +123,7 @@ module Workouts
         File.write(token_path, JSON.generate({
           access: @access_token,
           refresh: @refresh_token,
-          expires_at: @expires_at || Time.now.to_i + 86400
+          expires_at: @expires_at || Time.now.to_i + ACCESS_TOKEN_TTL
         }))
       rescue => e
         warn "XOSS: failed to save tokens: #{e.message}"
@@ -143,24 +144,35 @@ module Workouts
       def refresh_access_token
         return false unless @refresh_token
 
+        retries ||= 0
         resp = http_request(:post, REFRESH_PATH,
           body: JSON.generate({ refresh: @refresh_token }),
           headers: { "Content-Type" => "application/json", "Origin" => "xoss" }
         )
-        return false unless resp.code.to_i == 200
+        unless resp.code.to_i == 200
+          remove_stale_tokens
+          return false
+        end
 
         data = JSON.parse(resp.body)
-        return false unless data["code"] == 0
+        unless data["code"] == 0
+          remove_stale_tokens
+          return false
+        end
 
         @access_token = data.dig("data", "access")
         @refresh_token = data.dig("data", "refresh")
         return false unless @access_token
 
-        @expires_at = Time.now.to_i + 86400
+        @expires_at = Time.now.to_i + ACCESS_TOKEN_TTL
         @auth_headers = { "Authorization" => "Bearer #{@access_token}", "Origin" => "xoss" }
         save_tokens
         true
       rescue Net::OpenTimeout, Net::ReadTimeout => e
+        if (retries += 1) <= 2
+          sleep 2
+          retry
+        end
         raise SyncError, "XOSS token refresh timeout: #{e.message}"
       end
 
@@ -214,6 +226,12 @@ module Workouts
           retry
         end
         raise SyncError, "XOSS fetch timeout: #{e.message}"
+      rescue JSON::ParserError
+        if (retries ||= 0; (retries += 1) <= 2)
+          sleep 2
+          retry
+        end
+        nil
       end
 
       def process_activity(act)
@@ -240,21 +258,25 @@ module Workouts
           location_country: nil,
           average_speed: avg_speed,
           elevation_gain: act["elevation_gain"].to_f.nonzero?,
+          calories: act["total_calories"]&.to_i&.nonzero?,
           source: "xoss"
         }
 
-        if act["fit_file_hash"]
+        if act["fit_file_hash"].to_s != ""
           fit_data = download_fit(act_id)
           if fit_data
             write_raw(fit_data, act_id)
-            wgs_points = FIT::Decoder.decode(raw_path(act_id))
+            begin
+              wgs_points = FIT::Decoder.decode(raw_path(act_id))
+            rescue => e
+              warn "XOSS: FIT decode failed for #{act_id}: #{e.message}"
+              wgs_points = []
+            end
             if wgs_points.any?
               write_std(wgs_points, act_id)
               pts = wgs_points.map { |pt| [pt["positionLat"], pt["positionLong"]] }
               attrs[:summary_polyline] = Geo::Polyline.encode(pts)
               attrs.merge!(compute_sensor_summary(wgs_points))
-              attrs[:average_heartrate] = act["avg_heartrate"]&.to_f&.nonzero?
-              attrs[:average_cadence] ||= act["avg_cadence"]&.to_f&.nonzero?
             end
           end
         end
