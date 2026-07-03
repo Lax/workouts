@@ -36,7 +36,8 @@ jobs:
             echo "branch exists"
           else
             EMPTY_TREE=$(git hash-object -t tree --stdin -w < /dev/null)
-            COMMIT=$(git commit-tree -m "chore: init archive branch $BRANCH" "$EMPTY_TREE")
+            COMMIT=$(git -c user.name=workouts-bot -c user.email=bot@workouts \
+              commit-tree -m "chore: init archive branch $BRANCH" "$EMPTY_TREE")
             git push origin "$COMMIT:refs/heads/$BRANCH"
           fi
 
