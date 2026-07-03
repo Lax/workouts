@@ -1,10 +1,12 @@
 require_relative "base"
+require "fileutils"
 
 module Workouts
   module Sync
     class XOSS < Base
       BASE_URL = "https://backend.xoss.co/api"
       LOGIN_PATH = "/api/v1/jwt-token/"
+      REFRESH_PATH = "/api/v1/jwt-token/refresh/"
       ACTIVITIES_PATH = "/api/v3/activity/"
 
       SPORT_MAP = {
@@ -20,17 +22,26 @@ module Workouts
         super
         @email = @config["email"]
         @password = @config["password"]
+        @token_path = @config["token_path"] || File.join("data", "cache", "xoss_tokens.json")
       end
 
       def call
         return 0 if @email.nil? || @password.nil?
 
-        return 0 unless login
+        return 0 unless authenticate
 
         sync_activities
       end
 
       private
+
+      def authenticate
+        return true if load_tokens && access_token_valid?
+        return true if refresh_access_token
+        return true if login
+
+        false
+      end
 
       def http_request(method, path, body: nil, params: nil, headers: {})
         uri = URI("https://backend.xoss.co#{path}")
@@ -44,12 +55,22 @@ module Workouts
         headers.each { |k, v| req[k] = v }
         req.body = body if body
 
-        http = Net::HTTP.new(uri.host, uri.port)
+        proxy = proxy_uri
+        http = if proxy
+                 Net::HTTP.new(uri.host, uri.port, proxy.host, proxy.port, proxy.user, proxy.password)
+               else
+                 Net::HTTP.new(uri.host, uri.port)
+               end
         http.use_ssl = true
         http.open_timeout = 30
         http.read_timeout = 60
         resp = http.start { |h| h.request(req) }
         resp
+      end
+
+      def proxy_uri
+        uri = URI(ENV["https_proxy"] || ENV["HTTPS_PROXY"] || ENV["http_proxy"] || ENV["HTTP_PROXY"] || "")
+        uri.host ? uri : nil
       end
 
       def login
@@ -63,12 +84,82 @@ module Workouts
         return false unless data["code"] == 0
 
         @access_token = data.dig("data", "access")
+        @refresh_token = data.dig("data", "refresh")
         return false unless @access_token
 
         @auth_headers = { "Authorization" => "Bearer #{@access_token}", "Origin" => "xoss" }
+        save_tokens
         true
       rescue Net::OpenTimeout, Net::ReadTimeout => e
         raise SyncError, "XOSS login timeout: #{e.message}"
+      end
+
+      def token_path
+        @token_path
+      end
+
+      def load_tokens
+        return false unless File.exist?(token_path)
+
+        data = JSON.parse(File.read(token_path))
+        @access_token = data["access"]
+        @refresh_token = data["refresh"]
+        @expires_at = data["expires_at"]
+        @auth_headers = { "Authorization" => "Bearer #{@access_token}", "Origin" => "xoss" } if @access_token
+        true
+      rescue => e
+        warn "XOSS: failed to load cached tokens: #{e.message}"
+        false
+      end
+
+      def save_tokens
+        return unless @access_token
+
+        FileUtils.mkdir_p(File.dirname(token_path))
+        File.write(token_path, JSON.generate({
+          access: @access_token,
+          refresh: @refresh_token,
+          expires_at: @expires_at || Time.now.to_i + 86400
+        }))
+      rescue => e
+        warn "XOSS: failed to save tokens: #{e.message}"
+      end
+
+      def remove_stale_tokens
+        File.delete(token_path) if File.exist?(token_path)
+      rescue => e
+        warn "XOSS: failed to remove stale tokens: #{e.message}"
+      end
+
+      def access_token_valid?
+        return false unless @access_token
+        return false unless @expires_at
+
+        Time.now.to_i < @expires_at - 60
+      end
+
+      def refresh_access_token
+        return false unless @refresh_token
+
+        resp = http_request(:post, REFRESH_PATH,
+          body: JSON.generate({ refresh: @refresh_token }),
+          headers: { "Content-Type" => "application/json", "Origin" => "xoss" }
+        )
+        return false unless resp.code.to_i == 200
+
+        data = JSON.parse(resp.body)
+        return false unless data["code"] == 0
+
+        @access_token = data.dig("data", "access")
+        @refresh_token = data.dig("data", "refresh")
+        return false unless @access_token
+
+        @expires_at = Time.now.to_i + 86400
+        @auth_headers = { "Authorization" => "Bearer #{@access_token}", "Origin" => "xoss" }
+        save_tokens
+        true
+      rescue Net::OpenTimeout, Net::ReadTimeout => e
+        raise SyncError, "XOSS token refresh timeout: #{e.message}"
       end
 
       def sync_activities
