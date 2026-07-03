@@ -85,7 +85,10 @@ module Workouts
 
         @access_token = data.dig("data", "access")
         @refresh_token = data.dig("data", "refresh")
-        return false unless @access_token
+        unless @access_token
+          remove_stale_tokens
+          return false
+        end
 
         @auth_headers = { "Authorization" => "Bearer #{@access_token}", "Origin" => "xoss" }
         save_tokens

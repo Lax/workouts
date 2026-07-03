@@ -42,8 +42,8 @@ module Workouts
           #   phone: "13800138000"      # placeholder
           #   password: "your_password"  # placeholder
 
-          # xoss:                        # XOSS international (xoss.co)
-          #   email: "your@email.com"    # placeholder
+          # xoss:                        # XOSS international (backend.xoss.co)
+          #   email: "your@email.com"    # placeholder — FIT download + GPS
           #   password: "your_password"  # placeholder
 
           # xingzhe:                     # 行者国内版 (imxingzhe.com)
