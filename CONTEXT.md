@@ -15,6 +15,7 @@
 | 命令 | 说明 |
 |---|---|
 | `sync [--source S] [--act TYPE]` | 同步所有配置源（`--source` 指定单一源，`--act` 按运动类型过滤） |
+| `dedup` | 全源重跑去重匹配（覆盖已有 duplicate_info） |
 | `auth <garmin\|garmin_cn>` | 交互式 Garmin SSO 登录 |
 | `export json [--output]` | 导出 JSON |
 | `export csv [--output]` | 导出 CSV |
@@ -38,7 +39,12 @@
 ```
 lib/workouts/cli.rb              # 主 CLI（Workouts::CLI），加载子模块
 lib/workouts/cli/export.rb       # 导出子命令（ExportCLI: json, csv, svg, all）
-lib/workouts/cli/sync.rb         # 同步子模块（sync, auth）
+lib/workouts/cli/sync.rb         # 同步子模块（sync, auth, dedup）
+lib/workouts/sync/runner.rb      # Sync::Runner — 队列调度 + Worker 池
+lib/workouts/dedup/
+  matcher.rb                     # Dedup::Matcher — 置信度计算
+  trajectory.rb                  # Dedup::Trajectory — GPS 轨迹重叠判定
+  service.rb                     # Dedup::Service — 滑动窗口匹配 + 双向写入
 ```
 
 ---
@@ -46,20 +52,26 @@ lib/workouts/cli/sync.rb         # 同步子模块（sync, auth）
 ## 架构
 
 ```
-┌─────────────┐     ┌──────────────┐     ┌─────────────┐
-│ Strava      │     │  Sync::Base  │     │ Export::SVG │
-│ Garmin      │────▶│  upsert      │────▶│ Export::JSON│
-│ Keep        │     │  write_raw   │     │ Export::CSV │
-│ iGPSPORT    │     │  skip_type?  │     └─────────────┘
-│ XOSS (xoss) │     └───┬───┬──────┘
-│ XingZhe     │         │   │
-└─────────────┘         │   └───▶ data/raw/{source}/
-                        │           (原始 GPS 点阵备份, 每源独立 GH Cache)
-                        ▼
-                    ┌──────────────────┐
-                    │   SQLite DB      │
-                    │  (Sequel ORM)    │
-                    └──────────────────┘
+┌─────────────┐     ┌──────────────────┐     ┌─────────────┐
+│ Strava      │     │  Sync::Runner    │     │ Export::SVG │
+│ Garmin      │────▶│  Worker Pool × N │────▶│ Export::JSON│
+│ Keep        │     │  Source Queue    │     │ Export::CSV │
+│ iGPSPORT    │     │  Output Queue    │     └─────────────┘
+│ XOSS (xoss) │     └────┬──────────┬──┘
+│ XingZhe     │          │          │
+└─────────────┘          │          └───▶ data/raw/{source}/
+                         │               (原始 GPS 点阵备份, 每源独立 GH Cache)
+                         ▼
+                     ┌──────────────────┐
+                     │   SQLite DB      │
+                     │  (Sequel ORM)    │
+                     └────────┬─────────┘
+                              │
+                     ┌────────▼─────────┐
+                     │  Dedup::Service  │
+                     │   Matcher        │
+                     │   Trajectory     │
+                     └──────────────────┘
 ```
 
 ---
@@ -77,6 +89,9 @@ lib/workouts/cli/sync.rb         # 同步子模块（sync, auth）
 | Keep raw 存 decrypt JSON | 保留原始 HR 序列和相对时间戳，polyline 生成可重跑 |
 | 统一列表：new_ids + missing_raw | 一次 API 调用完成 summary + raw，省 50% API 开销 |
 | 时间预算在循环顶部 break | 避免写了 summary 但没写 raw 的不一致状态 |
+| 多源并行使用队列调度 | Runner 启动 N 线程 Worker 池（默认 3），类 1 队列每 source 单元素即为分布式锁。Worker pop = acquire lock，push = release。批量 BATCH_SIZE=5 后交还，减少竞争 |
+| 超时采用旗标机制 | `@timed_out` 设后不再 pop 新源，但当前 batch 完整收尾。不强制退出，数据一致 |
+| DedupService 独立于 adapter | 所有 source 完成后统一触发，不再绑定 Strava 内部 `recheck_duplicates`。双向写入，含轨迹对比 |
 | temp→rename 原子写入 raw 文件 | 崩溃恢复时 `raw_file_exists?` 不误判 |
 | Per-source 独立 GH Cache | 每源独立 cache key (`workouts-raw-v1-{source}-{run_id}`)，通过 `scripts/source-digest.sh` 计算内容 md5 检测变化，仅变动的源写 cache。通过 `.github/actions/sources-cache/restore` + `sources-cache/save` 封装。数据目录示例: `data/raw/{garmin,garmin_cn,igpsport,...}/`, `data/std/{...}/` |
 | 导出默认路径 `data/` → `build/` | 源数据与生成制品分离，gitignored |
@@ -114,28 +129,54 @@ lib/workouts/cli/sync.rb         # 同步子模块（sync, auth）
 
 每源通过 `scripts/source-digest.sh` 计算内容 md5 作为 digest，用于 CI cache 的变更检测。restore 阶段写入 `data/.source-digests`（统一快照文件），sync 后比对，仅 digest 变化时写回 cache。
 
+### Adapter 接口
+
+每个 adapter 实现三个公共方法，供 Runner 或单源 CLI 调用：
+
+| 方法 | 返回值 | 说明 |
+|---|---|---|
+| `authenticate` | `true/false` | 登录 / 刷新 token。在 `pending_ids` 前调用，共享 `@access_token` / `@session` 状态 |
+| `pending_ids` | `[{id:, type:, summary:}]` | 预拉列表 + 过滤 existing + `skip_type?`。`summary` 保存列表 API 响应，供 `process_one` 使用 |
+| `process_one(pending)` | `attrs hash / nil` | 单活动完整流程：fetch detail → write raw → write std → upsert DB |
+
+`call` 方法委拖为 `authenticate + pending_ids.filter_map { \|p\| process_one(p) }.size`，保持单源 CL I 兼容。
+
 ### 数据流程
+
+#### 单源模式（`--source`）
 
 ```
 同步前:
-  1. 检查凭证是否存在 (@email/@phone 等为 nil → return 0)
+  1. 检查凭证是否存在
   2. 认证（登录 / 刷新 token）
 
 同步中:
-  1. 读取已存在的 run_id 列表 (existing_run_ids)
-  2. 分页拉取活动列表 (fetch_run_ids)
-  3. 计算 new_ids（未同步的） + missing_raw（已有摘要但缺原始 GPS 的）
-  4. 合并为统一列表（new_ids 在前，优先同步）
-  5. 逐活动处理:
-     a. 时间预算耗尽? → break（下次 CI run 继续）
-     b. raw 文件已存在? → next（crash 恢复保护）
-     c. 一次 API 调用 → 解密 GPS → 写 raw 文件 + 写 DB (含 summary_polyline)
-  6. 按活动类型过滤 (skip_type?)
+  3. pending_ids: 分页拉列表 + 过滤 existing + skip_type
+  4. process_one 逐活动: API → write raw → write std → upsert DB
 
 同步后:
-  7. 计算新鲜度 f
-  8. f < N → N=max(1,N-1); f > 2N+1 → N=min(7,N+1)
-  9. 写回 cron 行 (schedule only)
+  5. 计算新鲜度 f → 调整 cron 间隔
+```
+
+#### 多源模式（默认）
+
+```
+初始化（串行）:
+  source 依次: 检查凭证 → authenticate → pending_ids → 入类 1 队列
+
+并行调度:
+  Worker 池(默认 3 线程) 循环:
+    pop 类 1 队列 → source           [acquire 分布式锁]
+    处理最多 BATCH_SIZE=5 活动:
+      shift pending_ids[source]
+      process_one                   [独占 source，无竞态]
+    还有剩余? → push 回队列           [release 锁]
+    已完成? → completion -1
+    全部完成? → push POISON
+
+扫尾:
+  worker.join → 输出队列线程 join
+  Dedup::Service.run               [全源去重]
 ```
 
 ### 去重机制
@@ -144,24 +185,41 @@ lib/workouts/cli/sync.rb         # 同步子模块（sync, auth）
 
 基于 `run_id` 字段（格式：`{source}_{platform_id}`），每次同步前读取 DB 中已有 ID 列表，跳过完全重复的活动。这是第一道防线，防止同一活动的重复导入。
 
-#### 二级去重：多源置信度打分
+#### 二级去重：`Dedup::Service`
 
-Strava 适配器在同步完成后会执行 `recheck_duplicates`，用置信度算法扫描 Strava 活动与其它来源（Keep、iGPSPORT 等）的匹配情况。算法考虑三个因子：
+所有 source 同步完成后由 Runner 触发，与具体 adapter 解耦。算法跨全源滑动窗口匹配：
 
-- **时间相近度**（权重 40%）：开始时间差 ≤ 5 分钟，越近得分越高
-- **距离相近度**（权重 40%）：距离差 ≤ 较大值的 15%
-- **时长相近度**（权重 20%）：运动时长差 ≤ 较大值的 15%
+**窗口分组：** 按 start_date 排序，5 分钟滑动窗口内两两比较
 
-综合置信度 ≥ 0.15 即视为匹配，结果写入 `duplicate_info` 列（JSON 数组）：
+**置信度因子（`Dedup::Matcher`）：**
+
+| 因子 | 权重 | 条件 |
+|---|---|---|
+| 时间相近度 | 35% | 开始时间差 ≤ 5min |
+| 距离相近度 | 35% | 距离差 ≤ 较大值的 15% |
+| 时长相近度 | 15% | 运动时长差 ≤ 较大值的 15% |
+| 运动类型匹配 | 15% | 同类型 +15%，不同类型 -10% |
+
+**轨迹分类（`Dedup::Trajectory`）：**
+
+读取 L2 标准化 GPS 文件，默认每 10 点采样一个，检查采样点中 ≥ 30% 在对方轨迹 50m 范围内。此分类覆盖全等、包含、大重叠三种重复轨迹情形。
+
+**分类体系（4 种 flag）：**
+
+| flag | 含义 | 条件 |
+|---|---|---|
+| `derived` | 极可能是同一活动 | 置信度 ≥ 0.85 |
+| `duplicate` | 轨迹高度重叠的重複活动 | 置信度 ≥ 0.15 + GPS 采样重叠 ≥ 30% |
+| `similar` | 相似但不是同一活动 | 置信度 ≥ 0.15 + 无轨迹重叠 |
+| `overlap` | （旧数据兼容，保留） | — |
+
+**双向写入：** 匹配结果同时写入双方活动的 `duplicate_info` 列（JSON 数组）：
 
 ```json
-[{"source": "keep", "run_id": "keep_xxx", "confidence": 0.92, "flag": "derived"}]
+[{"source": "strava", "run_id": "strava_123", "confidence": 0.92, "flag": "derived"}]
 ```
 
-- `confidence ≥ 0.85` → flag 为 `"derived"`（极可能是同一活动）
-- `0.15 ≤ confidence < 0.85` → flag 为 `"overlap"`（部分重叠，需人工判断）
-
-SVG 导出时，标注上会区分 derived（高置信度合并）和 overlap（低置信度重叠），鼠标悬停显示匹配来源和评分。
+SVG 导出时，标注上区分 derived（高置信度合并）、duplicate（轨迹重叠）和 similar（低置信度重叠），鼠标悬停显示匹配来源和评分。
 
 ---
 
@@ -238,6 +296,7 @@ SYNC__GARMIN_CN__EMAIL  → sync.garmin_cn.email
 SYNC__GARMIN__AUTH_SEED → sync.garmin.auth_seed
 SYNC__STRAVA_CLIENT_ID  → sync.strava.client_id
 SYNC__TIME_BUDGET       → sync.time_budget           # 全局 sync 配置
+SYNC__WORKERS           → sync.workers               # 并行 worker 数，默认 3
 ```
 
 `__` 作为层级分隔符 → key 自身可含单 `_`（如 `garmin_cn`）
