@@ -25,13 +25,12 @@ module Workouts
       end
 
       def run
-        init_pending
-        return 0 if @source_queue.empty?
-
         output_thread = Thread.new { output_loop }
-        worker_threads = @num_workers.times.map { Thread.new { worker_loop } }
-
-        worker_threads.each(&:join)
+        init_pending
+        unless @source_queue.empty?
+          worker_threads = @num_workers.times.map { Thread.new { worker_loop } }
+          worker_threads.each(&:join)
+        end
         output_queue << POISON
         output_thread.join
 
@@ -47,16 +46,29 @@ module Workouts
           cfg = @config.sync_config(source)
           next if cfg.nil? || cfg.empty?
 
+          output_queue << { type: :banner, source: source, text: "authenticating" }
           adapter = build_adapter(source, cfg)
-          next unless adapter
-          next unless adapter.authenticate
+          unless adapter
+            output_queue << { type: :banner, source: source, text: "no adapter" }
+            next
+          end
 
+          unless adapter.authenticate
+            output_queue << { type: :banner, source: source, text: "auth failed" }
+            next
+          end
+
+          output_queue << { type: :banner, source: source, text: "fetching activity list" }
           ids = adapter.pending_ids
-          next if ids.nil? || ids.empty?
+          if ids.nil? || ids.empty?
+            output_queue << { type: :banner, source: source, text: "no new activities" }
+            next
+          end
 
           @adapters[source] = adapter
           @pending_ids[source] = ids
           @source_queue << source
+          output_queue << { type: :banner, source: source, text: "#{ids.size} pending" }
         end
         @unfinished = @source_queue.size
       end
@@ -140,6 +152,8 @@ module Workouts
 
       def output_loop
         $stdout.sync = true
+        $stdout.puts "Runner started with #{@num_workers} workers, #{@sources.size} sources"
+        $stdout.flush
         per_source = Hash.new(0)
         errors = Hash.new(0)
 
@@ -148,15 +162,18 @@ module Workouts
           break if msg == POISON
 
           case msg[:type]
+          when :banner
+            $stdout.puts "  #{msg[:source].rjust(10)} | #{msg[:text]}"
           when :progress
             per_source[msg[:source]] += 1
-            puts "  #{msg[:source].rjust(10)} | #{msg[:info]}"
+            $stdout.puts "  #{msg[:source].rjust(10)} | #{msg[:info]}"
           when :error
             errors[msg[:source]] += 1
-            puts "  #{msg[:source].rjust(10)} | ERROR: #{msg[:message]}"
+            $stdout.puts "  #{msg[:source].rjust(10)} | ERROR: #{msg[:message]}"
           when :timeout
-            puts "  #{msg[:source].rjust(10)} | TIME BUDGET — #{msg[:remaining]} remaining"
+            $stdout.puts "  #{msg[:source].rjust(10)} | TIME BUDGET — #{msg[:remaining]} remaining"
           end
+          $stdout.flush
         end
 
         @sources.each do |s|
@@ -165,8 +182,9 @@ module Workouts
           next if cnt.to_i <= 0 && err.to_i <= 0
           label = err.to_i > 0 ? "#{cnt} synced, #{err} errors" : "#{cnt} synced"
           prefix = cnt.to_i > 0 ? "    done" : "   error"
-          puts "  #{prefix}: #{s}: #{label}"
+          $stdout.puts "  #{prefix}: #{s}: #{label}"
         end
+        $stdout.flush
       end
 
       def build_info(attrs)
