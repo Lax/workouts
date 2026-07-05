@@ -98,6 +98,46 @@ module Workouts
         true
       end
 
+      def pending_ids
+        existing = existing_run_ids
+        ids = []
+        start = 0
+        limit = 100
+        loop do
+          activities = fetch_activity_list(start, limit)
+          break if activities.nil? || activities.empty?
+          activities.each do |act|
+            act_id = act["activityId"].to_s
+            type = map_type(act["activityType"])
+            next if skip_type?(type)
+            next if existing.include?(act_id) && raw_file_exists?(act_id)
+            ids << { id: act_id, type: type }
+          end
+          start += limit
+        end
+        ids
+      end
+
+      def process_one(pending)
+        act_id = pending[:id]
+        type = pending[:type]
+
+        details = fetch_activity_detail(act_id)
+        return nil unless details
+
+        polyline = fetch_summary_polyline(act_id)
+
+        unless raw_file_exists?(act_id)
+          download_fit_raw(act_id)
+          l2 = fit_to_l2(act_id)
+          write_standardized_json(l2, act_id) if l2
+        end
+
+        attrs = build_attrs(details, act_id, type, polyline)
+        upsert_activity(attrs)
+        attrs
+      end
+
       private
 
       def access_token_valid?
@@ -324,46 +364,6 @@ module Workouts
         result = JSON.parse(resp.body)
         result["expires_at"] = Time.now.to_i + (result["expires_in"] || 21600).to_i
         result
-      end
-
-      def pending_ids
-        existing = existing_run_ids
-        ids = []
-        start = 0
-        limit = 100
-        loop do
-          activities = fetch_activity_list(start, limit)
-          break if activities.nil? || activities.empty?
-          activities.each do |act|
-            act_id = act["activityId"].to_s
-            type = map_type(act["activityType"])
-            next if skip_type?(type)
-            next if existing.include?(act_id) && raw_file_exists?(act_id)
-            ids << { id: act_id, type: type }
-          end
-          start += limit
-        end
-        ids
-      end
-
-      def process_one(pending)
-        act_id = pending[:id]
-        type = pending[:type]
-
-        details = fetch_activity_detail(act_id)
-        return nil unless details
-
-        polyline = fetch_summary_polyline(act_id)
-
-        unless raw_file_exists?(act_id)
-          download_fit_raw(act_id)
-          l2 = fit_to_l2(act_id)
-          write_standardized_json(l2, act_id) if l2
-        end
-
-        attrs = build_attrs(details, act_id, type, polyline)
-        upsert_activity(attrs)
-        attrs
       end
 
       def sync_activities
