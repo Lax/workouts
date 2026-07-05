@@ -46,7 +46,7 @@ module Workouts
 
         return 0 unless authenticate
 
-        sync_activities
+        pending_ids.filter_map { |p| process_one(p) }.size
       end
 
       private

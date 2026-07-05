@@ -13,23 +13,30 @@ module Workouts
 
         filter = options[:activity]&.map(&:strip)&.map(&:downcase)
 
-        sources.each do |source|
+        if sources.size == 1
+          source = sources.first
           say_status :syncing, source, :green
           adapter = build_sync_adapter(source, db, filter)
-          next unless adapter
-
-          begin
-            count = adapter.call
-            print "\r#{' ' * 150}\r" if adapter.progress_reported
-            if count == 0
-              say_status :warn, "#{source}: 0 activities (see messages above)", :yellow
-            else
-              say_status :done, "#{source}: #{count} activities", :green
+          if adapter
+            begin
+              count = adapter.call
+              if count == 0
+                say_status :warn, "#{source}: 0 activities", :yellow
+              else
+                say_status :done, "#{source}: #{count} activities", :green
+              end
+            rescue => e
+              say_status :error, "#{source}: #{e.message}", :red
             end
-          rescue => e
-            print "\r#{' ' * 60}\r"
-            say_status :error, "#{source}: #{e.message}", :red
           end
+        else
+          runner = Workouts::Sync::Runner.new(
+            sources: sources, db: db, config: workouts_config,
+            activity_filter: filter,
+            num_workers: (workouts_config.dig("sync", "workers") || 3).to_i,
+            time_budget: workouts_config.dig("sync", "time_budget")
+          )
+          runner.run
         end
       end
 

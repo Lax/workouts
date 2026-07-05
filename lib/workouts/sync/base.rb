@@ -19,7 +19,21 @@ module Workouts
       attr_reader :progress_reported
 
       def call
-        raise NotImplementedError, "#{self.class} must implement #call"
+        return 0 unless respond_to?(:authenticate) ? authenticate : true
+        ids = pending_ids
+        return 0 if ids.nil? || ids.empty?
+        ids.filter_map { |p| process_one(p) }.size
+      end
+
+      # 返回 [{ id:, type:, summary: }] 待同步活动列表
+      def pending_ids
+        raise NotImplementedError, "#{self.class} must implement #pending_ids"
+      end
+
+      # 同步单个活动（pending 是 pending_ids 的一个元素）
+      # 返回 attrs hash（成功）或 nil（skip/失败）
+      def process_one(pending)
+        raise NotImplementedError, "#{self.class} must implement #process_one"
       end
 
       protected

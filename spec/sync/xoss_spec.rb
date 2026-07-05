@@ -118,18 +118,6 @@ RSpec.describe Workouts::Sync::XOSS do
       end
     end
 
-    context "when time budget expires" do
-      before do
-        stub_api_responses
-        allow(xoss).to receive(:report_progress)
-        allow(xoss).to receive(:time_expired?).and_return(true)
-      end
-
-      it "stops processing" do
-        expect(xoss.call).to eq(0)
-      end
-    end
-
     context "with skip_type filter" do
       subject(:xoss) { described_class.new(config:, db:, activity_filter: ["run"]) }
 
@@ -139,21 +127,6 @@ RSpec.describe Workouts::Sync::XOSS do
       end
 
       it "skips ride activity" do
-        allow(xoss).to receive(:download_fit).and_return(nil)
-        expect(xoss.call).to eq(0)
-      end
-    end
-
-    context "with time_budget exhausted before loop" do
-      subject(:xoss) { described_class.new(config:, db:, activity_filter: nil, time_budget: 0.001) }
-
-      before do
-        stub_api_responses
-        allow(xoss).to receive(:report_progress)
-        allow(xoss).to receive(:time_expired?).and_return(true)
-      end
-
-      it "honors time budget in loop" do
         allow(xoss).to receive(:download_fit).and_return(nil)
         expect(xoss.call).to eq(0)
       end

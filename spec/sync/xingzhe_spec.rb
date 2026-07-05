@@ -282,11 +282,10 @@ RSpec.describe Workouts::Sync::XingZhe do
         allow(xz).to receive(:fetch_page).with(0, 50).and_return(activities)
         allow(xz).to receive(:fetch_page).with(50, 50).and_return(nil)
         allow(xz).to receive(:fetch_stream).and_return(nil)
-        allow(xz).to receive(:time_expired?).and_return(true)
       end
 
-      it "honors time budget (stops before processing)" do
-        expect(xz.call).to eq(0)
+      it "processes all pending activities (time budget handled by Runner)" do
+        expect(xz.call).to eq(1)
       end
     end
   end

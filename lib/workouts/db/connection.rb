@@ -6,6 +6,8 @@ module Workouts
       def initialize(db_path)
         FileUtils.mkdir_p(File.dirname(db_path)) if db_path.include?("/")
         @db = Sequel.sqlite(db_path)
+        @db.run("PRAGMA journal_mode=WAL")
+        @db.run("PRAGMA busy_timeout=5000")
         run_migrations
       end
 

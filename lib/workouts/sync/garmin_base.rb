@@ -58,10 +58,8 @@ module Workouts
 
       def call
         return 0 if @email.to_s.empty? && @secret.to_s.empty?
-
         return 0 unless authenticate
-
-        sync_activities
+        pending_ids.filter_map { |p| process_one(p) }.size
       end
 
       # 认证优先级链: secret → token 文件 → SSO 登录
@@ -328,46 +326,49 @@ module Workouts
         result
       end
 
-      def sync_activities
+      def pending_ids
         existing = existing_run_ids
+        ids = []
         start = 0
         limit = 100
-        count = 0
-        @start_time = Time.now
-
         loop do
           activities = fetch_activity_list(start, limit)
           break if activities.nil? || activities.empty?
-
           activities.each do |act|
-            break if time_expired?
-
             act_id = act["activityId"].to_s
             type = map_type(act["activityType"])
             next if skip_type?(type)
             next if existing.include?(act_id) && raw_file_exists?(act_id)
-
-            details = fetch_activity_detail(act_id)
-            next unless details
-
-            polyline = fetch_summary_polyline(act_id)
-
-            unless raw_file_exists?(act_id)
-              download_fit_raw(act_id)
-              l2 = fit_to_l2(act_id)
-              write_standardized_json(l2, act_id) if l2
-            end
-
-            attrs = build_attrs(details, act_id, type, polyline)
-            upsert_activity(attrs)
-            count += 1
-            report_progress(count, nil, build_progress_info(attrs))
+            ids << { id: act_id, type: type }
           end
-
           start += limit
         end
+        ids
+      end
 
-        count
+      def process_one(pending)
+        act_id = pending[:id]
+        type = pending[:type]
+
+        details = fetch_activity_detail(act_id)
+        return nil unless details
+
+        polyline = fetch_summary_polyline(act_id)
+
+        unless raw_file_exists?(act_id)
+          download_fit_raw(act_id)
+          l2 = fit_to_l2(act_id)
+          write_standardized_json(l2, act_id) if l2
+        end
+
+        attrs = build_attrs(details, act_id, type, polyline)
+        upsert_activity(attrs)
+        attrs
+      end
+
+      def sync_activities
+        @start_time = Time.now
+        pending_ids.filter_map { |p| process_one(p) }.size
       end
 
       def existing_run_ids

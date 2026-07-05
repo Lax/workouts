@@ -30,8 +30,36 @@ module Workouts
       def call
         @start_time = Time.now
         return 0 if @email.nil? || @password.nil?
-        return 0 unless login
-        sync_activities
+        return 0 unless authenticate
+        pending_ids.filter_map { |p| process_one(p) }.size
+      end
+
+      def authenticate
+        login
+      end
+
+      def pending_ids
+        existing = existing_run_ids
+        ids = []
+        offset = 0
+        limit = 50
+        loop do
+          acts = fetch_page(offset, limit)
+          break if acts.nil? || acts.empty?
+          acts.each do |act|
+            aid = act["id"].to_s
+            next if existing.include?(aid) && raw_file_exists?(aid)
+            type = map_sport(act["sport"])
+            next if skip_type?(type)
+            ids << { id: aid, type: type, summary: act }
+          end
+          offset += limit
+        end
+        ids
+      end
+
+      def process_one(pending)
+        process_activity(pending[:summary], pending[:type])
       end
 
       private
@@ -87,34 +115,7 @@ module Workouts
       end
 
       def sync_activities
-        existing = existing_run_ids
-        offset = 0
-        limit = 50
-        count = 0
-
-        loop do
-          acts = fetch_page(offset, limit)
-          break if acts.nil? || acts.empty?
-
-          acts.each do |act|
-            aid = act["id"].to_s
-            next if existing.include?(aid) && raw_file_exists?(aid)
-            break if time_expired?
-
-            type = map_sport(act["sport"])
-            next if skip_type?(type)
-
-            result = process_activity(act, type)
-            if result
-              count += 1
-              report_progress(count, nil, build_progress_info(result))
-            end
-          end
-
-          offset += limit
-        end
-
-        count
+        pending_ids.filter_map { |p| process_one(p) }.size
       end
 
       def fetch_page(offset, limit)
