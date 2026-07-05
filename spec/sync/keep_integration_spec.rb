@@ -130,10 +130,10 @@ RSpec.describe Workouts::Sync::Keep do
         allow(keep).to receive(:http_post).with(any_args).and_return(login_ok)
         empty = empty_stats
         allow(keep).to receive(:http_get).and_return(
-          stats_response(compound_id),  # fetch_run_ids(running)
-          log_response,                  # sync_single_run_with_raw
-          empty,                         # fetch_run_ids(hiking)
-          empty                          # fetch_run_ids(cycling)
+          stats_response(compound_id),  # pending_ids: fetch_run_ids(running)
+          empty,                         # pending_ids: fetch_run_ids(hiking)
+          empty,                         # pending_ids: fetch_run_ids(cycling)
+          log_response                   # process_one: sync_single_run_with_raw
         )
       end
 

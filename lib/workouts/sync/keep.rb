@@ -51,17 +51,38 @@ module Workouts
       def call
         @start_time = Time.now
         return 0 if @phone.nil? || @password.nil?
+        return 0 unless authenticate
+        pending_ids.filter_map { |p| process_one(p) }.size
+      end
 
+      def authenticate
         @session = login
-        return 0 unless @session
+        @session ? true : false
+      end
 
-        @existing_ids = existing_run_ids
-
-        count = 0
+      def pending_ids
+        existing = existing_run_ids
+        ids = []
         KEEP_TYPES.each do |sport|
-          count += sync_sport_type(sport)
+          compound_ids = fetch_run_ids(sport)
+          compound_ids.each do |cid|
+            keep_id = extract_id(cid) || cid
+            run_id = "keep_#{keep_id}"
+            has_existing = existing.include?(run_id)
+            has_raw = raw_file_exists?(keep_id)
+            next if has_existing && has_raw
+            ids << { id: cid, keep_id: keep_id, sport: sport, has_raw: has_raw }
+          end
         end
-        count
+        ids
+      end
+
+      def process_one(pending)
+        if pending[:has_raw]
+          upsert_from_raw(pending[:id])
+        else
+          sync_single_run_with_raw(pending[:id], pending[:sport])
+        end
       end
 
       private
@@ -104,39 +125,9 @@ module Workouts
       end
 
       def sync_sport_type(sport)
-        compound_ids = fetch_run_ids(sport)
-        new_ids = compound_ids.reject { |cid|
-          @existing_ids.include?("keep_#{extract_id(cid) || cid}")
-        }
-        missing_raw = compound_ids.select { |cid|
-          keep_id = extract_id(cid) || cid
-          run_id = "keep_#{keep_id}"
-          @existing_ids.include?(run_id) && !raw_file_exists?(keep_id)
-        }
-        all_ids = new_ids + missing_raw
-        total = all_ids.size
-        synced = 0
-
-        all_ids.each do |compound_id|
-          keep_id = extract_id(compound_id) || compound_id
-          break if time_expired?
-
-          if raw_file_exists?(keep_id)
-            if !@existing_ids.include?("keep_#{keep_id}") && (attrs = upsert_from_raw(compound_id))
-              synced += 1
-              report_progress(synced, total, build_progress_info(attrs))
-            end
-            next
-          end
-
-          if (attrs = sync_single_run_with_raw(compound_id, sport))
-            synced += 1
-            report_progress(synced, total, build_progress_info(attrs))
-          else
-            report_progress(synced, total)
-          end
-        end
-        synced
+        pending_ids.select { |p| p[:sport] == sport }
+                   .filter_map { |p| process_one(p) }
+                   .size
       end
 
       def existing_run_ids

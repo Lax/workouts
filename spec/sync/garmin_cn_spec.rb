@@ -198,10 +198,11 @@ RSpec.describe Workouts::Sync::GarminCN do
     context "with secret only (no email)" do
       subject(:adapter) { stub_adapter(config_overrides: { "email" => "", "password" => "", "secret" => build_secret }) }
 
-      it "calls authenticate and sync_activities" do
+      it "calls authenticate and pending_ids + process_one" do
         expect(adapter).to receive(:authenticate).and_return(true)
-        expect(adapter).to receive(:sync_activities).and_return(3)
-        expect(adapter.call).to eq(3)
+        expect(adapter).to receive(:pending_ids).and_return([{id: "1", type: "run"}])
+        expect(adapter).to receive(:process_one).and_return({"run_id" => "garmin_cn_1"})
+        expect(adapter.call).to eq(1)
       end
     end
 

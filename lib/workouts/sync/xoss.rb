@@ -31,10 +31,8 @@ module Workouts
         @start_time = Time.now
         return 0 if @email.nil? || @password.nil?
         return 0 unless authenticate
-        sync_activities
+        pending_ids.filter_map { |p| process_one(p) }.size
       end
-
-      private
 
       def authenticate
         return true if load_tokens && access_token_valid?
@@ -42,6 +40,32 @@ module Workouts
         return true if login
         false
       end
+
+      def pending_ids
+        existing = existing_run_ids
+        ids = []
+        offset = 1
+        limit = 50
+        loop do
+          acts = fetch_page(offset, limit)
+          break if acts.nil? || acts.empty?
+          acts.each do |act|
+            act_id = act["id"].to_s
+            next if existing.include?(act_id) && raw_file_exists?(act_id)
+            type = map_sport(act["sport"])
+            next if skip_type?(type)
+            ids << { id: act_id, type: type, summary: act }
+          end
+          offset += limit
+        end
+        ids
+      end
+
+      def process_one(pending)
+        process_activity(pending[:summary])
+      end
+
+      private
 
       def http_request(method, path, body: nil, params: nil, headers: {})
         uri = URI("#{BASE_URL}#{path}")
@@ -184,34 +208,7 @@ module Workouts
       end
 
       def sync_activities
-        existing = existing_run_ids
-        offset = 1
-        limit = 50
-        count = 0
-
-        loop do
-          activities = fetch_page(offset, limit)
-          break if activities.nil? || activities.empty?
-
-          activities.each do |act|
-            act_id = act["id"].to_s
-            next if existing.include?(act_id) && raw_file_exists?(act_id)
-            break if time_expired?
-
-            type = map_sport(act["sport"])
-            next if skip_type?(type)
-
-            result = process_activity(act)
-            if result
-              count += 1
-              report_progress(count, nil, build_progress_info(result))
-            end
-          end
-
-          offset += limit
-        end
-
-        count
+        pending_ids.filter_map { |p| process_one(p) }.size
       end
 
       def fetch_page(offset, limit)

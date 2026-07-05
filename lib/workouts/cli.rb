@@ -107,6 +107,15 @@ module Workouts
       say_status :error, "Parse failed: #{e.message}", :red
     end
 
+    desc "dedup", "Re-run dedup matching across all sources"
+    def dedup
+      db = connect_db
+      count = Workouts::Dedup::Service.new(db).run
+      say_status :done, "Dedup: #{count} matches updated", :green
+    rescue => e
+      say_status :error, "Dedup failed: #{e.message}", :red
+    end
+
     desc "version", "Show version"
     def version
       puts "Workouts v#{Workouts::VERSION}"

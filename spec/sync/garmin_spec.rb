@@ -49,7 +49,7 @@ RSpec.describe Workouts::Sync::Garmin do
       def strategy_b_login; nil; end
       def verify_access_token; true; end
       def api_get(path)
-        [{ "activityId" => 1 }] if path.include?("search/activities")
+        [{ "activityId" => 1, "activityType" => { "typeKey" => "running" } }] if path.include?("search/activities?start=0")
       end
     end.new(config:, db:, activity_filter: nil)
   end
@@ -375,11 +375,12 @@ RSpec.describe Workouts::Sync::Garmin do
       subject(:adapter) { stub_adapter(config_overrides: { "auth_seed" => Base64.strict_encode64(JSON.generate(token_json)) }) }
 
       before do
-        allow(adapter).to receive(:sync_activities).and_return(5)
+        allow(adapter).to receive(:pending_ids).and_return([{id: "1", type: "run"}])
+        allow(adapter).to receive(:process_one).and_return({"run_id" => "garmin_1"})
       end
 
-      it "calls authenticate and sync_activities" do
-        expect(adapter.call).to eq(5)
+      it "calls authenticate and pending_ids + process_one" do
+        expect(adapter.call).to eq(1)
       end
     end
 
@@ -388,11 +389,12 @@ RSpec.describe Workouts::Sync::Garmin do
 
       before do
         write_token(adapter, token_json(expires_at: Time.now.to_i + 3600))
-        allow(adapter).to receive(:sync_activities).and_return(3)
+        allow(adapter).to receive(:pending_ids).and_return([{id: "1", type: "run"}])
+        allow(adapter).to receive(:process_one).and_return({"run_id" => "garmin_1"})
       end
 
-      it "calls sync_activities" do
-        expect(adapter.call).to eq(3)
+      it "calls pending_ids + process_one" do
+        expect(adapter.call).to eq(1)
       end
     end
 

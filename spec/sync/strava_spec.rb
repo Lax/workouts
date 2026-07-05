@@ -118,8 +118,6 @@ RSpec.describe Workouts::Sync::Strava do
         "max_watts" => 450, "calories" => 680,
         "average_temp" => 28, "total_elevation_gain" => 200.0 }
     end
-    before { allow(strava).to receive(:credentials_present?).and_return(false) }
-
     it "sets run_id" do
       expect(attrs[:run_id]).to eq("strava_2002")
     end

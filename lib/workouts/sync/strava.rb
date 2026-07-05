@@ -7,27 +7,52 @@ module Workouts
     class Strava < Base
       BASE_URL = "https://www.strava.com/api/v3"
       MAX_DETAIL_CALLS = 5
-      DUPLICATE_SOURCES = %w[keep xingzhe xoss igpsport garmin garmin_cn].freeze
+
 
       def call
         @start_time = Time.now
-        return 0 unless credentials_present?
-
-        access_token = refresh_access_token
-        return 0 unless access_token
-
-        count = sync_activities(access_token)
-        recheck_duplicates
+        return 0 unless authenticate
+        count = pending_ids.filter_map { |p| process_one(p) }.size
         count
       end
 
-      private
-
-      def credentials_present?
-        @config["client_id"].to_s != "" &&
-        @config["client_secret"].to_s != "" &&
-        @config["refresh_token"].to_s != ""
+      def authenticate
+        return false unless @config["client_id"].to_s != "" &&
+                            @config["client_secret"].to_s != "" &&
+                            @config["refresh_token"].to_s != ""
+        @access_token = refresh_access_token
+        @access_token ? true : false
       end
+
+      def pending_ids
+        existing = existing_run_ids
+        ids = []
+        page = 1
+        detail_calls = 0
+        loop do
+          activities = fetch_activities(@access_token, page)
+          break if activities.empty?
+          activities.each do |act|
+            act_id = act["id"].to_s
+            next if existing.include?(act_id) && raw_file_exists?(act_id)
+            type = map_sport_type(act["type"], act["sport_type"])
+            next if skip_type?(type)
+            ids << { id: act_id, type: type, summary: act }
+            detail_calls += 1
+            break if detail_calls >= MAX_DETAIL_CALLS
+          end
+          break if detail_calls >= MAX_DETAIL_CALLS
+          page += 1
+        end
+        ids
+      end
+
+      def process_one(pending)
+        result = sync_activity(pending[:summary], pending[:id], @access_token)
+        result
+      end
+
+      private
 
       def refresh_access_token
         resp = Faraday.post("https://www.strava.com/oauth/token") do |req|
@@ -42,40 +67,11 @@ module Workouts
         JSON.parse(resp.body)["access_token"]
       end
 
-      def sync_activities(token)
-        existing = existing_run_ids
-        page = 1
-        count = 0
-        detail_calls = 0
-
-        loop do
-          activities = fetch_activities(token, page)
-          break if activities.empty?
-
-          activities.each do |act|
-            act_id = act["id"].to_s
-            next if existing.include?(act_id) && raw_file_exists?(act_id)
-            break if time_expired?
-            break if detail_calls >= MAX_DETAIL_CALLS
-
-            result = sync_activity(act, act_id, token)
-            if result
-              count += 1
-              report_progress(count, nil, build_progress_info(result))
-            end
-            detail_calls += 1
-          end
-
-          page += 1
-        end
-
-        count
+      def sync_activities(token = @access_token)
+        pending_ids.filter_map { |p| process_one(p) }.size
       end
 
       def sync_activity(act, act_id, token)
-          dup_info = find_best_match(act["start_date"], act["distance"], act["moving_time"],
-                                   map_sport_type(act["type"], act["sport_type"]))
-
         detail = fetch_detail(act_id, token)
         return false unless detail
 
@@ -91,7 +87,7 @@ module Workouts
         type = map_sport_type(act["type"], act["sport_type"])
         return false if skip_type?(type)
 
-        attrs = build_attrs(act, type, polyline, dup_info)
+        attrs = build_attrs(act, type, polyline)
         upsert_activity(attrs)
         attrs
       end
@@ -171,64 +167,7 @@ module Workouts
         File.rename(tmp, final)
       end
 
-      def recheck_duplicates
-        rows = @db[:activities].where(source: "strava").all
-        rows.each do |s|
-          next unless s[:distance] && s[:distance] > 100
-          best = find_best_match(s[:start_date], s[:distance], s[:moving_time], s[:sport_category])
-          new_json = best && best[:confidence] > 0.15 ? JSON.generate([best]) : nil
-          current = s[:duplicate_info]
-          next if new_json == current || (new_json && current && JSON.parse(new_json) == JSON.parse(current))
-          @db[:activities].where(run_id: s[:run_id]).update(duplicate_info: new_json)
-        end
-        nil
-      end
-
-      def find_best_match(start_date, distance, moving_time, category)
-        return nil unless distance && distance > 100
-
-        candidates = @db[:activities]
-          .where(source: DUPLICATE_SOURCES, sport_category: category)
-          .exclude(distance: nil)
-          .all
-
-        best = nil
-        best_conf = 0.0
-
-        candidates.each do |c|
-          t_diff = begin
-            (Time.parse(start_date) - Time.parse(c[:start_date].to_s)).abs
-          rescue
-            9999
-          end
-          next if t_diff > 300
-
-          max_dist = [distance, c[:distance] || 0].max
-          d_diff = (distance - (c[:distance] || 0)).abs
-          next if max_dist == 0 || d_diff > max_dist * 0.15
-
-          max_dur = [moving_time, c[:moving_time] || 0].max
-          dur_diff = (moving_time - (c[:moving_time] || 0)).abs
-
-          t_score = [1.0 - t_diff / 300.0, 0.0].max
-          d_score = max_dist > 0 ? [1.0 - d_diff / (max_dist * 0.15), 0.0].max : 0.0
-          dur_score = max_dur > 0 && dur_diff <= max_dur * 0.15 ? [1.0 - dur_diff / (max_dur * 0.15), 0.0].max : 0.0
-          conf = (t_score * 0.4 + d_score * 0.4 + dur_score * 0.2).round(4)
-
-          if conf > best_conf
-            best_conf = conf
-            best = { source: c[:source], run_id: c[:run_id], confidence: conf,
-                     primary_distance: c[:distance] }
-          end
-        end
-
-        return nil unless best && best_conf >= 0.15
-
-        best[:flag] = best_conf >= 0.85 ? "derived" : "overlap"
-        best
-      end
-
-      def build_attrs(act, category, polyline = nil, dup_info = nil)
+      def build_attrs(act, category, polyline = nil)
         start_t = Time.parse(act["start_date"]) rescue nil
         local_t = Time.parse(act["start_date_local"]) rescue nil
 
@@ -254,7 +193,6 @@ module Workouts
           average_temperature: act["average_temp"],
           average_speed: act["average_speed"],
           elevation_gain: act["total_elevation_gain"],
-          duplicate_info: dup_info ? JSON.generate([dup_info]) : nil,
           source: "strava"
         }
       end
