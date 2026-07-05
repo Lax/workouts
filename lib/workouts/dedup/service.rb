@@ -82,7 +82,11 @@ module Workouts
       def flush_updates
         @updates.each do |run_id, entries|
           existing_json = @db[:activities].where(run_id: run_id).get(:duplicate_info)
-          existing = existing_json ? JSON.parse(existing_json) : []
+          existing = begin
+            existing_json ? JSON.parse(existing_json) : []
+          rescue JSON::ParserError
+            []
+          end
           merged = merge_entries(existing, entries)
           new_json = merged.empty? ? nil : JSON.generate(merged)
           @db[:activities].where(run_id: run_id).update(duplicate_info: new_json)

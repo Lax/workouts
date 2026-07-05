@@ -52,7 +52,9 @@ module Workouts
         @start_time = Time.now
         return 0 if @phone.nil? || @password.nil?
         return 0 unless authenticate
-        pending_ids.filter_map { |p| process_one(p) }.size
+        ids = pending_ids
+        return 0 if ids.nil? || ids.empty?
+        ids.filter_map { |p| process_one(p) }.size
       end
 
       def authenticate

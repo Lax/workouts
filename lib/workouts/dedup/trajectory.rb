@@ -42,7 +42,7 @@ module Workouts
       end
 
       def source_from_run_id(run_id)
-        %w[garmin garmin_cn strava keep igpsport xoss xingzhe].each do |s|
+        %w[garmin_cn garmin strava keep igpsport xoss xingzhe].each do |s|
           return s if run_id.start_with?("#{s}_")
         end
         nil
