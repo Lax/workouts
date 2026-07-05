@@ -139,6 +139,7 @@ module Workouts
       end
 
       def output_loop
+        $stdout.sync = true
         per_source = Hash.new(0)
         errors = Hash.new(0)
 
