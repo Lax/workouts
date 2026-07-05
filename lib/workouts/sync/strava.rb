@@ -6,7 +6,6 @@ module Workouts
     # Dual dedup: run_id (hard) + confidence scoring (soft, via recheck_duplicates).
     class Strava < Base
       BASE_URL = "https://www.strava.com/api/v3"
-      MAX_DETAIL_CALLS = 5
 
 
       def call
@@ -28,7 +27,6 @@ module Workouts
         existing = existing_run_ids
         ids = []
         page = 1
-        detail_calls = 0
         loop do
           activities = fetch_activities(@access_token, page)
           break if activities.empty?
@@ -38,10 +36,7 @@ module Workouts
             type = map_sport_type(act["type"], act["sport_type"])
             next if skip_type?(type)
             ids << { id: act_id, type: type, summary: act }
-            detail_calls += 1
-            break if detail_calls >= MAX_DETAIL_CALLS
           end
-          break if detail_calls >= MAX_DETAIL_CALLS
           page += 1
         end
         ids
@@ -67,11 +62,10 @@ module Workouts
         JSON.parse(resp.body)["access_token"]
       end
 
-      def sync_activities(token = @access_token)
-        pending_ids.filter_map { |p| process_one(p) }.size
-      end
-
       def sync_activity(act, act_id, token)
+        type = map_sport_type(act["type"], act["sport_type"])
+        return false if skip_type?(type)
+
         detail = fetch_detail(act_id, token)
         return false unless detail
 
@@ -83,9 +77,6 @@ module Workouts
         write_standardized_json(l2, act_id) if l2
 
         polyline = l2 ? Geo::Polyline.encode(l2.map { |pt| [pt[:positionLat], pt[:positionLong]] }) : act.dig("map", "summary_polyline")
-
-        type = map_sport_type(act["type"], act["sport_type"])
-        return false if skip_type?(type)
 
         attrs = build_attrs(act, type, polyline)
         upsert_activity(attrs)

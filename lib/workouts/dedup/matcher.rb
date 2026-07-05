@@ -23,10 +23,6 @@ module Workouts
         result.round(4)
       end
 
-      def self.flag(score)
-        score >= 0.85 ? "derived" : "overlap"
-      end
-
       def self.time_diff_abs(t1, t2)
         t1 = t1.to_s
         t2 = t2.to_s

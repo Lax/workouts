@@ -163,8 +163,8 @@ module Workouts
           err = errors[s]
           next if cnt.to_i <= 0 && err.to_i <= 0
           label = err.to_i > 0 ? "#{cnt} synced, #{err} errors" : "#{cnt} synced"
-          color = err.to_i > 0 ? :yellow : (cnt.to_i > 0 ? :green : :red)
-          say_status cnt.to_i > 0 ? :done : :error, "#{s}: #{label}", color
+          prefix = cnt.to_i > 0 ? "    done" : "   error"
+          puts "  #{prefix}: #{s}: #{label}"
         end
       end
 
