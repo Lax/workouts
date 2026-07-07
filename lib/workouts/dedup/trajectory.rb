@@ -6,11 +6,12 @@ module Workouts
 
       def initialize(db)
         @db = db
+        @cache = {}
       end
 
       def duplicate?(run_id_a, run_id_b)
-        pts_a = load_points(run_id_a)
-        pts_b = load_points(run_id_b)
+        pts_a = cached_points(run_id_a)
+        pts_b = cached_points(run_id_b)
         return nil unless pts_a && pts_b && pts_a.size >= 2 && pts_b.size >= 2
 
         shorter = pts_a.size <= pts_b.size ? pts_a : pts_b
@@ -23,6 +24,10 @@ module Workouts
       end
 
       private
+
+      def cached_points(run_id)
+        @cache[run_id] ||= load_points(run_id)
+      end
 
       def load_points(run_id)
         source = source_from_run_id(run_id)

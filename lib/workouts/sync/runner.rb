@@ -106,54 +106,73 @@ module Workouts
           source = @source_queue.pop
           break if source == POISON
 
-          unless init_source(source)
-            finish_activity(source)
-            next
-          end
-
-          total = @pending_ids[source].size
-          processed = 0
-          timed_out_local = false
-
-          loop do
-            activity = nil
-            @stats_lock.synchronize { activity = @pending_ids[source]&.shift }
-            break unless activity
-
-            if @shutdown || budget_expired?
-              @stats_lock.synchronize do
+          begin
+            process_source(source)
+          rescue => e
+            @output_queue << { type: :error, source:, message: "Worker crashed: #{e.message}" }
+            @stats_lock.synchronize do
+              @pending_ids.delete(source)
+              @adapters.delete(source)
+              return if @completed[source]
+              @completed[source] = true
+              @unfinished -= 1
+              if @unfinished <= 0
                 @shutdown = true
-                @timed_out = true
-                @pending_ids[source]&.unshift(activity) if @pending_ids[source]
+                @num_workers.times { @source_queue << POISON }
               end
-              timed_out_local = true
-              break
             end
+          end
+        end
+      end
 
-            begin
-              result = @adapters[source].process_one(activity)
-              processed += 1
-              if result
-                info = @adapters[source].build_progress_info(result)
-                @output_queue << {
-                  type: :progress, source:, id: activity[:id],
-                  info: info, done: processed, total: total
-                }
-              else
-                @output_queue << {
-                  type: :progress, source:, id: activity[:id],
-                  info: nil, done: processed, total: total
-                }
-              end
-            rescue => e
-              @output_queue << { type: :error, source:, message: e.message }
+      def process_source(source)
+        unless init_source(source)
+          finish_activity(source)
+          return
+        end
+
+        total = @pending_ids[source].size
+        processed = 0
+        timed_out_local = false
+
+        loop do
+          activity = nil
+          @stats_lock.synchronize { activity = @pending_ids[source]&.shift }
+          break unless activity
+
+          if @shutdown || budget_expired?
+            @stats_lock.synchronize do
+              @shutdown = true
+              @timed_out = true
+              @pending_ids[source]&.unshift(activity) if @pending_ids[source]
             end
-
-            break if processed >= BATCH_SIZE
+            timed_out_local = true
+            break
           end
 
-          finish_activity(source, timed_out_local)
+          begin
+            result = @adapters[source].process_one(activity)
+            processed += 1
+            if result
+              info = @adapters[source].build_progress_info(result)
+              @output_queue << {
+                type: :progress, source:, id: activity[:id],
+                info: info, done: processed, total: total
+              }
+            else
+              @output_queue << {
+                type: :progress, source:, id: activity[:id],
+                info: nil, done: processed, total: total
+              }
+            end
+          rescue => e
+            @output_queue << { type: :error, source:, message: e.message }
+          end
+
+          break if processed >= BATCH_SIZE
         end
+
+        finish_activity(source, timed_out_local)
       end
 
       def finish_activity(source, timed_out = false)
