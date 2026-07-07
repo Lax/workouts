@@ -5,14 +5,16 @@ module Workouts
       BATCH_SIZE = 5
 
       def initialize(sources:, db:, config:, activity_filter: nil,
-                     num_workers: 3, time_budget: nil)
+                     num_workers: 3, time_budget: nil, total_timeout: nil)
         @sources = sources
         @db = db
         @config = config
         @activity_filter = activity_filter
         @num_workers = num_workers
         @time_budget = time_budget
+        @total_timeout = total_timeout || ENV["SYNC__TOTAL_TIMEOUT"]&.to_f
         @sync_start = Time.now
+        @watchdog = nil
 
         @pending_ids = {}
         @adapters = {}
@@ -27,6 +29,7 @@ module Workouts
 
       def run
         output_thread = Thread.new { output_loop }
+        start_watchdog if @total_timeout
         init_pending
         unless @source_queue.empty?
           worker_threads = @num_workers.times.map { Thread.new { worker_loop } }
@@ -36,6 +39,8 @@ module Workouts
         output_thread.join
 
         Workouts::Dedup::Service.new(@db).run if @sources.size > 1
+      ensure
+        @watchdog&.kill
       end
 
       private
@@ -168,6 +173,15 @@ module Workouts
         @time_budget && (Time.now - @sync_start) > @time_budget.to_f
       end
 
+      def start_watchdog
+        @watchdog = Thread.new do
+          sleep @total_timeout
+          @stats_lock.synchronize { @shutdown = true }
+          @output_queue << { type: :total_timeout, seconds: @total_timeout }
+          @num_workers.times { @source_queue << POISON }
+        end
+      end
+
       def output_loop
         $stdout.sync = true
         $stdout.puts "Runner started with #{@num_workers} workers, #{@sources.size} sources"
@@ -190,6 +204,8 @@ module Workouts
             $stdout.puts "  #{msg[:source].rjust(10)} | ERROR: #{msg[:message]}"
           when :timeout
             $stdout.puts "  #{msg[:source].rjust(10)} | TIME BUDGET — #{msg[:remaining]} remaining"
+          when :total_timeout
+            $stdout.puts "  *** TOTAL TIMEOUT #{msg[:seconds]}s — forcing shutdown"
           end
           $stdout.flush
         end
