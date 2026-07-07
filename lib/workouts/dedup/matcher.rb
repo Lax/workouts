@@ -7,9 +7,10 @@ module Workouts
 
       def self.match(a, b)
         t_diff = time_diff_abs(a[:start_date], b[:start_date])
-        return 0.0 if t_diff > 300
+        max_diff = [300, (a[:elapsed_time] || 0).to_i, (b[:elapsed_time] || 0).to_i].max
+        return 0.0 if t_diff > max_diff
 
-        t_score = 1.0 - t_diff / 300.0
+        t_score = 1.0 - t_diff / max_diff.to_f
         d_score = distance_score(a[:distance].to_f, b[:distance].to_f)
         return 0.0 unless d_score
 
