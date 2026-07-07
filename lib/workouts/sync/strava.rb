@@ -8,13 +8,6 @@ module Workouts
       BASE_URL = "https://www.strava.com/api/v3"
 
 
-      def call
-        @start_time = Time.now
-        return 0 unless authenticate
-        count = pending_ids.filter_map { |p| process_one(p) }.size
-        count
-      end
-
       def authenticate
         return false unless @config["client_id"].to_s != "" &&
                             @config["client_secret"].to_s != "" &&

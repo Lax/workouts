@@ -111,6 +111,7 @@ module Workouts
             next
           end
 
+          total = @pending_ids[source].size
           processed = 0
           timed_out_local = false
 
@@ -131,15 +132,23 @@ module Workouts
 
             begin
               result = @adapters[source].process_one(activity)
-              @output_queue << {
-                type: :progress, source:, id: activity[:id],
-                info: result ? build_info(result) : "skipped"
-              }
+              processed += 1
+              if result
+                info = @adapters[source].build_progress_info(result)
+                @output_queue << {
+                  type: :progress, source:, id: activity[:id],
+                  info: info, done: processed, total: total
+                }
+              else
+                @output_queue << {
+                  type: :progress, source:, id: activity[:id],
+                  info: nil, done: processed, total: total
+                }
+              end
             rescue => e
               @output_queue << { type: :error, source:, message: e.message }
             end
 
-            processed += 1
             break if processed >= BATCH_SIZE
           end
 
@@ -187,24 +196,41 @@ module Workouts
         $stdout.sync = true
         $stdout.puts "Runner started with #{@num_workers} workers, #{@sources.size} sources"
         $stdout.flush
-        per_source = Hash.new(0)
-        errors = Hash.new(0)
+        per_source = Hash.new { |h, k| h[k] = {} }
 
         loop do
           msg = @output_queue.pop
           break if msg == POISON
 
+          s = msg[:source]
+          ps = per_source[s]
+
           case msg[:type]
           when :banner
-            $stdout.puts "  #{msg[:source].rjust(10)} | #{msg[:text]}"
+            text = msg[:text]
+            if text =~ /auth failed/
+              ps[:auth_failed] = true
+            elsif text =~ /no new activities/
+              ps[:up_to_date] = true
+            elsif text =~ /(\d+) pending/
+              ps[:total] = $1.to_i
+            end
+            $stdout.puts "  #{s.rjust(10)} | #{text}"
           when :progress
-            per_source[msg[:source]] += 1
-            $stdout.puts "  #{msg[:source].rjust(10)} | #{msg[:info]}"
+            ps[:done] = msg[:done] || ps.fetch(:done, 0) + 1
+            total = msg[:total] || ps[:total]
+            next unless show_progress?(msg[:done], total)
+            line = if msg[:info]
+                     " [#{msg[:done]}/#{total}] #{msg[:info]}"
+                   else
+                     " [#{msg[:done]}/#{total}] (skipped)"
+                   end
+            $stdout.puts "  #{s.rjust(10)} |#{line}"
           when :error
-            errors[msg[:source]] += 1
-            $stdout.puts "  #{msg[:source].rjust(10)} | ERROR: #{msg[:message]}"
+            ps[:errors] = (ps[:errors] || 0) + 1
+            $stdout.puts "  #{s.rjust(10)} | ERROR: #{msg[:message]}"
           when :timeout
-            $stdout.puts "  #{msg[:source].rjust(10)} | TIME BUDGET — #{msg[:remaining]} remaining"
+            $stdout.puts "  #{s.rjust(10)} | TIME BUDGET — #{msg[:remaining]} remaining"
           when :total_timeout
             $stdout.puts "  *** TOTAL TIMEOUT #{msg[:seconds]}s — forcing shutdown"
           end
@@ -212,30 +238,27 @@ module Workouts
         end
 
         @sources.each do |s|
-          cnt = per_source[s]
-          err = errors[s]
-          next if cnt.to_i <= 0 && err.to_i <= 0
-          label = err.to_i > 0 ? "#{cnt} synced, #{err} errors" : "#{cnt} synced"
-          prefix = cnt.to_i > 0 ? "    done" : "   error"
-          $stdout.puts "  #{prefix}: #{s}: #{label}"
+          info = per_source[s] || {}
+          err = info[:errors] || 0
+          if info[:auth_failed]
+            $stdout.puts "    done: #{s}: 0 synced (auth failed)"
+          elsif info[:up_to_date]
+            $stdout.puts "    done: #{s}: up to date"
+          elsif (cnt = info[:done]) && cnt > 0
+            label = err > 0 ? "#{cnt} synced, #{err} errors" : "#{cnt} synced"
+            $stdout.puts "    done: #{s}: #{label}"
+          elsif info.key?(:done)
+            $stdout.puts "    done: #{s}: 0 synced"
+          end
         end
         $stdout.flush
       end
 
-      def build_info(attrs)
-        parts = []
-        if (sd = attrs["start_date"] || attrs[:start_date])
-          d = Date.parse(sd.to_s) rescue nil
-          parts << (d.year == Date.today.year ? d.strftime("%m-%d") : d.strftime("%Y-%m-%d")) if d
-        end
-        type = attrs["sport_category"] || attrs[:sport_category]
-        parts << type if type
-        dist = attrs["distance"] || attrs[:distance]
-        parts << "#{format('%.1f', dist.to_f / 1000)}km" if dist&.to_f&.> 0
-        name = (attrs["name"] || attrs[:name]).to_s.strip
-        name = "#{name}"[0, 30]
-        parts << name unless name.empty?
-        parts.join(" | ")
+      def show_progress?(done, total)
+        return true if done.nil? || done <= 3
+        return true if total && (total - done) <= 5
+        step = total && total > 0 ? [1, (total / 15.0).ceil].max : 1
+        step <= 1 || done % step == 0
       end
     end
   end
