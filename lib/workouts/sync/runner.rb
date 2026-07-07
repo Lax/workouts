@@ -13,6 +13,7 @@ module Workouts
         @num_workers = num_workers
         @time_budget = time_budget
         @total_timeout = total_timeout || ENV["SYNC__TOTAL_TIMEOUT"]&.to_f
+        @total_timeout = nil if @total_timeout&.<= 0
         @sync_start = Time.now
         @watchdog = nil
 
