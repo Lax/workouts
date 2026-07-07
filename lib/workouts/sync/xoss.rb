@@ -27,11 +27,9 @@ module Workouts
         @token_path = @config["token_path"] || File.join("data", "cache", "xoss_tokens.json")
       end
 
-      def call
-        @start_time = Time.now
-        return 0 if @email.nil? || @password.nil?
-        return 0 unless authenticate
-        pending_ids.filter_map { |p| process_one(p) }.size
+      def before_call
+        return false if @email.nil? || @password.nil?
+        super
       end
 
       def authenticate

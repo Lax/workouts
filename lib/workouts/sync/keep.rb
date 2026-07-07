@@ -48,13 +48,9 @@ module Workouts
         @session = nil
       end
 
-      def call
-        @start_time = Time.now
-        return 0 if @phone.nil? || @password.nil?
-        return 0 unless authenticate
-        ids = pending_ids
-        return 0 if ids.nil? || ids.empty?
-        ids.filter_map { |p| process_one(p) }.size
+      def before_call
+        return false if @phone.nil? || @password.nil?
+        super
       end
 
       def authenticate

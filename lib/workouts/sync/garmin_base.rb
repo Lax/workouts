@@ -56,10 +56,9 @@ module Workouts
 
       attr_reader :generated_secret
 
-      def call
-        return 0 if @email.to_s.empty? && @secret.to_s.empty?
-        return 0 unless authenticate
-        pending_ids.filter_map { |p| process_one(p) }.size
+      def before_call
+        return false if @email.to_s.empty? && @secret.to_s.empty?
+        super
       end
 
       # 认证优先级链: secret → token 文件 → SSO 登录

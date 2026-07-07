@@ -37,16 +37,14 @@ module Workouts
         false
       end
 
-      def call
+      def before_call
         if @config["auth_seed"].to_s.empty? && !File.exist?(token_path)
           puts "Garmin: auth_seed not configured and no cached token"
           puts "  Run: ./scripts/garmin_auth_local.sh"
-          return 0
+          return false
         end
-
-        return 0 unless authenticate
-
-        pending_ids.filter_map { |p| process_one(p) }.size
+        @start_time = Time.now
+        true
       end
 
       private

@@ -19,10 +19,23 @@ module Workouts
       attr_reader :progress_reported
 
       def call
+        return 0 unless before_call
         return 0 unless respond_to?(:authenticate) ? authenticate : true
         ids = pending_ids
         return 0 if ids.nil? || ids.empty?
-        ids.filter_map { |p| process_one(p) }.size
+        total = ids.size
+        count = 0
+        ids.filter_map do |p|
+          r = process_one(p)
+          count += 1
+          report_progress(count, total, build_progress_info(r)) if r
+          r
+        end.size
+      end
+
+      def before_call
+        @start_time = Time.now
+        true
       end
 
       # 返回 [{ id:, type:, summary: }] 待同步活动列表
@@ -69,10 +82,8 @@ module Workouts
         return unless show_progress?(count, total)
 
         @progress_reported = true
-        tally = Tally.new(count)
-        line = "#{source_label}: #{tally} (#{count}"
+        line = "#{source_label}: #{count}"
         line += "/#{total}" if total
-        line += ")"
         line += " #{info}" if info
         line += " "
         print "\r#{line}"
@@ -93,7 +104,8 @@ module Workouts
       end
 
       def source_label
-        self.class.name.split("::").last
+        name = self.class.name
+        name ? name.split("::").last : "Adapter"
       end
 
       def build_progress_info(attrs)
