@@ -22,6 +22,7 @@ module Workouts
         @unfinished = 0
         @completed = {}
         @timed_out = false
+        @shutdown = false
       end
 
       def run
@@ -45,32 +46,38 @@ module Workouts
         @sources.each do |source|
           cfg = @config.sync_config(source)
           next if cfg.nil? || cfg.empty?
-
-          output_queue << { type: :banner, source: source, text: "authenticating" }
-          adapter = build_adapter(source, cfg)
-          unless adapter
-            output_queue << { type: :banner, source: source, text: "no adapter" }
-            next
-          end
-
-          unless adapter.authenticate
-            output_queue << { type: :banner, source: source, text: "auth failed" }
-            next
-          end
-
-          output_queue << { type: :banner, source: source, text: "fetching activity list" }
-          ids = adapter.pending_ids
-          if ids.nil? || ids.empty?
-            output_queue << { type: :banner, source: source, text: "no new activities" }
-            next
-          end
-
-          @adapters[source] = adapter
-          @pending_ids[source] = ids
           @source_queue << source
-          output_queue << { type: :banner, source: source, text: "#{ids.size} pending" }
         end
         @unfinished = @source_queue.size
+      end
+
+      def init_source(source)
+        cfg = @config.sync_config(source)
+        return false unless cfg
+
+        output_queue << { type: :banner, source:, text: "authenticating" }
+        adapter = build_adapter(source, cfg)
+        unless adapter
+          output_queue << { type: :banner, source:, text: "no adapter" }
+          return false
+        end
+
+        unless adapter.authenticate
+          output_queue << { type: :banner, source:, text: "auth failed" }
+          return false
+        end
+
+        output_queue << { type: :banner, source:, text: "fetching activity list" }
+        ids = adapter.pending_ids
+        if ids.nil? || ids.empty?
+          output_queue << { type: :banner, source:, text: "no new activities" }
+          return false
+        end
+
+        @adapters[source] = adapter
+        @pending_ids[source] = ids
+        output_queue << { type: :banner, source:, text: "#{ids.size} pending" }
+        true
       end
 
       def build_adapter(source, cfg)
@@ -93,6 +100,11 @@ module Workouts
           source = @source_queue.pop
           break if source == POISON
 
+          unless init_source(source)
+            finish_activity(source)
+            next
+          end
+
           processed = 0
           timed_out_local = false
 
@@ -101,8 +113,9 @@ module Workouts
             @stats_lock.synchronize { activity = @pending_ids[source]&.shift }
             break unless activity
 
-            if @timed_out || (@time_budget && (Time.now - @sync_start) > @time_budget.to_f)
+            if @shutdown || budget_expired?
               @stats_lock.synchronize do
+                @shutdown = true
                 @timed_out = true
                 @pending_ids[source]&.unshift(activity) if @pending_ids[source]
               end
@@ -113,11 +126,11 @@ module Workouts
             begin
               result = @adapters[source].process_one(activity)
               @output_queue << {
-                type: :progress, source: source, id: activity[:id],
+                type: :progress, source:, id: activity[:id],
                 info: result ? build_info(result) : "skipped"
               }
             rescue => e
-              @output_queue << { type: :error, source: source, message: e.message }
+              @output_queue << { type: :error, source:, message: e.message }
             end
 
             processed += 1
@@ -132,22 +145,27 @@ module Workouts
         @stats_lock.synchronize do
           if timed_out
             remaining = @pending_ids[source]&.size.to_i
-            @output_queue << { type: :timeout, source: source, remaining: remaining }
+            @output_queue << { type: :timeout, source:, remaining: }
             @pending_ids[source]&.clear
           end
 
           more = @pending_ids[source]&.any?
-          if more
+          if more && !@shutdown
             @source_queue << source
           else
             return if @completed[source]
             @completed[source] = true
             @unfinished -= 1
             if @unfinished <= 0
+              @shutdown = true
               @num_workers.times { @source_queue << POISON }
             end
           end
         end
+      end
+
+      def budget_expired?
+        @time_budget && (Time.now - @sync_start) > @time_budget.to_f
       end
 
       def output_loop
