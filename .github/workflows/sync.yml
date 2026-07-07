@@ -92,6 +92,7 @@ jobs:
           SYNC__STRAVA__CLIENT_SECRET: ${{ secrets.SYNC_STRAVA_CLIENT_SECRET }}
           SYNC__STRAVA__REFRESH_TOKEN: ${{ secrets.SYNC_STRAVA_REFRESH_TOKEN }}
           SYNC__TIME_BUDGET: ${{ vars.SYNC_TIME_BUDGET || '' }}
+          SYNC__TOTAL_TIMEOUT: ${{ vars.SYNC_TOTAL_TIMEOUT || '' }}
           MIGRATE__IGPSPORT_TO_GARMIN__LIMIT: ${{ vars.MIGRATE_IGPSPORT_TO_GARMIN_LIMIT || 10 }}
           MIGRATE__IGPSPORT_TO_GARMIN_CN__LIMIT: ${{ vars.MIGRATE_IGPSPORT_TO_GARMIN_CN_LIMIT || 10 }}
         run: bundle exec exe/workouts sync
