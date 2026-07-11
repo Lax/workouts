@@ -69,76 +69,83 @@ export const app = $state({
   filteredActivities: [] as Activity[],
 })
 
-function computeYears() {
+export function computeYears(activities: Activity[]): number[] {
   const s = new Set<number>()
-  for (const a of app.activities) {
+  for (const a of activities) {
     if (a.start_date) s.add(new Date(a.start_date).getFullYear())
   }
-  app.years = Array.from(s).sort((a, b) => b - a)
+  return Array.from(s).sort((a, b) => b - a)
 }
 
-function computeAvailableTypes() {
+export function computeAvailableTypes(activities: Activity[]): [string, number][] {
   const s = new Map<string, number>()
-  for (const a of app.activities) {
+  for (const a of activities) {
     const t = a.sport_category || 'other'
     s.set(t, (s.get(t) || 0) + 1)
   }
-  app.availableTypes = Array.from(s.entries()).sort((a, b) => b[1] - a[1])
+  return Array.from(s.entries()).sort((a, b) => b[1] - a[1])
 }
 
-function computeAvailableSources() {
+export function computeAvailableSources(activities: Activity[]): [string, number][] {
   const s = new Map<string, number>()
-  for (const a of app.activities) {
+  for (const a of activities) {
     const src = a.source || 'unknown'
     s.set(src, (s.get(src) || 0) + 1)
   }
-  app.availableSources = Array.from(s.entries()).sort((a, b) => b[1] - a[1])
+  return Array.from(s.entries()).sort((a, b) => b[1] - a[1])
 }
 
-function computeFilteredActivities() {
-  let result = [...app.activities]
+export function computeFilteredActivities(
+  activities: Activity[],
+  filters: Filters,
+  sortField: SortField,
+  sortDesc: boolean,
+  selectedYear: number | null,
+  selectedMonth: number | null,
+): Activity[] {
+  let result = [...activities]
 
-  if (app.selectedYear !== null) {
+  if (selectedYear !== null) {
     result = result.filter((a) => {
       if (!a.start_date) return false
-      return new Date(a.start_date).getFullYear() === app.selectedYear
+      return new Date(a.start_date).getFullYear() === selectedYear
     })
   }
 
-  if (app.selectedMonth !== null && app.selectedYear !== null) {
+  if (selectedMonth !== null && selectedYear !== null) {
     result = result.filter((a) => {
       if (!a.start_date) return false
       const d = new Date(a.start_date)
-      return d.getFullYear() === app.selectedYear && d.getMonth() + 1 === app.selectedMonth
+      return d.getFullYear() === selectedYear && d.getMonth() + 1 === selectedMonth
     })
   }
 
-  if (app.filters.type) {
-    result = result.filter((a) => a.sport_category === app.filters.type)
+  if (filters.type) {
+    result = result.filter((a) => a.sport_category === filters.type)
   }
 
-  if (app.filters.source) {
-    result = result.filter((a) => a.source === app.filters.source)
+  if (filters.source) {
+    result = result.filter((a) => a.source === filters.source)
   }
 
-  if (app.filters.distanceMin !== null) {
-    const minM = app.filters.distanceMin * 1000
+  if (filters.distanceMin !== null) {
+    const minM = filters.distanceMin * 1000
     result = result.filter((a) => a.distance !== null && a.distance >= minM)
   }
 
-  if (app.filters.distanceMax !== null) {
-    const maxM = app.filters.distanceMax * 1000
+  if (filters.distanceMax !== null) {
+    const maxM = filters.distanceMax * 1000
     result = result.filter((a) => a.distance !== null && a.distance <= maxM)
   }
 
-  if (app.filters.search) {
-    const q = app.filters.search.toLowerCase()
+  if (filters.search) {
+    const q = filters.search.toLowerCase()
     result = result.filter((a) => a.name?.toLowerCase().includes(q))
   }
 
   result.sort((a, b) => {
-    const dir = app.sortDesc ? -1 : 1
-    switch (app.sortField) {
+    const dir = sortDesc ? -1 : 1
+    switch (sortField) {
       case 'date':
         return dir * ((a.start_date ?? '').localeCompare(b.start_date ?? ''))
       case 'distance':
@@ -150,29 +157,31 @@ function computeFilteredActivities() {
     }
   })
 
-  app.filteredActivities = result
+  return result
 }
 
-$effect(() => {
-  app.activities
-  computeYears()
-  computeAvailableTypes()
-  computeAvailableSources()
-  computeFilteredActivities()
-})
+export function initReactivity() {
+  $effect(() => {
+    app.activities
+    app.years = computeYears(app.activities)
+    app.availableTypes = computeAvailableTypes(app.activities)
+    app.availableSources = computeAvailableSources(app.activities)
+    app.filteredActivities = computeFilteredActivities(app.activities, app.filters, app.sortField, app.sortDesc, app.selectedYear, app.selectedMonth)
+  })
 
-$effect(() => {
-  app.selectedYear
-  app.selectedMonth
-  app.filters.type
-  app.filters.source
-  app.filters.distanceMin
-  app.filters.distanceMax
-  app.filters.search
-  app.sortField
-  app.sortDesc
-  computeFilteredActivities()
-})
+  $effect(() => {
+    app.selectedYear
+    app.selectedMonth
+    app.filters.type
+    app.filters.source
+    app.filters.distanceMin
+    app.filters.distanceMax
+    app.filters.search
+    app.sortField
+    app.sortDesc
+    app.filteredActivities = computeFilteredActivities(app.activities, app.filters, app.sortField, app.sortDesc, app.selectedYear, app.selectedMonth)
+  })
+}
 
 export function toggleSort(field: SortField) {
   if (app.sortField === field) {

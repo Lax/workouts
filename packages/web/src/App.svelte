@@ -1,12 +1,14 @@
 <script lang="ts">
   import { onMount } from 'svelte'
-  import { app, initTheme, toggleTheme } from './lib/state.svelte'
+  import { app, initReactivity, initTheme, toggleTheme } from './lib/state.svelte'
   import type { Activity } from '@workouts/shared'
   import type { StatsJson } from './lib/state.svelte'
   import MapView from './lib/MapView.svelte'
   import Drawer from './lib/Drawer.svelte'
   import DetailPanel from './lib/DetailPanel.svelte'
   import ChartOverlay from './lib/ChartOverlay.svelte'
+
+  initReactivity()
 
   onMount(async () => {
     initTheme()

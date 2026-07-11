@@ -21,3 +21,4 @@ __pycache__/
 .githooks/
 node_modules/
 packages/*/dist/
+test-results/
