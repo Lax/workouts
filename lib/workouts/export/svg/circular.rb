@@ -45,7 +45,7 @@ module Workouts
           rr_upper = outer_radius
           center = [offset[0] + size[0] / 2, offset[1] + size[1] / 2]
 
-          font_family = Defaults::SVG[:font]
+          font_family = poster.colors[:font]
           yr_style = "dominant-baseline:central;font-size:#{min_size * 4.0 / 80.0}px;font-family:#{font_family};"
           mo_style = "font-size:#{min_size * 3.0 / 80.0}px;font-family:#{font_family};"
 
@@ -85,14 +85,14 @@ module Workouts
                 fill: poster.colors[:text],
                 "text-anchor" => "middle",
                 "font-size" => "#{min_size * 3.0 / 80.0}px",
-                "font-family" => Defaults::SVG[:font]
+                "font-family" => poster.colors[:font]
               }, Date::MONTHNAMES[date.month])
             end
 
             if track_by_date[date_key]
               total_len = track_by_date[date_key].sum(&:length)
               t = length_range.zero? ? 0 : total_len / length_range.to_f
-              color = interpolate_color(Defaults::SVG[:empty_cell], poster.colors[:track], [t, 1.0].min)
+              color = interpolate_color(poster.colors[:empty_cell], poster.colors[:track], [t, 1.0].min)
 
               r1c = rr_lower
               r2c = rr_lower + (rr_upper - rr_lower) * total_len / length_range

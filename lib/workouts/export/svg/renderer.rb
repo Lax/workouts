@@ -5,12 +5,14 @@ module Workouts
     module SVG
       class Renderer
         def initialize(db:, style:, output:, year: nil, title: nil, athlete: nil,
+                       theme: nil,
                        bg_color: nil, track_color: nil,
                        special_color: nil, text_color: nil,
                        special_distance: 10, special_distance2: 20,
                        min_distance: 0, activity_filter: nil,
                        birth: nil, summary_year: nil, github_style: "align-firstday",
                        color_run: nil, color_ride: nil, color_walk: nil)
+          @theme = theme || BuiltinThemes.load(nil, config: nil)
           @db = db
           @style = style
           @output = output
@@ -18,12 +20,15 @@ module Workouts
           @title = title || "My Workouts"
           @athlete = athlete || "Athlete"
           @colors = {
-            background: bg_color || Defaults::SVG[:background],
-            track: track_color || Defaults::SVG[:track],
-            track2: track_color || Defaults::SVG[:track2],
-            special: special_color || Defaults::SVG[:special],
-            special2: special_color || Defaults::SVG[:special2],
-            text: text_color || Defaults::SVG[:text],
+            background: bg_color || @theme.svg[:background],
+            track: track_color || @theme.svg[:track],
+            track2: track_color || @theme.svg[:track2],
+            special: special_color || @theme.svg[:special],
+            special2: special_color || @theme.svg[:special2],
+            text: text_color || @theme.svg[:text],
+            font: @theme.svg[:font],
+            empty_cell: @theme.svg[:empty_cell],
+            dim_past: @theme.svg[:dim_past],
           }
           @special_distance = { special_distance: special_distance, special_distance2: special_distance2 }
           @min_distance = min_distance
@@ -176,7 +181,7 @@ module Workouts
         end
 
         def draw_header(poster)
-          font_family = Defaults::SVG[:font]
+          font_family = @theme.svg[:font]
           style = "font-size:12px; font-family:#{font_family}; font-weight:bold;"
           tag("text", { x: 10, y: 20, fill: poster.colors[:text], style: style }, poster.title)
         end
@@ -184,7 +189,7 @@ module Workouts
         def draw_footer(poster)
           lines = []
           tc = poster.colors[:text]
-          font_family = Defaults::SVG[:font]
+          font_family = @theme.svg[:font]
           hdr = "font-size:4px; font-family:#{font_family}"
           val = "font-size:9px; font-family:#{font_family}"
           sm = "font-size:3px; font-family:#{font_family}"
