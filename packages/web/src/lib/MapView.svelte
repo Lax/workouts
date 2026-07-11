@@ -67,26 +67,16 @@
       const lats = allPoints.map((p) => p[0]).sort((a, b) => a - b)
       const lngs = allPoints.map((p) => p[1]).sort((a, b) => a - b)
 
-      const midLat = lats[Math.floor(lats.length / 2)]
-      const midLng = lngs[Math.floor(lngs.length / 2)]
-      const q1Lat = lats[Math.floor(lats.length * 0.25)]
-      const q3Lat = lats[Math.floor(lats.length * 0.75)]
-      const q1Lng = lngs[Math.floor(lngs.length * 0.25)]
-      const q3Lng = lngs[Math.floor(lngs.length * 0.75)]
-
-      const iqrLat = q3Lat - q1Lat
-      const iqrLng = q3Lng - q1Lng
+      const medLat = lats[Math.floor(lats.length / 2)]
+      const medLng = lngs[Math.floor(lngs.length / 2)]
 
       const filtered = allPoints.filter(
-        (p) =>
-          Math.abs(p[0] - midLat) < iqrLat * 2 + 5 &&
-          Math.abs(p[1] - midLng) < iqrLng * 2 + 5,
+        (p) => Math.abs(p[0] - medLat) < 15 && Math.abs(p[1] - medLng) < 15,
       )
 
-      if (filtered.length > 0) {
-        const bounds = L.latLngBounds(filtered.map((p) => L.latLng(p[0], p[1])))
-        map.fitBounds(bounds.pad(0.1))
-      }
+      const use = filtered.length > 10 ? filtered : allPoints
+      const bounds = L.latLngBounds(use.map((p) => L.latLng(p[0], p[1])))
+      if (bounds.isValid()) map.fitBounds(bounds.pad(0.05))
     }
   }
 
@@ -129,12 +119,10 @@
     map = L.map(el, {
       zoomControl: false,
       attributionControl: false,
-    }).setView([30, 110], 4)
+    }).setView([20, 0], 2)
 
     L.control.zoom({ position: 'topright' }).addTo(map)
     L.tileLayer(tileUrl(), { maxZoom: 19, attribution: '' }).addTo(map)
-
-    updatePolylines()
   })
 
   $effect(() => {
