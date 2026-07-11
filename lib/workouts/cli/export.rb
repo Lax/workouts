@@ -46,9 +46,10 @@ module Workouts
     option :min_distance, type: :numeric, desc: "Minimum distance in km (--min-distance)", default: 0
     option :birth, type: :string, desc: "Birth date (YYYY-MM) for month-of-life style"
     option :summary_year, type: :numeric, desc: "Year for summary style (--summary-year)"
-     option :color_run, type: :string, desc: "Color for run activities (--color-run)"
-     option :color_ride, type: :string, desc: "Color for ride activities (--color-ride)"
-     option :color_walk, type: :string, desc: "Color for walk activities (--color-walk)"
+      option :color_run, type: :string, desc: "Color for run activities (--color-run)"
+      option :color_ride, type: :string, desc: "Color for ride activities (--color-ride)"
+      option :color_walk, type: :string, desc: "Color for walk activities (--color-walk)"
+    option :theme, type: :string, desc: "Theme name (dark/light)", default: "dark"
     def svg
       config = Workouts::Config.new
       db = Workouts::DB::Connection.new(config.db_path).db
@@ -66,15 +67,17 @@ module Workouts
         return
       end
 
+      theme = Workouts::Export::BuiltinThemes.load(options[:theme], config: config)
       FileUtils.mkdir_p(File.dirname(path))
 
       svg_gen = Workouts::Export::SVG::Renderer.new(
         db: db, style: style, output: path, year: options[:year] || "all",
         title: options[:title], athlete: options[:athlete],
-        bg_color: options[:bg_color] || Workouts::Export::Defaults::SVG[:background],
-        track_color: options[:track_color] || Workouts::Export::Defaults::SVG[:track],
-        special_color: options[:special_color] || Workouts::Export::Defaults::SVG[:special],
-        text_color: options[:text_color] || Workouts::Export::Defaults::SVG[:text],
+        theme: theme,
+        bg_color: options[:bg_color],
+        track_color: options[:track_color],
+        special_color: options[:special_color],
+        text_color: options[:text_color],
         special_distance: options[:special_distance] || 10, special_distance2: options[:special_distance2] || 20,
         min_distance: options[:min_distance] || 0,
         activity_filter: options[:activity]&.map(&:strip)&.map(&:downcase),
@@ -107,12 +110,14 @@ module Workouts
     desc "dashboard", "Generate interactive dashboard (index.html + JSON data)"
     option :output, type: :string, aliases: "-o", desc: "Output directory"
     option :activity, type: :array, desc: "Filter by sport type", aliases: "--act"
+    option :theme, type: :string, desc: "Theme name (dark/light)", default: "dark"
     def dashboard
       config = Workouts::Config.new
       db = Workouts::DB::Connection.new(config.db_path).db
       outdir = options[:output] || "build"
       filter = options[:activity]&.map(&:strip)&.map(&:downcase)
-      count = Export::Dashboard.new(db: db, output: outdir, activity_filter: filter).call
+      theme = Workouts::Export::BuiltinThemes.load(options[:theme], config: config)
+      count = Export::Dashboard.new(db: db, output: outdir, activity_filter: filter, theme: theme).call
       say_status :done, "Generated interactive dashboard for #{count} activities → #{outdir}/", :green
     rescue => e
       say_status :error, "Dashboard export failed: #{e.message}", :red
