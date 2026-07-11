@@ -149,6 +149,7 @@
     overflow: hidden;
     height: 8px;
     margin-top: 4px;
+    align-self: stretch;
   }
   .speed-legend span { flex: 1; }
   .sl-blue { background: #4A90D9; }

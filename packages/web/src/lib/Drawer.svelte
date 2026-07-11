@@ -119,13 +119,12 @@
     cursor: pointer;
   }
 
-  @media (min-width: 1024px) {
+    @media (min-width: 1024px) {
     .drawer {
       left: auto;
       right: 0;
-      top: 44px;
-      bottom: auto;
-      height: calc(100vh - 44px);
+      top: 0;
+      bottom: 0;
       border-top: none;
       border-left: 1px solid var(--color-border, #2a2a4a);
       transform: translateX(calc(100% - 48px));
