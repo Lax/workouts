@@ -39,15 +39,15 @@
 {:else}
   <MapView />
 
-  <div class="map-overlay ol-tl">
+  <div class="map-overlay ol-tl" onmousedown={(e) => e.stopPropagation()} ontouchstart={(e) => e.stopPropagation()}>
     <div class="brand"><strong>Workouts</strong> {app.years.at(-1) ?? '?'}–{app.years[0] ?? '?'}</div>
   </div>
 
-  <div class="map-overlay ol-lc">
+  <div class="map-overlay ol-lc" onmousedown={(e) => e.stopPropagation()} ontouchstart={(e) => e.stopPropagation()}>
     <YearPicker />
   </div>
 
-  <div class="map-overlay ol-bl">
+  <div class="map-overlay ol-bl" onmousedown={(e) => e.stopPropagation()} ontouchstart={(e) => e.stopPropagation()}>
     <div class="legend-toggle">
       <button class="legend-btn" class:active={app.colorMode === 'speed'} onclick={() => { app.colorMode = 'speed' }}>
         速度
@@ -78,6 +78,7 @@
   }
   .map-overlay > * {
     pointer-events: auto;
+    touch-action: manipulation;
   }
 
   .ol-tl {
