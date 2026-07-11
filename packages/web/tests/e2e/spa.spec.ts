@@ -45,6 +45,17 @@ async function waitLoaded(page: Page) {
   await expect(page.locator('.loading')).toHaveCount(0, { timeout: 10000 })
 }
 
+async function openDrawer(page: Page) {
+  // On desktop (>=1024px), click collapsed strip; on mobile, click handle
+  const collapsed = page.locator('.drawer-collapsed')
+  if (await collapsed.isVisible()) {
+    await collapsed.click()
+  } else {
+    await page.locator('.handle').click()
+  }
+  await expect(page.locator('.drawer.open')).toBeVisible()
+}
+
 test('SPA loads without page errors', async ({ page }) => {
   const errors: string[] = []
   page.on('pageerror', err => errors.push(err.message))
@@ -64,20 +75,28 @@ test('theme toggle persists across reload', async ({ page }) => {
 
 test('activity list renders items', async ({ page }) => {
   await waitLoaded(page)
+  await openDrawer(page)
   const items = page.locator('.activity-row')
   await expect(items.first()).toBeVisible({ timeout: 5000 })
   const count = await items.count()
   expect(count).toBeGreaterThan(0)
 })
 
-test('drawer visible with pills', async ({ page }) => {
+test('drawer visible with collapsed stats', async ({ page }) => {
   await waitLoaded(page)
   await expect(page.locator('.drawer')).toBeVisible()
-  await expect(page.locator('.pill')).not.toHaveCount(0)
+  // Desktop: collapsed strip shows stats; Mobile: handle shows pills
+  const collapsed = page.locator('.drawer-collapsed')
+  if (await collapsed.isVisible()) {
+    await expect(collapsed.locator('.collapsed-item').first()).toBeVisible()
+  } else {
+    await expect(page.locator('.pill')).not.toHaveCount(0)
+  }
 })
 
 test('clicking activity opens detail panel', async ({ page }) => {
   await waitLoaded(page)
+  await openDrawer(page)
   const first = page.locator('.activity-row').first()
   await first.click()
   await expect(page.locator('.overlay')).toBeVisible({ timeout: 3000 })
