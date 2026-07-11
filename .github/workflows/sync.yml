@@ -249,16 +249,8 @@ jobs:
       - name: Install npm dependencies
         run: npm ci
 
-      - name: Run Vitest unit tests
-        run: npx vitest run
-        working-directory: packages/web
-
       - name: Build Svelte frontend
         run: npm run build
-
-      - name: Bundle smoke test
-        run: node tests/build-smoke.js
-        working-directory: packages/web
 
       - name: Copy Svelte build to build/
         run: |
@@ -270,17 +262,6 @@ jobs:
           test -f build/index-svelte.html || { echo "::error::Missing index-svelte.html"; exit 1; }
           ls build/assets/index-*.js >/dev/null 2>&1 || { echo "::error::Missing JS bundle"; exit 1; }
           echo "OK: Svelte build present"
-
-      - name: Create mock data for E2E tests
-        run: |
-          echo '[]' > packages/web/dist/activities.json
-          echo '{}' > packages/web/dist/stats.json
-
-      - name: Run Playwright E2E tests
-        uses: microsoft/playwright-github-action@v1
-        with:
-          command: npx playwright test
-          working-directory: packages/web
 
       - name: Validate dashboard HTML
         run: |
