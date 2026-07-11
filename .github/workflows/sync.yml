@@ -29,10 +29,12 @@ jobs:
         if: vars.RUNNER_LABEL != 'self-hosted'
         with:
           python-version: '3.12'
+          cache: pip
+          cache-dependency-path: scripts/requirements.txt
 
       - name: Install Python deps (curl_cffi for Strategy A)
         if: vars.RUNNER_LABEL != 'self-hosted'
-        run: pip install curl_cffi
+        run: pip install -r scripts/requirements.txt
 
       - name: Restore DB cache
         uses: actions/cache/restore@v4
