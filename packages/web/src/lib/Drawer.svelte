@@ -122,11 +122,16 @@
   }
 
   @media (min-width: 1024px) {
+    .handle {
+      display: none;
+    }
+
     .drawer {
       left: auto;
       right: 0;
-      top: 0;
-      bottom: 0;
+      top: 44px;
+      bottom: auto;
+      height: calc(100vh - 44px);
       border-top: none;
       border-left: 1px solid var(--color-border, #2a2a4a);
       transform: translateX(calc(100% - 48px));

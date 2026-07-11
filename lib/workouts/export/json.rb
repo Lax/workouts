@@ -25,7 +25,7 @@ module Workouts
           run_id: a[:run_id],
           name: a[:name],
           distance: a[:distance],
-          moving_time: format_time(a[:moving_time]),
+          moving_time: a[:moving_time],
           type: a[:sport_category],
           subtype: a[:sport_type],
           start_date: a[:start_date],
@@ -41,17 +41,12 @@ module Workouts
           calories: a[:calories],
           average_temperature: a[:average_temperature],
           average_speed: a[:average_speed],
-          elevation_gain: a[:elevation_gain]
+          elevation_gain: a[:elevation_gain],
+          source: a[:source],
         }
       end
 
-      def format_time(seconds)
-        return nil unless seconds
-        hours = seconds / 3600
-        minutes = (seconds % 3600) / 60
-        secs = seconds % 60
-        format("%d:%02d:%02d", hours, minutes, secs)
-      end
+
     end
   end
 end

@@ -45,10 +45,10 @@ RSpec.describe Workouts::Export::JSON do
     expect(count).to eq(0)
   end
 
-  it "formats moving time" do
+  it "includes moving_time as raw seconds" do
     described_class.new(db: db, output: output).call
     data = JSON.parse(File.read(output))
-    expect(data[0]["moving_time"]).to eq("0:25:00")
+    expect(data[0]["moving_time"]).to eq(1500)
   end
 
   it "includes sensor fields" do
