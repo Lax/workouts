@@ -58,7 +58,8 @@
           Filters
         </button>
       </div>
-      <button class="charts-btn" onclick={openCharts}>📊 Charts</button>
+      <button class="charts-btn" onclick={openCharts}>📊</button>
+      <button class="retract-btn" onclick={() => { app.drawerOpen = false }} onmousedown={(e) => e.stopPropagation()} aria-label="Close drawer">▶</button>
     </div>
 
     {#if tab === 'list'}
@@ -136,7 +137,7 @@
     color: #000;
   }
 
-  .charts-btn {
+  .charts-btn, .retract-btn {
     background: transparent;
     border: 1px solid var(--color-border, #2a2a4a);
     border-radius: 4px;
@@ -144,6 +145,13 @@
     font-size: 0.8rem;
     color: var(--color-text, #e0e0e0);
     cursor: pointer;
+  }
+  .retract-btn {
+    margin-left: auto;
+  }
+  .retract-btn:hover {
+    color: var(--color-accent, #4dd2ff);
+    border-color: var(--color-accent, #4dd2ff);
   }
 
   .drawer-collapsed {
