@@ -87,24 +87,28 @@ jobs:
       - name: Export dashboard
         run: bundle exec exe/workouts export dashboard --output build/
 
+      - name: Rename Ruby dashboard to secondary
+        run: mv build/index.html build/index-ruby.html
+
       - name: Build Svelte frontend
         run: npm run build
 
-      - name: Copy Svelte build to build/
+      - name: Copy Svelte build to build/ (primary)
         run: |
           cp -r packages/web/dist/assets build/
-          cp packages/web/dist/index.html build/index-svelte.html
+          cp packages/web/dist/index.html build/index.html
 
       - name: Validate build
         run: |
-          test -f build/index-svelte.html || { echo "::error::Missing index-svelte.html"; exit 1; }
+          test -f build/index.html || { echo "::error::Missing index.html"; exit 1; }
+          test -f build/index-ruby.html || { echo "::error::Missing index-ruby.html"; exit 1; }
           ls build/assets/index-*.js >/dev/null 2>&1 || { echo "::error::Missing JS bundle"; exit 1; }
-          echo "OK: Svelte build present"
+          echo "OK: Svelte (primary) + Ruby (secondary) present"
 
       - name: Validate dashboard HTML
         run: |
           for id in map app-drawer chart chart-small detail-overlay charts-overlay; do
-            if ! grep -q "id=\"$id\"" build/index.html; then
+            if ! grep -q "id=\"$id\"" build/index-ruby.html; then
               echo "::error::Missing DOM id: $id"
               exit 1
             fi
