@@ -27,5 +27,6 @@ Gem::Specification.new do |s|
   s.add_dependency "oauth", "~> 1.0"
   s.add_dependency "mini_racer", "~> 0.16"
   s.add_dependency "webrick", "~> 1.8"
+  s.add_dependency "ostruct", "~> 0.6"
   s.add_dependency "rubyzip", "~> 2.3"
 end
