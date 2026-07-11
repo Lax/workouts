@@ -5,8 +5,8 @@ module Workouts
     module SVG
       class Renderer
         def initialize(db:, style:, output:, year: nil, title: nil, athlete: nil,
-                       bg_color: "#222222", track_color: "#4DD2FF",
-                       special_color: "#FFFF00", text_color: "#FFFFFF",
+                       bg_color: nil, track_color: nil,
+                       special_color: nil, text_color: nil,
                        special_distance: 10, special_distance2: 20,
                        min_distance: 0, activity_filter: nil,
                        birth: nil, summary_year: nil, github_style: "align-firstday",
@@ -18,12 +18,12 @@ module Workouts
           @title = title || "My Workouts"
           @athlete = athlete || "Athlete"
           @colors = {
-            background: bg_color,
-            track: track_color,
-            track2: track_color,
-            special: special_color,
-            special2: special_color,
-            text: text_color
+            background: bg_color || Defaults::SVG[:background],
+            track: track_color || Defaults::SVG[:track],
+            track2: track_color || Defaults::SVG[:track2],
+            special: special_color || Defaults::SVG[:special],
+            special2: special_color || Defaults::SVG[:special2],
+            text: text_color || Defaults::SVG[:text],
           }
           @special_distance = { special_distance: special_distance, special_distance2: special_distance2 }
           @min_distance = min_distance
@@ -176,16 +176,18 @@ module Workouts
         end
 
         def draw_header(poster)
-          style = "font-size:12px; font-family:Arial; font-weight:bold;"
+          font_family = Defaults::SVG[:font]
+          style = "font-size:12px; font-family:#{font_family}; font-weight:bold;"
           tag("text", { x: 10, y: 20, fill: poster.colors[:text], style: style }, poster.title)
         end
 
         def draw_footer(poster)
           lines = []
           tc = poster.colors[:text]
-          hdr = "font-size:4px; font-family:Arial"
-          val = "font-size:9px; font-family:Arial"
-          sm = "font-size:3px; font-family:Arial"
+          font_family = Defaults::SVG[:font]
+          hdr = "font-size:4px; font-family:#{font_family}"
+          val = "font-size:9px; font-family:#{font_family}"
+          sm = "font-size:3px; font-family:#{font_family}"
           h = poster.height
           sd1 = poster.special_distance[:special_distance]
           sd2 = poster.special_distance[:special_distance2]
