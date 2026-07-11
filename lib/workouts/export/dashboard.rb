@@ -7,10 +7,11 @@ module Workouts
     class Dashboard
       CATEGORY_COLORS = Defaults::CATEGORIES
 
-      def initialize(db:, output:, activity_filter: nil)
+      def initialize(db:, output:, activity_filter: nil, theme: nil)
         @db = db
         @output = output
         @activity_filter = activity_filter
+        @theme = theme || BuiltinThemes.load(nil, config: nil)
       end
 
       def call
@@ -71,6 +72,26 @@ module Workouts
         File.write(File.join(@output, "index.html"), html)
       end
 
+      def css_vars(hash)
+        rgb = hash[:surface].delete("#").scan(/../).map { |s| s.to_i(16) }.join(", ")
+        <<~VARS
+          --color-bg: #{hash[:background]};
+          --color-surface: #{hash[:surface]};
+          --color-surface-rgb: #{rgb};
+          --color-hover: #{hash[:hover]};
+          --color-active-row: #{hash[:active_row]};
+          --color-border: #{hash[:border]};
+          --color-text: #{hash[:text]};
+          --color-text-secondary: #{hash[:text_secondary]};
+          --color-text-dim: #{hash[:text_dim]};
+          --color-text-insight: #{hash[:text_insight]};
+          --color-accent: #{hash[:accent]};
+          --color-walk: #{Defaults::CATEGORIES["walk"]};
+          --color-ride: #{Defaults::CATEGORIES["ride"]};
+          --font-family: #{hash[:font]};
+        VARS
+      end
+
       def build_html
         years_range = "#{@stats[:yearly].first[:year]}-#{@stats[:yearly].last[:year]}"
 
@@ -86,22 +107,10 @@ module Workouts
             <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
             <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/theme/dark.js"></script>
             <style>
-              :root {
-                --color-bg: #{Defaults::DASHBOARD[:background]};
-                --color-surface: #{Defaults::DASHBOARD[:surface]};
-                --color-surface-rgb: #{Defaults::DASHBOARD[:surface].delete("#").scan(/../).map { |s| s.to_i(16) }.join(", ")};
-                --color-hover: #{Defaults::DASHBOARD[:hover]};
-                --color-active-row: #{Defaults::DASHBOARD[:active_row]};
-                --color-border: #{Defaults::DASHBOARD[:border]};
-                --color-text: #{Defaults::DASHBOARD[:text]};
-                --color-text-secondary: #{Defaults::DASHBOARD[:text_secondary]};
-                --color-text-dim: #{Defaults::DASHBOARD[:text_dim]};
-                --color-text-insight: #{Defaults::DASHBOARD[:text_insight]};
-                --color-accent: #{Defaults::DASHBOARD[:accent]};
-                --color-walk: #{Defaults::CATEGORIES["walk"]};
-                --color-ride: #{Defaults::CATEGORIES["ride"]};
-                --font-family: #{Defaults::DASHBOARD[:font]};
-              }
+              :root, [data-theme="dark"] {
+#{css_vars(BuiltinThemes::DARK.dashboard).sub(/\A\n/, "")}              }
+              [data-theme="light"] {
+#{css_vars(BuiltinThemes::LIGHT.dashboard).sub(/\A\n/, "")}              }
               * { box-sizing: border-box; margin: 0; padding: 0; }
               body { background: var(--color-bg); color: var(--color-text); font-family: var(--font-family); overflow: hidden; height: 100vh; }
               a { color: var(--color-accent); text-decoration: none; }
@@ -277,6 +286,7 @@ module Workouts
               </div>
 
               <div class="speed-legend" id="speed-legend"><span class="sl-blue"></span><span class="sl-green"></span><span class="sl-yellow"></span><span class="sl-red"></span></div>
+              <button class="icon-btn" onclick="toggleTheme()" title="切换主题">🌓</button>
             </div>
 
             <div class="drawer" id="app-drawer">
@@ -399,6 +409,34 @@ module Workouts
                 return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
               }
 
+              var TILES_DARK = '#{BuiltinThemes::DARK.map[:tiles_dark]}';
+              var TILES_LIGHT = '#{BuiltinThemes::LIGHT.map[:tiles_light]}';
+
+              function initTheme() {
+                var saved = localStorage.getItem('theme');
+                if (saved) { setTheme(saved); return; }
+                var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                setTheme(prefersDark ? 'dark' : 'light');
+                window.matchMedia('(prefers-color-scheme: dark)').addListener(function(e) {
+                  if (!localStorage.getItem('theme')) setTheme(e.matches ? 'dark' : 'light');
+                });
+              }
+
+              function toggleTheme() {
+                var cur = document.documentElement.dataset.theme || 'dark';
+                var next = cur === 'dark' ? 'light' : 'dark';
+                setTheme(next);
+                localStorage.setItem('theme', next);
+              }
+
+              function setTheme(name) {
+                document.documentElement.dataset.theme = name;
+                if (state.tileLayer) {
+                  var url = name === 'light' ? TILES_LIGHT : TILES_DARK;
+                  state.tileLayer.setUrl(url);
+                }
+              }
+
               function speedColor(speedMs) {
                 var s = (speedMs || 0) * 3.6;
                 if (s < 3) return '#4A90D9';
@@ -412,7 +450,7 @@ module Workouts
                 return speedColor(a.average_speed);
               }
 
-              var state = { activities: [], stats: null, filtered: [], map: null, chart: null, chartSmall: null, activeId: null, chartReady: false, monthFilter: null, sortBy: 'date', sortDesc: true, polylineMap: {}, drawerOpen: false, colorMode: 'speed' };
+              var state = { activities: [], stats: null, filtered: [], map: null, tileLayer: null, chart: null, chartSmall: null, activeId: null, chartReady: false, monthFilter: null, sortBy: 'date', sortDesc: true, polylineMap: {}, drawerOpen: false, colorMode: 'speed' };
 
     function init() {
       Promise.all([
@@ -432,7 +470,8 @@ module Workouts
         try {
           state.map = L.map('map', { zoomControl: false, attributionControl: false }).setView([30, 110], 4);
           L.control.zoom({ position: 'topright' }).addTo(state.map);
-          L.tileLayer('#{Defaults::MAP[:tiles_dark]}', {
+          var initialTiles = (document.documentElement.dataset.theme || 'dark') === 'light' ? TILES_LIGHT : TILES_DARK;
+          state.tileLayer = L.tileLayer(initialTiles, {
             maxZoom: 19
           }).addTo(state.map);
           state.map.on('zoomend', function() {
@@ -934,7 +973,8 @@ module Workouts
                 if (a.polyline && a.polyline.length > 0) {
                   if (state.detailMap) { state.detailMap.remove(); }
                   state.detailMap = L.map(mapContainer, { zoomControl: false }).setView([30, 110], 13);
-                  L.tileLayer('#{Defaults::MAP[:tiles_dark]}', { maxZoom: 19 }).addTo(state.detailMap);
+                  var detailTheme = document.documentElement.dataset.theme || 'dark';
+                  L.tileLayer(detailTheme === 'light' ? TILES_LIGHT : TILES_DARK, { maxZoom: 19 }).addTo(state.detailMap);
                   var pts = decodePolyline(a.polyline);
                   if (pts.length >= 2) {
                     var line = L.polyline(pts, { color: getCSSVar('--color-accent'), weight: 3, opacity: 0.8 }).addTo(state.detailMap);
@@ -965,6 +1005,7 @@ module Workouts
                 return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/'/g,'&#39;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
               }
 
+              initTheme();
               init();
             </script>
           </body>
