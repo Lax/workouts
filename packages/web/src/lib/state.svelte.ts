@@ -53,6 +53,7 @@ export const app = $state({
   error: '',
   selectedYear: null as number | null,
   selectedMonth: null as number | null,
+  theme: 'light' as 'light' | 'dark',
   colorMode: 'type' as ColorMode,
   drawerOpen: false,
   showCharts: false,
@@ -214,17 +215,17 @@ export function resetFilters() {
 export function initTheme() {
   const saved = localStorage.getItem('theme')
   if (saved) {
-    document.documentElement.setAttribute('data-theme', saved)
+    app.theme = saved as 'light' | 'dark'
   } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-    document.documentElement.setAttribute('data-theme', 'dark')
+    app.theme = 'dark'
   }
+  document.documentElement.setAttribute('data-theme', app.theme)
 }
 
 export function toggleTheme() {
-  const current = document.documentElement.getAttribute('data-theme') || 'light'
-  const next = current === 'light' ? 'dark' : 'light'
-  document.documentElement.setAttribute('data-theme', next)
-  localStorage.setItem('theme', next)
+  app.theme = app.theme === 'light' ? 'dark' : 'light'
+  document.documentElement.setAttribute('data-theme', app.theme)
+  localStorage.setItem('theme', app.theme)
 }
 
 export function currentTheme(): 'dark' | 'light' {

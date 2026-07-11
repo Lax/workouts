@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { app, toggleSort } from './state.svelte'
+  import { app, toggleSort, openDetail } from './state.svelte'
   import { formatDistance, formatDuration, formatDate } from '@workouts/shared'
   import { activityColor } from './colorMode'
 

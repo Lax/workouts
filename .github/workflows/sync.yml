@@ -254,7 +254,7 @@ jobs:
 
       - name: Copy Svelte build to build/
         run: |
-          cp -r packages/web/dist/* build/
+          cp -r packages/web/dist/assets build/
           cp packages/web/dist/index.html build/index-svelte.html
 
       - name: Validate Svelte build

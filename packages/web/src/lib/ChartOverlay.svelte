@@ -35,6 +35,11 @@
   $effect(() => {
     if (!app.showCharts) return
 
+    chart?.dispose()
+    smallChart?.dispose()
+    chart = null
+    smallChart = null
+
     tick().then(() => {
       if (!chartEl) return
 
@@ -65,7 +70,8 @@
 
       chart.on('click', (params: any) => {
         if (params.dataIndex !== undefined && app.selectedYear !== null) {
-          app.selectedMonth = params.dataIndex + 1
+          const monthNum = parseInt(params.name, 10)
+          if (!isNaN(monthNum)) app.selectedMonth = monthNum
         }
       })
 

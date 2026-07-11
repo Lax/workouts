@@ -6,8 +6,8 @@
   ],
   "scripts": {
     "dev": "npm run dev -w packages/web",
-    "build": "npm run build -w packages/shared && npm run build -w packages/web",
-    "typecheck": "npm run typecheck -w packages/shared && npm run typecheck -w packages/web"
+    "build": "npm run build -w packages/web",
+    "typecheck": "npm run typecheck -w packages/web"
   },
   "engines": {
     "node": ">=22.0.0"
