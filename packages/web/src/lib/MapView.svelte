@@ -119,7 +119,7 @@
     map = L.map(el, {
       zoomControl: false,
       attributionControl: false,
-    }).setView([20, 0], 2)
+    }).setView([30, 110], 4)
 
     L.control.zoom({ position: 'topright' }).addTo(map)
     L.tileLayer(tileUrl(), { maxZoom: 19, attribution: '' }).addTo(map)
