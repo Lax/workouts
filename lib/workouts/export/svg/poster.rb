@@ -9,13 +9,6 @@ module Workouts
           "hike" => 10_000,
         }.freeze
 
-        DEFAULT_CATEGORY_COLORS = {
-          "walk" => "#4ECDC4",
-          "run"  => "#4DD2FF",
-          "ride" => "#FF6B6B",
-          "hike" => "#FFD93D",
-        }.freeze
-
         attr_accessor :title, :athlete, :tracks, :colors, :special_distance,
                       :width, :height, :drawer_type, :github_style,
                       :color_by_category, :per_category_max
@@ -26,7 +19,7 @@ module Workouts
           @tracks = []
           @colors = colors
           @special_distance = special_distance
-          @color_by_category = DEFAULT_CATEGORY_COLORS.dup
+          @color_by_category = Defaults::CATEGORIES.dup
           @per_category_max = {}
           @width = 200
           @height = 300
