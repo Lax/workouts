@@ -50,7 +50,6 @@ export const app = $state({
   activities: [] as Activity[],
   stats: null as StatsJson | null,
   loading: true,
-  error: '',
   selectedYear: null as number | null,
   selectedMonth: null as number | null,
   theme: 'light' as 'light' | 'dark',

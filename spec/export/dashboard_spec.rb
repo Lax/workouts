@@ -98,7 +98,7 @@ RSpec.describe Workouts::Export::Dashboard do
       expect(a[:distance]).to eq(5000)
       expect(a[:type]).to eq("run")
       expect(a[:start_date]).to eq("2024-06-15T01:00:00Z")
-      expect(a[:polyline]).to eq("abc")
+      expect(a[:summary_polyline]).to eq("abc")
     end
 
     it "includes sensor fields" do

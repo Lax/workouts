@@ -51,7 +51,7 @@ async function openDrawer(page: Page) {
   if (await collapsed.isVisible()) {
     await collapsed.click()
   } else {
-    await page.locator('.handle').click()
+    await page.locator('.drawer-handle').click()
   }
   await expect(page.locator('.drawer.open')).toBeVisible()
 }

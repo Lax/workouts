@@ -1,18 +1,23 @@
 export interface Activity {
-  id: number
+  /** Not exported by Ruby — only present in DB */
+  id?: number
   run_id: string
   name: string | null
   distance: number | null
   moving_time: number | null
-  elapsed_time: number | null
+  /** Not exported by Ruby */
+  elapsed_time?: number | null
   sport_category: string
-  /** Ruby dashboard/JSON export writes type instead of sport_category */
+  /** Ruby export writes type instead of sport_category */
   type?: string
-  sport_type: string | null
+  /** Ruby JSON export writes sport_type; dashboard omits it */
+  sport_type?: string | null
   start_date: string | null
   start_date_local: string | null
   location_country: string | null
   summary_polyline: string | null
+  /** Legacy: old dashboard exports wrote polyline */
+  polyline?: string
   average_heartrate: number | null
   max_heartrate: number | null
   average_cadence: number | null
@@ -24,7 +29,7 @@ export interface Activity {
   average_speed: number | null
   elevation_gain: number | null
   source: string | null
-  duplicate_info: string | null
+  duplicate_info?: string | null
 }
 
 export type SportCategory =

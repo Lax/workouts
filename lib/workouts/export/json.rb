@@ -27,7 +27,7 @@ module Workouts
           distance: a[:distance],
           moving_time: a[:moving_time],
           type: a[:sport_category],
-          subtype: a[:sport_type],
+          sport_type: a[:sport_type],
           start_date: a[:start_date],
           start_date_local: a[:start_date_local],
           location_country: a[:location_country],

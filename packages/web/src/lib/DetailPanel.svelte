@@ -24,8 +24,9 @@
         { maxZoom: 19 },
       ).addTo(miniMap)
 
-      if (app.selectedActivity.summary_polyline) {
-        const points = decodePolyline(app.selectedActivity.summary_polyline)
+      const encoded = app.selectedActivity.summary_polyline || app.selectedActivity.polyline
+      if (encoded) {
+        const points = decodePolyline(encoded)
         if (points.length > 1) {
           const line = L.polyline(points, {
             color: '#4DD2FF',

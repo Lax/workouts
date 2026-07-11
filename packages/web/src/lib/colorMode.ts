@@ -1,4 +1,4 @@
-export type ColorMode = 'speed' | 'type'
+import type { ColorMode } from './state.svelte'
 
 export const SPEED_COLORS = [
   { max: 3, color: '#4A90D9' },
@@ -12,6 +12,10 @@ export const CAT_COLORS: Record<string, string> = {
   walk: '#4ECDC4',
   ride: '#FF6B6B',
   hike: '#FFD93D',
+  swim: '#00BCD4',
+  ski: '#9C27B0',
+  workout: '#FF5722',
+  other: '#9E9E9E',
 }
 
 export function speedColor(speedMs: number | null): string {

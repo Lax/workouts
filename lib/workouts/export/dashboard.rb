@@ -63,7 +63,7 @@ module Workouts
           average_temperature: a[:average_temperature],
           average_speed: a[:average_speed],
           elevation_gain: a[:elevation_gain],
-          polyline: a[:summary_polyline],
+          summary_polyline: a[:summary_polyline],
         }
       end
 
