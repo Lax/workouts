@@ -55,14 +55,22 @@ jobs:
         run: node tests/build-smoke.js
         working-directory: packages/web
 
-      - uses: actions/cache@v4
+      - id: playwright-cache
+        uses: actions/cache/restore@v4
         with:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ hashFiles('packages/web/package-lock.json') }}
 
       - name: Install Playwright browsers
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
         run: npx playwright install --with-deps chromium
         working-directory: packages/web
+
+      - uses: actions/cache/save@v4
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ steps.playwright-cache.outputs.cache-primary-key }}
 
       - name: Run Playwright E2E tests
         run: npx playwright test
