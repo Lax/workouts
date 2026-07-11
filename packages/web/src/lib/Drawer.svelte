@@ -13,21 +13,23 @@
   let dist = $derived((app.filteredActivities.reduce((s, a) => s + (a.distance ?? 0), 0) / 1000).toFixed(0))
   let time = $derived((app.filteredActivities.reduce((s, a) => s + (a.moving_time ?? 0), 0) / 3600).toFixed(1))
   let elev = $derived(Math.round(app.filteredActivities.reduce((s, a) => s + (a.elevation_gain ?? 0), 0)).toString())
+
+  function toggle() { app.drawerOpen = !app.drawerOpen }
 </script>
 
 <div class="drawer" class:open={app.drawerOpen}>
-  <div class="drawer-handle" onclick={() => { app.drawerOpen = !app.drawerOpen }} onmousedown={(e) => e.stopPropagation()}>
+  <div class="drawer-handle" onclick={toggle} onmousedown={(e) => e.stopPropagation()}>
     <div class="bar"></div>
   </div>
 
-  <div class="drawer-collapsed" onclick={() => { if (!app.drawerOpen) app.drawerOpen = true }} onmousedown={(e) => e.stopPropagation()}>
+  <div class="drawer-collapsed" onclick={toggle} onmousedown={(e) => e.stopPropagation()}>
     <span class="stat-pill"><strong>{count}</strong>次</span>
     <span class="stat-pill"><strong>{dist}</strong>km</span>
     <span class="stat-pill"><strong>{time}</strong>h</span>
     <span class="stat-pill"><strong>{elev}</strong>m</span>
     <span class="spacer"></span>
     <button class="icon-btn" onclick={(e) => { e.stopPropagation(); openCharts() }} onmousedown={(e) => e.stopPropagation()}>📊</button>
-    <button class="icon-btn" onclick={(e) => { e.stopPropagation(); app.drawerOpen = true }} onmousedown={(e) => e.stopPropagation()}>▲</button>
+    <button class="icon-btn" onclick={(e) => { e.stopPropagation(); toggle() }} onmousedown={(e) => e.stopPropagation()}>▲</button>
   </div>
 
   <div class="drawer-body">
@@ -37,7 +39,7 @@
         <button class="tab" class:active={tab === 'filters'} onclick={() => { tab = 'filters' }}>Filters</button>
       </div>
       <button class="icon-btn" onclick={openCharts} onmousedown={(e) => e.stopPropagation()}>📊</button>
-      <button class="icon-btn retract" onclick={() => { app.drawerOpen = false }} onmousedown={(e) => e.stopPropagation()} aria-label="Close drawer">▶</button>
+      <button class="icon-btn retract" onclick={(e) => { e.stopPropagation(); toggle() }} onmousedown={(e) => e.stopPropagation()} aria-label="Close drawer">✕</button>
     </div>
     {#if tab === 'list'}
       <ActivityList />
