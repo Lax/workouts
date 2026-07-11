@@ -39,30 +39,30 @@
 {:else}
   <MapView />
 
-  <div class="map-overlay ol-tl" onmousedown={(e) => e.stopPropagation()} ontouchstart={(e) => e.stopPropagation()}>
-    <div class="brand"><strong>Workouts</strong> {app.years.at(-1) ?? '?'}–{app.years[0] ?? '?'}</div>
-  </div>
-
-  <div class="map-overlay ol-lc" onmousedown={(e) => e.stopPropagation()} ontouchstart={(e) => e.stopPropagation()}>
-    <YearPicker />
-  </div>
-
-  <div class="map-overlay ol-bl" onmousedown={(e) => e.stopPropagation()} ontouchstart={(e) => e.stopPropagation()}>
-    <div class="legend-toggle">
-      <button class="legend-btn" class:active={app.colorMode === 'speed'} onclick={() => { app.colorMode = 'speed' }}>
-        速度
-      </button>
-      <button class="legend-btn" class:active={app.colorMode === 'type'} onclick={() => { app.colorMode = 'type' }}>
-        类型
-      </button>
+  <div class="map-overlays">
+    <div class="ol-tl">
+      <div class="brand"><strong>Workouts</strong> {app.years.at(-1) ?? '?'}–{app.years[0] ?? '?'}</div>
     </div>
-    <div class="speed-legend">
-      <span class="sl-blue"></span>
-      <span class="sl-green"></span>
-      <span class="sl-yellow"></span>
-      <span class="sl-red"></span>
+    <div class="ol-lc">
+      <YearPicker />
     </div>
-    <button class="icon-btn" onclick={toggleTheme} aria-label="Toggle theme">🌓</button>
+    <div class="ol-bl">
+      <div class="legend-toggle">
+        <button class="legend-btn" class:active={app.colorMode === 'speed'} onclick={() => { app.colorMode = 'speed' }}>
+          速度
+        </button>
+        <button class="legend-btn" class:active={app.colorMode === 'type'} onclick={() => { app.colorMode = 'type' }}>
+          类型
+        </button>
+      </div>
+      <div class="speed-legend">
+        <span class="sl-blue"></span>
+        <span class="sl-green"></span>
+        <span class="sl-yellow"></span>
+        <span class="sl-red"></span>
+      </div>
+      <button class="icon-btn" onclick={toggleTheme} aria-label="Toggle theme">🌓</button>
+    </div>
   </div>
 
   <Drawer />
@@ -71,12 +71,14 @@
 {/if}
 
 <style>
-  .map-overlay {
+  .map-overlays {
     position: fixed;
+    inset: 0;
     z-index: 1;
     pointer-events: none;
   }
-  .map-overlay > * {
+  .map-overlays > * {
+    position: absolute;
     pointer-events: auto;
     touch-action: manipulation;
   }
