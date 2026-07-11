@@ -20,6 +20,9 @@
       ])
       if (actRes.ok) {
         const data: Activity[] = await actRes.json()
+        for (const a of data) {
+          if (a.type && !a.sport_category) a.sport_category = a.type
+        }
         app.activities.splice(0, app.activities.length, ...data)
       }
       if (statsRes.ok) {

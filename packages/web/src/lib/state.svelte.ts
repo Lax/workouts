@@ -77,10 +77,14 @@ export function computeYears(activities: Activity[]): number[] {
   return Array.from(s).sort((a, b) => b - a)
 }
 
+function activityType(a: Activity): string {
+  return a.sport_category || a.type || 'other'
+}
+
 export function computeAvailableTypes(activities: Activity[]): [string, number][] {
   const s = new Map<string, number>()
   for (const a of activities) {
-    const t = a.sport_category || 'other'
+    const t = activityType(a)
     s.set(t, (s.get(t) || 0) + 1)
   }
   return Array.from(s.entries()).sort((a, b) => b[1] - a[1])
@@ -121,7 +125,7 @@ export function computeFilteredActivities(
   }
 
   if (filters.type) {
-    result = result.filter((a) => a.sport_category === filters.type)
+    result = result.filter((a) => activityType(a) === filters.type)
   }
 
   if (filters.source) {

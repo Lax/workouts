@@ -6,6 +6,8 @@ export interface Activity {
   moving_time: number | null
   elapsed_time: number | null
   sport_category: string
+  /** Ruby dashboard/JSON export writes type instead of sport_category */
+  type?: string
   sport_type: string | null
   start_date: string | null
   start_date_local: string | null
