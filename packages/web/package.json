@@ -16,7 +16,7 @@
     "@workouts/shared": "*",
     "@workouts/svelte-echarts": "*",
     "@workouts/svelte-leaflet": "*",
-    "echarts": "^5.6.0",
+    "echarts": "^6.1.0",
     "leaflet": "^1.9.4"
   },
   "devDependencies": {
