@@ -39,15 +39,15 @@
 {:else}
   <MapView />
 
-  <div class="overlay ol-tl">
+  <div class="map-overlay ol-tl">
     <div class="brand"><strong>Workouts</strong> {app.years.at(-1) ?? '?'}–{app.years[0] ?? '?'}</div>
   </div>
 
-  <div class="overlay ol-lc">
+  <div class="map-overlay ol-lc">
     <YearPicker />
   </div>
 
-  <div class="overlay ol-bl">
+  <div class="map-overlay ol-bl">
     <div class="legend-toggle">
       <button class="legend-btn" class:active={app.colorMode === 'speed'} onclick={() => { app.colorMode = 'speed' }}>
         速度
@@ -62,7 +62,7 @@
       <span class="sl-yellow"></span>
       <span class="sl-red"></span>
     </div>
-    <button class="icon-btn" onclick={toggleTheme}>🌓</button>
+    <button class="icon-btn" onclick={toggleTheme} aria-label="Toggle theme">🌓</button>
   </div>
 
   <Drawer />
@@ -71,12 +71,12 @@
 {/if}
 
 <style>
-  .overlay {
+  .map-overlay {
     position: fixed;
     z-index: 1;
     pointer-events: none;
   }
-  .overlay > * {
+  .map-overlay > * {
     pointer-events: auto;
   }
 

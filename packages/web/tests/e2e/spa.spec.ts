@@ -49,7 +49,7 @@ test('SPA loads without page errors', async ({ page }) => {
   const errors: string[] = []
   page.on('pageerror', err => errors.push(err.message))
   await waitLoaded(page)
-  await expect(page.locator('header h1')).toHaveText('Workouts')
+  await expect(page.locator('.brand')).toContainText('Workouts')
   expect(errors).toEqual([])
 })
 
