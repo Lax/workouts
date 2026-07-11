@@ -31,6 +31,9 @@ module Workouts
 
         def hex_to_rgb(h)
           h = h.delete("#")
+          if h.length < 6
+            h = h.chars.map { |c| c * 2 }.join
+          end
           [h[0..1].to_i(16), h[2..3].to_i(16), h[4..5].to_i(16)]
         end
 

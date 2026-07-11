@@ -170,8 +170,11 @@ RSpec.describe Workouts::Export::Dashboard do
     def node_test(assertions)
       mock = <<~MOCK
         console.error = function(){};
+        var store = {};
+        global.localStorage = { getItem: function(k){ return store[k] || null; }, setItem: function(k,v){ store[k]=v; }, removeItem: function(k){ delete store[k]; } };
         var mockEl = function(){ return { textContent: '', innerHTML: '', className: '', classList: { toggle: function(){}, add: function(){}, remove: function(){} }, style: {}, appendChild: function(){}, remove: function(){}, addEventListener: function(){}, onclick: null, closest: function(){return null}, dataset: {}, scrollIntoView: function(){}, value: '' } };
         global.document = {
+          documentElement: { dataset: {} },
           getElementById: function(){ return mockEl(); },
           querySelectorAll: function(){ return []; },
           querySelector: function(){ return null; },
@@ -179,6 +182,7 @@ RSpec.describe Workouts::Export::Dashboard do
           addEventListener: function(){},
           createTextNode: function(){ return {}; }
         };
+        global.window = { matchMedia: function(){ return { matches: false, addListener: function(){} } } };
         global.L = { map: function(){ return { setView: function(){return this}, on: function(){return this}, remove: function(){}, invalidateSize: function(){}, scrollWheelZoom: { disable: function(){}, enable: function(){} }, dragging: { disable: function(){}, enable: function(){} }, touchZoom: { disable: function(){}, enable: function(){} }, fitBounds: function(){return this}, addLayer: function(){}, removeLayer: function(){}, getZoom: function(){return 6}, getBounds: function(){return {pad: function(){return this}}} }; }, control: { zoom: function(){ return { addTo: function(){} } } }, tileLayer: function(){ return { addTo: function(){} } }, polyline: function(){ return { bindTooltip: function(){return this}, on: function(){return this}, addTo: function(){return this}, setStyle: function(){}, getBounds: function(){return {pad: function(){return {}}}} }; }, latLngBounds: function(){ return { isValid: function(){return true}, pad: function(){return this} } } };
         global.echarts = { init: function(){ return { setOption: function(){}, on: function(){}, resize: function(){} } } };
         global.fetch = function(){ return Promise.resolve({ ok: true, json: function(){ return Promise.resolve([]) } }) };

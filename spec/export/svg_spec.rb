@@ -1,6 +1,7 @@
 RSpec.describe Workouts::Export::SVG::GithubDrawer do
   let(:colors) do
-    { background: "#222", track: "#4DD2FF", text: "#FFF", special: "#FF0" }
+    { background: "#222", track: "#4DD2FF", text: "#FFF", special: "#FF0",
+      font: "Arial", empty_cell: "#444", dim_past: "#555" }
   end
   let(:sd) { { special_distance: 10, special_distance2: 20 } }
   let(:poster) { Workouts::Export::SVG::Poster.new("Test", "Test", colors, sd) }
