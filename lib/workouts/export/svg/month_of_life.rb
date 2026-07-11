@@ -51,11 +51,11 @@ module Workouts
                         poster.colors[:special]
                       else
                         t = [dist / max_dist, 1.0].min
-                        base = is_past ? "#555555" : "#444444"
+                        base = is_past ? Defaults::SVG[:dim_past] : Defaults::SVG[:empty_cell]
                         interpolate_color(base, poster.colors[:track], t)
                       end
                     else
-                      is_past ? "#555555" : "#444444"
+                      is_past ? Defaults::SVG[:dim_past] : Defaults::SVG[:empty_cell]
                     end
 
             age = y - @birth_year + (m - @birth_month) / 12.0
