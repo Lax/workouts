@@ -4,15 +4,14 @@
   import 'leaflet/dist/leaflet.css'
   import { decodePolyline } from './polyline'
   import { activityColor } from './colorMode'
-  import { app, openDetail, currentTheme } from './state.svelte'
+  import { app, openDetail } from './state.svelte'
 
   let el: HTMLDivElement
   let map: L.Map | null = null
   let polylines: Map<string, L.Polyline> = new Map()
 
   function tileUrl(): string {
-    const theme = currentTheme()
-    const carto = theme === 'dark' ? 'dark_nolabels' : 'light_nolabels'
+    const carto = app.theme === 'dark' ? 'dark_nolabels' : 'light_nolabels'
     return `https://{s}.basemaps.cartocdn.com/${carto}/{z}/{x}/{y}{r}.png`
   }
 
@@ -139,16 +138,15 @@
 
   $effect(() => {
     if (!map) return
-    app.colorMode
-    app.filteredActivities
+    app.theme
     updateTileLayer()
-    updatePolylines()
   })
 
   $effect(() => {
     if (!map) return
-    currentTheme()
-    updateTileLayer()
+    app.colorMode
+    app.filteredActivities
+    updatePolylines()
   })
 
   $effect(() => {

@@ -21,7 +21,7 @@
       }
       if (statsRes.ok) {
         const data: StatsJson = await statsRes.json()
-        Object.assign(app.stats, data)
+        app.stats = data
       }
     } catch (e) {
       console.warn('Failed to load data', e)
