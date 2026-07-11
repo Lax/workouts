@@ -241,6 +241,28 @@ jobs:
       - name: Export dashboard
         run: bundle exec exe/workouts export dashboard --output build/
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install npm dependencies
+        run: npm ci
+
+      - name: Build Svelte frontend
+        run: npm run build
+
+      - name: Copy Svelte build to build/
+        run: |
+          cp -r packages/web/dist/* build/
+          cp packages/web/dist/index.html build/index-svelte.html
+
+      - name: Validate Svelte build
+        run: |
+          test -f build/index-svelte.html || { echo "::error::Missing index-svelte.html"; exit 1; }
+          ls build/assets/index-*.js >/dev/null 2>&1 || { echo "::error::Missing JS bundle"; exit 1; }
+          echo "OK: Svelte build present"
+
       - name: Validate dashboard HTML
         run: |
           for id in map app-drawer chart chart-small detail-overlay charts-overlay; do
