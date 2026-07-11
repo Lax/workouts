@@ -196,11 +196,12 @@ jobs:
   build:
     needs: [sync]
     if: needs.sync.outputs.db_changed == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.RUNNER_LABEL || 'ubuntu-latest' }}
     steps:
       - uses: actions/checkout@v4
 
       - uses: ruby/setup-ruby@v1
+        if: vars.RUNNER_LABEL != 'self-hosted'
         with:
           ruby-version: '3.4'
           bundler-cache: true
