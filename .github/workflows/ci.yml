@@ -55,8 +55,10 @@ jobs:
         run: node tests/build-smoke.js
         working-directory: packages/web
 
-      - name: Playwright E2E tests
-        uses: microsoft/playwright-github-action@v1
-        with:
-          command: npx playwright test
-          working-directory: packages/web
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+        working-directory: packages/web
+
+      - name: Run Playwright E2E tests
+        run: npx playwright test
+        working-directory: packages/web
