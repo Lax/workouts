@@ -54,7 +54,7 @@ export const app = $state({
   selectedYear: null as number | null,
   selectedMonth: null as number | null,
   theme: 'light' as 'light' | 'dark',
-  colorMode: 'type' as ColorMode,
+  colorMode: 'speed' as ColorMode,
   drawerOpen: false,
   showCharts: false,
   selectedActivity: null as Activity | null,

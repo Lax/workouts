@@ -85,13 +85,7 @@ test('activity list renders items', async ({ page }) => {
 test('drawer visible with collapsed stats', async ({ page }) => {
   await waitLoaded(page)
   await expect(page.locator('.drawer')).toBeVisible()
-  // Desktop: collapsed strip shows stats; Mobile: handle shows pills
-  const collapsed = page.locator('.drawer-collapsed')
-  if (await collapsed.isVisible()) {
-    await expect(collapsed.locator('.collapsed-item').first()).toBeVisible()
-  } else {
-    await expect(page.locator('.pill')).not.toHaveCount(0)
-  }
+  await expect(page.locator('.stat-pill').first()).toBeVisible()
 })
 
 test('clicking activity opens detail panel', async ({ page }) => {
