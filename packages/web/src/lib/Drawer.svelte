@@ -15,6 +15,8 @@
 <button
   class="handle"
   onclick={() => { app.drawerOpen = !app.drawerOpen }}
+  onmousedown={(e) => e.stopPropagation()}
+  ontouchstart={(e) => e.stopPropagation()}
   aria-label="Toggle drawer"
 >
   <div class="handle-bar">

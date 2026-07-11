@@ -29,9 +29,10 @@
 
     for (let i = 0; i < Math.min(acts.length, maxLines); i++) {
       const a = acts[i]
-      if (!a.summary_polyline) continue
+      const encoded = a.summary_polyline || a.polyline
+      if (!encoded) continue
 
-      const points = decodePolyline(a.summary_polyline)
+      const points = decodePolyline(encoded)
       if (points.length < 2) continue
 
       allPoints.push(...points)
