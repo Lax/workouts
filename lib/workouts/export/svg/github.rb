@@ -29,9 +29,10 @@ module Workouts
             first_dow = is_monday ? 0 : first_wday
 
             year_size = 200 * 4.0 / 80.0
-            year_style = "font-size:#{year_size}px; font-family:Arial;"
-            yl_style = "font-size:#{110 * 3.0 / 80.0}px; font-family:Arial;"
-            mn_style = "font-size:2.5px; font-family:Arial"
+            font_family = Defaults::SVG[:font]
+            year_style = "font-size:#{year_size}px; font-family:#{font_family};"
+            yl_style = "font-size:#{110 * 3.0 / 80.0}px; font-family:#{font_family};"
+            mn_style = "font-size:2.5px; font-family:#{font_family}"
 
             lines << tag("text", { x: offset[0], y: cur_offset_y, fill: poster.colors[:text], "dominant-baseline" => "hanging", style: year_style }, year.to_s)
             lines << tag("text", { x: offset[0] + 165, y: cur_offset_y + 5, fill: poster.colors[:text], "dominant-baseline" => "hanging", style: yl_style }, "#{format("%.1f", poster.m2u(year_len))} #{poster.u}")
@@ -69,11 +70,11 @@ module Workouts
                   else
                     intensity = 0
                   end
-                  color = interpolate_color("#444444", base_color, intensity)
+                  color = interpolate_color(Defaults::SVG[:empty_cell], base_color, intensity)
                   css_class = "s-#{dom_cat}"
                   title = build_day_title(date_key, tracks_by_cat)
                 else
-                  color = "#444444"
+                  color = Defaults::SVG[:empty_cell]
                   css_class = nil
                   title = date_key
                 end
