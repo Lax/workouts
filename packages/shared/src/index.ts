@@ -95,3 +95,77 @@ const CATEGORY_COLORS: Record<SportCategory, string> = {
 export function categoryColor(cat: string): string {
   return CATEGORY_COLORS[cat as SportCategory] ?? CATEGORY_COLORS.other
 }
+
+// ---- SportMapper ported from lib/workouts/sport_mapper.rb ----
+
+const SPORT_ALIASES: Record<string, SportCategory> = {
+  running: 'run', trailrun: 'run', trail_run: 'run',
+  virtualrun: 'run', virtual_run: 'run',
+  indoorrun: 'run', indoor_run: 'run',
+  cycling: 'ride', biking: 'ride',
+  mountainbike: 'ride', gravelride: 'ride', ebikeride: 'ride',
+  virtualride: 'ride', virtual_ride: 'ride',
+  indoor_ride: 'ride', indoorride: 'ride',
+  hiking: 'hike',
+  walking: 'walk',
+  swimming: 'swim',
+  skiing: 'ski', backcountryski: 'ski', nordicski: 'ski',
+  strengthtraining: 'workout',
+}
+
+const SPORT_KEYWORDS: [RegExp, SportCategory][] = [
+  [/\b(?:run|jog|sprint|marathon)\w*\b/i, 'run'],
+  [/\b(?:ride|cycl|bike|mountain\.?bike|gravel|ebike)\w*\b/i, 'ride'],
+  [/\b(?:hike|climb|mountaineer|trek)\w*\b/i, 'hike'],
+  [/\b(?:walk|stroll)\w*\b/i, 'walk'],
+  [/\b(?:swim|pool|laps?)\w*\b/i, 'swim'],
+  [/\b(?:ski|snowboard|nordic)\w*\b/i, 'ski'],
+  [/\b(?:workout|train|gym|fitness|yoga|pilates|crossfit|elliptical|strength)\w*\b/i, 'workout'],
+]
+
+const LEV_REFERENCES = [
+  'running', 'run', 'trailrun', 'trail_run', 'virtualrun', 'virtual_run', 'indoorrun', 'indoor_run',
+  'cycling', 'ride', 'biking', 'mountainbike', 'gravelride', 'ebikeride',
+  'virtualride', 'virtual_ride', 'indoor_ride', 'indoorride',
+  'hiking', 'hike', 'walking', 'walk', 'swimming', 'swim', 'skiing', 'ski',
+  'workout', 'strengthtraining', 'training', 'elliptical', 'cardio', 'functional',
+]
+
+function levenshtein(a: string, b: string): number {
+  const n = a.length, m = b.length
+  if (n === 0) return m
+  if (m === 0) return n
+  let cur: number[] = Array.from({ length: m + 1 }, (_, i) => i)
+  for (let i = 1; i <= n; i++) {
+    let prev = cur[0]
+    cur[0] = i
+    for (let j = 1; j <= m; j++) {
+      const tmp = cur[j]
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1
+      cur[j] = Math.min(cur[j] + 1, cur[j - 1] + 1, prev + cost)
+      prev = tmp
+    }
+  }
+  return cur[m]
+}
+
+export function canonicalizeSport(str: string | null | undefined): SportCategory {
+  if (!str) return 'other'
+  const key = str.toLowerCase().trim()
+
+  if (SPORT_ALIASES[key]) return SPORT_ALIASES[key]
+
+  for (const [re, sport] of SPORT_KEYWORDS) {
+    if (re.test(str)) return sport
+  }
+
+  let best: string | null = null
+  let bestDist = Infinity
+  for (const ref of LEV_REFERENCES) {
+    const d = levenshtein(key, ref)
+    if (d < bestDist) { bestDist = d; best = ref }
+  }
+  if (best && bestDist <= 3) return SPORT_ALIASES[best] ?? best as SportCategory
+
+  return 'other'
+}
