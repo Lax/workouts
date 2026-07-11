@@ -12,8 +12,8 @@
     initTheme()
     try {
       const [actRes, statsRes] = await Promise.all([
-        fetch('/activities.json'),
-        fetch('/stats.json'),
+        fetch('activities.json'),
+        fetch('stats.json'),
       ])
       if (actRes.ok) {
         const data: Activity[] = await actRes.json()
