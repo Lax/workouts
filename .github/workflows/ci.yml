@@ -30,3 +30,33 @@ jobs:
         run: |
           ruby -c lib/workouts.rb
           for f in $(find lib -name '*.rb'); do ruby -c "$f"; done
+
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Vitest unit tests
+        run: npx vitest run
+        working-directory: packages/web
+
+      - name: Build Svelte frontend
+        run: npm run build
+
+      - name: Bundle smoke test
+        run: node tests/build-smoke.js
+        working-directory: packages/web
+
+      - name: Playwright E2E tests
+        uses: microsoft/playwright-github-action@v1
+        with:
+          command: npx playwright test
+          working-directory: packages/web
