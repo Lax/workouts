@@ -21,9 +21,9 @@ module Workouts
           right_start = offset[0] + left_width
 
           header_text = stats[:first_run] ? "Running for #{stats[:days_ago]} Days" : "Year #{@year}"
-          lines << tag("text", { x: left_margin, y: offset[1] + 14, fill: dim, style: "font-size:6px;font-family:#{Defaults::SVG[:font]};" }, header_text)
+          lines << tag("text", { x: left_margin, y: offset[1] + 14, fill: dim, style: "font-size:6px;font-family:#{poster.colors[:font]};" }, header_text)
 
-          lines << tag("text", { x: left_margin, y: offset[1] + 34, fill: dim, style: "font-size:6px;font-family:#{Defaults::SVG[:font]};" }, "Races")
+          lines << tag("text", { x: left_margin, y: offset[1] + 34, fill: dim, style: "font-size:6px;font-family:#{poster.colors[:font]};" }, "Races")
 
           categories = [
             ["Full", stats[:marathon_count]],
@@ -38,16 +38,16 @@ module Workouts
           categories.each do |name, count|
             next unless count > 0
 
-            lines << tag("text", { x: left_margin, y: y_pos, fill: dim, style: "font-size:8px;font-family:#{Defaults::SVG[:font]};" }, race_num.to_s)
-            lines << tag("text", { x: left_margin + 12, y: y_pos, fill: tc, style: "font-size:10px;font-family:#{Defaults::SVG[:font]};font-weight:bold;" }, name)
-            lines << tag("text", { x: left_margin + 38, y: y_pos, fill: dim, style: "font-size:6px;font-family:#{Defaults::SVG[:font]};" }, "#{count}x")
+            lines << tag("text", { x: left_margin, y: y_pos, fill: dim, style: "font-size:8px;font-family:#{poster.colors[:font]};" }, race_num.to_s)
+            lines << tag("text", { x: left_margin + 12, y: y_pos, fill: tc, style: "font-size:10px;font-family:#{poster.colors[:font]};font-weight:bold;" }, name)
+            lines << tag("text", { x: left_margin + 38, y: y_pos, fill: dim, style: "font-size:6px;font-family:#{poster.colors[:font]};" }, "#{count}x")
             y_pos += 18
             race_num += 1
             race_count += 1
           end
 
           stats_start_y = race_count == 0 ? offset[1] + 72 : offset[1] + 54 + race_count * 18 + 26
-          lines << tag("text", { x: left_margin, y: stats_start_y - 6, fill: dim, style: "font-size:6px;font-family:#{Defaults::SVG[:font]};" }, "Stats")
+          lines << tag("text", { x: left_margin, y: stats_start_y - 6, fill: dim, style: "font-size:6px;font-family:#{poster.colors[:font]};" }, "Stats")
 
           total_hours = (stats[:total_time] / 3600).to_i
           avg_pace = stats[:avg_pace]
@@ -68,11 +68,11 @@ module Workouts
             x = i.even? ? col1_x : col2_x
             sy = stats_start_y + (i / 2) * 28
 
-            lines << tag("text", { x: x, y: sy, fill: dim, style: "font-size:5px;font-family:#{Defaults::SVG[:font]};" }, label)
-            lines << tag("text", { x: x, y: sy + 11, fill: tc, style: "font-size:10px;font-family:#{Defaults::SVG[:font]};font-weight:bold;" }, value)
+            lines << tag("text", { x: x, y: sy, fill: dim, style: "font-size:5px;font-family:#{poster.colors[:font]};" }, label)
+            lines << tag("text", { x: x, y: sy + 11, fill: tc, style: "font-size:10px;font-family:#{poster.colors[:font]};font-weight:bold;" }, value)
             if unit && !unit.empty?
               vw = value.length * 6
-              lines << tag("text", { x: x + vw, y: sy + 11, fill: dim, style: "font-size:6px;font-family:#{Defaults::SVG[:font]};" }, unit)
+              lines << tag("text", { x: x + vw, y: sy + 11, fill: dim, style: "font-size:6px;font-family:#{poster.colors[:font]};" }, unit)
             end
           end
 
@@ -81,11 +81,11 @@ module Workouts
           dots_spacing_y = dots_height / 31.0
 
           runner_row = dots_y_start + 27.5 * dots_spacing_y
-          lines << tag("text", { x: left_margin, y: runner_row - 4, fill: dim, style: "font-size:5px;font-family:#{Defaults::SVG[:font]};" }, "Runner")
-          lines << tag("text", { x: left_margin, y: runner_row + 6, fill: tc, style: "font-size:8px;font-family:#{Defaults::SVG[:font]};font-weight:bold;" }, poster.athlete)
+          lines << tag("text", { x: left_margin, y: runner_row - 4, fill: dim, style: "font-size:5px;font-family:#{poster.colors[:font]};" }, "Runner")
+          lines << tag("text", { x: left_margin, y: runner_row + 6, fill: tc, style: "font-size:8px;font-family:#{poster.colors[:font]};font-weight:bold;" }, poster.athlete)
 
           footer_y = dots_y_start + 30.5 * dots_spacing_y + 3
-          lines << tag("text", { x: left_margin, y: footer_y, fill: dim, style: "font-size:7px;font-family:#{Defaults::SVG[:font]};" }, "workouts/#{@year}")
+          lines << tag("text", { x: left_margin, y: footer_y, fill: dim, style: "font-size:7px;font-family:#{poster.colors[:font]};" }, "workouts/#{@year}")
 
           lines << draw_monthly_grid(year_tracks, right_start, offset[1] + 8,
                                      size[0] - (right_start - offset[0]) - 8,
