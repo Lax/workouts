@@ -122,10 +122,6 @@
   }
 
   @media (min-width: 1024px) {
-    .handle {
-      display: none;
-    }
-
     .drawer {
       left: auto;
       right: 0;
