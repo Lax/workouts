@@ -1,0 +1,117 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_run:
+    workflows: [Sync Workouts]
+    types: [completed]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    if: >
+      github.event_name != 'workflow_run' ||
+      github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    concurrency:
+      group: pages
+      cancel-in-progress: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.4'
+          bundler-cache: true
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install npm dependencies
+        run: npm ci
+
+      - name: Restore DB from cache
+        uses: actions/cache/restore@v4
+        with:
+          path: data/workouts.db
+          key: workouts-db-v1-
+          restore-keys: workouts-db-v1-
+
+      - name: Download fresh DB artifact
+        if: github.event_name == 'workflow_run'
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: workouts-db
+          path: data/
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ github.token }}
+
+      - name: Create build directory
+        run: mkdir -p build/svg
+
+      - name: Export JSON
+        run: bundle exec exe/workouts export json --output build/activities.json
+
+      - name: Export SVG
+        run: bundle exec exe/workouts export svg --style github --title "Workouts" --output build/svg/github.svg
+
+      - name: Validate SVG
+        run: |
+          bundle exec ruby -e '
+            require "nokogiri"
+            Dir["build/svg/*.svg"].each do |f|
+              doc = Nokogiri::XML(File.read(f))
+              if doc.errors.any?
+                puts "::error::#{f}: #{doc.errors.map(&:to_s).join(", ")}"
+                exit 1
+              end
+              puts "OK #{f}"
+            end
+          '
+
+      - name: Export Stats
+        run: bundle exec exe/workouts export stats --output build/stats.json
+
+      - name: Export dashboard
+        run: bundle exec exe/workouts export dashboard --output build/
+
+      - name: Build Svelte frontend
+        run: npm run build
+
+      - name: Copy Svelte build to build/
+        run: |
+          cp -r packages/web/dist/assets build/
+          cp packages/web/dist/index.html build/index-svelte.html
+
+      - name: Validate build
+        run: |
+          test -f build/index-svelte.html || { echo "::error::Missing index-svelte.html"; exit 1; }
+          ls build/assets/index-*.js >/dev/null 2>&1 || { echo "::error::Missing JS bundle"; exit 1; }
+          echo "OK: Svelte build present"
+
+      - name: Validate dashboard HTML
+        run: |
+          for id in map app-drawer chart chart-small detail-overlay charts-overlay; do
+            if ! grep -q "id=\"$id\"" build/index.html; then
+              echo "::error::Missing DOM id: $id"
+              exit 1
+            fi
+          done
+          echo "OK: All DOM IDs present"
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./build
+
+      - id: deployment
+        uses: actions/deploy-pages@v4
