@@ -4,6 +4,7 @@
   --color-text: #1a1a1a;
   --color-accent: #4dd2ff;
   --color-surface: #ffffff;
+  --color-surface-rgb: 255, 255, 255;
   --color-border: #e5e5e5;
   --color-text-secondary: #666666;
 }
@@ -13,6 +14,7 @@
   --color-text: #e0e0e0;
   --color-accent: #4dd2ff;
   --color-surface: #1e1e1e;
+  --color-surface-rgb: 30, 30, 30;
   --color-border: #333333;
   --color-text-secondary: #999999;
 }

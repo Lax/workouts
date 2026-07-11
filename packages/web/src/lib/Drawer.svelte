@@ -1,7 +1,6 @@
 <script lang="ts">
   import { app, openCharts } from './state.svelte'
   import StatsBar from './StatsBar.svelte'
-  import YearPicker from './YearPicker.svelte'
   import ActivityList from './ActivityList.svelte'
   import Filters from './Filters.svelte'
 
@@ -37,7 +36,6 @@
   </div>
 
   {#if tab === 'list'}
-    <YearPicker />
     <ActivityList />
   {:else}
     <Filters />
@@ -50,7 +48,7 @@
     bottom: 0;
     left: 0;
     right: 0;
-    z-index: 10;
+    z-index: 2;
     background: transparent;
     border: none;
     cursor: pointer;
@@ -68,7 +66,7 @@
     bottom: 0;
     left: 0;
     right: 0;
-    z-index: 9;
+    z-index: 2;
     background: var(--color-surface, #16213e);
     border-top: 1px solid var(--color-border, #2a2a4a);
     transform: translateY(calc(100% - 52px));

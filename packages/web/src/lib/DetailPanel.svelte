@@ -134,7 +134,7 @@
   .overlay {
     position: fixed;
     inset: 0;
-    z-index: 1000;
+    z-index: 3;
     background: rgba(0, 0, 0, 0.5);
     display: flex;
     align-items: flex-end;
