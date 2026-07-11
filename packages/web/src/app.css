@@ -7,6 +7,12 @@
   --color-surface-rgb: 255, 255, 255;
   --color-border: #e5e5e5;
   --color-text-secondary: #666666;
+  --color-text-dim: #94a3b8;
+  --color-text-insight: #94a3b8;
+  --color-hover: #f0f9ff;
+  --color-active-row: #e0f2fe;
+  --color-walk: #4ecdc4;
+  --color-ride: #ff6b6b;
 }
 
 [data-theme='dark'] {
@@ -17,6 +23,12 @@
   --color-surface-rgb: 30, 30, 30;
   --color-border: #333333;
   --color-text-secondary: #999999;
+  --color-text-dim: #666666;
+  --color-text-insight: #aaaaaa;
+  --color-hover: #0f3460;
+  --color-active-row: #1a3a6a;
+  --color-walk: #4ecdc4;
+  --color-ride: #ff6b6b;
 }
 
 * {
@@ -31,6 +43,8 @@ body {
   background: var(--color-bg);
   color: var(--color-text);
   line-height: 1.5;
+  overflow: hidden;
+  height: 100vh;
 }
 
 a {

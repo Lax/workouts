@@ -86,7 +86,7 @@
     width: 32px;
     height: 3px;
     border-radius: 2px;
-    background: #444;
+    background: var(--color-text-dim, #444);
   }
 
   .drawer-collapsed {
