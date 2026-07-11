@@ -5,12 +5,7 @@ require "time"
 module Workouts
   module Export
     class Dashboard
-      CATEGORY_COLORS = {
-        "run"  => "#4DD2FF",
-        "walk" => "#4ECDC4",
-        "ride" => "#FF6B6B",
-        "hike" => "#FFD93D",
-      }.freeze
+      CATEGORY_COLORS = Defaults::CATEGORIES
 
       def initialize(db:, output:, activity_filter: nil)
         @db = db
@@ -91,9 +86,25 @@ module Workouts
             <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
             <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/theme/dark.js"></script>
             <style>
+              :root {
+                --color-bg: #{Defaults::DASHBOARD[:background]};
+                --color-surface: #{Defaults::DASHBOARD[:surface]};
+                --color-surface-rgb: #{Defaults::DASHBOARD[:surface].delete("#").scan(/../).map { |s| s.to_i(16) }.join(", ")};
+                --color-hover: #{Defaults::DASHBOARD[:hover]};
+                --color-active-row: #{Defaults::DASHBOARD[:active_row]};
+                --color-border: #{Defaults::DASHBOARD[:border]};
+                --color-text: #{Defaults::DASHBOARD[:text]};
+                --color-text-secondary: #{Defaults::DASHBOARD[:text_secondary]};
+                --color-text-dim: #{Defaults::DASHBOARD[:text_dim]};
+                --color-text-insight: #{Defaults::DASHBOARD[:text_insight]};
+                --color-accent: #{Defaults::DASHBOARD[:accent]};
+                --color-walk: #{Defaults::CATEGORIES["walk"]};
+                --color-ride: #{Defaults::CATEGORIES["ride"]};
+                --font-family: #{Defaults::DASHBOARD[:font]};
+              }
               * { box-sizing: border-box; margin: 0; padding: 0; }
-              body { background: #1a1a2e; color: #e0e0e0; font-family: -apple-system,BlinkMacSystemFont,sans-serif; overflow: hidden; height: 100vh; }
-              a { color: #4DD2FF; text-decoration: none; }
+              body { background: var(--color-bg); color: var(--color-text); font-family: var(--font-family); overflow: hidden; height: 100vh; }
+              a { color: var(--color-accent); text-decoration: none; }
 
               #map-container { position: fixed; inset: 0; z-index: 0; }
               #map { width: 100%; height: 100%; }
@@ -106,21 +117,21 @@ module Workouts
               .ol-lc { position: fixed; left: 6px; top: 50%; z-index: 1; transform: translateY(-50%); pointer-events: none; }
               .ol-lc > * { pointer-events: auto; touch-action: manipulation; }
 
-              .brand { font-size: 0.85rem; color: #888; letter-spacing: 1px; }
-              .brand strong { color: #4DD2FF; font-weight: 700; }
+              .brand { font-size: 0.85rem; color: var(--color-text-secondary); letter-spacing: 1px; }
+              .brand strong { color: var(--color-accent); font-weight: 700; }
 
               .year-pills { display: flex; flex-direction: column; gap: 3px; }
-              .year-pill { padding: 2px 8px; border-radius: 12px; border: 1px solid #2a2a4a; background: rgba(22,33,62,0.85); color: #888; cursor: pointer; font-size: 0.7rem; transition: all 0.15s; backdrop-filter: blur(4px); }
-              .year-pill:hover { border-color: #4DD2FF; color: #4DD2FF; }
-              .year-pill.active { background: #4DD2FF; color: #1a1a2e; border-color: #4DD2FF; font-weight: 600; }
-              .month-chip { padding: 3px 10px; border-radius: 14px; border: 1px solid #4ECDC4; background: rgba(78,205,196,0.15); color: #4ECDC4; cursor: pointer; font-size: 0.75rem; display: inline-flex; align-items: center; gap: 4px; }
-              .month-chip:hover { background: rgba(78,205,196,0.25); }
+              .year-pill { padding: 2px 8px; border-radius: 12px; border: 1px solid var(--color-border); background: rgba(var(--color-surface-rgb), 0.85); color: var(--color-text-secondary); cursor: pointer; font-size: 0.7rem; transition: all 0.15s; backdrop-filter: blur(4px); }
+              .year-pill:hover { border-color: var(--color-accent); color: var(--color-accent); }
+              .year-pill.active { background: var(--color-accent); color: var(--color-bg); border-color: var(--color-accent); font-weight: 600; }
+              .month-chip { padding: 3px 10px; border-radius: 14px; border: 1px solid var(--color-walk); background: rgba(var(--color-surface-rgb), 0.15); color: var(--color-walk); cursor: pointer; font-size: 0.75rem; display: inline-flex; align-items: center; gap: 4px; }
+              .month-chip:hover { background: rgba(var(--color-surface-rgb), 0.25); }
 
-              .legend-toggle { display: flex; background: rgba(22,33,62,0.85); border-radius: 8px; border: 1px solid #2a2a4a; overflow: hidden; backdrop-filter: blur(4px); }
-              .legend-btn { padding: 4px 12px; font-size: 0.7rem; color: #888; cursor: pointer; border: none; background: transparent; transition: all 0.15s; }
-              .legend-btn:hover { color: #ccc; }
-              .legend-btn.active { background: #4DD2FF; color: #1a1a2e; font-weight: 600; }
-              .legend-btn:first-child { border-right: 1px solid #2a2a4a; }
+              .legend-toggle { display: flex; background: rgba(var(--color-surface-rgb), 0.85); border-radius: 8px; border: 1px solid var(--color-border); overflow: hidden; backdrop-filter: blur(4px); }
+              .legend-btn { padding: 4px 12px; font-size: 0.7rem; color: var(--color-text-secondary); cursor: pointer; border: none; background: transparent; transition: all 0.15s; }
+              .legend-btn:hover { color: var(--color-text); }
+              .legend-btn.active { background: var(--color-accent); color: var(--color-bg); font-weight: 600; }
+              .legend-btn:first-child { border-right: 1px solid var(--color-border); }
 
               .speed-legend { display: flex; gap: 0; border-radius: 6px; overflow: hidden; height: 8px; margin-top: 4px; }
               .speed-legend span { flex: 1; }
@@ -134,95 +145,95 @@ module Workouts
               .drawer { position: fixed; bottom: 0; left: 0; right: 0; z-index: 2; transform: translateY(calc(100% - 52px)); transition: transform 0.3s ease-out; will-change: transform; }
               .drawer.open { transform: translateY(0); }
 
-              .drawer-handle { height: 16px; display: flex; justify-content: center; align-items: center; cursor: pointer; background: #16213e; border-radius: 12px 12px 0 0; border: 1px solid #2a2a4a; border-bottom: none; padding: 2px 0; }
+              .drawer-handle { height: 16px; display: flex; justify-content: center; align-items: center; cursor: pointer; background: var(--color-surface); border-radius: 12px 12px 0 0; border: 1px solid var(--color-border); border-bottom: none; padding: 2px 0; }
               .drawer-handle .bar { width: 32px; height: 3px; border-radius: 2px; background: #444; }
-              .drawer-handle:hover .bar { background: #4DD2FF; }
+              .drawer-handle:hover .bar { background: var(--color-accent); }
 
-              .drawer-collapsed { height: 34px; display: flex; align-items: center; padding: 0 10px; gap: 6px; background: #16213e; border-left: 1px solid #2a2a4a; border-right: 1px solid #2a2a4a; }
-              .stat-pill { font-size: 0.72rem; color: #888; white-space: nowrap; display: flex; align-items: center; gap: 3px; }
-              .stat-pill strong { color: #fff; font-weight: 600; }
+              .drawer-collapsed { height: 34px; display: flex; align-items: center; padding: 0 10px; gap: 6px; background: var(--color-surface); border-left: 1px solid var(--color-border); border-right: 1px solid var(--color-border); }
+              .stat-pill { font-size: 0.72rem; color: var(--color-text-secondary); white-space: nowrap; display: flex; align-items: center; gap: 3px; }
+              .stat-pill strong { color: var(--color-text); font-weight: 600; }
               .stat-pill .delta { display: inline; font-size: 0.65rem; margin: 0; }
-              .stat-pill .delta.up { color: #4ECDC4; }
-              .stat-pill .delta.down { color: #FF6B6B; }
+              .stat-pill .delta.up { color: var(--color-walk); }
+              .stat-pill .delta.down { color: var(--color-ride); }
               .spacer { flex: 1; }
-              .icon-btn { background: transparent; border: 1px solid #2a2a4a; color: #888; border-radius: 6px; padding: 4px 8px; font-size: 0.85rem; cursor: pointer; transition: all 0.15s; line-height: 1; }
-              .icon-btn:hover { border-color: #4DD2FF; color: #4DD2FF; }
+              .icon-btn { background: transparent; border: 1px solid var(--color-border); color: var(--color-text-secondary); border-radius: 6px; padding: 4px 8px; font-size: 0.85rem; cursor: pointer; transition: all 0.15s; line-height: 1; }
+              .icon-btn:hover { border-color: var(--color-accent); color: var(--color-accent); }
 
-              .drawer-body { height: 45vh; max-height: 480px; background: #16213e; border-left: 1px solid #2a2a4a; border-right: 1px solid #2a2a4a; display: none; flex-direction: column; }
+              .drawer-body { height: 45vh; max-height: 480px; background: var(--color-surface); border-left: 1px solid var(--color-border); border-right: 1px solid var(--color-border); display: none; flex-direction: column; }
               .drawer.open .drawer-body { display: flex; }
 
-              .drawer-tabs { display: flex; border-bottom: 1px solid #2a2a4a; flex-shrink: 0; }
-              .drawer-tab { padding: 8px 16px; font-size: 0.8rem; color: #888; cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.15s; background: transparent; border-top: none; border-left: none; border-right: none; }
-              .drawer-tab:hover { color: #ccc; }
-              .drawer-tab.active { color: #4DD2FF; border-bottom-color: #4DD2FF; }
-              .drawer-tab .badge { font-size: 0.65rem; color: #666; margin-left: 4px; }
+              .drawer-tabs { display: flex; border-bottom: 1px solid var(--color-border); flex-shrink: 0; }
+              .drawer-tab { padding: 8px 16px; font-size: 0.8rem; color: var(--color-text-secondary); cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.15s; background: transparent; border-top: none; border-left: none; border-right: none; }
+              .drawer-tab:hover { color: var(--color-text); }
+              .drawer-tab.active { color: var(--color-accent); border-bottom-color: var(--color-accent); }
+              .drawer-tab .badge { font-size: 0.65rem; color: var(--color-text-dim); margin-left: 4px; }
 
               .drawer-panel { display: none; flex: 1; overflow-y: auto; overscroll-behavior: contain; }
               .drawer-panel.active { display: block; }
               .drawer-panel::-webkit-scrollbar { width: 5px; }
               .drawer-panel::-webkit-scrollbar-track { background: transparent; }
-              .drawer-panel::-webkit-scrollbar-thumb { background: #2a2a4a; border-radius: 3px; }
+              .drawer-panel::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 3px; }
 
-              .act-item { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; padding: 9px 14px; border-bottom: 1px solid #222; cursor: pointer; transition: background 0.12s; align-items: center; min-height: 48px; }
-              .act-item:hover { background: #0f3460; }
-              .act-item.active { background: #1a3a6a; }
-              .act-item.hover { background: #1a3a6a; box-shadow: inset 3px 0 0 #4DD2FF; }
+              .act-item { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; padding: 9px 14px; border-bottom: 1px solid var(--color-border); cursor: pointer; transition: background 0.12s; align-items: center; min-height: 48px; }
+              .act-item:hover { background: var(--color-hover); }
+              .act-item.active { background: var(--color-active-row); }
+              .act-item.hover { background: var(--color-active-row); box-shadow: inset 3px 0 0 var(--color-accent); }
               .act-item .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-              .act-item .act-name { font-size: 0.82rem; color: #ccc; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-              .act-item .act-name .src-badge { font-size: 0.6rem; padding: 1px 5px; border-radius: 3px; margin-left: 5px; color: #888; background: #0f3460; }
-              .act-item .act-date { font-size: 0.7rem; color: #666; }
-              .act-item .act-meta { text-align: right; font-size: 0.72rem; color: #888; white-space: nowrap; }
-              .act-item .act-meta .dist { color: #4DD2FF; font-weight: 600; }
+              .act-item .act-name { font-size: 0.82rem; color: var(--color-text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+              .act-item .act-name .src-badge { font-size: 0.6rem; padding: 1px 5px; border-radius: 3px; margin-left: 5px; color: var(--color-text-secondary); background: var(--color-hover); }
+              .act-item .act-date { font-size: 0.7rem; color: var(--color-text-dim); }
+              .act-item .act-meta { text-align: right; font-size: 0.72rem; color: var(--color-text-secondary); white-space: nowrap; }
+              .act-item .act-meta .dist { color: var(--color-accent); font-weight: 600; }
 
-              .list-controls { display: flex; gap: 6px; padding: 6px 14px; border-bottom: 1px solid #2a2a4a; align-items: center; flex-wrap: wrap; }
-              .list-controls .sort-btn { background: transparent; border: 1px solid #2a2a4a; color: #888; border-radius: 4px; padding: 2px 8px; font-size: 0.7rem; cursor: pointer; }
-              .list-controls .sort-btn:hover { border-color: #4DD2FF; color: #4DD2FF; }
-              .list-controls .sort-btn.active { border-color: #4DD2FF; color: #4DD2FF; }
-              .list-controls .count { font-size: 0.7rem; color: #666; margin-left: auto; }
+              .list-controls { display: flex; gap: 6px; padding: 6px 14px; border-bottom: 1px solid var(--color-border); align-items: center; flex-wrap: wrap; }
+              .list-controls .sort-btn { background: transparent; border: 1px solid var(--color-border); color: var(--color-text-secondary); border-radius: 4px; padding: 2px 8px; font-size: 0.7rem; cursor: pointer; }
+              .list-controls .sort-btn:hover { border-color: var(--color-accent); color: var(--color-accent); }
+              .list-controls .sort-btn.active { border-color: var(--color-accent); color: var(--color-accent); }
+              .list-controls .count { font-size: 0.7rem; color: var(--color-text-dim); margin-left: auto; }
 
               .filter-grid { padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; }
               .filter-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-              .filter-row label { font-size: 0.72rem; color: #888; min-width: 40px; }
-              .filter-row select, .filter-row input { background: #0f3460; color: #e0e0e0; border: 1px solid #2a2a4a; border-radius: 5px; padding: 5px 10px; font-size: 0.8rem; outline: none; }
-              .filter-row select:focus, .filter-row input:focus { border-color: #4DD2FF; }
+              .filter-row label { font-size: 0.72rem; color: var(--color-text-secondary); min-width: 40px; }
+              .filter-row select, .filter-row input { background: var(--color-hover); color: var(--color-text); border: 1px solid var(--color-border); border-radius: 5px; padding: 5px 10px; font-size: 0.8rem; outline: none; }
+              .filter-row select:focus, .filter-row input:focus { border-color: var(--color-accent); }
               .filter-row input[type="text"] { flex: 1; min-width: 120px; }
               .filter-row input[type="number"] { width: 56px; }
-              .filter-row .hint { font-size: 0.7rem; color: #666; }
+              .filter-row .hint { font-size: 0.7rem; color: var(--color-text-dim); }
 
-              .insight { font-size: 0.78rem; color: #aaa; padding: 6px 14px; background: #0f3460; border-radius: 6px; margin: 0 14px 8px 14px; line-height: 1.5; text-align: center; }
-              .insight em { color: #4DD2FF; font-style: normal; }
+              .insight { font-size: 0.78rem; color: var(--color-text-insight); padding: 6px 14px; background: var(--color-hover); border-radius: 6px; margin: 0 14px 8px 14px; line-height: 1.5; text-align: center; }
+              .insight em { color: var(--color-accent); font-style: normal; }
 
               .detail-overlay { display: none; position: fixed; inset: 0; z-index: 3; background: rgba(0,0,0,0.5); justify-content: center; align-items: flex-end; }
               .detail-overlay.open { display: flex; }
-              .detail-panel { background: #16213e; border-radius: 16px 16px 0 0; max-width: 600px; width: 100%; max-height: 80vh; overflow-y: auto; padding: 1.2rem 1.2rem 2rem; border-top: 1px solid #2a2a4a; animation: slideUp 0.3s ease-out; }
+              .detail-panel { background: var(--color-surface); border-radius: 16px 16px 0 0; max-width: 600px; width: 100%; max-height: 80vh; overflow-y: auto; padding: 1.2rem 1.2rem 2rem; border-top: 1px solid var(--color-border); animation: slideUp 0.3s ease-out; }
               @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
-              .detail-panel .close { float: right; font-size: 1.4rem; cursor: pointer; color: #888; line-height: 1; }
-              .detail-panel .close:hover { color: #fff; }
+              .detail-panel .close { float: right; font-size: 1.4rem; cursor: pointer; color: var(--color-text-secondary); line-height: 1; }
+              .detail-panel .close:hover { color: var(--color-text); }
               .detail-panel h2 { font-size: 1.05rem; margin-bottom: 2px; }
-              .detail-panel .meta { color: #888; font-size: 0.78rem; margin-bottom: 0.8rem; }
+              .detail-panel .meta { color: var(--color-text-secondary); font-size: 0.78rem; margin-bottom: 0.8rem; }
               .detail-panel .grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
-              .detail-panel .grid .item { background: #0f3460; padding: 6px; border-radius: 6px; text-align: center; }
-              .detail-panel .grid .item .v { font-size: 1rem; font-weight: 700; color: #4DD2FF; display: block; }
-              .detail-panel .grid .item .l { font-size: 0.65rem; color: #888; }
+              .detail-panel .grid .item { background: var(--color-hover); padding: 6px; border-radius: 6px; text-align: center; }
+              .detail-panel .grid .item .v { font-size: 1rem; font-weight: 700; color: var(--color-accent); display: block; }
+              .detail-panel .grid .item .l { font-size: 0.65rem; color: var(--color-text-secondary); }
               #detail-map { width: 100%; height: 180px; border-radius: 8px; margin-top: 0.8rem; }
 
               .charts-overlay { display: none; position: fixed; inset: 0; z-index: 4; background: rgba(0,0,0,0.6); justify-content: center; align-items: center; }
               .charts-overlay.open { display: flex; }
-              .charts-panel { background: #16213e; border-radius: 16px; max-width: 520px; width: 92%; max-height: 85vh; overflow-y: auto; padding: 1.2rem; border: 1px solid #2a2a4a; }
-              .charts-panel .close { float: right; font-size: 1.4rem; cursor: pointer; color: #888; line-height: 1; }
-              .charts-panel .close:hover { color: #fff; }
-              .charts-panel h3 { font-size: 0.9rem; color: #888; margin-bottom: 8px; }
+              .charts-panel { background: var(--color-surface); border-radius: 16px; max-width: 520px; width: 92%; max-height: 85vh; overflow-y: auto; padding: 1.2rem; border: 1px solid var(--color-border); }
+              .charts-panel .close { float: right; font-size: 1.4rem; cursor: pointer; color: var(--color-text-secondary); line-height: 1; }
+              .charts-panel .close:hover { color: var(--color-text); }
+              .charts-panel h3 { font-size: 0.9rem; color: var(--color-text-secondary); margin-bottom: 8px; }
               #chart { width: 100%; height: 240px; }
               #chart-small { width: 100%; height: 200px; }
 
-              .empty { padding: 2rem; text-align: center; color: #666; font-size: 0.85rem; }
+              .empty { padding: 2rem; text-align: center; color: var(--color-text-dim); font-size: 0.85rem; }
 
               ::-webkit-scrollbar { width: 5px; }
               ::-webkit-scrollbar-track { background: transparent; }
-              ::-webkit-scrollbar-thumb { background: #2a2a4a; border-radius: 3px; }
+              ::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 3px; }
 
               @media (min-width: 1024px) {
-                .drawer { left: auto; right: 0; bottom: auto; top: 50%; transform: translateY(-50%) translateX(calc(100% - 48px)); width: auto; border-radius: 12px 0 0 12px; height: auto; max-height: 80vh; border: 1px solid #2a2a4a; border-right: none; overflow: hidden; }
+                .drawer { left: auto; right: 0; bottom: auto; top: 50%; transform: translateY(-50%) translateX(calc(100% - 48px)); width: auto; border-radius: 12px 0 0 12px; height: auto; max-height: 80vh; border: 1px solid var(--color-border); border-right: none; overflow: hidden; }
                 .drawer.open { transform: translateY(-50%) translateX(0); }
                 .drawer-collapsed { width: 48px; flex-direction: column; height: auto; padding: 10px 4px; gap: 8px; border: none; border-radius: 12px 0 0 12px; }
                 .drawer.open .drawer-collapsed { display: none; }
@@ -377,8 +388,16 @@ module Workouts
               function fmtSpeed(a) { if (!a || !a.average_speed) return '—'; return (a.average_speed * 3.6).toFixed(1); }
               function distKm(a) { return a.distance ? (a.distance / 1000) : 0; }
 
-              var CAT_COLORS = { run: '#4DD2FF', walk: '#4ECDC4', ride: '#FF6B6B', hike: '#FFD93D' };
+              var CAT_COLORS = {
+                run: '#{Defaults::CATEGORIES["run"]}',
+                walk: '#{Defaults::CATEGORIES["walk"]}',
+                ride: '#{Defaults::CATEGORIES["ride"]}',
+                hike: '#{Defaults::CATEGORIES["hike"]}'
+              };
               function typeColor(t) { return CAT_COLORS[t] || '#888'; }
+              function getCSSVar(name) {
+                return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+              }
 
               function speedColor(speedMs) {
                 var s = (speedMs || 0) * 3.6;
@@ -413,7 +432,7 @@ module Workouts
         try {
           state.map = L.map('map', { zoomControl: false, attributionControl: false }).setView([30, 110], 4);
           L.control.zoom({ position: 'topright' }).addTo(state.map);
-          L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', {
+          L.tileLayer('#{Defaults::MAP[:tiles_dark]}', {
             maxZoom: 19
           }).addTo(state.map);
           state.map.on('zoomend', function() {
@@ -708,7 +727,7 @@ module Workouts
                   state.polylineMap[k].setStyle({ weight: 1.5, opacity: 0.15 });
                 });
                 var line = state.polylineMap[id];
-                if (line) line.setStyle({ weight: 3.5, opacity: 1, color: '#4DD2FF' });
+                if (line) line.setStyle({ weight: 3.5, opacity: 1, color: getCSSVar('--color-accent') });
               }
               function unhighlightMap() {
                 Object.keys(state.polylineMap).forEach(function(k) {
@@ -755,8 +774,8 @@ module Workouts
                 document.getElementById('charts-overlay').classList.add('open');
                 if (!state.chartReady) {
                   try {
-                    state.chart = echarts.init(document.getElementById('chart'), 'dark');
-                    state.chartSmall = echarts.init(document.getElementById('chart-small'), 'dark');
+                    state.chart = echarts.init(document.getElementById('chart'), '#{Defaults::MAP[:echarts_theme]}');
+                    state.chartSmall = echarts.init(document.getElementById('chart-small'), '#{Defaults::MAP[:echarts_theme]}');
                     state.chartReady = true;
                   } catch(e) { console.error('ECharts init:', e); }
                 }
@@ -790,7 +809,7 @@ module Workouts
                   grid: { left: 50, right: 16, top: 20, bottom: 30 },
                   xAxis: { type: 'category', data: months, axisLabel: { fontSize: 10, color: '#666' } },
                   yAxis: { type: 'value', name: 'km', nameTextStyle: { fontSize: 10, color: '#666' }, axisLabel: { fontSize: 10, color: '#666' }, splitLine: { lineStyle: { color: '#2a2a4a' } } },
-                  series: [{ type: 'bar', data: data, itemStyle: { color: '#4DD2FF', borderRadius: [4,4,0,0] }, barMaxWidth: 32 }]
+                  series: [{ type: 'bar', data: data, itemStyle: { color: getCSSVar('--color-accent'), borderRadius: [4,4,0,0] }, barMaxWidth: 32 }]
                 };
                 state.chart.setOption(option, true);
                 if (!state.chartReady) {
@@ -825,7 +844,7 @@ module Workouts
                     itemStyle: { borderRadius: 4 },
                     label: { color: '#888', fontSize: 11, formatter: function(p) { return p.name; } },
                     labelLine: { lineStyle: { color: '#2a2a4a' } },
-                    color: ['#4DD2FF','#4ECDC4','#FF6B6B','#FFD93D','#888']
+                    color: ['#{Defaults::CATEGORIES["run"]}','#{Defaults::CATEGORIES["walk"]}','#{Defaults::CATEGORIES["ride"]}','#{Defaults::CATEGORIES["hike"]}','#888']
                   }]
                 };
                 state.chartSmall.setOption(option, true);
@@ -915,10 +934,10 @@ module Workouts
                 if (a.polyline && a.polyline.length > 0) {
                   if (state.detailMap) { state.detailMap.remove(); }
                   state.detailMap = L.map(mapContainer, { zoomControl: false }).setView([30, 110], 13);
-                  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', { maxZoom: 19 }).addTo(state.detailMap);
+                  L.tileLayer('#{Defaults::MAP[:tiles_dark]}', { maxZoom: 19 }).addTo(state.detailMap);
                   var pts = decodePolyline(a.polyline);
                   if (pts.length >= 2) {
-                    var line = L.polyline(pts, { color: '#4DD2FF', weight: 3, opacity: 0.8 }).addTo(state.detailMap);
+                    var line = L.polyline(pts, { color: getCSSVar('--color-accent'), weight: 3, opacity: 0.8 }).addTo(state.detailMap);
                     state.detailMap.fitBounds(line.getBounds().pad(0.1));
                   }
                   setTimeout(function() { if (state.detailMap) state.detailMap.invalidateSize(); }, 150);
