@@ -154,6 +154,8 @@ function levenshtein(a: string, b: string): number {
   return cur[m]
 }
 
+export * from './theme-types'
+
 export function canonicalizeSport(str: string | null | undefined): SportCategory {
   if (!str) return 'other'
   const key = str.toLowerCase().trim()

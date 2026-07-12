@@ -8,11 +8,17 @@
   import Drawer from './lib/Drawer.svelte'
   import DetailPanel from './lib/DetailPanel.svelte'
   import ChartOverlay from './lib/ChartOverlay.svelte'
+  import { ThemeRegistry } from './lib/theme/registry'
+  import { activateTheme, setActiveContext } from './lib/theme/host'
+  import ThemeHost from './lib/theme/ThemeHost.svelte'
+
+  let themeMode = $state<'default' | 'theme'>('default')
 
   initReactivity()
 
   onMount(async () => {
     initTheme()
+    await ThemeRegistry.loadAll()
     try {
       const [actRes, statsRes] = await Promise.all([
         fetch('activities.json'),
@@ -34,17 +40,31 @@
     } finally {
       app.loading = false
     }
+
+    const first = ThemeRegistry.list()[0]
+    if (first) {
+      const ctx = await activateTheme(first.manifest.name)
+      setActiveContext(ctx)
+    }
   })
 </script>
 
 {#if app.loading}
   <div class="loading">Loading…</div>
+{:else if themeMode === 'theme'}
+  <ThemeHost />
 {:else}
   <MapView />
 
   <div class="map-overlays">
     <div class="ol-tl">
-      <div class="brand"><strong>Workouts</strong> {app.years.at(-1) ?? '?'}–{app.years[0] ?? '?'}</div>
+      <div class="brand">
+        <strong>Workouts</strong>
+        {app.years.at(-1) ?? '?'}–{app.years[0] ?? '?'}
+        <button class="theme-toggle-btn" onclick={() => themeMode = 'theme'}>
+          themes ({ThemeRegistry.list().length})
+        </button>
+      </div>
     </div>
     <div class="ol-lc">
       <YearPicker />
@@ -162,6 +182,21 @@
   .sl-green { background: #50C878; }
   .sl-yellow { background: #FFD700; }
   .sl-red { background: #FF4500; }
+
+  .theme-toggle-btn {
+    margin-left: 8px;
+    padding: 2px 6px;
+    font-size: 0.65rem;
+    border: 1px solid var(--color-border, #333);
+    border-radius: 4px;
+    background: var(--color-surface, #1e1e1e);
+    color: var(--color-text-secondary, #888);
+    cursor: pointer;
+  }
+  .theme-toggle-btn:hover {
+    border-color: var(--color-accent, #4dd2ff);
+    color: var(--color-accent, #4dd2ff);
+  }
 
   .icon-btn {
     background: rgba(var(--color-surface-rgb), 0.85);
