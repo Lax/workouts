@@ -59,7 +59,7 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ hashFiles('packages/web/package-lock.json') }}
+          key: playwright-${{ runner.os }}-${{ hashFiles('packages/web/package.json') }}
 
       - name: Install Playwright browsers
         if: steps.playwright-cache.outputs.cache-hit != 'true'
