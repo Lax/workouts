@@ -58,19 +58,19 @@ jobs:
           github-token: ${{ github.token }}
 
       - name: Create build directory
-        run: mkdir -p build/svg
+        run: mkdir -p site/svg
 
       - name: Export JSON
-        run: bundle exec exe/workouts export json --output build/activities.json
+        run: bundle exec exe/workouts export json --output site/activities.json
 
       - name: Export SVG
-        run: bundle exec exe/workouts export svg --style github --title "Workouts" --output build/svg/github.svg
+        run: bundle exec exe/workouts export svg --style github --title "Workouts" --output site/svg/github.svg
 
       - name: Validate SVG
         run: |
           bundle exec ruby -e '
             require "nokogiri"
-            Dir["build/svg/*.svg"].each do |f|
+            Dir["site/svg/*.svg"].each do |f|
               doc = Nokogiri::XML(File.read(f))
               if doc.errors.any?
                 puts "::error::#{f}: #{doc.errors.map(&:to_s).join(", ")}"
@@ -81,25 +81,25 @@ jobs:
           '
 
       - name: Export Stats
-        run: bundle exec exe/workouts export stats --output build/stats.json
+        run: bundle exec exe/workouts export stats --output site/stats.json
 
       - name: Build Svelte frontend
         run: npm run build
 
-      - name: Copy Svelte build to build/ (primary)
+      - name: Copy Svelte build to site/ (primary)
         run: |
-          cp -r packages/web/dist/assets build/
-          cp packages/web/dist/index.html build/index.html
+          cp -r packages/web/dist/assets site/
+          cp packages/web/dist/index.html site/index.html
 
       - name: Validate build
         run: |
-          test -f build/index.html || { echo "::error::Missing index.html"; exit 1; }
-          ls build/assets/index-*.js >/dev/null 2>&1 || { echo "::error::Missing JS bundle"; exit 1; }
+          test -f site/index.html || { echo "::error::Missing index.html"; exit 1; }
+          ls site/assets/index-*.js >/dev/null 2>&1 || { echo "::error::Missing JS bundle"; exit 1; }
           echo "OK: Svelte build present"
 
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: ./build
+          path: ./site
 
       - id: deployment
         uses: actions/deploy-pages@v4

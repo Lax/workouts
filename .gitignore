@@ -10,6 +10,8 @@ data/std/
 data/cache/
 data/.source-digests
 build/
+target/
+site/
 *.bak
 *.gem
 config/config.yml

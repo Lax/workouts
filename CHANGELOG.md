@@ -8,7 +8,7 @@
 | iGPSPORT 原生 GPS 调研（FIT 方案选型完成） | ✅ 已完成（选定 mini_racer + JS SDK） |
 | iGPSPORT FIT raw 数据 pipeline（L1+L2+L3） | ✅ 已完成 |
 | L1/L2 数据架构设计（三层模型 + 源适配矩阵） | ✅ 已完成 |
-| 导出路径 `data/` → `build/`（源数据与制品分离） | ✅ 已完成 |
+| 导出路径 `data/` → `build/` → `site/`（源数据与制品分离） | ✅ 已完成 |
 | 3-job workflow（sync / build / deploy） | ✅ 已完成 |
 | 原始数据 GH Cache（替代 submodule） | ✅ 已完成 |
 | Keep spider_sleep 1s → 0.1s | ✅ 已完成 |

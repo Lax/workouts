@@ -8,7 +8,7 @@ module Workouts
     def json
       config = Workouts::Config.new
       db = Workouts::DB::Connection.new(config.db_path).db
-      path = options[:output] || config.export_config.dig("json", "path") || "build/activities.json"
+      path = options[:output] || config.export_config.dig("json", "path") || "site/activities.json"
       filter = options[:activity]&.map(&:strip)&.map(&:downcase)
       count = Export::JSON.new(db: db, output: path, activity_filter: filter).call
       say_status :done, "Exported #{count} activities to #{path}", :green
@@ -22,7 +22,7 @@ module Workouts
     def csv
       config = Workouts::Config.new
       db = Workouts::DB::Connection.new(config.db_path).db
-      path = options[:output] || config.export_config.dig("csv", "path") || "build/workouts.csv"
+      path = options[:output] || config.export_config.dig("csv", "path") || "site/workouts.csv"
       filter = options[:activity]&.map(&:strip)&.map(&:downcase)
       Export::CSV.new(db: db, output: path, activity_filter: filter).call
       say_status :done, "Exported to #{path}", :green
@@ -53,7 +53,7 @@ module Workouts
     def svg
       config = Workouts::Config.new
       db = Workouts::DB::Connection.new(config.db_path).db
-      svg_dir = config.export_config.dig("svg", "dir") || "build/svg"
+      svg_dir = config.export_config.dig("svg", "dir") || "site/svg"
       path = options[:output] || "#{svg_dir}/#{options[:style]}.svg"
 
       style = options[:style]
@@ -99,7 +99,7 @@ module Workouts
     def stats
       config = Workouts::Config.new
       db = Workouts::DB::Connection.new(config.db_path).db
-      path = options[:output] || config.export_config.dig("stats", "path") || "build/stats.json"
+      path = options[:output] || config.export_config.dig("stats", "path") || "site/stats.json"
       filter = options[:activity]&.map(&:strip)&.map(&:downcase)
       count = Export::Stats.new(db: db, output: path, activity_filter: filter).call
       say_status :done, "Exported stats for #{count} activities → #{path}", :green
@@ -113,7 +113,7 @@ module Workouts
     def gpx
       config = Workouts::Config.new
       db = Workouts::DB::Connection.new(config.db_path).db
-      outdir = options[:output] || config.export_config.dig("gpx", "path") || "build/gpx_out"
+      outdir = options[:output] || config.export_config.dig("gpx", "path") || "site/gpx_out"
       filter = options[:activity]&.map(&:strip)&.map(&:downcase)
       count = Export::GPX.new(db: db, output: outdir, activity_filter: filter).call
       say_status :done, "Exported #{count} GPX files to #{outdir}/", :green

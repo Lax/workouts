@@ -92,7 +92,7 @@ lib/workouts/dedup/
 | DedupService 独立于 adapter | 所有 source 完成后统一触发，不再绑定 Strava 内部 `recheck_duplicates`。双向写入，含轨迹对比 |
 | temp→rename 原子写入 raw 文件 | 崩溃恢复时 `raw_file_exists?` 不误判 |
 | Per-source 独立 GH Cache | 每源独立 cache key (`workouts-raw-v1-{source}-{run_id}`)，通过 `scripts/source-digest.sh` 计算内容 md5 检测变化，仅变动的源写 cache。通过 `.github/actions/sources-cache/restore` + `sources-cache/save` 封装。数据目录示例: `data/raw/{garmin,garmin_cn,igpsport,...}/`, `data/std/{...}/` |
-| 导出默认路径 `data/` → `build/` | 源数据与生成制品分离，gitignored |
+| 导出默认路径 `data/` → `site/` | 源数据与生成制品分离，gitignored |
 | `mini_racer` + `@garmin/fitsdk` 解析 FIT | V8 引擎在 Ruby 进程中执行 JS SDK，纯 gem 依赖，无需外部运行时 |
 
 ---
@@ -383,13 +383,13 @@ sync job (runs-on: ${{ vars.RUNNER_LABEL || 'ubuntu-latest' }}):
 build job (needs: sync):
   1. checkout + setup Ruby + setup Node
   2. download DB artifact
-  3. create build/ dir
-  4. export json → build/activities.json
-  5. export svg → build/svg/github.svg
+  3. create site/ dir
+  4. export json → site/activities.json
+  5. export svg → site/svg/github.svg
   6. validate SVG
-  7. export stats → build/stats.json
+  7. export stats → site/stats.json
   8. Svelte build (npm run build)
-  9. copy Svelte dist → build/ (index.html + assets/)
+  9. copy Svelte dist → site/ (index.html + assets/)
   10. upload build artifact
 
 deploy job (needs: build):
@@ -485,7 +485,7 @@ packages/
 
 ```
 Ruby export (JSON) → packages/web/public/ (dev)
-                              → build/ (prod via gh-pages.yml)
+                              → site/ (prod via gh-pages.yml)
                                         ↓
                               fetch('activities.json') + fetch('stats.json')
                                         ↓

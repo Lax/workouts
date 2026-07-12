@@ -8,10 +8,10 @@ module Workouts
       "database" => { "path" => "data/workouts.db" },
       "sync" => {},
       "export" => {
-        "json" => { "path" => "build/activities.json" },
-        "svg" => { "dir" => "build/svg" },
-        "csv" => { "path" => "build/workouts.csv" },
-        "gpx" => { "path" => "build/gpx_out" }
+        "json" => { "path" => "site/activities.json" },
+        "svg" => { "dir" => "site/svg" },
+        "csv" => { "path" => "site/workouts.csv" },
+        "gpx" => { "path" => "site/gpx_out" }
       },
       "privacy" => {
         "start_end_range" => 200
