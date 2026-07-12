@@ -1,0 +1,11 @@
+{
+  "name": "overview",
+  "displayName": "Overview",
+  "version": "1.0.0",
+  "description": "Full-screen map with drawer activity list",
+  "author": "Lax",
+  "data": {
+    "activities": { "source": "activities.json", "optional": false },
+    "stats": { "source": "stats.json", "optional": true }
+  }
+}
