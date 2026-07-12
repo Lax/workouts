@@ -19,7 +19,8 @@
   })
 
   function toggleTheme() {
-    const next = ctx.theme === 'light' ? 'dark' : 'light'
+    const cur = document.documentElement.getAttribute('data-theme') || 'dark'
+    const next = cur === 'light' ? 'dark' : 'light'
     document.documentElement.setAttribute('data-theme', next)
     localStorage.setItem('theme', next)
   }

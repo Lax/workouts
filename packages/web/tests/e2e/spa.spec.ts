@@ -42,7 +42,7 @@ test.beforeAll(() => {
 
 async function waitLoaded(page: Page) {
   await page.goto('/index.html')
-  await expect(page.locator('.loading')).toHaveCount(0, { timeout: 10000 })
+  await expect(page.locator('.brand, .rp-layout, .hello-world')).toHaveCount(1, { timeout: 10000 })
 }
 
 async function openDrawer(page: Page) {
