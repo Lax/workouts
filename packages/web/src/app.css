@@ -55,3 +55,7 @@ a {
 a:hover {
   text-decoration: underline;
 }
+
+.leaflet-container {
+  background: var(--color-bg);
+}

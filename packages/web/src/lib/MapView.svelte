@@ -145,5 +145,23 @@
     position: fixed;
     inset: 0;
     z-index: 0;
+    background: var(--color-bg);
+  }
+
+  :global(.leaflet-control-zoom) {
+    border-color: var(--color-border);
+  }
+
+  :global(.leaflet-control-zoom a) {
+    background: var(--color-surface);
+    color: var(--color-text);
+  }
+
+  :global(.leaflet-control-zoom a:hover) {
+    background: var(--color-hover);
+  }
+
+  :global(.leaflet-control-zoom a.leaflet-disabled) {
+    color: var(--color-text-dim);
   }
 </style>
