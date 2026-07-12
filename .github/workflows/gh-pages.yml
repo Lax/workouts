@@ -3,9 +3,6 @@ name: Deploy (Github Pages)
 on:
   push:
     branches: [main]
-  workflow_run:
-    workflows: [Sync Workouts]
-    types: [completed]
   workflow_dispatch:
     inputs:
       artifact-run-id:
@@ -13,32 +10,7 @@ on:
         required: false
 
 jobs:
-  check-skip:
-    runs-on: ubuntu-latest
-    permissions:
-      actions: read
-    outputs:
-      should_run: ${{ steps.check.outputs.should_run }}
-    steps:
-      - name: Check if sync produced new data
-        id: check
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          if [ "${{ github.event_name }}" != "workflow_run" ]; then
-            echo "should_run=true" >> $GITHUB_OUTPUT
-          else
-            RUN_ID="${{ github.event.workflow_run.id }}"
-            if gh api "/repos/${{ github.repository }}/actions/runs/$RUN_ID/artifacts" --jq '.artifacts[] | select(.name == "workouts-db") | .id' | grep -q .; then
-              echo "should_run=true" >> $GITHUB_OUTPUT
-            else
-              echo "should_run=false" >> $GITHUB_OUTPUT
-            fi
-          fi
-
   deploy:
-    needs: [check-skip]
-    if: needs.check-skip.outputs.should_run == 'true'
     runs-on: ubuntu-latest
     permissions:
       actions: read
@@ -76,17 +48,7 @@ jobs:
           restore-keys: workouts-db-v1-
 
       - name: Download fresh DB artifact
-        if: github.event_name == 'workflow_run'
-        continue-on-error: true
-        uses: actions/download-artifact@v4
-        with:
-          name: workouts-db
-          path: data/
-          run-id: ${{ github.event.workflow_run.id }}
-          github-token: ${{ github.token }}
-
-      - name: Download fresh DB artifact (dispatch)
-        if: github.event_name == 'workflow_dispatch' && inputs.artifact-run-id != ''
+        if: inputs.artifact-run-id != ''
         continue-on-error: true
         uses: actions/download-artifact@v4
         with:
