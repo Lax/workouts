@@ -4,6 +4,8 @@ import './app.css'
 import { loadData, buildThemeContext, metaTheme } from './lib/theme/mount'
 import type { ThemeContext } from '@workouts/shared'
 
+document.documentElement.setAttribute('data-theme', localStorage.getItem('theme') || 'dark')
+
 async function start() {
   const themeName = metaTheme() || 'overview'
   const [data, layoutMod] = await Promise.all([

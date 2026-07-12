@@ -6,15 +6,19 @@
   import Drawer from './components/Drawer.svelte'
   import DetailPanel from './components/DetailPanel.svelte'
   import ChartOverlay from './components/ChartOverlay.svelte'
-  import { createOverviewStore } from './store'
+  import { createOverviewStore } from './store.svelte'
 
   let { ctx }: { ctx: ThemeContext } = $props()
 
-  const { state: store, openDetail, closeDetail, openCharts, closeCharts, toggleSort, resetFilters } = createOverviewStore(ctx)
+  setContext('theme', ctx)
+
+  const storeApi = createOverviewStore(ctx)
+  const store = storeApi.state
+  const { setActivities, openDetail, closeDetail, openCharts, closeCharts, toggleSort, resetFilters } = storeApi
   setContext('overview-store', { state: store, openDetail, closeDetail, openCharts, closeCharts, toggleSort, resetFilters })
 
   onMount(() => {
-    store.activities = ctx.data.activities ?? []
+    setActivities(ctx.data.activities ?? [])
     store.stats = ctx.data.stats ?? null
   })
 

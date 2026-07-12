@@ -1,7 +1,7 @@
 <script lang="ts">
   import { setContext } from 'svelte'
   import type { ThemeContext } from '@workouts/shared'
-  import { createRunningStore } from './store'
+  import { createRunningStore } from './store.svelte'
   import Sidebar from './components/Sidebar.svelte'
   import MapView from './components/MapView.svelte'
   import ActivityTable from './components/ActivityTable.svelte'
@@ -9,6 +9,7 @@
   import VirtualGrid from './components/VirtualGrid.svelte'
 
   let { ctx }: { ctx: ThemeContext } = $props()
+  setContext('theme', ctx)
 
   const api = createRunningStore(ctx)
   setContext('running-store', api)

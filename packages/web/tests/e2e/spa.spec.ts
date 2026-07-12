@@ -66,11 +66,13 @@ test('SPA loads without page errors', async ({ page }) => {
 
 test('theme toggle persists across reload', async ({ page }) => {
   await waitLoaded(page)
+  const before = await page.evaluate(() => document.documentElement.getAttribute('data-theme'))
   await page.click('button[aria-label="Toggle theme"]')
-  expect(await page.evaluate(() => document.documentElement.getAttribute('data-theme'))).toBe('dark')
+  const after = await page.evaluate(() => document.documentElement.getAttribute('data-theme'))
+  expect(after).not.toBe(before)
   await page.reload()
   await waitLoaded(page)
-  expect(await page.evaluate(() => document.documentElement.getAttribute('data-theme'))).toBe('dark')
+  expect(await page.evaluate(() => document.documentElement.getAttribute('data-theme'))).toBe(after)
 })
 
 test('activity list renders items', async ({ page }) => {
