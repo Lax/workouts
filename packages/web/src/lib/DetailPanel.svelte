@@ -19,8 +19,9 @@
         scrollWheelZoom: false,
       }).setView([30, 110], 4)
 
+      const carto = app.theme === 'dark' ? 'dark_nolabels' : 'light_nolabels'
       L.tileLayer(
-        'https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png',
+        `https://{s}.basemaps.cartocdn.com/${carto}/{z}/{x}/{y}{r}.png`,
         { maxZoom: 19 },
       ).addTo(miniMap)
 
@@ -51,6 +52,7 @@
   onDestroy(() => {
     document.removeEventListener('keydown', handleKey)
     miniMap?.remove()
+    miniMap = null
   })
 
   function fmtPace(act: typeof app.selectedActivity): string {
