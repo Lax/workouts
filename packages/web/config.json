@@ -1,0 +1,7 @@
+{
+  "pages": {
+    "/": "overview",
+    "/summary": "running_page",
+    "/hello": "hello-world"
+  }
+}
