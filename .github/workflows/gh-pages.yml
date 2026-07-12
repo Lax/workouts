@@ -7,6 +7,10 @@ on:
     workflows: [Sync Workouts]
     types: [completed]
   workflow_dispatch:
+    inputs:
+      artifact-run-id:
+        description: 'Sync run ID to download DB artifact'
+        required: false
 
 jobs:
   check-skip:
