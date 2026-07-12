@@ -107,22 +107,6 @@ module Workouts
       say_status :error, "Stats export failed: #{e.message}", :red
     end
 
-    desc "dashboard", "Generate interactive dashboard (index.html + JSON data)"
-    option :output, type: :string, aliases: "-o", desc: "Output directory"
-    option :activity, type: :array, desc: "Filter by sport type", aliases: "--act"
-    option :theme, type: :string, desc: "Theme name (dark/light)", default: "dark"
-    def dashboard
-      config = Workouts::Config.new
-      db = Workouts::DB::Connection.new(config.db_path).db
-      outdir = options[:output] || "build"
-      filter = options[:activity]&.map(&:strip)&.map(&:downcase)
-      theme = Workouts::Export::BuiltinThemes.load(options[:theme], config: config)
-      count = Export::Dashboard.new(db: db, output: outdir, activity_filter: filter, theme: theme).call
-      say_status :done, "Generated interactive dashboard for #{count} activities → #{outdir}/", :green
-    rescue => e
-      say_status :error, "Dashboard export failed: #{e.message}", :red
-    end
-
     desc "gpx", "Export activities to GPX files (one per activity)"
     option :output, type: :string, aliases: "-o", desc: "Output directory"
     option :activity, type: :array, desc: "Filter by sport type", aliases: "--act"
@@ -137,20 +121,12 @@ module Workouts
       say_status :error, "GPX export failed: #{e.message}", :red
     end
 
-    desc "html", "Generate HTML site (delegates to dashboard)"
-    option :output, type: :string, aliases: "-o", desc: "Output directory"
-    option :activity, type: :array, desc: "Filter by sport type", aliases: "--act"
-    def html
-      invoke :dashboard, [], options
-    end
-
     desc "all", "Export all formats"
     option :activity, type: :array, desc: "Filter by sport type", aliases: "--act"
     def all
       invoke :json, [], options
       invoke :csv, [], options
       invoke :stats, [], options
-      invoke :dashboard, [], options
       invoke :gpx, [], options
       say_status :done, "All exports complete", :green
     rescue => e

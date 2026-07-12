@@ -196,6 +196,5 @@ gh-pages.yml: cache DB → export → build → deploy
 ### 部署验证
 
 ```
-https://liulantao.com/workouts/index-svelte.html    ← Svelte SPA
-https://liulantao.com/workouts/index.html            ← Ruby dashboard
+https://liulantao.com/workouts/index.html            ← Svelte SPA
 ```

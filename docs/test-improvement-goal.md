@@ -15,17 +15,7 @@ so that core pipeline health is confirmed in <6 min instead of ~18 min.
 ## 2. Scenarios
 
 ```
-Scenario A — Dashboard JS Robustness (regression guard)
-Given: normal / empty / anomalous data (null polyline, zero-spread traces, single-point GPS)
-When: export dashboard generates index.html
-Then: page loads without console errors, map renders, charts render, filters work
-
-Scenario B — Export Pipeline Data Contract
-Given: 1~2000 activity records in DB
-When: export stats + export dashboard run sequentially
-Then: stats.json format matches dashboard JS consumption expectations, all required fields present
-
-Scenario C — SVG Github Style Output
+Scenario A — SVG Github Style Output
 Given: at least 1 activity in DB
 When: export svg --style github
 Then: valid SVG file output (Nokogiri valid + contains key elements)
@@ -45,15 +35,11 @@ Then: no crash, meaningful error message output
 
 | ID | Requirement | Pri | Risk Driver |
 |----|-------------|-----|-------------|
-| F1 | Dashboard JS doesn't crash under data edge cases (null, empty, boundary) | **P0** | 6 historical JS crashes |
-| F2 | Dashboard output HTML contains all required DOM element IDs | **P0** | JS depends on element existence |
-| F3 | export stats format consistent with dashboard JS consumer | **P0** | Data contract fracture |
-| F4 | SVG github export remains valid SVG after code changes | **P1** | Pages core output |
+| F1 | SVG github export remains valid SVG after code changes | **P1** | Pages core output |
 | F5 | CI test matrix simplified to Ruby 3.4 only | **P1** | 18min -> ~6min |
 | F6 | Sync adapters handle unexpected API types (Hash vs String) without crash | **P1** | 2 historical failures |
 | F7 | Calculator core path smoke test (output structure correct) | **P2** | 217 lines untested |
-| F8 | Dashboard JS syntax validated in CI | **P2** | Low prob, high impact |
-| F9 | export all pipeline end-to-end test | **P2** | Multi-output consistency |
+| F8 | export all pipeline end-to-end test | **P2** | Multi-output consistency |
 | F10 | Remove spec writes to `data/raw/` production dirs (Dir.mktmpdir) | **P2** | Test pollution |
 | F11 | CI build job validates more output formats (not just SVG) | **P3** | CI blind spot |
 | NF1 | Test execution time <= 5 min (single version) | non-func | CI efficiency |
@@ -107,7 +93,6 @@ Decision 5: Coverage Tool
 | `docs/test-improvement-goal.md` | **new** | This document |
 | `docs/test-improvement-research.md` | **new** | Adversarial review record |
 | `docs/test-improvement-impl.md` | **new** | Implementation checklist |
-| `spec/export/dashboard_spec.rb` | **new** | Dashboard integration test (~100 lines) |
 | `spec/export/stats_spec.rb` | **new** | Stats export + Calculator indirect coverage (~60 lines) |
 | `spec/export/svg_spec.rb` | **modify** | Add Renderer orchestration smoke test (~20 lines) |
 | `.github/workflows/ci.yml` | **modify** | Matrix 3.2/3.3/3.4 -> 3.4 only |
@@ -121,12 +106,6 @@ Decision 5: Coverage Tool
 ## 6. Acceptance
 
 ```
-Dashboard:
-  - [ ] `bundle exec rspec spec/export/dashboard_spec.rb` all green
-  - [ ] Simulated null polyline -> no JS exception
-  - [ ] Simulated empty activity list -> page renders without crash
-  - [ ] HTML contains all 6 required DOM IDs (map, app-drawer, chart, etc.)
-
 Stats/Calculator:
   - [ ] `bundle exec rspec spec/export/stats_spec.rb` all green
   - [ ] Empty DB returns `{ summary: {}, monthly: [], yearly: [], streaks: {}, activity_types: [] }`

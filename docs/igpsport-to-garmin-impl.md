@@ -96,7 +96,7 @@ DB activities (source='igpsport')
 workouts
 ├── sync
 ├── auth
-├── export (json / csv / stats / dashboard / gpx / svg / html / all)
+├── export (json / csv / stats / gpx / svg / all)
 ├── migrate (igpsport_to_garmin / igpsport_to_garmin_cn)
 ├── db (migrate)
 ├── init / parse / version

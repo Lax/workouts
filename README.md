@@ -55,7 +55,6 @@ docker compose run --rm workouts export svg --style github
 | `export csv` | 导出 CSV |
 | `export svg --style github` | 生成 SVG 海报 |
 | `export stats` | 导出统计摘要 |
-| `export dashboard` | 导出自定义仪表盘 HTML |
 | `export gpx` | 从 L2 重新导出 GPX |
 | `export all` | 执行所有导出 |
 | `parse activity.gpx --save` | 解析本地 GPX/TCX 并写入 DB |

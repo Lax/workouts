@@ -64,7 +64,7 @@ Read each matching commit to classify failure type and whether a test would have
 | `56c6d8f` | IIFE scope isolation breaks onclick handlers | PARTIAL — syntax check would not catch; runtime test would |
 | `3971f7a` | Gentler time decay + zoom-dependent line width (map rendering) | HARD — visual regression |
 
-**Pattern**: 5/6 would be caught by data edge condition tests for the dashboard.
+**Pattern**: Dashboard removed in 2026-07 (replaced by Svelte SPA). Edge case tests migrated to vitest (`polyline.test.ts`, `colorMode.test.ts`, `formatters.test.ts`).
 
 #### Garmin API Type Shifts (2 bugs)
 
@@ -97,7 +97,7 @@ Permission, PAT format, credentials — no test can prevent these.
 |------|---------|--------------|
 | `lib/workouts/sync/garmin_base.rb` | 22 | Auth contract changes |
 | `lib/workouts/cli.rb` | 18 | Command routing |
-| `lib/workouts/export/dashboard.rb` | 13 | JS crashes + style changes |
+| `lib/workouts/export/dashboard.rb` | 13 (deleted 2026-07) | JS crashes + style changes |
 | `lib/workouts/sync/keep.rb` | 13 | API response parsing |
 | `lib/workouts/export/svg/github.rb` | 6 | Histogram rendering |
 | `lib/workouts/analysis/calculator.rb` | 2 | Stable — low risk |

@@ -21,9 +21,7 @@
 | `export csv [--output]` | 导出 CSV |
 | `export svg --style <style>` | 生成 SVG 海报（5 种风格） |
 | `export stats [--output]` | 导出统计摘要 |
-| `export dashboard [--output]` | 导出自定义仪表盘 HTML |
 | `export gpx [--output]` | 从 L2 文件重新导出 GPX |
-| `export html` | 导出 HTML（同 dashboard）|
 | `export all` | 执行所有导出 |
 | `migrate igpsport_to_garmin [--limit]` | 上传 iGPSPORT 数据至 Garmin |
 | `migrate igpsport_to_garmin_cn [--limit]` | 上传 iGPSPORT 数据至 Garmin CN |
@@ -383,15 +381,15 @@ sync job (runs-on: ${{ vars.RUNNER_LABEL || 'ubuntu-latest' }}):
   12. upload DB artifact (for build job)
 
 build job (needs: sync):
-  1. checkout + setup Ruby
+  1. checkout + setup Ruby + setup Node
   2. download DB artifact
   3. create build/ dir
   4. export json → build/activities.json
   5. export svg → build/svg/github.svg
   6. validate SVG
   7. export stats → build/stats.json
-  8. export dashboard → build/
-  9. generate index.html → build/index.html
+  8. Svelte build (npm run build)
+  9. copy Svelte dist → build/ (index.html + assets/)
   10. upload build artifact
 
 deploy job (needs: build):
@@ -486,7 +484,7 @@ packages/
 ### 数据流
 
 ```
-Ruby export (JSON/dashboard) → packages/web/public/ (dev)
+Ruby export (JSON) → packages/web/public/ (dev)
                               → build/ (prod via gh-pages.yml)
                                         ↓
                               fetch('activities.json') + fetch('stats.json')
@@ -503,7 +501,7 @@ Ruby export (JSON/dashboard) → packages/web/public/ (dev)
 | 前端优先字段 | Ruby 导出字段 | 说明 |
 |---|---|---|
 | `sport_category` | `type` | App.svelte 归一化：`a.type && !a.sport_category` → copy |
-| `summary_polyline` | `summary_polyline` | dashboard 导出旧版本写 `polyline`，兼容 fallback |
+| `summary_polyline` | `summary_polyline` | — |
 | `sport_type` | `sport_type` | JSON 导出旧版本写 `subtype`，前端无消费 |
 
 ### 层级 (z-index)
