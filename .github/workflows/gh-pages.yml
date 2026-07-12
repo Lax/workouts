@@ -81,6 +81,16 @@ jobs:
           run-id: ${{ github.event.workflow_run.id }}
           github-token: ${{ github.token }}
 
+      - name: Download fresh DB artifact (dispatch)
+        if: github.event_name == 'workflow_dispatch' && inputs.artifact-run-id != ''
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: workouts-db
+          path: data/
+          run-id: ${{ inputs.artifact-run-id }}
+          github-token: ${{ github.token }}
+
       - name: Create build directory
         run: mkdir -p build/svg
 
