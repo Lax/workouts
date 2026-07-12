@@ -5,6 +5,8 @@
   import Sidebar from './components/Sidebar.svelte'
   import MapView from './components/MapView.svelte'
   import ActivityTable from './components/ActivityTable.svelte'
+  import FilterBar from './components/FilterBar.svelte'
+  import VirtualGrid from './components/VirtualGrid.svelte'
 
   let { ctx }: { ctx: ThemeContext } = $props()
   setContext('theme', ctx)
@@ -38,7 +40,8 @@
     </aside>
     <section class="rp-content">
       {#if api.state.view === 'summary'}
-        <p class="rp-summary-placeholder">Summary view — coming soon (virtual card grid)</p>
+        <FilterBar />
+        <VirtualGrid buckets={api.summaryBuckets} />
       {:else}
         <MapView />
         <ActivityTable />
