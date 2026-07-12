@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { speedColor, typeColor } from '../src/lib/colorMode'
+import { speedColor, typeColor } from '@workouts/shared'
 
 describe('speedColor', () => {
   it('returns #888 for null', () => {

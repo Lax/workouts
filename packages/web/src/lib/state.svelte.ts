@@ -50,23 +50,12 @@ export const app = $state({
   activities: [] as Activity[],
   stats: null as StatsJson | null,
   loading: true,
-  selectedYear: null as number | null,
-  selectedMonth: null as number | null,
-  theme: 'light' as 'light' | 'dark',
-  colorMode: 'speed' as ColorMode,
-  drawerOpen: false,
-  showCharts: false,
-  selectedActivity: null as Activity | null,
-  detailOpen: false,
-  sortField: 'date' as SortField,
-  sortDesc: true,
-  filters: { type: '', source: '', distanceMin: null, distanceMax: null, search: '' } as Filters,
-  mapHoveredId: null as string | null,
-  years: [] as number[],
-  availableTypes: [] as [string, number][],
-  availableSources: [] as [string, number][],
-  filteredActivities: [] as Activity[],
+  theme: 'dark' as string,
 })
+
+function activityType(a: Activity): string {
+  return a.sport_category || a.type || 'other'
+}
 
 export function computeYears(activities: Activity[]): number[] {
   const s = new Set<number>()
@@ -74,10 +63,6 @@ export function computeYears(activities: Activity[]): number[] {
     if (a.start_date) s.add(new Date(a.start_date).getFullYear())
   }
   return Array.from(s).sort((a, b) => b - a)
-}
-
-function activityType(a: Activity): string {
-  return a.sport_category || a.type || 'other'
 }
 
 export function computeAvailableTypes(activities: Activity[]): [string, number][] {
@@ -161,85 +146,4 @@ export function computeFilteredActivities(
   })
 
   return result
-}
-
-export function initReactivity() {
-  $effect(() => {
-    app.activities
-    app.years = computeYears(app.activities)
-    app.availableTypes = computeAvailableTypes(app.activities)
-    app.availableSources = computeAvailableSources(app.activities)
-    app.filteredActivities = computeFilteredActivities(app.activities, app.filters, app.sortField, app.sortDesc, app.selectedYear, app.selectedMonth)
-  })
-
-  $effect(() => {
-    app.selectedYear
-    app.selectedMonth
-    app.filters.type
-    app.filters.source
-    app.filters.distanceMin
-    app.filters.distanceMax
-    app.filters.search
-    app.sortField
-    app.sortDesc
-    app.filteredActivities = computeFilteredActivities(app.activities, app.filters, app.sortField, app.sortDesc, app.selectedYear, app.selectedMonth)
-  })
-}
-
-export function toggleSort(field: SortField) {
-  if (app.sortField === field) {
-    app.sortDesc = !app.sortDesc
-  } else {
-    app.sortField = field
-    app.sortDesc = true
-  }
-}
-
-export function openDetail(act: Activity) {
-  app.selectedActivity = act
-  app.detailOpen = true
-  app.drawerOpen = false
-}
-
-export function closeDetail() {
-  app.detailOpen = false
-  app.selectedActivity = null
-}
-
-export function openCharts() {
-  app.showCharts = true
-  app.drawerOpen = false
-}
-
-export function closeCharts() {
-  app.showCharts = false
-}
-
-export function resetFilters() {
-  app.filters.type = ''
-  app.filters.source = ''
-  app.filters.distanceMin = null
-  app.filters.distanceMax = null
-  app.filters.search = ''
-  app.selectedMonth = null
-}
-
-export function initTheme() {
-  const saved = localStorage.getItem('theme')
-  if (saved) {
-    app.theme = saved as 'light' | 'dark'
-  } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-    app.theme = 'dark'
-  }
-  document.documentElement.setAttribute('data-theme', app.theme)
-}
-
-export function toggleTheme() {
-  app.theme = app.theme === 'light' ? 'dark' : 'light'
-  document.documentElement.setAttribute('data-theme', app.theme)
-  localStorage.setItem('theme', app.theme)
-}
-
-export function currentTheme(): 'dark' | 'light' {
-  return (document.documentElement.getAttribute('data-theme') as 'dark' | 'light') || 'light'
 }

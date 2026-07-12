@@ -26,19 +26,26 @@ export const ThemeRegistry = {
   },
 
   async loadAll(): Promise<void> {
-    const modules = import.meta.glob<Record<string, any>>(
+    const manifests = import.meta.glob<Record<string, any>>(
       '/src/plugins/themes/*/src/manifest.json',
-      { eager: false, import: 'default' },
+      { eager: true, import: 'default' },
+    )
+    const layouts = import.meta.glob<Record<string, any>>(
+      '/src/plugins/themes/*/src/Layout.svelte',
+      { eager: true, import: 'default' },
     )
 
-    for (const [path, loader] of Object.entries(modules)) {
+    for (const [path, themeManifest] of Object.entries(manifests)) {
       try {
-        const manifestJson = await loader()
-        const dir = path.replace('/manifest.json', '')
-        const layoutMod = await import(/* @vite-ignore */ `${dir}/Layout.svelte`)
+        const layoutPath = path.replace('/manifest.json', '/Layout.svelte')
+        const layoutMod = layouts[layoutPath]
+        if (!layoutMod) {
+          console.warn(`Theme layout not found: ${layoutPath}`)
+          continue
+        }
         const pkg: ThemePackage = {
-          manifest: manifestJson as any,
-          default: layoutMod.default,
+          manifest: themeManifest as any,
+          default: layoutMod,
         }
         ThemeRegistry.register(pkg)
       } catch (e) {
