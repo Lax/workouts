@@ -35,7 +35,7 @@
     }
 
     if (overview) {
-      const ctx = await activateTheme('overview')
+      const ctx = await activateTheme('overview', { activities: app.activities, stats: app.stats })
       setActiveContext(ctx)
     }
     app.loading = false

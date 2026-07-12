@@ -2,7 +2,7 @@
   import { setContext, onMount } from 'svelte'
   import { ThemeRegistry } from './registry'
   import type { ThemeContext } from '@workouts/shared'
-  import { getActiveContext, setActiveContext } from './host'
+  import { getActiveContext } from './host'
 
   let Layout = $state<any>(null)
   let ctx = $state<ThemeContext | null>(null)
@@ -14,6 +14,8 @@
     return ThemeRegistry.onChange(() => {
       const active = ThemeRegistry.active
       Layout = active?.default ?? null
+      ctx = getActiveContext()
+      if (ctx) setContext('theme', ctx)
     })
   })
 </script>

@@ -9,7 +9,6 @@
   import { createOverviewStore } from './store'
 
   let { ctx }: { ctx: ThemeContext } = $props()
-  setContext('theme', ctx)
 
   const { state: store, openDetail, closeDetail, openCharts, closeCharts, toggleSort, resetFilters } = createOverviewStore(ctx)
   setContext('overview-store', { state: store, openDetail, closeDetail, openCharts, closeCharts, toggleSort, resetFilters })

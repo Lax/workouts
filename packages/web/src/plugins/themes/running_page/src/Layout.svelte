@@ -9,7 +9,6 @@
   import VirtualGrid from './components/VirtualGrid.svelte'
 
   let { ctx }: { ctx: ThemeContext } = $props()
-  setContext('theme', ctx)
 
   const api = createRunningStore(ctx)
   setContext('running-store', api)

@@ -2,7 +2,6 @@
   import { setContext } from 'svelte'
   import type { ThemeContext } from '@workouts/shared'
   let { ctx }: { ctx: ThemeContext } = $props()
-  setContext('theme', ctx)
 </script>
 
 <div class="hello-world">

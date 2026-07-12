@@ -31,7 +31,7 @@ function saveConfig(themeName: string, config: Record<string, any>) {
   localStorage.setItem(`theme:${themeName}:config`, JSON.stringify(config))
 }
 
-export async function activateTheme(name: string): Promise<ThemeContext> {
+export async function activateTheme(name: string, preloadedData?: Record<string, any>): Promise<ThemeContext> {
   const pkg = ThemeRegistry.lookup(name)
   if (!pkg) throw new Error(`Theme not found: ${name}`)
 
@@ -40,7 +40,7 @@ export async function activateTheme(name: string): Promise<ThemeContext> {
 
   cleanupStores(name)
 
-  const data = pkg.manifest.data ? await fetchRequiredData(pkg.manifest.data) : {}
+  const data = preloadedData ?? (pkg.manifest.data ? await fetchRequiredData(pkg.manifest.data) : {})
   const config = loadConfig(name, pkg.manifest.config ? defaultsFromSchema(pkg.manifest.config) : {})
 
   const ctx: ThemeContext = {
