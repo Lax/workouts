@@ -9,10 +9,32 @@ on:
   workflow_dispatch:
 
 jobs:
+  check-skip:
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+    outputs:
+      should_run: ${{ steps.check.outputs.should_run }}
+    steps:
+      - name: Check if sync produced new data
+        id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ "${{ github.event_name }}" != "workflow_run" ]; then
+            echo "should_run=true" >> $GITHUB_OUTPUT
+          else
+            RUN_ID="${{ github.event.workflow_run.id }}"
+            if gh api "/repos/${{ github.repository }}/actions/runs/$RUN_ID/artifacts" --jq '.artifacts[] | select(.name == "workouts-db") | .id' | grep -q .; then
+              echo "should_run=true" >> $GITHUB_OUTPUT
+            else
+              echo "should_run=false" >> $GITHUB_OUTPUT
+            fi
+          fi
+
   deploy:
-    if: >
-      github.event_name != 'workflow_run' ||
-      github.event.workflow_run.conclusion == 'success'
+    needs: [check-skip]
+    if: needs.check-skip.outputs.should_run == 'true'
     runs-on: ubuntu-latest
     permissions:
       pages: write
