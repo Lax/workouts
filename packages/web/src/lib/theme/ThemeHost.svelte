@@ -1,21 +1,20 @@
 <script lang="ts">
-  import { setContext } from 'svelte'
+  import { setContext, onMount } from 'svelte'
   import { ThemeRegistry } from './registry'
   import type { ThemeContext } from '@workouts/shared'
-  import { getActiveContext } from './host'
+  import { getActiveContext, setActiveContext } from './host'
 
   let Layout = $state<any>(null)
-
-  $effect(() => {
-    const active = ThemeRegistry.active
-    Layout = active?.default ?? null
-  })
-
   let ctx = $state<ThemeContext | null>(null)
 
-  $effect(() => {
+  onMount(() => {
     ctx = getActiveContext()
     if (ctx) setContext('theme', ctx)
+
+    return ThemeRegistry.onChange(() => {
+      const active = ThemeRegistry.active
+      Layout = active?.default ?? null
+    })
   })
 </script>
 

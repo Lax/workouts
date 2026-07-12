@@ -3,9 +3,17 @@ import type { ThemePackage } from '@workouts/shared'
 const entries = new Map<string, ThemePackage>()
 let activeName: string | null = null
 
+type Listener = () => void
+const listeners = new Set<Listener>()
+
+function notify() {
+  listeners.forEach(cb => cb())
+}
+
 export const ThemeRegistry = {
   register(pkg: ThemePackage) {
     entries.set(pkg.manifest.name, pkg)
+    notify()
   },
 
   lookup(name: string): ThemePackage | undefined {
@@ -21,8 +29,14 @@ export const ThemeRegistry = {
   },
 
   setActive(name: string) {
-    if (!entries.has(name)) throw new Error(`Theme not registered: ${name}`)
-    activeName = name
+    if (name && !entries.has(name)) throw new Error(`Theme not registered: ${name}`)
+    activeName = name || null
+    notify()
+  },
+
+  onChange(cb: Listener) {
+    listeners.add(cb)
+    return () => listeners.delete(cb)
   },
 
   async loadAll(): Promise<void> {

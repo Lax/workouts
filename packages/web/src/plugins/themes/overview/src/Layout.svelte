@@ -16,12 +16,13 @@
 
   onMount(() => {
     store.activities = ctx.data.activities ?? []
+    store.stats = ctx.data.stats ?? null
   })
 
   function toggleTheme() {
     const next = ctx.theme === 'light' ? 'dark' : 'light'
     document.documentElement.setAttribute('data-theme', next)
-    ctx.updateConfig({ theme: next })
+    localStorage.setItem('theme', next)
   }
 </script>
 

@@ -1,13 +1,19 @@
 <script lang="ts">
   import { ThemeRegistry } from './registry'
+  import { activateTheme, setActiveContext } from './host'
 
   const themes = $derived(ThemeRegistry.list())
   let selected = $state(ThemeRegistry.active?.manifest.name ?? '')
 
-  function onSwitch(e: Event) {
+  async function onSwitch(e: Event) {
     const name = (e.target as HTMLSelectElement).value
     selected = name
-    ThemeRegistry.setActive(name)
+    try {
+      const ctx = await activateTheme(name)
+      setActiveContext(ctx)
+    } catch (err) {
+      console.warn('Theme switch failed:', err)
+    }
   }
 </script>
 

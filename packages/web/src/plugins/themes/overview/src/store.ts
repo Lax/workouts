@@ -1,6 +1,14 @@
 import type { Activity } from '@workouts/shared'
 import type { ThemeContext } from '@workouts/shared'
 
+export interface StatsJson {
+  summary: { total_activities: number; total_distance_km: number; total_moving_time_h: number; total_elevation_gain_m: number; avg_cadence: number | null; avg_power: number | null; sport_breakdown: { category: string; count: number; distance_km: number; moving_time_h: number }[] }
+  monthly: { year: number; month: number; count: number; distance_km: number; moving_time_h: number; avg_pace: string; avg_hr: number | null; avg_cadence: number | null; avg_power: number | null; elevation_gain_m: number }[]
+  yearly: { year: number; month: number; count: number; distance_km: number; moving_time_h: number; longest_km: number; streak: number }[]
+  streaks: { current: number; all_time: number }
+  activity_types: string[]
+}
+
 export type SortField = 'date' | 'distance' | 'time'
 
 export interface Filters {
@@ -16,6 +24,7 @@ export function createOverviewStore(ctx: ThemeContext) {
 
   const state = $state({
     activities: [] as Activity[],
+    stats: null as StatsJson | null,
     colorMode: 'speed' as 'speed' | 'type',
     selectedYear: null as number | null,
     selectedMonth: null as number | null,

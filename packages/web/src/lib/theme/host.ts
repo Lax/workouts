@@ -74,7 +74,8 @@ export function deactivateTheme() {
   const pkg = ThemeRegistry.active
   if (pkg?.onDeactivate) pkg.onDeactivate()
   if (pkg) cleanupStores(pkg.manifest.name)
-  ThemeRegistry.setActive('')
+  cleanupStores('')
+  setActiveContext(null)
 }
 
 export function getActiveContext(): ThemeContext | null {

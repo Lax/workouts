@@ -12,6 +12,8 @@
     initTheme()
     await ThemeRegistry.loadAll()
 
+    const overview = ThemeRegistry.lookup('overview')
+
     try {
       const [actRes, statsRes] = await Promise.all([
         fetch('activities.json'),
@@ -30,15 +32,13 @@
       }
     } catch (e) {
       console.warn('Failed to load data', e)
-    } finally {
-      app.loading = false
     }
 
-    const overview = ThemeRegistry.lookup('overview')
     if (overview) {
       const ctx = await activateTheme('overview')
       setActiveContext(ctx)
     }
+    app.loading = false
   })
 
   function initTheme() {

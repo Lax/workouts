@@ -6,11 +6,14 @@
   let el: HTMLDivElement
   let chart: echarts.ECharts | null = null
 
+  import { onDestroy } from 'svelte'
+
   onMount(() => {
     chart = echarts.init(el, undefined, { renderer: 'svg' })
     updateChart()
-    return () => chart?.dispose()
   })
+
+  onDestroy(() => chart?.dispose())
 
   function updateChart() {
     if (!chart) return
