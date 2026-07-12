@@ -64,19 +64,10 @@
     }
 
     if (allPoints.length > 0) {
-      const lats = allPoints.map((p) => p[0]).sort((a, b) => a - b)
-      const lngs = allPoints.map((p) => p[1]).sort((a, b) => a - b)
-
-      const medLat = lats[Math.floor(lats.length / 2)]
-      const medLng = lngs[Math.floor(lngs.length / 2)]
-
-      const filtered = allPoints.filter(
-        (p) => Math.abs(p[0] - medLat) < 15 && Math.abs(p[1] - medLng) < 15,
-      )
-
-      const use = filtered.length > 10 ? filtered : allPoints
-      const bounds = L.latLngBounds(use.map((p) => L.latLng(p[0], p[1])))
-      if (bounds.isValid()) map.fitBounds(bounds.pad(0.05))
+      const bounds = L.latLngBounds(allPoints.map((p) => L.latLng(p[0], p[1])))
+      if (bounds.isValid()) {
+        map.fitBounds(bounds.pad(0.05))
+      }
     }
   }
 
