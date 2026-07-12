@@ -534,7 +534,7 @@ Ruby export (JSON) → packages/web/public/ (dev)
 
 - **ci.yml**: push/PR → rspec + frontend test job (vitest → build → smoke → playwright)
 - **sync.yml**: schedule → sync data → build + deploy (Ruby 全程)
-- **gh-pages.yml**: push/PR 或 sync 完成后 → cache DB → export → build → deploy Pages
+- **gh-pages.yml**: CI completed (workflow_run) 或 sync workflow_dispatch → cache DB → export → build → deploy Pages
 
 ## 文档架构
 

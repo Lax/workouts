@@ -169,7 +169,7 @@ App.svelte
 | 触发 | 工作流 | 产出 |
 |---|---|---|
 | schedule | sync.yml | 数据同步 + DB 缓存 |
-| push / sync 完成 | gh-pages.yml | 导出 + 构建 + Pages 部署 |
+| CI completed / sync 完成 | gh-pages.yml | 导出 + 构建 + Pages 部署 |
 | push / PR | ci.yml | rspec + frontend test |
 
 ---
