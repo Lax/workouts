@@ -37,13 +37,14 @@ jobs:
     if: needs.check-skip.outputs.should_run == 'true'
     runs-on: ubuntu-latest
     permissions:
+      actions: read
       pages: write
       id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     concurrency:
-      group: pages
+      group: deploy-gh-pages
       cancel-in-progress: true
     steps:
       - uses: actions/checkout@v4
