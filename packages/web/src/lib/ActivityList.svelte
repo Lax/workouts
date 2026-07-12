@@ -2,6 +2,61 @@
   import { app, toggleSort, openDetail } from './state.svelte'
   import { formatDistance, formatDuration, formatDate } from '@workouts/shared'
   import { activityColor } from './colorMode'
+  import { decodePolyline } from './polyline'
+
+  interface SvgPathData {
+    points: string
+    sx: number; sy: number
+    ex: number; ey: number
+    hasPath: boolean
+  }
+
+  function normalizeSvg(pts: [number, number][]): SvgPathData {
+    let minLat = Infinity, maxLat = -Infinity
+    let minLng = Infinity, maxLng = -Infinity
+    for (const [lat, lng] of pts) {
+      if (lat < minLat) minLat = lat
+      if (lat > maxLat) maxLat = lat
+      if (lng < minLng) minLng = lng
+      if (lng > maxLng) maxLng = lng
+    }
+    const rLng = maxLng - minLng || 1
+    const rLat = maxLat - minLat || 1
+    const W = 60, H = 24, pad = 3
+    const scale = Math.min((W - pad * 2) / rLng, (H - pad * 2) / rLat)
+    const ox = (W - rLng * scale) / 2
+    const oy = (H - rLat * scale) / 2
+    const coords = pts.map(([lat, lng]) => ({
+      x: ox + (lng - minLng) * scale,
+      y: oy + (maxLat - lat) * scale,
+    }))
+    return {
+      points: coords.map(c => `${c.x.toFixed(1)},${c.y.toFixed(1)}`).join(' '),
+      sx: coords[0].x, sy: coords[0].y,
+      ex: coords[coords.length - 1].x, ey: coords[coords.length - 1].y,
+      hasPath: true,
+    }
+  }
+
+  const decodeCache = new Map<string, SvgPathData>()
+
+  let pathCache = $derived.by(() => {
+    const map = new Map<string, SvgPathData>()
+    for (const a of app.filteredActivities) {
+      const encoded = a.summary_polyline || a.polyline
+      if (!encoded) { map.set(a.run_id, { points: '', sx: 0, sy: 0, ex: 0, ey: 0, hasPath: false }); continue }
+      if (decodeCache.has(encoded)) {
+        map.set(a.run_id, decodeCache.get(encoded)!)
+      } else {
+        const pts = decodePolyline(encoded)
+        if (pts.length < 2) { map.set(a.run_id, { points: '', sx: 0, sy: 0, ex: 0, ey: 0, hasPath: false }); continue }
+        const data = normalizeSvg(pts)
+        decodeCache.set(encoded, data)
+        map.set(a.run_id, data)
+      }
+    }
+    return map
+  })
 
   function srcBadge(source: string | null): string {
     const map: Record<string, string> = {
@@ -45,7 +100,9 @@
 </div>
 
 <div class="list">
-  {#each app.filteredActivities as act}
+  {#each app.filteredActivities as act (act.run_id)}
+    {@const col = activityColor({ average_speed: act.average_speed, type: act.sport_category }, app.colorMode)}
+    {@const svg = pathCache.get(act.run_id)}
     <div
       class="activity-row"
       class:hovered={app.mapHoveredId === act.run_id}
@@ -53,13 +110,17 @@
       onmouseenter={() => { app.mapHoveredId = act.run_id }}
       onmouseleave={() => { app.mapHoveredId = null }}
     >
-      <span
-        class="dot"
-        style="background:{activityColor(
-          { average_speed: act.average_speed, type: act.sport_category },
-          app.colorMode,
-        )}"
-      ></span>
+      {#if svg?.hasPath}
+        <svg viewBox="0 0 60 24" width="60" height="24" class="mini-svg">
+          <polyline points={svg.points} stroke={col} class="mini-path" />
+          <circle cx={svg.sx} cy={svg.sy} r="2" fill={col} class="mini-endpoint" />
+          <circle cx={svg.ex} cy={svg.ey} r="2" fill={col} class="mini-endpoint" />
+        </svg>
+      {:else}
+        <svg viewBox="0 0 60 24" width="60" height="24" class="mini-svg">
+          <circle cx="30" cy="12" r="6" fill={col} />
+        </svg>
+      {/if}
       <div class="info">
         <span class="name">
           {act.name || 'Untitled'}
@@ -113,7 +174,7 @@
 
   .activity-row {
     display: grid;
-    grid-template-columns: 8px 1fr auto;
+    grid-template-columns: 60px 1fr auto;
     gap: 0.5rem;
     padding: 0.5rem 0.75rem;
     cursor: pointer;
@@ -127,11 +188,32 @@
     background: var(--color-hover, #0f3460);
   }
 
-  .dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
+  .mini-svg {
+    display: block;
     flex-shrink: 0;
+  }
+
+  .mini-path {
+    fill: none;
+    stroke-width: 2;
+    stroke-opacity: 0.7;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    transition: stroke-opacity 0.1s, stroke-width 0.1s;
+  }
+
+  .mini-endpoint {
+    opacity: 0;
+    transition: opacity 0.1s;
+  }
+
+  .activity-row:hover .mini-path {
+    stroke-opacity: 1;
+    stroke-width: 2.5;
+  }
+
+  .activity-row:hover .mini-endpoint {
+    opacity: 0.8;
   }
 
   .info {

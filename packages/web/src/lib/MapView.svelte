@@ -46,7 +46,7 @@
 
       const line = L.polyline(points, {
         color,
-        weight: 3,
+        weight: 5,
         opacity,
         smoothFactor: 1,
         interactive: true,
@@ -82,13 +82,13 @@
   function updateHover() {
     for (const [id, line] of polylines) {
       if (app.mapHoveredId === id) {
-        line.setStyle({ weight: 4, color: 'var(--color-accent, #4DD2FF)', opacity: 1 })
+        line.setStyle({ weight: 7, color: 'var(--color-accent, #4DD2FF)', opacity: 1 })
         line.bringToFront()
       } else {
         const a = app.filteredActivities.find((a) => a.run_id === id)
         if (a) {
           line.setStyle({
-            weight: 3,
+            weight: 5,
             color: activityColor(
               { average_speed: a.average_speed, type: a.sport_category },
               app.colorMode,
