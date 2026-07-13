@@ -43,6 +43,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Biome lint + format check
+        run: npx biome ci .
+
       - name: Vitest unit tests
         run: npx vitest run
         working-directory: packages/web
