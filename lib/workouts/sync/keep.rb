@@ -15,6 +15,9 @@ module Workouts
       AES_KEY = Base64.decode64("NTZmZTU5OzgyZzpkODczYw==")
       AES_IV = Base64.decode64("MjM0Njg5MjQzMjkyMDMwMA==")
 
+      # Keep returns 2 identical default GCJ-02 coords when no GPS track
+      PLACEHOLDER_POLYLINE = "gqqrFurkeU??".freeze
+
       KEEP_TYPES = %w[running hiking cycling].freeze
       KEEP_RAW_EXT = "json".freeze
 
