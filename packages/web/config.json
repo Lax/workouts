@@ -1,13 +1,8 @@
 {
   "entries": {
-    "index": "overview",
+    "index": "simple",
+    "overview": "overview",
     "hello": "hello-world"
-  },
-  "plugins": {
-    "data-source": {},
-    "map": {},
-    "chart": {},
-    "ui": {}
   },
   "data": {
     "activities": { "source": "activities.json", "optional": false },

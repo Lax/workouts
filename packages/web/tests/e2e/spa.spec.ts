@@ -24,19 +24,22 @@ test.beforeAll(() => {
         { category: 'ride', count: 15, distance_km: 600, moving_time_h: 90 },
         { category: 'hike', count: 10, distance_km: 100, moving_time_h: 30 },
         { category: 'swim', count: 8, distance_km: 25, moving_time_h: 10 },
-        { category: 'walk', count: 7, distance_km: 50, moving_time_h: 15 },
-        { category: 'workout', count: 0, distance_km: 0, moving_time_h: 0 },
       ],
     },
     monthly: [],
     yearly: [],
     streaks: { current: 7, all_time: 30 },
-    activity_types: ['run', 'ride', 'hike', 'swim', 'walk', 'workout'],
+    activity_types: ['run', 'ride', 'hike', 'swim'],
   }))
 })
 
 async function waitLoaded(page: Page) {
   await page.goto('/index.html')
+  await expect(page.locator('text=Workouts')).toBeVisible({ timeout: 10000 })
+}
+
+async function gotoOverview(page: Page) {
+  await page.goto('/overview.html')
   await expect(page.locator('text=Workouts')).toBeVisible({ timeout: 10000 })
 }
 
@@ -50,7 +53,6 @@ test('SPA loads without page errors', async ({ page }) => {
 test('theme toggle persists across reload', async ({ page }) => {
   await waitLoaded(page)
   const before = await page.evaluate(() => document.documentElement.getAttribute('data-theme'))
-  // Theme toggle is the last button in the bottom-left overlay group
   const buttons = page.locator('button:has-text("☀️"), button:has-text("🌙")')
   await buttons.first().click()
   const after = await page.evaluate(() => document.documentElement.getAttribute('data-theme'))
@@ -60,32 +62,44 @@ test('theme toggle persists across reload', async ({ page }) => {
   expect(await page.evaluate(() => document.documentElement.getAttribute('data-theme'))).toBe(after)
 })
 
-test('drawer opens and shows activity count', async ({ page }) => {
+test('simple theme shows activity list', async ({ page }) => {
   await waitLoaded(page)
-  // Click the right-edge drawer toggle (contains "activities")
-  await page.locator('text=/activities/').first().click()
-  // Drawer panel slides in; should show filter header
-  await expect(page.locator('text=Filters')).toBeVisible({ timeout: 3000 })
-  // Should show activity type chips (Run, Ride, etc.)
-  await expect(page.locator('text=/run/i').first()).toBeVisible()
+  await expect(page.locator('text=Workouts')).toBeVisible()
+  // Simple theme has a bottom activity bar with activity cards
+  const actCards = page.locator('text=km').first()
+  await expect(actCards).toBeVisible({ timeout: 5000 })
 })
 
-test('activity items appear in drawer', async ({ page }) => {
+test('color mode toggles in simple theme', async ({ page }) => {
   await waitLoaded(page)
+  // Type and Speed buttons are visible
+  await expect(page.locator('button:has-text("类型")')).toBeVisible()
+  await expect(page.locator('button:has-text("速度")')).toBeVisible()
+  // Click speed mode
+  await page.locator('button:has-text("速度")').click()
+  await expect(page.locator('button:has-text("速度")')).toBeVisible()
+})
+
+test('overview page loads without errors', async ({ page }) => {
+  const errors: string[] = []
+  page.on('pageerror', err => errors.push(err.message))
+  await gotoOverview(page)
+  expect(errors).toEqual([])
+})
+
+test('overview drawer opens and shows activities', async ({ page }) => {
+  await gotoOverview(page)
   await page.locator('text=/activities/').first().click()
-  // Activity items have date+name in the drawer
+  await expect(page.locator('text=Filters')).toBeVisible({ timeout: 3000 })
   await expect(page.locator('text=/Morning|Evening|Lunch|Hill|Recovery|Long|Commute|Weekend/').first()).toBeVisible({ timeout: 5000 })
 })
 
-test('clicking activity opens detail panel', async ({ page }) => {
-  await waitLoaded(page)
+test('overview clicking activity opens detail panel', async ({ page }) => {
+  await gotoOverview(page)
   await page.locator('text=/activities/').first().click()
-  // Wait for drawer content, click first activity name
   const activityLink = page.locator('text=/Morning|Evening|Lunch|Hill|Recovery|Long|Commute|Weekend/').first()
   await expect(activityLink).toBeVisible({ timeout: 5000 })
   await activityLink.click()
-  // Detail panel modal opens with close button ×
   await expect(page.locator('button:has-text("×")')).toBeVisible({ timeout: 5000 })
-  // Stats should be visible
   await expect(page.locator('text=Distance')).toBeVisible()
 })

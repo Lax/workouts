@@ -46,6 +46,7 @@ export interface ThemePlugin {
   type: 'theme'
   manifest: PluginManifest
   Layout: ComponentType<ThemeProps>
+  plugins?: Record<string, RegularPlugin>
 }
 
 export interface RegularPlugin {

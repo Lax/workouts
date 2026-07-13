@@ -1,35 +1,28 @@
 import { createRoot } from 'react-dom/client'
-import type { Config, ThemePlugin, RegularPlugin, ThemeProps } from './types'
+import type { Config, ThemePlugin, ThemeProps } from './types'
 import { createRegistry, createPluginAPI } from './registry'
 import { ThemeProvider } from './context'
 import { ErrorBoundary } from './ErrorBoundary'
 
 export async function bootstrap(
   config: Config,
-  entry: string,
-  options?: {
-    data?: ThemeProps['data']
+  options: {
     theme?: ThemePlugin
-    plugins?: Record<string, RegularPlugin>
+    data?: ThemeProps['data']
   },
 ): Promise<void> {
-  const themeId = config.entries?.[entry] ?? config.theme
-  if (!themeId) throw new Error(`No theme configured for entry "${entry}"`)
+  const theme = options.theme
+  if (!theme) throw new Error('bootstrap requires a theme')
 
-  const theme = options?.theme ?? await loadTheme(themeId)
   const registry = createRegistry()
 
-  if (options?.plugins) {
-    for (const [id, plugin] of Object.entries(options.plugins)) {
-      if (plugin.type === 'plugin' && plugin.setup) {
-        plugin.setup(createPluginAPI(registry, plugin.manifest.id))
-      }
+  for (const plugin of Object.values(theme.plugins ?? {})) {
+    if (plugin.type === 'plugin' && plugin.setup) {
+      plugin.setup(createPluginAPI(registry, plugin.manifest.id))
     }
-  } else {
-    await loadPlugins(config, registry)
   }
 
-  const data = options?.data ?? await fetchData(config.data ?? {})
+  const data = options.data ?? await fetchData(config.data ?? {})
 
   const root = document.getElementById('root')
   if (!root) throw new Error('No #root element found')
@@ -42,23 +35,6 @@ export async function bootstrap(
       </ThemeProvider>
     </ErrorBoundary>,
   )
-}
-
-async function loadTheme(id: string): Promise<ThemePlugin> {
-  const mod = await import(/* @vite-ignore */ `@workouts/theme-${id}`)
-  const plugin = mod.default as ThemePlugin
-  if (plugin.type !== 'theme') throw new Error(`Module "${id}" is not a theme plugin`)
-  return plugin
-}
-
-async function loadPlugins(config: Config, registry: ReturnType<typeof createRegistry>): Promise<void> {
-  for (const [id, _pluginConfig] of Object.entries(config.plugins ?? {})) {
-    const mod = await import(/* @vite-ignore */ `@workouts/plugin-${id}`)
-    const plugin = mod.default as RegularPlugin
-    if (plugin.type === 'plugin' && plugin.setup) {
-      plugin.setup(createPluginAPI(registry, plugin.manifest.id))
-    }
-  }
 }
 
 async function fetchData(

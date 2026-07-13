@@ -1,6 +1,8 @@
 import { useState, useMemo } from 'react'
 import { useTheme, useRequiredComponent } from '@workouts/core'
 import { useDerivedData } from '@workouts/plugin-data-source'
+import dsPlugin from '@workouts/plugin-data-source'
+import mapPlugin from '@workouts/plugin-map'
 
 function SimpleLayout() {
   const { data, registry } = useTheme()
@@ -110,6 +112,10 @@ const theme = {
   type: 'theme' as const,
   manifest: { id: 'simple', name: 'Simple', version: '0.1.0' },
   Layout: SimpleLayout,
+  plugins: {
+    'data-source': dsPlugin,
+    'map': mapPlugin,
+  },
 }
 
 export default theme
