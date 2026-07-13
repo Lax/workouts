@@ -1,7 +1,7 @@
-import { test, expect, Page } from '@playwright/test'
-import { writeFileSync, mkdirSync } from 'fs'
-import { join, dirname } from 'path'
-import { fileURLToPath } from 'url'
+import { mkdirSync, writeFileSync } from 'node:fs'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import { expect, type Page, test } from '@playwright/test'
 import { generateActivities } from '../fixtures/activities'
 
 const __filename = fileURLToPath(import.meta.url)
@@ -11,26 +11,29 @@ const dist = (...p: string[]) => join(__dirname, '..', '..', 'dist', ...p)
 test.beforeAll(() => {
   mkdirSync(dist(), { recursive: true })
   writeFileSync(dist('activities.json'), JSON.stringify(generateActivities(60)))
-  writeFileSync(dist('stats.json'), JSON.stringify({
-    summary: {
-      total_activities: 60,
-      total_distance_km: 1200,
-      total_moving_time_h: 200,
-      total_elevation_gain_m: 4000,
-      avg_cadence: 82,
-      avg_power: null,
-      sport_breakdown: [
-        { category: 'run', count: 20, distance_km: 400, moving_time_h: 70 },
-        { category: 'ride', count: 15, distance_km: 600, moving_time_h: 90 },
-        { category: 'hike', count: 10, distance_km: 100, moving_time_h: 30 },
-        { category: 'swim', count: 8, distance_km: 25, moving_time_h: 10 },
-      ],
-    },
-    monthly: [],
-    yearly: [],
-    streaks: { current: 7, all_time: 30 },
-    activity_types: ['run', 'ride', 'hike', 'swim'],
-  }))
+  writeFileSync(
+    dist('stats.json'),
+    JSON.stringify({
+      summary: {
+        total_activities: 60,
+        total_distance_km: 1200,
+        total_moving_time_h: 200,
+        total_elevation_gain_m: 4000,
+        avg_cadence: 82,
+        avg_power: null,
+        sport_breakdown: [
+          { category: 'run', count: 20, distance_km: 400, moving_time_h: 70 },
+          { category: 'ride', count: 15, distance_km: 600, moving_time_h: 90 },
+          { category: 'hike', count: 10, distance_km: 100, moving_time_h: 30 },
+          { category: 'swim', count: 8, distance_km: 25, moving_time_h: 10 },
+        ],
+      },
+      monthly: [],
+      yearly: [],
+      streaks: { current: 7, all_time: 30 },
+      activity_types: ['run', 'ride', 'hike', 'swim'],
+    }),
+  )
 })
 
 async function waitLoaded(page: Page) {
@@ -43,10 +46,22 @@ async function gotoOverview(page: Page) {
   await expect(page.locator('text=Workouts')).toBeVisible({ timeout: 10000 })
 }
 
+async function gotoHello(page: Page) {
+  await page.goto('/hello.html')
+  await expect(page.locator('text=Hello World')).toBeVisible({ timeout: 10000 })
+}
+
 test('SPA loads without page errors', async ({ page }) => {
   const errors: string[] = []
-  page.on('pageerror', err => errors.push(err.message))
+  page.on('pageerror', (err) => errors.push(err.message))
   await waitLoaded(page)
+  expect(errors).toEqual([])
+})
+
+test('hello page loads without errors', async ({ page }) => {
+  const errors: string[] = []
+  page.on('pageerror', (err) => errors.push(err.message))
+  await gotoHello(page)
   expect(errors).toEqual([])
 })
 
@@ -82,7 +97,7 @@ test('color mode toggles in simple theme', async ({ page }) => {
 
 test('overview page loads without errors', async ({ page }) => {
   const errors: string[] = []
-  page.on('pageerror', err => errors.push(err.message))
+  page.on('pageerror', (err) => errors.push(err.message))
   await gotoOverview(page)
   expect(errors).toEqual([])
 })
