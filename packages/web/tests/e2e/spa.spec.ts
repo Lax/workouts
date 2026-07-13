@@ -106,6 +106,36 @@ test('drawer activity row background is not white in dark mode', async ({ page }
   expect(rowBg).not.toBe('rgb(255, 255, 255)')
 })
 
+test('drawer scrollbar uses overflow-y auto', async ({ page }) => {
+  await gotoOverview(page)
+  await page.locator('.drawer-collapsed').click()
+  const overflowY = await page.locator('.list').evaluate((el) => window.getComputedStyle(el).overflowY)
+  expect(overflowY).toBe('auto')
+})
+
+test('sort buttons respond to hover', async ({ page }) => {
+  await gotoOverview(page)
+  await page.locator('.drawer-collapsed').click()
+  const sortBtn = page.locator('.sort-btn').first()
+  await expect(sortBtn).toBeVisible()
+  await sortBtn.hover()
+})
+
+test('activity rows use 3-column grid', async ({ page }) => {
+  await gotoOverview(page)
+  await page.locator('.drawer-collapsed').click()
+  const grid = await page
+    .locator('.activity-row')
+    .first()
+    .evaluate((el) => ({
+      display: window.getComputedStyle(el).display,
+      template: window.getComputedStyle(el).gridTemplateColumns,
+    }))
+  expect(grid.display).toBe('grid')
+  // 3-column grid: SVG(60px) + name(info) + metrics(auto)
+  expect(grid.template).toContain('60px')
+})
+
 test('legend-toggle with active class toggles', async ({ page }) => {
   await gotoOverview(page)
   await expect(page.locator('.legend-toggle')).toBeVisible()

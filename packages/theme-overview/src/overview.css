@@ -53,6 +53,7 @@
 
 .drawer-handle { height: 16px; display: flex; justify-content: center; align-items: center; cursor: pointer; background: var(--color-surface, #16213e); border-radius: 12px 12px 0 0; padding: 2px 0; flex-shrink: 0; }
 .drawer-handle .bar { width: 32px; height: 3px; border-radius: 2px; background: var(--color-text-dim, #444); }
+.drawer-handle:hover .bar { background: var(--color-accent, #4dd2ff); }
 
 .drawer-collapsed { height: 34px; display: flex; align-items: center; padding: 0 10px; gap: 6px; background: var(--color-surface, #16213e); border-left: 1px solid var(--color-border, #2a2a4a); border-right: 1px solid var(--color-border, #2a2a4a); flex-shrink: 0; }
 
@@ -73,8 +74,15 @@
 .list-header { display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 0.75rem; font-size: 0.8rem; color: var(--color-text-secondary, #888); border-bottom: 1px solid var(--color-border, #2a2a4a); }
 .sort-group { display: flex; gap: 0.25rem; }
 .sort-btn { background: transparent; border: 1px solid var(--color-border, #2a2a4a); border-radius: 4px; padding: 0.15rem 0.4rem; font-size: 0.75rem; color: var(--color-text-secondary, #888); cursor: pointer; }
+.sort-btn:hover { border-color: var(--color-accent, #4dd2ff); color: var(--color-accent, #4dd2ff); }
 .sort-btn.active { color: var(--color-accent, #4dd2ff); border-color: var(--color-accent, #4dd2ff); }
 .list { overflow-y: auto; flex: 1; }
+.list::-webkit-scrollbar { width: 5px; }
+.list::-webkit-scrollbar-track { background: transparent; }
+.list::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 3px; }
+.drawer-body::-webkit-scrollbar { width: 5px; }
+.drawer-body::-webkit-scrollbar-track { background: transparent; }
+.drawer-body::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 3px; }
 
 .activity-row { display: grid; grid-template-columns: 60px 1fr auto; gap: 0.5rem; padding: 0.5rem 0.75rem; cursor: pointer; align-items: center; border-bottom: 1px solid var(--color-border, #2a2a4a); transition: background 0.1s; background: transparent; }
 .activity-row:hover, .activity-row.hovered { background: var(--color-hover, #0f3460); }
