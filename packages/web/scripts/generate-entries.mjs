@@ -1,12 +1,24 @@
-import { readFileSync, writeFileSync } from 'fs'
+import { readFileSync, writeFileSync, mkdirSync } from 'fs'
 import { resolve } from 'path'
 
 const root = resolve(import.meta.dirname, '..')
 const config = JSON.parse(readFileSync(resolve(root, 'config.json'), 'utf-8'))
 const entries = config.entries ?? { index: config.theme }
-const template = readFileSync(resolve(import.meta.dirname, 'template.html'), 'utf-8')
+const htmlTemplate = readFileSync(resolve(import.meta.dirname, 'template.html'), 'utf-8')
+
+mkdirSync(resolve(root, 'src/entries'), { recursive: true })
 
 for (const key of Object.keys(entries)) {
-  const html = template.replace('{{ENTRY}}', `./src/entries/${key}.tsx`).replace('{{THEME}}', entries[key])
+  const themeId = entries[key]
+
+  const html = htmlTemplate.replace('{{ENTRY}}', `./src/entries/${key}.tsx`).replace('{{THEME}}', themeId)
   writeFileSync(resolve(root, `${key}.html`), html)
+
+  const shim = `import { bootstrap } from '@workouts/core'
+import config from '../../config.json'
+import theme from '@workouts/theme-${themeId}'
+
+bootstrap(config, { theme })
+`
+  writeFileSync(resolve(root, `src/entries/${key}.tsx`), shim)
 }
