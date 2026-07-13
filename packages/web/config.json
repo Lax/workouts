@@ -1,7 +1,7 @@
 {
   "pages": {
-    "/": "overview",
-    "/summary": "running_page",
-    "/hello": "hello-world"
+    "index":   { "url": "/",        "theme": "overview" },
+    "summary": { "url": "/summary",  "theme": "running_page" },
+    "hello":   { "url": "/hello",    "theme": "hello-world" }
   }
 }
