@@ -39,11 +39,11 @@
   </div>
   <div class="ol-bl">
     <div class="legend-toggle">
-      <button class="legend-btn" class:active={store.colorMode === 'speed'} onclick={() => { store.colorMode = 'speed' }}>
-        速度
-      </button>
       <button class="legend-btn" class:active={store.colorMode === 'type'} onclick={() => { store.colorMode = 'type' }}>
         类型
+      </button>
+      <button class="legend-btn" class:active={store.colorMode === 'speed'} onclick={() => { store.colorMode = 'speed' }}>
+        速度
       </button>
     </div>
     <div class="speed-legend">
@@ -77,7 +77,7 @@
   .ol-tl { top: 10px; left: 10px; }
   .brand { font-size: 0.85rem; color: var(--color-text-secondary, #888); text-shadow: 0 1px 3px rgba(0,0,0,0.5); }
   .brand strong { color: var(--color-accent, #4dd2ff); font-weight: 700; }
-  .ol-lc { left: 6px; top: 50%; transform: translateY(-50%); background: rgba(var(--color-surface-rgb), 0.85); border-radius: 10px; padding: 6px 4px; backdrop-filter: blur(4px); }
+  .ol-lc { left: 6px; top: 50%; transform: translateY(-50%); }
   .ol-bl { bottom: 72px; left: 10px; display: flex; flex-direction: column; gap: 4px; align-items: flex-start; }
   .legend-toggle { display: flex; background: rgba(var(--color-surface-rgb), 0.85); border-radius: 8px; border: 1px solid var(--color-border, #2a2a4a); overflow: hidden; backdrop-filter: blur(4px); }
   .legend-btn { padding: 4px 12px; font-size: 0.7rem; color: var(--color-text-secondary, #888); cursor: pointer; border: none; background: transparent; transition: all 0.15s; }

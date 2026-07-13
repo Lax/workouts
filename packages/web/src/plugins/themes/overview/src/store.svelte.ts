@@ -23,7 +23,7 @@ export function createOverviewStore(ctx: ThemeContext) {
   const state = $state({
     activities: [] as Activity[],
     stats: null as StatsJson | null,
-    colorMode: 'speed' as 'speed' | 'type',
+    colorMode: 'type' as 'speed' | 'type',
     colorScheme: (document.documentElement.getAttribute('data-theme') || 'dark') as 'dark' | 'light',
     selectedYear: null as number | null,
     selectedMonth: null as number | null,
