@@ -1,3 +1,8 @@
+---
+name: dev-workflow
+description: Structured multi-phase development workflow with 5 auto-orchestrated stages (requirement → plan → development → QA → release). Each phase runs as an independent subagent with handoff communication, QA auto-loop with escalation, strict role boundaries, and 12 development principles. Use when user says "bug fix", "new feature", "improvement", "implement" or describes a task needing structured execution.
+---
+
 # Dev Workflow — Multi-Agent Development Lifecycle
 
 5-phase loop: **requirement → plan → development → qa → release**

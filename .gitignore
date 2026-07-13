@@ -17,7 +17,6 @@ site/
 config/config.yml
 vendor/fit-js/node_modules/
 vendor/fit-js/dist/
-/.opencode/
 __pycache__/
 .git-credentials
 
