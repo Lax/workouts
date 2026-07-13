@@ -76,7 +76,7 @@
 .sort-btn.active { color: var(--color-accent, #4dd2ff); border-color: var(--color-accent, #4dd2ff); }
 .list { overflow-y: auto; flex: 1; }
 
-.activity-row { display: grid; grid-template-columns: 60px 1fr auto; gap: 0.5rem; padding: 0.5rem 0.75rem; cursor: pointer; align-items: center; border-bottom: 1px solid var(--color-border, #2a2a4a); transition: background 0.1s; }
+.activity-row { display: grid; grid-template-columns: 60px 1fr auto; gap: 0.5rem; padding: 0.5rem 0.75rem; cursor: pointer; align-items: center; border-bottom: 1px solid var(--color-border, #2a2a4a); transition: background 0.1s; background: transparent; }
 .activity-row:hover, .activity-row.hovered { background: var(--color-hover, #0f3460); }
 
 .mini-svg { display: block; flex-shrink: 0; }

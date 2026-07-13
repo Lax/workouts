@@ -95,6 +95,16 @@ test('leaflet zoom controls use theme CSS variables', async ({ page }) => {
   expect(bg).not.toBe('rgb(244, 244, 244)')
 })
 
+test('drawer activity row background is not white in dark mode', async ({ page }) => {
+  await gotoOverview(page)
+  await page.locator('.drawer-collapsed').click()
+  await expect(page.locator('.drawer.open')).toBeVisible()
+  const rowBg = await page.locator('.activity-row').first().evaluate(
+    (el) => window.getComputedStyle(el).backgroundColor,
+  )
+  expect(rowBg).not.toBe('rgb(255, 255, 255)')
+})
+
 test('legend-toggle with active class toggles', async ({ page }) => {
   await gotoOverview(page)
   await expect(page.locator('.legend-toggle')).toBeVisible()
