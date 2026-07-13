@@ -7,5 +7,11 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     include: ['tests/**/*.test.{ts,tsx}'],
+    css: true,
+    server: {
+      deps: {
+        inline: [/@workouts/],
+      },
+    },
   },
 })

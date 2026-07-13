@@ -71,4 +71,5 @@ jobs:
           key: ${{ steps.playwright-cache.outputs.cache-primary-key }}
 
       - name: Run Playwright E2E tests
+        if: success()
         run: npx playwright test
