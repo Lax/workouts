@@ -67,6 +67,7 @@
 .tabs { display: flex; gap: 0.25rem; }
 .tab { background: transparent; border: 1px solid var(--color-border, #2a2a4a); border-radius: 4px; padding: 0.25rem 0.6rem; font-size: 0.8rem; color: var(--color-text-secondary, #888); cursor: pointer; }
 .tab.active { background: var(--color-accent, #4dd2ff); border-color: var(--color-accent, #4dd2ff); color: #000; }
+.retract { margin-left: auto; }
 
 /* Activity list */
 .list-header { display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 0.75rem; font-size: 0.8rem; color: var(--color-text-secondary, #888); border-bottom: 1px solid var(--color-border, #2a2a4a); }

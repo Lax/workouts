@@ -92,13 +92,13 @@ export function ActivityList() {
       <div className="list-header">
         <span className="count">{filtered.length} activities</span>
         <div className="sort-group">
-          <button type="button" className={'sort-btn' + (sortField === 'date' ? ' active' : '')} onClick={() => toggleSort('date')}>
+          <button type="button" className={`sort-btn${sortField === 'date' ? ' active' : ''}`} onClick={() => toggleSort('date')}>
             Date {sortField === 'date' ? (sortDesc ? '↓' : '↑') : ''}
           </button>
-          <button type="button" className={'sort-btn' + (sortField === 'distance' ? ' active' : '')} onClick={() => toggleSort('distance')}>
+          <button type="button" className={`sort-btn${sortField === 'distance' ? ' active' : ''}`} onClick={() => toggleSort('distance')}>
             Dist {sortField === 'distance' ? (sortDesc ? '↓' : '↑') : ''}
           </button>
-          <button type="button" className={'sort-btn' + (sortField === 'time' ? ' active' : '')} onClick={() => toggleSort('time')}>
+          <button type="button" className={`sort-btn${sortField === 'time' ? ' active' : ''}`} onClick={() => toggleSort('time')}>
             Time {sortField === 'time' ? (sortDesc ? '↓' : '↑') : ''}
           </button>
         </div>
@@ -113,21 +113,38 @@ export function ActivityList() {
             const col = activityColor({ average_speed: act.average_speed, type: act.sport_category }, colorMode)
             const svg = pathCache.get(act.run_id)
             return (
-              <div
+              <button
+                type="button"
                 key={act.run_id}
-                className={'activity-row' + (mapHoveredId === act.run_id ? ' hovered' : '')}
+                className={`activity-row${mapHoveredId === act.run_id ? ' hovered' : ''}`}
                 onClick={() => openDetail(act)}
                 onMouseEnter={() => setMapHoveredId(act.run_id)}
                 onMouseLeave={() => setMapHoveredId(null)}
               >
                 {svg?.hasPath ? (
-                  <svg viewBox="0 0 60 24" width="60" height="24" className="mini-svg">
+                  <svg
+                    viewBox="0 0 60 24"
+                    width="60"
+                    height="24"
+                    className="mini-svg"
+                    role="img"
+                    aria-label={`Route for ${act.name || 'activity'}`}
+                  >
+                    <title>{`Route for ${act.name || 'activity'}`}</title>
                     <polyline points={svg.points} stroke={col} className="mini-path" />
                     <circle cx={svg.sx} cy={svg.sy} r="2" fill={col} className="mini-endpoint" />
                     <circle cx={svg.ex} cy={svg.ey} r="2" fill={col} className="mini-endpoint" />
                   </svg>
                 ) : (
-                  <svg viewBox="0 0 60 24" width="60" height="24" className="mini-svg">
+                  <svg
+                    viewBox="0 0 60 24"
+                    width="60"
+                    height="24"
+                    className="mini-svg"
+                    role="img"
+                    aria-label={`${act.sport_category || 'activity'} icon`}
+                  >
+                    <title>{`${act.sport_category || 'activity'} icon`}</title>
                     <circle cx="30" cy="12" r="6" fill={col} />
                   </svg>
                 )}
@@ -142,7 +159,7 @@ export function ActivityList() {
                   <span className="dist">{formatDistance(act.distance)}</span>
                   <span className="time">{formatDuration(act.moving_time)}</span>
                 </div>
-              </div>
+              </button>
             )
           })
         )}

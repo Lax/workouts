@@ -27,12 +27,24 @@ export function Drawer() {
   }
 
   return (
-    <div className={'drawer' + (drawerOpen ? ' open' : '')}>
+    <div className={`drawer${drawerOpen ? ' open' : ''}`}>
       <div className="drawer-handle" onClick={handleToggle} onMouseDown={(e) => e.stopPropagation()}>
         <div className="bar" />
       </div>
 
-      <div className="drawer-collapsed" onClick={handleToggle} onMouseDown={(e) => e.stopPropagation()}>
+      <div
+        className="drawer-collapsed"
+        onClick={handleToggle}
+        onMouseDown={(e) => e.stopPropagation()}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault()
+            toggleDrawer()
+          }
+        }}
+      >
         <span className="stat-pill">
           <strong>{stats.count}</strong>次
         </span>
@@ -73,10 +85,10 @@ export function Drawer() {
       <div className="drawer-body">
         <div className="drawer-header">
           <div className="tabs">
-            <button type="button" className={'tab' + (tab === 'list' ? ' active' : '')} onClick={() => setTab('list')}>
+            <button type="button" className={`tab${tab === 'list' ? ' active' : ''}`} onClick={() => setTab('list')}>
               Activities
             </button>
-            <button type="button" className={'tab' + (tab === 'filters' ? ' active' : '')} onClick={() => setTab('filters')}>
+            <button type="button" className={`tab${tab === 'filters' ? ' active' : ''}`} onClick={() => setTab('filters')}>
               Filters
             </button>
           </div>

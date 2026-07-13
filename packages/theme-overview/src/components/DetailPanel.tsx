@@ -27,7 +27,9 @@ export function DetailPanel() {
         <div className="detail-card">
           <div className="panel-header">
             <h2>{act.name || 'Untitled'}</h2>
-            <button type="button" className="close-btn" onClick={closeDetail}>×</button>
+            <button type="button" className="close-btn" onClick={closeDetail}>
+              ×
+            </button>
           </div>
           <div className="detail-meta">
             {(act.start_date || act.source) && `${act.start_date?.slice(0, 10) ?? ''}${act.source ? ` · ${act.source}` : ''}`}
@@ -74,7 +76,9 @@ function MiniMap({ polyline, colorScheme }: { polyline: string; colorScheme: str
       L.polyline(points, { color: '#4DD2FF', weight: 3 }).addTo(map)
       map.fitBounds(L.latLngBounds(points.map((p) => L.latLng(p[0], p[1]))).pad(0.1))
     }
-    return () => { map.remove() }
+    return () => {
+      map.remove()
+    }
   }, [polyline, colorScheme])
 
   return <div id="mini-map" style={{ height: '100%' }} />
@@ -83,13 +87,26 @@ function MiniMap({ polyline, colorScheme }: { polyline: string; colorScheme: str
 function decodePolyline(encoded: string): [number, number][] {
   if (!encoded) return []
   const points: [number, number][] = []
-  let index = 0, lat = 0, lng = 0
+  let index = 0,
+    lat = 0,
+    lng = 0
   while (index < encoded.length) {
-    let b: number, shift = 0, result = 0
-    do { b = encoded.charCodeAt(index++) - 63; result |= (b & 0x1f) << shift; shift += 5 } while (b >= 0x20)
+    let b: number,
+      shift = 0,
+      result = 0
+    do {
+      b = encoded.charCodeAt(index++) - 63
+      result |= (b & 0x1f) << shift
+      shift += 5
+    } while (b >= 0x20)
     lat += result & 1 ? ~(result >> 1) : result >> 1
-    shift = 0; result = 0
-    do { b = encoded.charCodeAt(index++) - 63; result |= (b & 0x1f) << shift; shift += 5 } while (b >= 0x20)
+    shift = 0
+    result = 0
+    do {
+      b = encoded.charCodeAt(index++) - 63
+      result |= (b & 0x1f) << shift
+      shift += 5
+    } while (b >= 0x20)
     lng += result & 1 ? ~(result >> 1) : result >> 1
     points.push([lat * 1e-5, lng * 1e-5])
   }

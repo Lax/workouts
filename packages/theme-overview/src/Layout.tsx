@@ -57,7 +57,7 @@ export function OverviewLayout() {
               <button
                 type="button"
                 key={y}
-                className={'year-pill' + (selectedYear === y ? ' active' : '')}
+                className={`year-pill${selectedYear === y ? ' active' : ''}`}
                 onClick={() => setSelectedYear(selectedYear === y ? null : y)}
               >
                 {y}
@@ -67,17 +67,19 @@ export function OverviewLayout() {
           {selectedYear !== null && selectedMonth !== null && (
             <div className="month-chip">
               {selectedYear}-{String(selectedMonth).padStart(2, '0')}
-              <button type="button" onClick={() => useOverviewStore.getState().setSelectedMonth(null)}>×</button>
+              <button type="button" onClick={() => useOverviewStore.getState().setSelectedMonth(null)}>
+                ×
+              </button>
             </div>
           )}
         </div>
 
         <div className="ol-bl">
           <div className="legend-toggle">
-            <button type="button" className={'legend-btn' + (colorMode === 'type' ? ' active' : '')} onClick={() => setColorMode('type')}>
+            <button type="button" className={`legend-btn${colorMode === 'type' ? ' active' : ''}`} onClick={() => setColorMode('type')}>
               类型
             </button>
-            <button type="button" className={'legend-btn' + (colorMode === 'speed' ? ' active' : '')} onClick={() => setColorMode('speed')}>
+            <button type="button" className={`legend-btn${colorMode === 'speed' ? ' active' : ''}`} onClick={() => setColorMode('speed')}>
               速度
             </button>
           </div>
