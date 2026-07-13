@@ -32,15 +32,7 @@ export interface Activity {
   duplicate_info?: string | null
 }
 
-export type SportCategory =
-  | 'run'
-  | 'ride'
-  | 'hike'
-  | 'walk'
-  | 'swim'
-  | 'ski'
-  | 'workout'
-  | 'other'
+export type SportCategory = 'run' | 'ride' | 'hike' | 'walk' | 'swim' | 'ski' | 'workout' | 'other'
 
 export const CATEGORY_LABELS: Record<SportCategory, string> = {
   run: 'Running',
@@ -104,17 +96,28 @@ export function categoryColor(cat: string): string {
 // ---- SportMapper ported from lib/workouts/sport_mapper.rb ----
 
 const SPORT_ALIASES: Record<string, SportCategory> = {
-  running: 'run', trailrun: 'run', trail_run: 'run',
-  virtualrun: 'run', virtual_run: 'run',
-  indoorrun: 'run', indoor_run: 'run',
-  cycling: 'ride', biking: 'ride',
-  mountainbike: 'ride', gravelride: 'ride', ebikeride: 'ride',
-  virtualride: 'ride', virtual_ride: 'ride',
-  indoor_ride: 'ride', indoorride: 'ride',
+  running: 'run',
+  trailrun: 'run',
+  trail_run: 'run',
+  virtualrun: 'run',
+  virtual_run: 'run',
+  indoorrun: 'run',
+  indoor_run: 'run',
+  cycling: 'ride',
+  biking: 'ride',
+  mountainbike: 'ride',
+  gravelride: 'ride',
+  ebikeride: 'ride',
+  virtualride: 'ride',
+  virtual_ride: 'ride',
+  indoor_ride: 'ride',
+  indoorride: 'ride',
   hiking: 'hike',
   walking: 'walk',
   swimming: 'swim',
-  skiing: 'ski', backcountryski: 'ski', nordicski: 'ski',
+  skiing: 'ski',
+  backcountryski: 'ski',
+  nordicski: 'ski',
   strengthtraining: 'workout',
 }
 
@@ -129,18 +132,46 @@ const SPORT_KEYWORDS: [RegExp, SportCategory][] = [
 ]
 
 const LEV_REFERENCES = [
-  'running', 'run', 'trailrun', 'trail_run', 'virtualrun', 'virtual_run', 'indoorrun', 'indoor_run',
-  'cycling', 'ride', 'biking', 'mountainbike', 'gravelride', 'ebikeride',
-  'virtualride', 'virtual_ride', 'indoor_ride', 'indoorride',
-  'hiking', 'hike', 'walking', 'walk', 'swimming', 'swim', 'skiing', 'ski',
-  'workout', 'strengthtraining', 'training', 'elliptical', 'cardio', 'functional',
+  'running',
+  'run',
+  'trailrun',
+  'trail_run',
+  'virtualrun',
+  'virtual_run',
+  'indoorrun',
+  'indoor_run',
+  'cycling',
+  'ride',
+  'biking',
+  'mountainbike',
+  'gravelride',
+  'ebikeride',
+  'virtualride',
+  'virtual_ride',
+  'indoor_ride',
+  'indoorride',
+  'hiking',
+  'hike',
+  'walking',
+  'walk',
+  'swimming',
+  'swim',
+  'skiing',
+  'ski',
+  'workout',
+  'strengthtraining',
+  'training',
+  'elliptical',
+  'cardio',
+  'functional',
 ]
 
 function levenshtein(a: string, b: string): number {
-  const n = a.length, m = b.length
+  const n = a.length,
+    m = b.length
   if (n === 0) return m
   if (m === 0) return n
-  let cur: number[] = Array.from({ length: m + 1 }, (_, i) => i)
+  const cur: number[] = Array.from({ length: m + 1 }, (_, i) => i)
   for (let i = 1; i <= n; i++) {
     let prev = cur[0]
     cur[0] = i
@@ -154,8 +185,8 @@ function levenshtein(a: string, b: string): number {
   return cur[m]
 }
 
-export * from './theme-types'
 export * from './color-mode'
+export * from './theme-types'
 
 export function canonicalizeSport(str: string | null | undefined): SportCategory {
   if (!str) return 'other'
@@ -171,9 +202,12 @@ export function canonicalizeSport(str: string | null | undefined): SportCategory
   let bestDist = Infinity
   for (const ref of LEV_REFERENCES) {
     const d = levenshtein(key, ref)
-    if (d < bestDist) { bestDist = d; best = ref }
+    if (d < bestDist) {
+      bestDist = d
+      best = ref
+    }
   }
-  if (best && bestDist <= 3) return SPORT_ALIASES[best] ?? best as SportCategory
+  if (best && bestDist <= 3) return SPORT_ALIASES[best] ?? (best as SportCategory)
 
   return 'other'
 }

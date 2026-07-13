@@ -1,7 +1,7 @@
-import { createContext, useContext, useMemo } from 'react'
-import type { ReactNode, ComponentType } from 'react'
 import type { Activity } from '@workouts/shared'
-import type { Stats, ComponentRegistry } from './types'
+import type { ComponentType, ReactNode } from 'react'
+import { createContext, useContext, useMemo } from 'react'
+import type { ComponentRegistry, Stats } from './types'
 
 export interface ThemeContextValue {
   data: { activities: Activity[]; stats: Stats | null; error?: string }
@@ -11,12 +11,7 @@ export interface ThemeContextValue {
 
 const ThemeContext = createContext<ThemeContextValue | null>(null)
 
-export function ThemeProvider({
-  data,
-  config,
-  registry,
-  children,
-}: ThemeContextValue & { children: ReactNode }) {
+export function ThemeProvider({ data, config, registry, children }: ThemeContextValue & { children: ReactNode }) {
   const value = useMemo(() => ({ data, config, registry }), [data, config, registry])
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>
 }

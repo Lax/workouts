@@ -1,6 +1,6 @@
-import { describe, it, expect } from 'vitest'
-import { useOverviewStore } from '@workouts/theme-overview'
 import type { Activity } from '@workouts/shared'
+import { useOverviewStore } from '@workouts/theme-overview'
+import { describe, expect, it } from 'vitest'
 
 function act(overrides: Partial<Activity> = {}): Activity {
   return {
@@ -48,17 +48,20 @@ describe('useOverviewStore', () => {
     ])
     const s = useOverviewStore.getState()
     expect(s.years).toEqual([2025, 2024])
-    expect(s.availableTypes).toEqual([['run', 1], ['ride', 1]])
-    expect(s.availableSources).toEqual([['garmin', 1], ['strava', 1]])
+    expect(s.availableTypes).toEqual([
+      ['run', 1],
+      ['ride', 1],
+    ])
+    expect(s.availableSources).toEqual([
+      ['garmin', 1],
+      ['strava', 1],
+    ])
     expect(s.filteredActivities).toHaveLength(2)
   })
 
   it('setFilter filters by type', () => {
     const { setActivities, setFilter } = useOverviewStore.getState()
-    setActivities([
-      act({ run_id: 'a', sport_category: 'run' }),
-      act({ run_id: 'b', sport_category: 'ride' }),
-    ])
+    setActivities([act({ run_id: 'a', sport_category: 'run' }), act({ run_id: 'b', sport_category: 'ride' })])
     setFilter({ type: 'run' })
     expect(useOverviewStore.getState().filteredActivities).toHaveLength(1)
     expect(useOverviewStore.getState().filteredActivities[0].run_id).toBe('a')
@@ -72,10 +75,7 @@ describe('useOverviewStore', () => {
 
   it('setSelectedYear filters activities', () => {
     const { setActivities, setSelectedYear } = useOverviewStore.getState()
-    setActivities([
-      act({ run_id: 'a', start_date: '2024-01-01T00:00:00Z' }),
-      act({ run_id: 'b', start_date: '2025-06-15T00:00:00Z' }),
-    ])
+    setActivities([act({ run_id: 'a', start_date: '2024-01-01T00:00:00Z' }), act({ run_id: 'b', start_date: '2025-06-15T00:00:00Z' })])
     setSelectedYear(2024)
     expect(useOverviewStore.getState().filteredActivities).toHaveLength(1)
     expect(useOverviewStore.getState().filteredActivities[0].run_id).toBe('a')
@@ -83,10 +83,7 @@ describe('useOverviewStore', () => {
 
   it('toggleSort changes sort field', () => {
     const { setActivities, toggleSort } = useOverviewStore.getState()
-    setActivities([
-      act({ run_id: 'a', distance: 5000 }),
-      act({ run_id: 'b', distance: 10000 }),
-    ])
+    setActivities([act({ run_id: 'a', distance: 5000 }), act({ run_id: 'b', distance: 10000 })])
     toggleSort('distance')
     const s = useOverviewStore.getState()
     expect(s.sortField).toBe('distance')

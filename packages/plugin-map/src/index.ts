@@ -1,4 +1,4 @@
-export { default } from './plugin'
-export { MapView } from './MapView'
 export type { MapViewProps } from './MapView'
+export { MapView } from './MapView'
+export { default } from './plugin'
 export { decodePolyline } from './polyline'

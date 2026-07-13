@@ -1,5 +1,4 @@
 import { useMemo } from 'react'
-import { useRequiredComponent } from '@workouts/core'
 import { useOverviewStore } from '../store'
 
 export function Drawer() {
@@ -9,14 +8,14 @@ export function Drawer() {
   const setSelectedYear = useOverviewStore((s) => s.setSelectedYear)
   const setSelectedMonth = useOverviewStore((s) => s.setSelectedMonth)
   const selectedMonth = useOverviewStore((s) => s.selectedMonth)
-  const closeDetail = useOverviewStore((s) => s.closeDetail)
+  const _closeDetail = useOverviewStore((s) => s.closeDetail)
   const openCharts = useOverviewStore((s) => s.openCharts)
   const toggleDrawer = useOverviewStore((s) => s.toggleDrawer)
 
   const yearItems = useMemo(() => {
     const items: { y: number; ms: number[] }[] = []
     for (const y of availableYears) {
-      items.push({ y, ms: selectedYear === y ? [1,2,3,4,5,6,7,8,9,10,11,12] : [] })
+      items.push({ y, ms: selectedYear === y ? [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12] : [] })
     }
     return items
   }, [availableYears, selectedYear])
@@ -26,10 +25,19 @@ export function Drawer() {
       <div
         onClick={toggleDrawer}
         style={{
-          position: 'fixed', top: 0, right: 0, bottom: 0, width: 48,
-          zIndex: 2, cursor: 'pointer', display: 'flex', alignItems: 'center',
-          justifyContent: 'center', color: 'var(--color-text-secondary)',
-          fontSize: '0.75rem', writingMode: 'vertical-lr',
+          position: 'fixed',
+          top: 0,
+          right: 0,
+          bottom: 0,
+          width: 48,
+          zIndex: 2,
+          cursor: 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: 'var(--color-text-secondary)',
+          fontSize: '0.75rem',
+          writingMode: 'vertical-lr',
           background: 'var(--color-bg)',
           borderLeft: '1px solid var(--color-border)',
           userSelect: 'none',
@@ -40,18 +48,31 @@ export function Drawer() {
 
       <div
         style={{
-          position: 'fixed', top: 0, right: drawerOpen ? 0 : -360, bottom: 0, width: 320,
-          zIndex: 3, background: 'var(--color-surface)',
+          position: 'fixed',
+          top: 0,
+          right: drawerOpen ? 0 : -360,
+          bottom: 0,
+          width: 320,
+          zIndex: 3,
+          background: 'var(--color-surface)',
           borderLeft: '1px solid var(--color-border)',
-          transition: 'right 0.2s ease', overflowY: 'auto', padding: 10,
-          display: 'flex', flexDirection: 'column', gap: 8,
+          transition: 'right 0.2s ease',
+          overflowY: 'auto',
+          padding: 10,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 8,
         }}
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
           <span style={{ fontWeight: 600 }}>Filters</span>
           <div style={{ display: 'flex', gap: 4 }}>
-            <button onClick={() => openCharts()} style={btnStyle}>Charts</button>
-            <button onClick={() => useOverviewStore.getState().resetFilters()} style={btnStyle}>Reset</button>
+            <button onClick={() => openCharts()} style={btnStyle}>
+              Charts
+            </button>
+            <button onClick={() => useOverviewStore.getState().resetFilters()} style={btnStyle}>
+              Reset
+            </button>
           </div>
         </div>
 
@@ -67,7 +88,9 @@ export function Drawer() {
                   background: selectedYear === y ? 'var(--color-accent)' : 'var(--color-bg)',
                   color: selectedYear === y ? '#000' : 'var(--color-text)',
                 }}
-              >{y}</button>
+              >
+                {y}
+              </button>
               {ms.length > 0 && (
                 <div style={{ display: 'flex', gap: 2, flexWrap: 'wrap', marginTop: 2 }}>
                   {ms.map((m) => (
@@ -75,11 +98,15 @@ export function Drawer() {
                       key={m}
                       onClick={() => setSelectedMonth(selectedMonth === m ? null : m)}
                       style={{
-                        ...chipStyle, fontSize: '0.65rem', padding: '1px 4px',
+                        ...chipStyle,
+                        fontSize: '0.65rem',
+                        padding: '1px 4px',
                         background: selectedMonth === m ? 'var(--color-accent)' : 'var(--color-bg)',
                         color: selectedMonth === m ? '#000' : 'var(--color-text)',
                       }}
-                    >{m}月</button>
+                    >
+                      {m}月
+                    </button>
                   ))}
                 </div>
               )}
@@ -113,7 +140,9 @@ function FiltersSection() {
               background: filters.type === t ? 'var(--color-accent)' : 'var(--color-bg)',
               color: filters.type === t ? '#000' : 'var(--color-text)',
             }}
-          >{t} ({c})</button>
+          >
+            {t} ({c})
+          </button>
         ))}
       </div>
       <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
@@ -126,7 +155,9 @@ function FiltersSection() {
               background: filters.source === s ? 'var(--color-accent)' : 'var(--color-bg)',
               color: filters.source === s ? '#000' : 'var(--color-text)',
             }}
-          >{s} ({c})</button>
+          >
+            {s} ({c})
+          </button>
         ))}
       </div>
       <input
@@ -134,8 +165,12 @@ function FiltersSection() {
         value={filters.search}
         onChange={(e) => setFilter({ search: e.target.value })}
         style={{
-          padding: '4px 8px', borderRadius: 4, border: '1px solid var(--color-border)',
-          background: 'var(--color-bg)', color: 'var(--color-text)', fontSize: '0.75rem',
+          padding: '4px 8px',
+          borderRadius: 4,
+          border: '1px solid var(--color-border)',
+          background: 'var(--color-bg)',
+          color: 'var(--color-text)',
+          fontSize: '0.75rem',
         }}
       />
     </div>
@@ -157,7 +192,16 @@ function ActivityList() {
 
   return (
     <div style={{ fontSize: '0.7rem' }}>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 60px 50px', gap: 4, paddingBottom: 4, borderBottom: '1px solid var(--color-border)', marginBottom: 4 }}>
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: '1fr 60px 50px',
+          gap: 4,
+          paddingBottom: 4,
+          borderBottom: '1px solid var(--color-border)',
+          marginBottom: 4,
+        }}
+      >
         {headers.map((h) => (
           <div
             key={h.field}
@@ -173,8 +217,12 @@ function ActivityList() {
           key={a.run_id}
           onClick={() => openDetail(a)}
           style={{
-            display: 'grid', gridTemplateColumns: '1fr 60px 50px', gap: 4,
-            padding: '2px 0', cursor: 'pointer', borderRadius: 2,
+            display: 'grid',
+            gridTemplateColumns: '1fr 60px 50px',
+            gap: 4,
+            padding: '2px 0',
+            cursor: 'pointer',
+            borderRadius: 2,
           }}
         >
           <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -189,12 +237,19 @@ function ActivityList() {
 }
 
 const btnStyle: React.CSSProperties = {
-  padding: '2px 8px', fontSize: '0.7rem', borderRadius: 4,
-  border: '1px solid var(--color-border)', cursor: 'pointer',
-  background: 'var(--color-bg)', color: 'var(--color-text)',
+  padding: '2px 8px',
+  fontSize: '0.7rem',
+  borderRadius: 4,
+  border: '1px solid var(--color-border)',
+  cursor: 'pointer',
+  background: 'var(--color-bg)',
+  color: 'var(--color-text)',
 }
 
 const chipStyle: React.CSSProperties = {
-  padding: '2px 6px', fontSize: '0.65rem', borderRadius: 4,
-  border: 'none', cursor: 'pointer',
+  padding: '2px 6px',
+  fontSize: '0.65rem',
+  borderRadius: 4,
+  border: 'none',
+  cursor: 'pointer',
 }

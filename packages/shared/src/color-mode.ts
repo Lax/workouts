@@ -29,9 +29,6 @@ export function typeColor(type: string | null): string {
   return CAT_COLORS[type ?? ''] ?? '#888'
 }
 
-export function activityColor(
-  act: { average_speed?: number | null; type?: string | null },
-  mode: string,
-): string {
+export function activityColor(act: { average_speed?: number | null; type?: string | null }, mode: string): string {
   return mode === 'speed' ? speedColor(act.average_speed ?? null) : typeColor(act.type ?? null)
 }

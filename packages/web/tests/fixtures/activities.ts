@@ -5,7 +5,7 @@ function pick<T>(arr: T[]): T {
 }
 
 function isoDate(y: number, m: number, d: number): string {
-  return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}T${String(10 + d % 12).padStart(2, '0')}:00:00Z`
+  return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}T${String(10 + (d % 12)).padStart(2, '0')}:00:00Z`
 }
 
 const CATEGORIES = ['run', 'ride', 'hike', 'walk', 'swim', 'workout'] as const
@@ -39,7 +39,7 @@ export function generateActivities(count: number): Activity[] {
       average_power: cat === 'ride' ? 150 + Math.round(Math.random() * 100) : null,
       max_power: null,
       average_temperature: Math.round(10 + Math.random() * 25),
-      calories: Math.round(dist / 20 * 4),
+      calories: Math.round((dist / 20) * 4),
       average_speed: speed,
       elevation_gain: Math.round(dist * 0.02 + Math.random() * 50),
       summary_polyline: null,

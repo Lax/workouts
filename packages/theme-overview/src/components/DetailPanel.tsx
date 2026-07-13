@@ -1,5 +1,5 @@
-import { useEffect } from 'react'
 import L from 'leaflet'
+import { useEffect } from 'react'
 import { useOverviewStore } from '../store'
 
 export function DetailPanel() {
@@ -10,7 +10,9 @@ export function DetailPanel() {
 
   useEffect(() => {
     if (!detailOpen) return
-    function onKey(e: KeyboardEvent) { if (e.key === 'Escape') closeDetail() }
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') closeDetail()
+    }
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
   }, [detailOpen, closeDetail])
@@ -19,23 +21,37 @@ export function DetailPanel() {
 
   return (
     <div
-      onClick={(e) => { if (e.target === e.currentTarget) closeDetail() }}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) closeDetail()
+      }}
       style={{
-        position: 'fixed', inset: 0, zIndex: 3,
+        position: 'fixed',
+        inset: 0,
+        zIndex: 3,
         background: 'rgba(0,0,0,0.5)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
       }}
     >
       <div
         style={{
           background: 'var(--color-surface)',
-          borderRadius: 12, padding: 16, width: '90%', maxWidth: 400,
+          borderRadius: 12,
+          padding: 16,
+          width: '90%',
+          maxWidth: 400,
           animation: 'fadeIn 0.15s ease-out',
         }}
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
           <h3 style={{ margin: 0, fontSize: '1rem' }}>{act.name || 'Untitled'}</h3>
-          <button onClick={closeDetail} style={{ background: 'none', border: 'none', color: 'var(--color-text)', fontSize: '1.5rem', cursor: 'pointer' }}>×</button>
+          <button
+            onClick={closeDetail}
+            style={{ background: 'none', border: 'none', color: 'var(--color-text)', fontSize: '1.5rem', cursor: 'pointer' }}
+          >
+            ×
+          </button>
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, fontSize: '0.8rem' }}>
@@ -49,9 +65,7 @@ export function DetailPanel() {
           <Stat label="Calories" value={act.calories ? `${act.calories} kcal` : '—'} />
         </div>
 
-        {act.summary_polyline && (
-          <MiniMap polyline={act.summary_polyline} colorScheme={colorScheme} />
-        )}
+        {act.summary_polyline && <MiniMap polyline={act.summary_polyline} colorScheme={colorScheme} />}
       </div>
     </div>
   )
@@ -78,7 +92,9 @@ function MiniMap({ polyline, colorScheme }: { polyline: string; colorScheme: str
       L.polyline(points, { color: '#4DD2FF', weight: 3 }).addTo(map)
       map.fitBounds(L.latLngBounds(points.map((p) => L.latLng(p[0], p[1]))).pad(0.1))
     }
-    return () => { map.remove() }
+    return () => {
+      map.remove()
+    }
   }, [polyline, colorScheme])
 
   return <div id="mini-map" style={{ height: 150, marginTop: 8, borderRadius: 8, overflow: 'hidden' }} />
@@ -87,14 +103,27 @@ function MiniMap({ polyline, colorScheme }: { polyline: string; colorScheme: str
 function decodePolyline(encoded: string): [number, number][] {
   if (!encoded) return []
   const points: [number, number][] = []
-  let index = 0, lat = 0, lng = 0
+  let index = 0,
+    lat = 0,
+    lng = 0
   while (index < encoded.length) {
-    let b, shift = 0, result = 0
-    do { b = encoded.charCodeAt(index++) - 63; result |= (b & 0x1f) << shift; shift += 5 } while (b >= 0x20)
-    lat += (result & 1 ? ~(result >> 1) : result >> 1)
-    shift = 0; result = 0
-    do { b = encoded.charCodeAt(index++) - 63; result |= (b & 0x1f) << shift; shift += 5 } while (b >= 0x20)
-    lng += (result & 1 ? ~(result >> 1) : result >> 1)
+    let b,
+      shift = 0,
+      result = 0
+    do {
+      b = encoded.charCodeAt(index++) - 63
+      result |= (b & 0x1f) << shift
+      shift += 5
+    } while (b >= 0x20)
+    lat += result & 1 ? ~(result >> 1) : result >> 1
+    shift = 0
+    result = 0
+    do {
+      b = encoded.charCodeAt(index++) - 63
+      result |= (b & 0x1f) << shift
+      shift += 5
+    } while (b >= 0x20)
+    lng += result & 1 ? ~(result >> 1) : result >> 1
     points.push([lat * 1e-5, lng * 1e-5])
   }
   return points

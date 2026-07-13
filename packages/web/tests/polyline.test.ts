@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest'
 import { decodePolyline } from '@workouts/plugin-map'
+import { describe, expect, it } from 'vitest'
 
 describe('decodePolyline', () => {
   it('returns [] for null', () => {

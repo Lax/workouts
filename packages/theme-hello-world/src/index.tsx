@@ -18,10 +18,7 @@ const wsNames = new Set<string>()
 const runtimeNames = new Set<string>()
 const toolingNames = new Set<string>()
 
-const TOOLING_LIST = new Set([
-  'vite', 'typescript', 'vitest', 'jsdom', '@biomejs/biome',
-  '@playwright/test', '@vitejs/plugin-react',
-])
+const TOOLING_LIST = new Set(['vite', 'typescript', 'vitest', 'jsdom', '@biomejs/biome', '@playwright/test', '@vitejs/plugin-react'])
 
 for (const pkg of Object.values(wsPkgs)) {
   wsNames.add(pkg.name)
@@ -67,12 +64,8 @@ function Table({ label, rows }: { label: string; rows: Row[] }) {
         <tbody>
           {rows.map((r) => (
             <tr key={r.name}>
-              <td style={{ padding: '2px 16px 2px 0', fontFamily: 'monospace', color: 'var(--color-text, #e0e0e0)' }}>
-                {r.name}
-              </td>
-              <td style={{ padding: '2px 0', fontFamily: 'monospace', color: 'var(--color-text-secondary, #888)' }}>
-                {r.version}
-              </td>
+              <td style={{ padding: '2px 16px 2px 0', fontFamily: 'monospace', color: 'var(--color-text, #e0e0e0)' }}>{r.name}</td>
+              <td style={{ padding: '2px 0', fontFamily: 'monospace', color: 'var(--color-text-secondary, #888)' }}>{r.version}</td>
             </tr>
           ))}
         </tbody>

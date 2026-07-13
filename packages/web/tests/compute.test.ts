@@ -1,11 +1,6 @@
-import { describe, it, expect } from 'vitest'
-import {
-  computeYears,
-  computeAvailableTypes,
-  computeAvailableSources,
-  computeFilteredActivities,
-} from '@workouts/plugin-data-source'
+import { computeAvailableSources, computeAvailableTypes, computeFilteredActivities, computeYears } from '@workouts/plugin-data-source'
 import type { Activity } from '@workouts/shared'
+import { describe, expect, it } from 'vitest'
 
 function act(overrides: Partial<Activity> = {}): Activity {
   return {
@@ -38,11 +33,13 @@ const defaultFilters = { type: '', source: '', distanceMin: null, distanceMax: n
 
 describe('computeYears', () => {
   it('returns unique years sorted desc', () => {
-    expect(computeYears([
-      act({ start_date: '2024-01-01T00:00:00Z' }),
-      act({ start_date: '2025-06-15T00:00:00Z' }),
-      act({ start_date: '2024-07-20T00:00:00Z' }),
-    ])).toEqual([2025, 2024])
+    expect(
+      computeYears([
+        act({ start_date: '2024-01-01T00:00:00Z' }),
+        act({ start_date: '2025-06-15T00:00:00Z' }),
+        act({ start_date: '2024-07-20T00:00:00Z' }),
+      ]),
+    ).toEqual([2025, 2024])
   })
 
   it('returns empty for empty list', () => {
@@ -56,33 +53,29 @@ describe('computeYears', () => {
 
 describe('computeAvailableTypes', () => {
   it('counts sorted by count desc', () => {
-    expect(computeAvailableTypes([
-      act({ sport_category: 'run' }),
-      act({ sport_category: 'ride' }),
-      act({ sport_category: 'run' }),
-    ])).toEqual([['run', 2], ['ride', 1]])
+    expect(
+      computeAvailableTypes([act({ sport_category: 'run' }), act({ sport_category: 'ride' }), act({ sport_category: 'run' })]),
+    ).toEqual([
+      ['run', 2],
+      ['ride', 1],
+    ])
   })
 
   it('classifies empty category as other via fallback', () => {
-    expect(computeAvailableTypes([
-      act({ sport_category: undefined as any }),
-    ])).toEqual([['other', 1]])
+    expect(computeAvailableTypes([act({ sport_category: undefined as any })])).toEqual([['other', 1]])
   })
 })
 
 describe('computeAvailableSources', () => {
   it('counts sorted by count desc', () => {
-    expect(computeAvailableSources([
-      act({ source: 'garmin' }),
-      act({ source: 'strava' }),
-      act({ source: 'garmin' }),
-    ])).toEqual([['garmin', 2], ['strava', 1]])
+    expect(computeAvailableSources([act({ source: 'garmin' }), act({ source: 'strava' }), act({ source: 'garmin' })])).toEqual([
+      ['garmin', 2],
+      ['strava', 1],
+    ])
   })
 
   it('classifies null source as unknown', () => {
-    expect(computeAvailableSources([
-      act({ source: null as any }),
-    ])).toEqual([['unknown', 1]])
+    expect(computeAvailableSources([act({ source: null as any })])).toEqual([['unknown', 1]])
   })
 })
 
@@ -96,12 +89,12 @@ describe('computeFilteredActivities', () => {
   it('filters by sport_category', () => {
     const r = computeFilteredActivities(activities, { ...defaultFilters, type: 'run' }, 'date', true, null, null)
     expect(r).toHaveLength(2)
-    expect(r.every(a => a.sport_category === 'run')).toBe(true)
+    expect(r.every((a) => a.sport_category === 'run')).toBe(true)
   })
 
   it('filters by source', () => {
     const r = computeFilteredActivities(activities, { ...defaultFilters, source: 'garmin' }, 'date', true, null, null)
-    expect(r.every(a => a.source === 'garmin')).toBe(true)
+    expect(r.every((a) => a.source === 'garmin')).toBe(true)
   })
 
   it('filters by distance range', () => {
@@ -111,10 +104,7 @@ describe('computeFilteredActivities', () => {
   })
 
   it('filters by search term in name', () => {
-    const acts = [
-      act({ run_id: '1', name: 'Morning Run' }),
-      act({ run_id: '2', name: 'Evening Ride' }),
-    ]
+    const acts = [act({ run_id: '1', name: 'Morning Run' }), act({ run_id: '2', name: 'Evening Ride' })]
     const r = computeFilteredActivities(acts, { ...defaultFilters, search: 'morning' }, 'date', true, null, null)
     expect(r).toHaveLength(1)
     expect(r[0].run_id).toBe('1')
@@ -122,17 +112,17 @@ describe('computeFilteredActivities', () => {
 
   it('sorts by distance desc', () => {
     const r = computeFilteredActivities(activities, defaultFilters, 'distance', true, null, null)
-    expect(r.map(a => a.distance)).toEqual([20000, 10000, 5000])
+    expect(r.map((a) => a.distance)).toEqual([20000, 10000, 5000])
   })
 
   it('sorts by distance asc', () => {
     const r = computeFilteredActivities(activities, defaultFilters, 'distance', false, null, null)
-    expect(r.map(a => a.distance)).toEqual([5000, 10000, 20000])
+    expect(r.map((a) => a.distance)).toEqual([5000, 10000, 20000])
   })
 
   it('sorts by time desc', () => {
     const r = computeFilteredActivities(activities, defaultFilters, 'time', true, null, null)
-    expect(r.map(a => a.moving_time)).toEqual([3600, 3000, 1800])
+    expect(r.map((a) => a.moving_time)).toEqual([3600, 3000, 1800])
   })
 
   it('filters by year', () => {

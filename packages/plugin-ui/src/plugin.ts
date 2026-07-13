@@ -1,5 +1,5 @@
 import type { RegularPlugin } from '@workouts/core'
-import { Card, Badge } from './components'
+import { Badge, Card } from './components'
 
 const plugin: RegularPlugin = {
   type: 'plugin',

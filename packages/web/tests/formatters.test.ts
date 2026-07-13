@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest'
-import { formatDistance, formatDuration, formatPace, formatDate } from '@workouts/shared'
+import { formatDate, formatDistance, formatDuration, formatPace } from '@workouts/shared'
+import { describe, expect, it } from 'vitest'
 
 describe('formatDistance', () => {
   it('returns — for null', () => {

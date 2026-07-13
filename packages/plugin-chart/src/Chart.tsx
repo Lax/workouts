@@ -1,6 +1,6 @@
-import { useRef, useEffect } from 'react'
-import * as echarts from 'echarts'
 import type { EChartsOption } from 'echarts'
+import * as echarts from 'echarts'
+import { useEffect, useRef } from 'react'
 
 export interface ChartProps {
   option: EChartsOption
@@ -17,7 +17,11 @@ export function Chart({ option, style, onClick }: ChartProps) {
     if (!el) return
     const instance = echarts.init(el)
     chartRef.current = instance
-    return () => { instance.dispose(); chartRef.current = null; return }
+    return () => {
+      instance.dispose()
+      chartRef.current = null
+      return
+    }
   }, [])
 
   useEffect(() => {
@@ -28,7 +32,10 @@ export function Chart({ option, style, onClick }: ChartProps) {
     const instance = chartRef.current
     if (!instance || !onClick) return
     instance.on('click', onClick)
-    return () => { instance.off('click', onClick); return }
+    return () => {
+      instance.off('click', onClick)
+      return
+    }
   }, [onClick])
 
   return <div ref={elRef} style={{ width: '100%', height: '100%', ...style }} />

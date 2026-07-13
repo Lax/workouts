@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest'
 import { speedColor, typeColor } from '@workouts/shared'
+import { describe, expect, it } from 'vitest'
 
 describe('speedColor', () => {
   it('returns #888 for null', () => {

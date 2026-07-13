@@ -33,6 +33,15 @@ export function buildTypePieOption(activities: Activity[]): EChartsOption {
   }))
   return {
     tooltip: { trigger: 'item' as const, formatter: '{b}: {c} km' },
-    series: [{ type: 'pie' as const, radius: ['40%', '70%'], center: ['50%', '50%'], data, label: { color: '#e0e0e0' }, itemStyle: { borderRadius: 4 } }],
+    series: [
+      {
+        type: 'pie' as const,
+        radius: ['40%', '70%'],
+        center: ['50%', '50%'],
+        data,
+        label: { color: '#e0e0e0' },
+        itemStyle: { borderRadius: 4 },
+      },
+    ],
   }
 }

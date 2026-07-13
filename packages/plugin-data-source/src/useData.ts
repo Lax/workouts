@@ -1,7 +1,7 @@
-import { useMemo } from 'react'
 import { useTheme } from '@workouts/core'
 import type { Activity } from '@workouts/shared'
-import { computeYears, computeAvailableTypes, computeAvailableSources } from './compute'
+import { useMemo } from 'react'
+import { computeAvailableSources, computeAvailableTypes, computeYears } from './compute'
 import type { DerivedData, FilterOptions, SortField } from './types'
 
 export function useDerivedData(): DerivedData {

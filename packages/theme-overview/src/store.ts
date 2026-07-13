@@ -1,5 +1,5 @@
-import { create } from 'zustand'
 import type { Activity } from '@workouts/shared'
+import { create } from 'zustand'
 
 export type SortField = 'date' | 'distance' | 'time'
 
@@ -50,47 +50,83 @@ const defaultFilters: Filters = { type: '', source: '', distanceMin: null, dista
 
 function computeYears(acts: Activity[]): number[] {
   const s = new Set<number>()
-  for (const a of acts) { if (a.start_date) s.add(new Date(a.start_date).getFullYear()) }
+  for (const a of acts) {
+    if (a.start_date) s.add(new Date(a.start_date).getFullYear())
+  }
   return Array.from(s).sort((a, b) => b - a)
 }
 
 function computeAvailableTypes(acts: Activity[]): [string, number][] {
   const s = new Map<string, number>()
-  for (const a of acts) { const cat = a.sport_category || a.type || 'other'; s.set(cat, (s.get(cat) || 0) + 1) }
+  for (const a of acts) {
+    const cat = a.sport_category || a.type || 'other'
+    s.set(cat, (s.get(cat) || 0) + 1)
+  }
   return Array.from(s.entries()).sort((a, b) => b[1] - a[1])
 }
 
 function computeAvailableSources(acts: Activity[]): [string, number][] {
   const s = new Map<string, number>()
-  for (const a of acts) { const src = a.source || 'unknown'; s.set(src, (s.get(src) || 0) + 1) }
+  for (const a of acts) {
+    const src = a.source || 'unknown'
+    s.set(src, (s.get(src) || 0) + 1)
+  }
   return Array.from(s.entries()).sort((a, b) => b[1] - a[1])
 }
 
 function filterActivities(
-  acts: Activity[], filters: Filters, sortField: SortField, sortDesc: boolean,
-  selectedYear: number | null, selectedMonth: number | null,
+  acts: Activity[],
+  filters: Filters,
+  sortField: SortField,
+  sortDesc: boolean,
+  selectedYear: number | null,
+  selectedMonth: number | null,
 ): Activity[] {
   let r = [...acts]
-  if (selectedYear !== null) r = r.filter(a => a.start_date && new Date(a.start_date).getFullYear() === selectedYear)
-  if (selectedMonth !== null && selectedYear !== null) r = r.filter(a => a.start_date && new Date(a.start_date).getFullYear() === selectedYear && new Date(a.start_date).getMonth() + 1 === selectedMonth)
-  if (filters.type) r = r.filter(a => (a.sport_category || a.type || 'other') === filters.type)
-  if (filters.source) r = r.filter(a => a.source === filters.source)
-  if (filters.distanceMin !== null) { const minM = filters.distanceMin * 1000; r = r.filter(a => a.distance !== null && a.distance >= minM) }
-  if (filters.distanceMax !== null) { const maxM = filters.distanceMax * 1000; r = r.filter(a => a.distance !== null && a.distance <= maxM) }
-  if (filters.search) { const q = filters.search.toLowerCase(); r = r.filter(a => a.name?.toLowerCase().includes(q)) }
+  if (selectedYear !== null) r = r.filter((a) => a.start_date && new Date(a.start_date).getFullYear() === selectedYear)
+  if (selectedMonth !== null && selectedYear !== null)
+    r = r.filter(
+      (a) =>
+        a.start_date && new Date(a.start_date).getFullYear() === selectedYear && new Date(a.start_date).getMonth() + 1 === selectedMonth,
+    )
+  if (filters.type) r = r.filter((a) => (a.sport_category || a.type || 'other') === filters.type)
+  if (filters.source) r = r.filter((a) => a.source === filters.source)
+  if (filters.distanceMin !== null) {
+    const minM = filters.distanceMin * 1000
+    r = r.filter((a) => a.distance !== null && a.distance >= minM)
+  }
+  if (filters.distanceMax !== null) {
+    const maxM = filters.distanceMax * 1000
+    r = r.filter((a) => a.distance !== null && a.distance <= maxM)
+  }
+  if (filters.search) {
+    const q = filters.search.toLowerCase()
+    r = r.filter((a) => a.name?.toLowerCase().includes(q))
+  }
   r.sort((a, b) => {
     const d = sortDesc ? -1 : 1
     switch (sortField) {
-      case 'date': return d * ((a.start_date ?? '').localeCompare(b.start_date ?? ''))
-      case 'distance': return d * ((a.distance ?? 0) - (b.distance ?? 0))
-      case 'time': return d * ((a.moving_time ?? 0) - (b.moving_time ?? 0))
-      default: return 0
+      case 'date':
+        return d * (a.start_date ?? '').localeCompare(b.start_date ?? '')
+      case 'distance':
+        return d * ((a.distance ?? 0) - (b.distance ?? 0))
+      case 'time':
+        return d * ((a.moving_time ?? 0) - (b.moving_time ?? 0))
+      default:
+        return 0
     }
   })
   return r
 }
 
-function recompute(acts: Activity[], filters: Filters, sortField: SortField, sortDesc: boolean, selectedYear: number | null, selectedMonth: number | null) {
+function recompute(
+  acts: Activity[],
+  filters: Filters,
+  sortField: SortField,
+  sortDesc: boolean,
+  selectedYear: number | null,
+  selectedMonth: number | null,
+) {
   return {
     years: computeYears(acts),
     availableTypes: computeAvailableTypes(acts),
@@ -119,47 +155,61 @@ export const useOverviewStore = create<OverviewStore>()((set) => ({
   availableSources: [],
   filteredActivities: [],
 
-  setActivities: (acts) => set((s) => ({
-    activities: acts,
-    ...recompute(acts, s.filters, s.sortField, s.sortDesc, s.selectedYear, s.selectedMonth),
-  })),
+  setActivities: (acts) =>
+    set((s) => ({
+      activities: acts,
+      ...recompute(acts, s.filters, s.sortField, s.sortDesc, s.selectedYear, s.selectedMonth),
+    })),
   openDetail: (act) => set({ selectedActivity: act, detailOpen: true, drawerOpen: false }),
   closeDetail: () => set({ detailOpen: false, selectedActivity: null }),
   openCharts: () => set({ showCharts: true, drawerOpen: false }),
   closeCharts: () => set({ showCharts: false }),
-  toggleSort: (field) => set((s) => {
-    const desc = s.sortField === field ? !s.sortDesc : true
-    return {
-      sortField: field,
-      sortDesc: desc,
-      filteredActivities: filterActivities(s.activities, s.filters, field, desc, s.selectedYear, s.selectedMonth),
-    }
-  }),
-  resetFilters: () => set((s) => ({
-    filters: { ...defaultFilters },
-    selectedMonth: null,
-    filteredActivities: filterActivities(s.activities, defaultFilters, s.sortField, s.sortDesc, s.selectedYear, null),
-  })),
-  setFilter: (patch) => set((s) => {
-    const f = { ...s.filters, ...patch }
-    return { filters: f, filteredActivities: filterActivities(s.activities, f, s.sortField, s.sortDesc, s.selectedYear, s.selectedMonth) }
-  }),
-  setSelectedYear: (y) => set((s) => ({
-    selectedYear: y,
-    selectedMonth: y !== s.selectedYear ? null : s.selectedMonth,
-    filteredActivities: filterActivities(s.activities, s.filters, s.sortField, s.sortDesc, y, y !== s.selectedYear ? null : s.selectedMonth),
-  })),
-  setSelectedMonth: (m) => set((s) => ({
-    selectedMonth: m,
-    filteredActivities: filterActivities(s.activities, s.filters, s.sortField, s.sortDesc, s.selectedYear, m),
-  })),
+  toggleSort: (field) =>
+    set((s) => {
+      const desc = s.sortField === field ? !s.sortDesc : true
+      return {
+        sortField: field,
+        sortDesc: desc,
+        filteredActivities: filterActivities(s.activities, s.filters, field, desc, s.selectedYear, s.selectedMonth),
+      }
+    }),
+  resetFilters: () =>
+    set((s) => ({
+      filters: { ...defaultFilters },
+      selectedMonth: null,
+      filteredActivities: filterActivities(s.activities, defaultFilters, s.sortField, s.sortDesc, s.selectedYear, null),
+    })),
+  setFilter: (patch) =>
+    set((s) => {
+      const f = { ...s.filters, ...patch }
+      return { filters: f, filteredActivities: filterActivities(s.activities, f, s.sortField, s.sortDesc, s.selectedYear, s.selectedMonth) }
+    }),
+  setSelectedYear: (y) =>
+    set((s) => ({
+      selectedYear: y,
+      selectedMonth: y !== s.selectedYear ? null : s.selectedMonth,
+      filteredActivities: filterActivities(
+        s.activities,
+        s.filters,
+        s.sortField,
+        s.sortDesc,
+        y,
+        y !== s.selectedYear ? null : s.selectedMonth,
+      ),
+    })),
+  setSelectedMonth: (m) =>
+    set((s) => ({
+      selectedMonth: m,
+      filteredActivities: filterActivities(s.activities, s.filters, s.sortField, s.sortDesc, s.selectedYear, m),
+    })),
   setColorMode: (m) => set({ colorMode: m }),
-  toggleTheme: () => set((s) => {
-    const next = s.colorScheme === 'light' ? 'dark' : 'light'
-    document.documentElement.setAttribute('data-theme', next)
-    localStorage.setItem('theme', next)
-    return { colorScheme: next }
-  }),
+  toggleTheme: () =>
+    set((s) => {
+      const next = s.colorScheme === 'light' ? 'dark' : 'light'
+      document.documentElement.setAttribute('data-theme', next)
+      localStorage.setItem('theme', next)
+      return { colorScheme: next }
+    }),
   setMapHoveredId: (id) => set({ mapHoveredId: id }),
   toggleDrawer: () => set((s) => ({ drawerOpen: !s.drawerOpen })),
 }))

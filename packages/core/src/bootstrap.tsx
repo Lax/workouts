@@ -1,8 +1,8 @@
 import { createRoot } from 'react-dom/client'
-import type { Config, ThemePlugin, ThemeProps } from './types'
-import { createRegistry, createPluginAPI } from './registry'
 import { ThemeProvider } from './context'
 import { ErrorBoundary } from './ErrorBoundary'
+import { createPluginAPI, createRegistry } from './registry'
+import type { Config, ThemePlugin, ThemeProps } from './types'
 
 export async function bootstrap(
   config: Config,
@@ -22,7 +22,7 @@ export async function bootstrap(
     }
   }
 
-  const data = options.data ?? await fetchData(config.data ?? {})
+  const data = options.data ?? (await fetchData(config.data ?? {}))
 
   const root = document.getElementById('root')
   if (!root) throw new Error('No #root element found')
@@ -37,9 +37,7 @@ export async function bootstrap(
   )
 }
 
-async function fetchData(
-  dataConfig: Record<string, { source: string; optional?: boolean }>,
-): Promise<ThemeProps['data']> {
+async function fetchData(dataConfig: Record<string, { source: string; optional?: boolean }>): Promise<ThemeProps['data']> {
   const result: Record<string, unknown> = {}
   let error: string | undefined
 

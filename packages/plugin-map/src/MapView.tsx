@@ -1,5 +1,5 @@
-import { useRef, useEffect, useCallback } from 'react'
 import L from 'leaflet'
+import { useCallback, useEffect, useRef } from 'react'
 import 'leaflet/dist/leaflet.css'
 import type { Activity } from '@workouts/shared'
 import { activityColor } from '@workouts/shared'
@@ -29,8 +29,7 @@ export function MapView({
   const polylinesRef = useRef<Map<string, L.Polyline>>(new Map())
 
   const tileUrl = useCallback(
-    () =>
-      `https://{s}.basemaps.cartocdn.com/${colorScheme === 'dark' ? 'dark_nolabels' : 'light_nolabels'}/{z}/{x}/{y}{r}.png`,
+    () => `https://{s}.basemaps.cartocdn.com/${colorScheme === 'dark' ? 'dark_nolabels' : 'light_nolabels'}/{z}/{x}/{y}{r}.png`,
     [colorScheme],
   )
 

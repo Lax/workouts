@@ -1,15 +1,15 @@
 export { bootstrap } from './bootstrap.js'
+export { ThemeProvider, useComponent, useRequiredComponent, useTheme } from './context'
 export { ErrorBoundary } from './ErrorBoundary'
-export { ThemeProvider, useTheme, useComponent, useRequiredComponent } from './context'
-export { createRegistry, createPluginAPI } from './registry'
+export { createPluginAPI, createRegistry } from './registry'
 export type {
-  Config,
-  PluginManifest,
-  Stats,
-  ThemeProps,
   ComponentRegistry,
+  Config,
   PluginAPI,
-  ThemePlugin,
+  PluginManifest,
   RegularPlugin,
+  Stats,
+  ThemePlugin,
+  ThemeProps,
   WorkoutsPlugin,
 } from './types'
