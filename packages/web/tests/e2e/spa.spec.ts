@@ -99,9 +99,10 @@ test('drawer activity row background is not white in dark mode', async ({ page }
   await gotoOverview(page)
   await page.locator('.drawer-collapsed').click()
   await expect(page.locator('.drawer.open')).toBeVisible()
-  const rowBg = await page.locator('.activity-row').first().evaluate(
-    (el) => window.getComputedStyle(el).backgroundColor,
-  )
+  const rowBg = await page
+    .locator('.activity-row')
+    .first()
+    .evaluate((el) => window.getComputedStyle(el).backgroundColor)
   expect(rowBg).not.toBe('rgb(255, 255, 255)')
 })
 
