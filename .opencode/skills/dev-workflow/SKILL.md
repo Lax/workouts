@@ -86,6 +86,29 @@ escalated → user picks phase → resume
 
 ## Phase Definitions
 
+### Hard Rule: All Phases Run as Subagents
+
+Every phase MUST be executed via `task(subagent_type, prompt)`.
+The main session NEVER executes a phase directly — it only orchestrates.
+
+Exception: only the main session can read phase output and decide next action.
+This ensures: (a) role boundaries are enforced, (b) handoff documents are produced,
+(c) no step can be skipped.
+
+### Phase Transition Gates
+
+Between each phase transition, the main session MUST verify:
+
+| Transition | Gate |
+|---|---|
+| req → plan | handoffs/01-req.md exists, Done Criteria are testable |
+| plan → dev | status.json phase=plan status=pending_approval, user confirmed y |
+| dev → qa | npm run typecheck passes, npm run test passes, npx biome ci passes, build passes |
+| qa → release | handoffs/04-qa.md status=passed, all tests green |
+| release → done | CI run on committed SHA returns success |
+
+If any gate fails → return to the phase that produced the failing output.
+
 ### Phase 1: Requirement
 
 | Field | Value |
@@ -285,6 +308,7 @@ Update status.json with result and target_phase if returning.
 | skill | `caveman` |
 | handoff | `handoffs/05-release.md` |
 | status | `completed / terminated` |
+| depends_on | `handoffs/04-qa.md status=passed` |
 
 **general prompt:**
 ```
@@ -293,23 +317,35 @@ You are the workflow Release Manager. Input:
 Requirement: {workflow_dir}/handoffs/01-req.md
 QA report: {workflow_dir}/handoffs/04-qa.md
 
+IMPORTANT — Check QA status first:
+- QA report status MUST equal "passed". If not, DO NOT commit.
+  Return to QA phase with message: "QA not passed, release aborted."
+
 Your job:
 
 1. Generate release summary:
    - Change summary
    - Scope / affected files
-   - Test results
-   - Known minor issues (from QA)
+   - Test results from QA
+   - Known minor issues (from QA, only if approved)
    - Rollback plan
 
 2. Stage and commit:
-   - Check git status
-   - Write commit message explaining WHY
+   - Check git status — only intended files staged
+   - Write commit message explaining WHY (not WHAT)
    - Push
 
-3. Write handoff to {workflow_dir}/handoffs/05-release.md
-4. Update status.json to completed
-5. Present final report to user
+3. Monitor CI:
+   - After push, run: gh run list --limit 1 --json conclusion,displayTitle
+   - Wait for CI to complete (up to 90s, check every 15s)
+   - If CI returns "failure": log the error, recommend rollback
+   - If CI returns "success": confirm release complete
+
+4. Write handoff to {workflow_dir}/handoffs/05-release.md
+5. Update status.json to completed
+6. Present final report to user
+
+Failure to check CI → risk of merging broken code. This is a non-negotiable gate.
 ```
 
 ---
