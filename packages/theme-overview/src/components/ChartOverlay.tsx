@@ -27,53 +27,65 @@ export function ChartOverlay() {
   const typeOption = buildTypePieOption(filteredActivities)
 
   return (
-    <div
-      onClick={(e) => {
-        if (e.target === e.currentTarget) closeCharts()
-      }}
-      style={{
-        position: 'fixed',
-        inset: 0,
-        zIndex: 4,
-        background: 'rgba(0,0,0,0.5)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-      }}
-    >
+    <div style={{ position: 'fixed', inset: 0, zIndex: 4 }}>
+      <button
+        type="button"
+        onClick={closeCharts}
+        aria-label="Close"
+        style={{
+          position: 'absolute',
+          inset: 0,
+          background: 'rgba(0,0,0,0.5)',
+          border: 'none',
+          cursor: 'pointer',
+          display: 'block',
+        }}
+      />
       <div
         style={{
-          background: 'var(--color-surface)',
-          borderRadius: 12,
-          padding: 16,
-          width: '90%',
-          maxWidth: 600,
-          animation: 'fadeIn 0.15s ease-out',
+          position: 'absolute',
+          inset: 0,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          pointerEvents: 'none',
         }}
       >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-          <h3 style={{ margin: 0, fontSize: '1rem' }}>Charts</h3>
-          <button
-            type="button"
-            onClick={closeCharts}
-            style={{ background: 'none', border: 'none', color: 'var(--color-text)', fontSize: '1.5rem', cursor: 'pointer' }}
-          >
-            ×
-          </button>
+        <div
+          style={{
+            background: 'var(--color-surface)',
+            borderRadius: 12,
+            padding: 16,
+            width: '90%',
+            maxWidth: 600,
+            pointerEvents: 'auto',
+            animation: 'fadeIn 0.15s ease-out',
+          }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+            <h3 style={{ margin: 0, fontSize: '1rem' }}>Charts</h3>
+            <button
+              type="button"
+              onClick={closeCharts}
+              style={{ background: 'none', border: 'none', color: 'var(--color-text)', fontSize: '1.5rem', cursor: 'pointer' }}
+            >
+              ×
+            </button>
+          </div>
+          {Chart && (
+            <Chart
+              option={monthOption}
+              style={{ height: 240 }}
+              onClick={(params: any) => {
+                if (params.dataIndex !== undefined && selectedYear !== null) {
+                  const m = parseInt(params.name, 10)
+                  if (!Number.isNaN(m)) setSelectedMonth(m)
+                }
+              }}
+            />
+          )}
+          {Chart && <Chart option={typeOption} style={{ height: 200, marginTop: 16 }} />}
         </div>
-        {Chart && (
-          <Chart
-            option={monthOption}
-            style={{ height: 240 }}
-            onClick={(params: any) => {
-              if (params.dataIndex !== undefined && selectedYear !== null) {
-                const m = parseInt(params.name, 10)
-                if (!Number.isNaN(m)) setSelectedMonth(m)
-              }
-            }}
-          />
-        )}
-        {Chart && <Chart option={typeOption} style={{ height: 200, marginTop: 16 }} />}
       </div>
     </div>
   )

@@ -20,53 +20,65 @@ export function DetailPanel() {
   if (!detailOpen || !act) return null
 
   return (
-    <div
-      onClick={(e) => {
-        if (e.target === e.currentTarget) closeDetail()
-      }}
-      style={{
-        position: 'fixed',
-        inset: 0,
-        zIndex: 3,
-        background: 'rgba(0,0,0,0.5)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-      }}
-    >
+    <div style={{ position: 'fixed', inset: 0, zIndex: 3 }}>
+      <button
+        type="button"
+        onClick={closeDetail}
+        aria-label="Close"
+        style={{
+          position: 'absolute',
+          inset: 0,
+          background: 'rgba(0,0,0,0.5)',
+          border: 'none',
+          cursor: 'pointer',
+          display: 'block',
+        }}
+      />
       <div
         style={{
-          background: 'var(--color-surface)',
-          borderRadius: 12,
-          padding: 16,
-          width: '90%',
-          maxWidth: 400,
-          animation: 'fadeIn 0.15s ease-out',
+          position: 'absolute',
+          inset: 0,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          pointerEvents: 'none',
         }}
       >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-          <h3 style={{ margin: 0, fontSize: '1rem' }}>{act.name || 'Untitled'}</h3>
-          <button
-            type="button"
-            onClick={closeDetail}
-            style={{ background: 'none', border: 'none', color: 'var(--color-text)', fontSize: '1.5rem', cursor: 'pointer' }}
-          >
-            ×
-          </button>
-        </div>
+        <div
+          style={{
+            background: 'var(--color-surface)',
+            borderRadius: 12,
+            padding: 16,
+            width: '90%',
+            maxWidth: 400,
+            pointerEvents: 'auto',
+            animation: 'fadeIn 0.15s ease-out',
+          }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+            <h3 style={{ margin: 0, fontSize: '1rem' }}>{act.name || 'Untitled'}</h3>
+            <button
+              type="button"
+              onClick={closeDetail}
+              style={{ background: 'none', border: 'none', color: 'var(--color-text)', fontSize: '1.5rem', cursor: 'pointer' }}
+            >
+              ×
+            </button>
+          </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, fontSize: '0.8rem' }}>
-          <Stat label="Distance" value={act.distance ? `${(act.distance / 1000).toFixed(2)} km` : '—'} />
-          <Stat label="Moving Time" value={act.moving_time ? `${Math.floor(act.moving_time / 60)}m` : '—'} />
-          <Stat label="Avg Pace" value={act.average_speed ? `${(1000 / (act.average_speed * 60)).toFixed(1)} /km` : '—'} />
-          <Stat label="Elevation" value={act.elevation_gain ? `${Math.round(act.elevation_gain)} m` : '—'} />
-          <Stat label="Avg HR" value={act.average_heartrate ? `${Math.round(act.average_heartrate)} bpm` : '—'} />
-          <Stat label="Avg Power" value={act.average_power ? `${Math.round(act.average_power)} W` : '—'} />
-          <Stat label="Avg Cadence" value={act.average_cadence ? `${Math.round(act.average_cadence)} rpm` : '—'} />
-          <Stat label="Calories" value={act.calories ? `${act.calories} kcal` : '—'} />
-        </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, fontSize: '0.8rem' }}>
+            <Stat label="Distance" value={act.distance ? `${(act.distance / 1000).toFixed(2)} km` : '—'} />
+            <Stat label="Moving Time" value={act.moving_time ? `${Math.floor(act.moving_time / 60)}m` : '—'} />
+            <Stat label="Avg Pace" value={act.average_speed ? `${(1000 / (act.average_speed * 60)).toFixed(1)} /km` : '—'} />
+            <Stat label="Elevation" value={act.elevation_gain ? `${Math.round(act.elevation_gain)} m` : '—'} />
+            <Stat label="Avg HR" value={act.average_heartrate ? `${Math.round(act.average_heartrate)} bpm` : '—'} />
+            <Stat label="Avg Power" value={act.average_power ? `${Math.round(act.average_power)} W` : '—'} />
+            <Stat label="Avg Cadence" value={act.average_cadence ? `${Math.round(act.average_cadence)} rpm` : '—'} />
+            <Stat label="Calories" value={act.calories ? `${act.calories} kcal` : '—'} />
+          </div>
 
-        {act.summary_polyline && <MiniMap polyline={act.summary_polyline} colorScheme={colorScheme} />}
+          {act.summary_polyline && <MiniMap polyline={act.summary_polyline} colorScheme={colorScheme} />}
+        </div>
       </div>
     </div>
   )

@@ -22,7 +22,8 @@ export function Drawer() {
 
   return (
     <>
-      <div
+      <button
+        type="button"
         onClick={toggleDrawer}
         style={{
           position: 'fixed',
@@ -39,12 +40,13 @@ export function Drawer() {
           fontSize: '0.75rem',
           writingMode: 'vertical-lr',
           background: 'var(--color-bg)',
+          border: 'none',
           borderLeft: '1px solid var(--color-border)',
           userSelect: 'none',
         }}
       >
         {drawerOpen ? '→' : '←'} {useOverviewStore.getState().filteredActivities.length} activities
-      </div>
+      </button>
 
       <div
         style={{
@@ -207,17 +209,27 @@ function ActivityList() {
         }}
       >
         {headers.map((h) => (
-          <div
+          <button
+            type="button"
             key={h.field}
             onClick={() => toggleSort(h.field)}
-            style={{ cursor: 'pointer', fontWeight: sortField === h.field ? 700 : 400 }}
+            style={{
+              cursor: 'pointer',
+              fontWeight: sortField === h.field ? 700 : 400,
+              background: 'none',
+              border: 'none',
+              padding: 0,
+              textAlign: 'left',
+              color: 'inherit',
+            }}
           >
             {h.label} {sortField === h.field ? (sortDesc ? '↓' : '↑') : ''}
-          </div>
+          </button>
         ))}
       </div>
       {filtered.map((a) => (
-        <div
+        <button
+          type="button"
           key={a.run_id}
           onClick={() => openDetail(a)}
           style={{
@@ -227,6 +239,11 @@ function ActivityList() {
             padding: '2px 0',
             cursor: 'pointer',
             borderRadius: 2,
+            background: 'none',
+            border: 'none',
+            textAlign: 'left',
+            color: 'inherit',
+            width: '100%',
           }}
         >
           <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -234,7 +251,7 @@ function ActivityList() {
           </span>
           <span>{a.distance ? (a.distance / 1000).toFixed(1) : '—'}</span>
           <span>{a.moving_time ? `${Math.floor(a.moving_time / 60)}m` : '—'}</span>
-        </div>
+        </button>
       ))}
     </div>
   )
