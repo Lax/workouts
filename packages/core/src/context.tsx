@@ -34,7 +34,7 @@ export function useComponent(pluginId: string, name: string): ComponentType<any>
 
 export function useRequiredComponent(pluginId: string, name: string): ComponentType<any> | null {
   const Component = useComponent(pluginId, name)
-  if (import.meta.env.DEV && !Component) {
+  if (!Component) {
     console.warn(`[@workouts/core] Required component not registered: ${pluginId}:${name}`)
   }
   return Component
