@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import { useOverviewStore } from '../store'
+import '../overview.css'
 
 export function Drawer() {
   const drawerOpen = useOverviewStore((s) => s.drawerOpen)
@@ -8,7 +9,6 @@ export function Drawer() {
   const setSelectedYear = useOverviewStore((s) => s.setSelectedYear)
   const setSelectedMonth = useOverviewStore((s) => s.setSelectedMonth)
   const selectedMonth = useOverviewStore((s) => s.selectedMonth)
-  const _closeDetail = useOverviewStore((s) => s.closeDetail)
   const openCharts = useOverviewStore((s) => s.openCharts)
   const toggleDrawer = useOverviewStore((s) => s.toggleDrawer)
 
@@ -22,57 +22,18 @@ export function Drawer() {
 
   return (
     <>
-      <button
-        type="button"
-        onClick={toggleDrawer}
-        style={{
-          position: 'fixed',
-          top: 0,
-          right: 0,
-          bottom: 0,
-          width: 48,
-          zIndex: 2,
-          cursor: 'pointer',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          color: 'var(--color-text-secondary)',
-          fontSize: '0.75rem',
-          writingMode: 'vertical-lr',
-          background: 'var(--color-bg)',
-          border: 'none',
-          borderLeft: '1px solid var(--color-border)',
-          userSelect: 'none',
-        }}
-      >
+      <button type="button" className="drawer-toggle" onClick={toggleDrawer}>
         {drawerOpen ? '→' : '←'} {useOverviewStore.getState().filteredActivities.length} activities
       </button>
 
-      <div
-        style={{
-          position: 'fixed',
-          top: 0,
-          right: drawerOpen ? 0 : -360,
-          bottom: 0,
-          width: 320,
-          zIndex: 3,
-          background: 'var(--color-surface)',
-          borderLeft: '1px solid var(--color-border)',
-          transition: 'right 0.2s ease',
-          overflowY: 'auto',
-          padding: 10,
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 8,
-        }}
-      >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+      <div className={'drawer-panel' + (drawerOpen ? ' open' : '')}>
+        <div className="panel-header">
           <span style={{ fontWeight: 600 }}>Filters</span>
           <div style={{ display: 'flex', gap: 4 }}>
-            <button type="button" onClick={() => openCharts()} style={btnStyle}>
+            <button type="button" onClick={() => openCharts()} style={{ padding: '2px 8px', fontSize: '0.7rem', borderRadius: 4, border: '1px solid var(--color-border)', cursor: 'pointer', background: 'var(--color-bg)', color: 'var(--color-text)' }}>
               Charts
             </button>
-            <button type="button" onClick={() => useOverviewStore.getState().resetFilters()} style={btnStyle}>
+            <button type="button" onClick={() => useOverviewStore.getState().resetFilters()} style={{ padding: '2px 8px', fontSize: '0.7rem', borderRadius: 4, border: '1px solid var(--color-border)', cursor: 'pointer', background: 'var(--color-bg)', color: 'var(--color-text)' }}>
               Reset
             </button>
           </div>
@@ -87,7 +48,7 @@ export function Drawer() {
                 type="button"
                 onClick={() => setSelectedYear(selectedYear === y ? null : y)}
                 style={{
-                  ...chipStyle,
+                  padding: '2px 6px', fontSize: '0.65rem', borderRadius: 4, border: 'none', cursor: 'pointer',
                   background: selectedYear === y ? 'var(--color-accent)' : 'var(--color-bg)',
                   color: selectedYear === y ? '#000' : 'var(--color-text)',
                 }}
@@ -102,9 +63,7 @@ export function Drawer() {
                       key={m}
                       onClick={() => setSelectedMonth(selectedMonth === m ? null : m)}
                       style={{
-                        ...chipStyle,
-                        fontSize: '0.65rem',
-                        padding: '1px 4px',
+                        padding: '1px 4px', fontSize: '0.65rem', borderRadius: 4, border: 'none', cursor: 'pointer',
                         background: selectedMonth === m ? 'var(--color-accent)' : 'var(--color-bg)',
                         color: selectedMonth === m ? '#000' : 'var(--color-text)',
                       }}
@@ -132,6 +91,8 @@ function FiltersSection() {
   const availableSources = useOverviewStore((s) => s.availableSources)
   const setFilter = useOverviewStore((s) => s.setFilter)
 
+  const chipClass = (active: boolean) => 'chip' + (active ? ' active' : '')
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: '0.75rem' }}>
       <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
@@ -139,12 +100,8 @@ function FiltersSection() {
           <button
             type="button"
             key={t}
+            className={chipClass(filters.type === t)}
             onClick={() => setFilter({ type: filters.type === t ? '' : t })}
-            style={{
-              ...chipStyle,
-              background: filters.type === t ? 'var(--color-accent)' : 'var(--color-bg)',
-              color: filters.type === t ? '#000' : 'var(--color-text)',
-            }}
           >
             {t} ({c})
           </button>
@@ -155,12 +112,8 @@ function FiltersSection() {
           <button
             type="button"
             key={s}
+            className={chipClass(filters.source === s)}
             onClick={() => setFilter({ source: filters.source === s ? '' : s })}
-            style={{
-              ...chipStyle,
-              background: filters.source === s ? 'var(--color-accent)' : 'var(--color-bg)',
-              color: filters.source === s ? '#000' : 'var(--color-text)',
-            }}
           >
             {s} ({c})
           </button>
@@ -171,12 +124,8 @@ function FiltersSection() {
         value={filters.search}
         onChange={(e) => setFilter({ search: e.target.value })}
         style={{
-          padding: '4px 8px',
-          borderRadius: 4,
-          border: '1px solid var(--color-border)',
-          background: 'var(--color-bg)',
-          color: 'var(--color-text)',
-          fontSize: '0.75rem',
+          padding: '4px 8px', borderRadius: 4, border: '1px solid var(--color-border)',
+          background: 'var(--color-bg)', color: 'var(--color-text)', fontSize: '0.75rem',
         }}
       />
     </div>
@@ -200,50 +149,28 @@ function ActivityList() {
     <div style={{ fontSize: '0.7rem' }}>
       <div
         style={{
-          display: 'grid',
-          gridTemplateColumns: '1fr 60px 50px',
-          gap: 4,
-          paddingBottom: 4,
-          borderBottom: '1px solid var(--color-border)',
-          marginBottom: 4,
+          display: 'grid', gridTemplateColumns: '1fr 60px 50px', gap: 4,
+          paddingBottom: 4, borderBottom: '1px solid var(--color-border)', marginBottom: 4,
         }}
       >
         {headers.map((h) => (
-          <button
-            type="button"
+          <button type="button" className="sort-header"
             key={h.field}
             onClick={() => toggleSort(h.field)}
-            style={{
-              cursor: 'pointer',
-              fontWeight: sortField === h.field ? 700 : 400,
-              background: 'none',
-              border: 'none',
-              padding: 0,
-              textAlign: 'left',
-              color: 'inherit',
-            }}
+            style={{ fontWeight: sortField === h.field ? 700 : 400 }}
           >
             {h.label} {sortField === h.field ? (sortDesc ? '↓' : '↑') : ''}
           </button>
         ))}
       </div>
       {filtered.map((a) => (
-        <button
-          type="button"
+        <button type="button"
           key={a.run_id}
           onClick={() => openDetail(a)}
           style={{
-            display: 'grid',
-            gridTemplateColumns: '1fr 60px 50px',
-            gap: 4,
-            padding: '2px 0',
-            cursor: 'pointer',
-            borderRadius: 2,
-            background: 'none',
-            border: 'none',
-            textAlign: 'left',
-            color: 'inherit',
-            width: '100%',
+            display: 'grid', gridTemplateColumns: '1fr 60px 50px', gap: 4,
+            padding: '2px 0', cursor: 'pointer', borderRadius: 2,
+            background: 'none', border: 'none', textAlign: 'left', color: 'inherit', width: '100%', fontSize: '0.7rem',
           }}
         >
           <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -255,22 +182,4 @@ function ActivityList() {
       ))}
     </div>
   )
-}
-
-const btnStyle: React.CSSProperties = {
-  padding: '2px 8px',
-  fontSize: '0.7rem',
-  borderRadius: 4,
-  border: '1px solid var(--color-border)',
-  cursor: 'pointer',
-  background: 'var(--color-bg)',
-  color: 'var(--color-text)',
-}
-
-const chipStyle: React.CSSProperties = {
-  padding: '2px 6px',
-  fontSize: '0.65rem',
-  borderRadius: 4,
-  border: 'none',
-  cursor: 'pointer',
 }

@@ -51,17 +51,129 @@ async function gotoHello(page: Page) {
   await expect(page.locator('text=Hello World')).toBeVisible({ timeout: 10000 })
 }
 
+test('hello page shows version tables', async ({ page }) => {
+  const errors: string[] = []
+  page.on('pageerror', (err) => errors.push(err.message))
+  await gotoHello(page)
+  expect(errors).toEqual([])
+  await expect(page.locator('text=Workspace Packages')).toBeVisible()
+  await expect(page.locator('text=Runtime Dependencies')).toBeVisible()
+  await expect(page.locator('text=Tooling')).toBeVisible()
+})
+
+// ──────── Layout CSS Classes ────────
+
+test('overview has map-overlays with correct structure', async ({ page }) => {
+  await gotoOverview(page)
+  await expect(page.locator('.map-overlays')).toBeVisible()
+  // Brand text and year pills inside
+  await expect(page.locator('.brand')).toBeVisible()
+  await expect(page.locator('.year-pill').first()).toBeVisible()
+})
+
+test('legend-toggle with active class toggles', async ({ page }) => {
+  await gotoOverview(page)
+  await expect(page.locator('.legend-toggle')).toBeVisible()
+  await expect(page.locator('.legend-btn').first()).toBeVisible()
+  // Click speed button → it gets active class
+  await page.locator('.legend-btn:has-text("速度")').click()
+  await expect(page.locator('.legend-btn.active:has-text("速度")')).toBeVisible()
+  // Type button should no longer be active
+  await expect(page.locator('.legend-btn.active:has-text("类型")')).toHaveCount(0)
+})
+
+test('speed legend bar has four color segments', async ({ page }) => {
+  await gotoOverview(page)
+  await expect(page.locator('.speed-legend')).toBeVisible()
+  const spans = page.locator('.speed-legend > span')
+  await expect(spans).toHaveCount(4)
+})
+
+test('icon-btn theme toggle is present', async ({ page }) => {
+  await gotoOverview(page)
+  await expect(page.locator('.icon-btn')).toBeVisible()
+})
+
+test('year-pill active toggles on click', async ({ page }) => {
+  await gotoOverview(page)
+  const firstPill = page.locator('.year-pill').first()
+  await expect(firstPill).toBeVisible()
+  await firstPill.click()
+  await expect(page.locator('.year-pill.active')).toBeVisible()
+})
+
+// ──────── Drawer ────────
+
+test('drawer-toggle opens drawer-panel with open class', async ({ page }) => {
+  await gotoOverview(page)
+  await expect(page.locator('.drawer-toggle')).toBeVisible()
+  // Panel starts closed (no .open class)
+  await expect(page.locator('.drawer-panel.open')).toHaveCount(0)
+  // Click toggle
+  await page.locator('.drawer-toggle').click()
+  await expect(page.locator('.drawer-panel.open')).toBeVisible()
+  await expect(page.locator('text=Filters')).toBeVisible()
+})
+
+test('drawer-panel shows activity list after opening', async ({ page }) => {
+  await gotoOverview(page)
+  await page.locator('.drawer-toggle').click()
+  await expect(page.locator('.drawer-panel.open')).toBeVisible()
+  await expect(page.locator('.drawer-panel').locator('text=/Morning|Evening/').first()).toBeVisible({ timeout: 5000 })
+})
+
+// ──────── Detail Panel ────────
+
+test('detail-panel opens with card animation', async ({ page }) => {
+  await gotoOverview(page)
+  await page.locator('.drawer-toggle').click()
+  const activityLink = page.locator('.drawer-panel').locator('text=/Morning|Evening/').first()
+  await expect(activityLink).toBeVisible({ timeout: 5000 })
+  await activityLink.click()
+  await expect(page.locator('.detail-panel')).toBeVisible()
+  await expect(page.locator('.detail-card')).toBeVisible()
+  await expect(page.locator('.detail-backdrop')).toBeVisible()
+  await expect(page.locator('.close-btn')).toBeVisible()
+  await expect(page.locator('text=Distance')).toBeVisible()
+})
+
+test('detail-panel closes via backdrop click', async ({ page }) => {
+  await gotoOverview(page)
+  await page.locator('.drawer-toggle').click()
+  await page.locator('.drawer-panel').locator('text=/Morning|Evening/').first().click()
+  await expect(page.locator('.detail-card')).toBeVisible()
+  // Click top-left corner (backdrop area, not card)
+  await page.mouse.click(10, 10)
+  await expect(page.locator('.detail-panel')).not.toBeVisible()
+})
+
+// ──────── Chart Overlay ────────
+
+test('chart-overlay opens via Charts button', async ({ page }) => {
+  await gotoOverview(page)
+  await page.locator('.drawer-toggle').click()
+  await page.locator('button:has-text("Charts")').click()
+  await expect(page.locator('.chart-overlay')).toBeVisible()
+  await expect(page.locator('.chart-card')).toBeVisible()
+  await expect(page.locator('.chart-backdrop')).toBeVisible()
+})
+
+test('chart-overlay closes via backdrop click', async ({ page }) => {
+  await gotoOverview(page)
+  await page.locator('.drawer-toggle').click()
+  await page.locator('button:has-text("Charts")').click()
+  await expect(page.locator('.chart-card')).toBeVisible()
+  // Click top-left corner (backdrop area)
+  await page.mouse.click(10, 10)
+  await expect(page.locator('.chart-overlay')).not.toBeVisible()
+})
+
+// ──────── Simple Theme ────────
+
 test('SPA loads without page errors', async ({ page }) => {
   const errors: string[] = []
   page.on('pageerror', (err) => errors.push(err.message))
   await waitLoaded(page)
-  expect(errors).toEqual([])
-})
-
-test('hello page loads without errors', async ({ page }) => {
-  const errors: string[] = []
-  page.on('pageerror', (err) => errors.push(err.message))
-  await gotoHello(page)
   expect(errors).toEqual([])
 })
 
@@ -80,41 +192,14 @@ test('theme toggle persists across reload', async ({ page }) => {
 test('simple theme shows activity list', async ({ page }) => {
   await waitLoaded(page)
   await expect(page.locator('text=Workouts')).toBeVisible()
-  // Simple theme has a bottom activity bar with activity cards
   const actCards = page.locator('text=km').first()
   await expect(actCards).toBeVisible({ timeout: 5000 })
 })
 
 test('color mode toggles in simple theme', async ({ page }) => {
   await waitLoaded(page)
-  // Type and Speed buttons are visible
   await expect(page.locator('button:has-text("类型")')).toBeVisible()
   await expect(page.locator('button:has-text("速度")')).toBeVisible()
-  // Click speed mode
   await page.locator('button:has-text("速度")').click()
   await expect(page.locator('button:has-text("速度")')).toBeVisible()
-})
-
-test('overview page loads without errors', async ({ page }) => {
-  const errors: string[] = []
-  page.on('pageerror', (err) => errors.push(err.message))
-  await gotoOverview(page)
-  expect(errors).toEqual([])
-})
-
-test('overview drawer opens and shows activities', async ({ page }) => {
-  await gotoOverview(page)
-  await page.locator('text=/activities/').first().click()
-  await expect(page.locator('text=Filters')).toBeVisible({ timeout: 3000 })
-  await expect(page.locator('text=/Morning|Evening|Lunch|Hill|Recovery|Long|Commute|Weekend/').first()).toBeVisible({ timeout: 5000 })
-})
-
-test('overview clicking activity opens detail panel', async ({ page }) => {
-  await gotoOverview(page)
-  await page.locator('text=/activities/').first().click()
-  const activityLink = page.locator('text=/Morning|Evening|Lunch|Hill|Recovery|Long|Commute|Weekend/').first()
-  await expect(activityLink).toBeVisible({ timeout: 5000 })
-  await activityLink.click()
-  await expect(page.locator('button:has-text("×")')).toBeVisible({ timeout: 5000 })
-  await expect(page.locator('text=Distance')).toBeVisible()
 })

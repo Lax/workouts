@@ -2,6 +2,7 @@ import { useRequiredComponent } from '@workouts/core'
 import { buildMonthlyBarOption, buildTypePieOption } from '@workouts/plugin-chart'
 import { useEffect } from 'react'
 import { useOverviewStore } from '../store'
+import '../overview.css'
 
 export function ChartOverlay() {
   const showCharts = useOverviewStore((s) => s.showCharts)
@@ -27,50 +28,13 @@ export function ChartOverlay() {
   const typeOption = buildTypePieOption(filteredActivities)
 
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 4 }}>
-      <button
-        type="button"
-        onClick={closeCharts}
-        aria-label="Close"
-        style={{
-          position: 'absolute',
-          inset: 0,
-          background: 'rgba(0,0,0,0.5)',
-          border: 'none',
-          cursor: 'pointer',
-          display: 'block',
-        }}
-      />
-      <div
-        style={{
-          position: 'absolute',
-          inset: 0,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          pointerEvents: 'none',
-        }}
-      >
-        <div
-          style={{
-            background: 'var(--color-surface)',
-            borderRadius: 12,
-            padding: 16,
-            width: '90%',
-            maxWidth: 600,
-            pointerEvents: 'auto',
-            animation: 'fadeIn 0.15s ease-out',
-          }}
-        >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+    <div className="chart-overlay">
+      <button type="button" className="chart-backdrop" onClick={closeCharts} aria-label="Close" />
+      <div className="chart-content">
+        <div className="chart-card">
+          <div className="panel-header">
             <h3 style={{ margin: 0, fontSize: '1rem' }}>Charts</h3>
-            <button
-              type="button"
-              onClick={closeCharts}
-              style={{ background: 'none', border: 'none', color: 'var(--color-text)', fontSize: '1.5rem', cursor: 'pointer' }}
-            >
-              ×
-            </button>
+            <button type="button" className="close-btn" onClick={closeCharts}>×</button>
           </div>
           {Chart && (
             <Chart
