@@ -1,0 +1,21 @@
+{
+  "name": "@workouts/theme-hello-world",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.tsx",
+  "types": "./src/index.tsx",
+  "exports": {
+    ".": "./src/index.tsx"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0"
+  },
+  "devDependencies": {
+    "react": "^19.0.0",
+    "@workouts/core": "*"
+  },
+  "dependencies": {
+    "@workouts/core": "*"
+  }
+}
