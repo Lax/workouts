@@ -93,7 +93,7 @@ jobs:
       - name: Copy Svelte build to site/ (primary)
         run: |
           cp -r packages/web/dist/assets site/
-          cp packages/web/dist/index.html site/index.html
+          cp packages/web/dist/*.html site/
 
       - name: Validate build
         run: |
