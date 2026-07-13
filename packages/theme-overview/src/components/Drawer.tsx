@@ -67,10 +67,10 @@ export function Drawer() {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
           <span style={{ fontWeight: 600 }}>Filters</span>
           <div style={{ display: 'flex', gap: 4 }}>
-            <button onClick={() => openCharts()} style={btnStyle}>
+            <button type="button" onClick={() => openCharts()} style={btnStyle}>
               Charts
             </button>
-            <button onClick={() => useOverviewStore.getState().resetFilters()} style={btnStyle}>
+            <button type="button" onClick={() => useOverviewStore.getState().resetFilters()} style={btnStyle}>
               Reset
             </button>
           </div>
@@ -82,6 +82,7 @@ export function Drawer() {
           {yearItems.map(({ y, ms }) => (
             <div key={y}>
               <button
+                type="button"
                 onClick={() => setSelectedYear(selectedYear === y ? null : y)}
                 style={{
                   ...chipStyle,
@@ -95,6 +96,7 @@ export function Drawer() {
                 <div style={{ display: 'flex', gap: 2, flexWrap: 'wrap', marginTop: 2 }}>
                   {ms.map((m) => (
                     <button
+                      type="button"
                       key={m}
                       onClick={() => setSelectedMonth(selectedMonth === m ? null : m)}
                       style={{
@@ -133,6 +135,7 @@ function FiltersSection() {
       <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
         {availableTypes.map(([t, c]) => (
           <button
+            type="button"
             key={t}
             onClick={() => setFilter({ type: filters.type === t ? '' : t })}
             style={{
@@ -148,6 +151,7 @@ function FiltersSection() {
       <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
         {availableSources.map(([s, c]) => (
           <button
+            type="button"
             key={s}
             onClick={() => setFilter({ source: filters.source === s ? '' : s })}
             style={{

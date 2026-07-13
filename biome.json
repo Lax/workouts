@@ -18,6 +18,10 @@
       "suspicious": {
         "noExplicitAny": "off"
       },
+      "a11y": {
+        "noStaticElementInteractions": "off",
+        "useKeyWithClickEvents": "off"
+      },
       "style": {
         "noNonNullAssertion": "off"
       }

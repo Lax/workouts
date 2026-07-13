@@ -47,6 +47,7 @@ export function DetailPanel() {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
           <h3 style={{ margin: 0, fontSize: '1rem' }}>{act.name || 'Untitled'}</h3>
           <button
+            type="button"
             onClick={closeDetail}
             style={{ background: 'none', border: 'none', color: 'var(--color-text)', fontSize: '1.5rem', cursor: 'pointer' }}
           >
@@ -107,7 +108,7 @@ function decodePolyline(encoded: string): [number, number][] {
     lat = 0,
     lng = 0
   while (index < encoded.length) {
-    let b,
+    let b: number,
       shift = 0,
       result = 0
     do {

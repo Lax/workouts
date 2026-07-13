@@ -54,6 +54,7 @@ export function ChartOverlay() {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
           <h3 style={{ margin: 0, fontSize: '1rem' }}>Charts</h3>
           <button
+            type="button"
             onClick={closeCharts}
             style={{ background: 'none', border: 'none', color: 'var(--color-text)', fontSize: '1.5rem', cursor: 'pointer' }}
           >

@@ -55,6 +55,7 @@ function SimpleLayout() {
             }}
           >
             <button
+              type="button"
               onClick={() => setColorMode('type')}
               style={{
                 padding: '4px 12px',
@@ -69,6 +70,7 @@ function SimpleLayout() {
               类型
             </button>
             <button
+              type="button"
               onClick={() => setColorMode('speed')}
               style={{
                 padding: '4px 12px',
@@ -90,6 +92,7 @@ function SimpleLayout() {
             <span style={{ flex: 1, background: '#FF4500' }} />
           </div>
           <button
+            type="button"
             onClick={toggleTheme}
             style={{
               background: 'rgba(var(--color-surface-rgb), 0.85)',

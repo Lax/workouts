@@ -93,6 +93,7 @@ export function OverviewLayout() {
         >
           {years.map((y) => (
             <button
+              type="button"
               key={y}
               onClick={() => setSelectedYear(selectedYear === y ? null : y)}
               style={{
@@ -118,6 +119,7 @@ export function OverviewLayout() {
             <div style={{ display: 'flex', gap: 2, flexWrap: 'wrap', maxWidth: 120 }}>
               {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
                 <button
+                  type="button"
                   key={m}
                   onClick={() => setSelectedMonth(m)}
                   style={{
@@ -139,6 +141,7 @@ export function OverviewLayout() {
         {(selectedYear !== null || selectedMonth !== null) && (
           <div style={{ position: 'absolute', left: 10, top: 40, pointerEvents: 'auto' }}>
             <button
+              type="button"
               onClick={() => {
                 setSelectedYear(null)
                 setSelectedMonth(null)
@@ -181,6 +184,7 @@ export function OverviewLayout() {
             }}
           >
             <button
+              type="button"
               onClick={() => setColorMode('type')}
               style={{
                 padding: '4px 12px',
@@ -196,6 +200,7 @@ export function OverviewLayout() {
               类型
             </button>
             <button
+              type="button"
               onClick={() => setColorMode('speed')}
               style={{
                 padding: '4px 12px',
@@ -217,6 +222,7 @@ export function OverviewLayout() {
             <span style={{ flex: 1, background: '#FF4500' }} />
           </div>
           <button
+            type="button"
             onClick={toggleTheme}
             style={{
               background: 'rgba(var(--color-surface-rgb), 0.85)',
