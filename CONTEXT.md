@@ -5,7 +5,7 @@
 运动数据聚合 CLI 工具，多渠道同步 → SQLite 数据库 → JSON / CSV / SVG 导出。
 
 **仓库：** `github.com/Lax/workouts`（私有，付费计划）  
-**技术栈：** Ruby 3.4 (Thor, Sequel, SQLite3, Nokogiri, Faraday) + Svelte 5 / TypeScript (npm workspaces, Vite, Leaflet, ECharts)  
+**技术栈：** Ruby 3.4 (Thor, Sequel, SQLite3, Nokogiri, Faraday) + React 19 / TypeScript (npm workspaces, Vite, Leaflet, ECharts, zustand, Tailwind)  
 **部署：** Docker / GitHub Actions / GitHub Pages
 
 ---
@@ -388,8 +388,8 @@ build job (needs: sync):
   5. export svg → site/svg/github.svg
   6. validate SVG
   7. export stats → site/stats.json
-  8. Svelte build (npm run build)
-  9. copy Svelte dist → site/ (index.html + assets/)
+   8. Vite build (npm run build)
+   9. copy dist → site/ (assets/ + *.html)
   10. upload build artifact
 
 deploy job (needs: build):
@@ -452,55 +452,61 @@ L1 raw → L2 标准化 GPS → L3 SQLite 摘要 → L4 构建制品 → L5 部�
 
 ```
 packages/
-  shared/             # TypeScript：Activity 类型、格式化、SportMapper、categoryColor
-  svelte-echarts/     # ECharts wrapper 组件（workspace-only）
-  svelte-leaflet/     # Leaflet wrapper 组件（workspace-only）
-  web/                # Svelte 5 SPA — 主力前端
-    src/
-      app.css                 # CSS 变量（light/dark 双主题）
-      main.ts                 # 入口 — mount App
-      App.svelte              # 根组件：数据加载、地图 overlay（brand/year/legend/theme）
-      lib/
-        state.svelte.ts       # 全局状态 ($state) + 计算函数
-        Drawer.svelte         # 底部/右侧抽屉（handle+collapsed+body）
-        MapView.svelte        # Leaflet 地图 + 路线渲染
-        ActivityList.svelte   # 活动列表
-        ChartOverlay.svelte   # ECharts 图表（月距离 + 类型分布）
-        DetailPanel.svelte    # 详情面板（带 mini-map）
-        Filters.svelte        # 筛选面板
-        YearPicker.svelte     # 年份选择器
-        colorMode.ts          # 速度/类型配色
-        polyline.ts           # Google Polyline 解码
-    tests/
-      build-smoke.js          # L1 bundle 烟雾测试
-      state.test.ts           # L2 状态单元测试
-      fixtures/activities.ts  # 测试夹具生成器
-      e2e/spa.spec.ts         # L3 Playwright E2E
-    public/                   # 静态文件：dev 用 fixture JSON
+  shared/             # TypeScript：Activity 类型、格式化、SportMapper、categoryColor（不变）
+  core/               # React 19 核心：PluginAPI, ComponentRegistry, ThemeContext, ErrorBoundary, bootstrap()
+  plugin-data-source/ # 派生数据 hook：useDerivedData, computeYears, computeFilteredActivities
+  plugin-map/         # Leaflet 地图组件（MapView），polyline 解码
+  plugin-chart/       # ECharts 包装（Chart），月距离/类型饼图预设
+  plugin-ui/          # 通用 UI：Card, Badge
+  theme-hello-world/  # 无数据依赖验证主题
+  theme-simple/       # 地图 + 底部列表
+  theme-overview/     # 完整仪表盘（地图/抽屉/详情/图表）
+  web/                # Vite 入口 — 主力前端
     scripts/
-      generate-fixtures.mjs   # JS fixture 生成器（无 Ruby 环境时的 fallback）
+      template.html        # HTML 模板（含 FOUC 脚本）
+      generate-entries.mjs # 根据 config.json 生成多页 HTML
+      generate-fixtures.mjs
+    config.json            # 入口 + 插件 + 数据源配置
+    src/
+      app.css              # CSS 变量（light/dark 双主题）
+      entries/
+        index.tsx           # overview 主题入口 shim
+        hello.tsx           # hello-world 主题入口 shim
+      json.d.ts             # JSON 模块类型声明
+    public/                 # 静态文件：activities.json, stats.json
+    tests/
+      compute.test.ts       # plugin-data-source 纯函数测试
+      registry.test.ts      # core registry 测试
+      store.test.ts         # theme-overview zustand store 测试
+      formatters.test.ts    # shared 格式化测试
+      colorMode.test.ts     # speedColor/typeColor 测试
+      polyline.test.ts      # decodePolyline 测试
+      fixtures/activities.ts# 测试夹具生成器
+      e2e/spa.spec.ts       # Playwright E2E
 ```
 
 ### 数据流
 
 ```
 Ruby export (JSON) → packages/web/public/ (dev)
-                              → site/ (prod via gh-pages.yml)
-                                        ↓
-                              fetch('activities.json') + fetch('stats.json')
-                                        ↓
-                              App.svelte — 归一化 type→sport_category
-                                        ↓
-                              state.svelte.ts ($state + $effect)
-                                        ↓
-                              组件：MapView / Drawer / ChartOverlay / DetailPanel
+                    → site/ (prod via gh-pages.yml)
+                              ↓
+                    bootstrap(config, entry, { theme, plugins })
+                              ↓
+                    config.data → fetch('activities.json') + fetch('stats.json')
+                              ↓
+                    ThemeProvider (data + registry via React Context)
+                              ↓
+                    theme.Layout({ data, config, registry })
+                              ↓
+                    组件：MapView / Drawer / ChartOverlay / DetailPanel
 ```
 
 ### 字段名约定
 
 | 前端优先字段 | Ruby 导出字段 | 说明 |
 |---|---|---|
-| `sport_category` | `type` | App.svelte 归一化：`a.type && !a.sport_category` → copy |
+| `sport_category` | `type` | App 层归一化：`a.type && !a.sport_category` → copy |
 | `summary_polyline` | `summary_polyline` | — |
 | `sport_type` | `sport_type` | JSON 导出旧版本写 `subtype`，前端无消费 |
 
@@ -526,13 +532,12 @@ Ruby export (JSON) → packages/web/public/ (dev)
 
 | 层 | 工具 | 内容 |
 |---|---|---|
-| L1 Bundle smoke | Node `new Function()` | 捕获 `effect_orphan` |
-| L2 Unit | vitest | 纯函数：computeYears, computeFilteredActivities, computeAvailableTypes |
-| L3 E2E | Playwright | 加载、主题、列表、抽屉、详情面板 |
+| L0 Unit | vitest | 纯函数：computeYears, computeFilteredActivities, registry, store |
+| L1 E2E | Playwright | 加载、主题切换、列表、抽屉、详情面板 |
 
 ### CI/CD
 
-- **ci.yml**: push/PR → rspec + frontend test job (vitest → build → smoke → playwright)
+- **ci.yml**: push/PR → rspec + frontend test job (Biome → vitest → build → playwright)
 - **sync.yml**: schedule → sync data → build + deploy (Ruby 全程)
 - **gh-pages.yml**: CI completed (workflow_run) 或 sync workflow_dispatch → cache DB → export → build → deploy Pages
 
