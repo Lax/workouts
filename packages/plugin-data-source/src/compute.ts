@@ -5,7 +5,7 @@ export function computeYears(activities: Activity[]): number[] {
   for (const a of activities) {
     if (a.start_date) {
       const y = new Date(a.start_date).getFullYear()
-      if (!isNaN(y)) years.add(y)
+      if (!Number.isNaN(y)) years.add(y)
     }
   }
   return [...years].sort((a, b) => b - a)

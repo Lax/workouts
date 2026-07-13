@@ -1,6 +1,6 @@
-import { defineConfig } from 'vite'
+import { readFileSync } from 'node:fs'
 import react from '@vitejs/plugin-react'
-import { readFileSync } from 'fs'
+import { defineConfig } from 'vite'
 
 const raw = readFileSync('config.json', 'utf-8')
 const config = JSON.parse(raw)

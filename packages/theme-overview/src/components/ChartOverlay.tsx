@@ -1,6 +1,6 @@
-import { useEffect } from 'react'
 import { useRequiredComponent } from '@workouts/core'
 import { buildMonthlyBarOption, buildTypePieOption } from '@workouts/plugin-chart'
+import { useEffect } from 'react'
 import { useOverviewStore } from '../store'
 
 export function ChartOverlay() {
@@ -14,7 +14,9 @@ export function ChartOverlay() {
 
   useEffect(() => {
     if (!showCharts) return
-    function onKey(e: KeyboardEvent) { if (e.key === 'Escape') closeCharts() }
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') closeCharts()
+    }
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
   }, [showCharts, closeCharts])
@@ -26,20 +28,37 @@ export function ChartOverlay() {
 
   return (
     <div
-      onClick={(e) => { if (e.target === e.currentTarget) closeCharts() }}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) closeCharts()
+      }}
       style={{
-        position: 'fixed', inset: 0, zIndex: 4,
+        position: 'fixed',
+        inset: 0,
+        zIndex: 4,
         background: 'rgba(0,0,0,0.5)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
       }}
     >
-      <div style={{
-        background: 'var(--color-surface)', borderRadius: 12, padding: 16,
-        width: '90%', maxWidth: 600, animation: 'fadeIn 0.15s ease-out',
-      }}>
+      <div
+        style={{
+          background: 'var(--color-surface)',
+          borderRadius: 12,
+          padding: 16,
+          width: '90%',
+          maxWidth: 600,
+          animation: 'fadeIn 0.15s ease-out',
+        }}
+      >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
           <h3 style={{ margin: 0, fontSize: '1rem' }}>Charts</h3>
-          <button onClick={closeCharts} style={{ background: 'none', border: 'none', color: 'var(--color-text)', fontSize: '1.5rem', cursor: 'pointer' }}>×</button>
+          <button
+            onClick={closeCharts}
+            style={{ background: 'none', border: 'none', color: 'var(--color-text)', fontSize: '1.5rem', cursor: 'pointer' }}
+          >
+            ×
+          </button>
         </div>
         {Chart && (
           <Chart
@@ -48,7 +67,7 @@ export function ChartOverlay() {
             onClick={(params: any) => {
               if (params.dataIndex !== undefined && selectedYear !== null) {
                 const m = parseInt(params.name, 10)
-                if (!isNaN(m)) setSelectedMonth(m)
+                if (!Number.isNaN(m)) setSelectedMonth(m)
               }
             }}
           />

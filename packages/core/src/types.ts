@@ -1,5 +1,5 @@
-import type { ComponentType, ReactNode } from 'react'
 import type { Activity } from '@workouts/shared'
+import type { ComponentType } from 'react'
 
 export interface Config {
   theme?: string

@@ -1,5 +1,5 @@
-import { describe, it, expect, vi } from 'vitest'
-import { createRegistry, createPluginAPI } from '@workouts/core'
+import { createPluginAPI, createRegistry } from '@workouts/core'
+import { describe, expect, it, vi } from 'vitest'
 
 describe('createRegistry', () => {
   it('returns object with register and get methods', () => {
@@ -52,7 +52,7 @@ describe('createPluginAPI', () => {
   it('does not affect other plugin scopes', () => {
     const r = createRegistry()
     const apiA = createPluginAPI(r, 'a')
-    const apiB = createPluginAPI(r, 'b')
+    const _apiB = createPluginAPI(r, 'b')
     apiA.registerComponent('X', vi.fn())
     expect(r.get('b', 'X')).toBeNull()
   })

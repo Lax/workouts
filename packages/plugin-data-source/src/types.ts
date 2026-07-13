@@ -1,5 +1,3 @@
-import type { Activity } from '@workouts/shared'
-
 export interface FilterOptions {
   type: string
   source: string

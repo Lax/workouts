@@ -1,14 +1,22 @@
 {
-  "$schema": "node_modules/biome/configuration_schema.json",
-  "organizeImports": {
-    "enabled": true
+  "$schema": "https://biomejs.dev/schemas/2.5.3/schema.json",
+  "files": {
+    "includes": [
+      "**/packages/**/*/src/**/*.{ts,tsx,js,jsx}",
+      "**/packages/**/*/tests/**/*.{ts,tsx,js,jsx}",
+      "**/packages/web/vite.config.ts"
+    ],
+    "ignoreUnknown": true
   },
   "linter": {
     "enabled": true,
     "rules": {
-      "recommended": true,
+      "preset": "recommended",
       "correctness": {
         "noUnusedVariables": "error"
+      },
+      "suspicious": {
+        "noExplicitAny": "off"
       },
       "style": {
         "noNonNullAssertion": "off"
@@ -26,9 +34,5 @@
       "quoteStyle": "single",
       "semicolons": "asNeeded"
     }
-  },
-  "files": {
-    "include": ["packages/*/src/**/*.{ts,tsx,js}", "packages/*/tests/**/*.{ts,tsx,js}", "packages/web/vite.config.ts"],
-    "ignore": ["node_modules", "dist", "data", "site", "vendor"]
   }
 }
