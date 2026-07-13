@@ -1,19 +1,18 @@
 import { defineConfig } from 'vite'
-import { svelte } from '@sveltejs/vite-plugin-svelte'
+import react from '@vitejs/plugin-react'
 import { readFileSync } from 'fs'
 
-const config = JSON.parse(readFileSync('config.json', 'utf-8'))
+const raw = readFileSync('config.json', 'utf-8')
+const config = JSON.parse(raw)
+const entries = config.entries ?? { index: config.theme }
 const input: Record<string, string> = {}
-for (const key of Object.keys(config.pages))
+
+for (const key of Object.keys(entries)) {
   input[key] = `${key}.html`
+}
 
 export default defineConfig({
-  plugins: [svelte()],
-  resolve: {
-    alias: {
-      $lib: new URL('src/lib', import.meta.url).pathname,
-    },
-  },
+  plugins: [react()],
   base: '',
   build: {
     outDir: 'dist',

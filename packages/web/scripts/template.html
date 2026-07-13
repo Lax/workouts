@@ -1,30 +1,17 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="app-theme" content="{{THEME}}" />
-    <title>Workouts Dashboard</title>
-  </head>
-  <body>
-    <div id="app">
-      <div class="loading-spinner"></div>
-    </div>
-    <script type="module" src="/src/main.ts"></script>
-  </body>
-  <style>
-    .loading-spinner {
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      width: 32px;
-      height: 32px;
-      margin: -16px 0 0 -16px;
-      border: 3px solid #2a2a4a;
-      border-top-color: #4dd2ff;
-      border-radius: 50%;
-      animation: spin 0.8s linear infinite;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
-  </style>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="app-theme" content="{{THEME}}" />
+  <title>Workouts</title>
+  <script>
+    (function(){var t=localStorage.getItem('theme');var p=window.matchMedia('(prefers-color-scheme:dark)').matches;if(t==='dark'||(!t&&p))document.documentElement.setAttribute('data-theme','dark')})()
+  </script>
+  <link rel="stylesheet" href="/src/app.css" />
+</head>
+<body>
+  <div id="root"></div>
+  <script type="module" src="{{ENTRY}}"></script>
+</body>
 </html>

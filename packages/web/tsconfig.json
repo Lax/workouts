@@ -3,16 +3,10 @@
   "compilerOptions": {
     "outDir": "./dist",
     "rootDir": "./src",
-    "types": ["svelte"],
+    "jsx": "react-jsx",
     "verbatimModuleSyntax": true,
-    "paths": {
-      "$lib/*": ["./src/lib/*"]
-    }
+    "resolveJsonModule": true,
+    "types": []
   },
-  "include": ["src", "tests", "vite-env.d.ts"],
-  "references": [
-    { "path": "../shared" },
-    { "path": "../svelte-echarts" },
-    { "path": "../svelte-leaflet" }
-  ]
+  "include": ["src", "vite-env.d.ts"]
 }

@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import L from 'leaflet'
 import { useOverviewStore } from '../store'
 
 export function DetailPanel() {
@@ -67,20 +68,17 @@ function Stat({ label, value }: { label: string; value: string }) {
 
 function MiniMap({ polyline, colorScheme }: { polyline: string; colorScheme: string }) {
   useEffect(() => {
-    let map: any = null
-    import('leaflet').then((L) => {
-      const el = document.getElementById('mini-map')
-      if (!el) return
-      map = L.map(el, { zoomControl: false, attributionControl: false }).setView([30, 110], 4)
-      const tiles = colorScheme === 'dark' ? 'dark_nolabels' : 'light_nolabels'
-      L.tileLayer(`https://{s}.basemaps.cartocdn.com/${tiles}/{z}/{x}/{y}{r}.png`, { maxZoom: 19, attribution: '' }).addTo(map)
-      const points = decodePolyline(polyline)
-      if (points.length > 1) {
-        L.polyline(points, { color: '#4DD2FF', weight: 3 }).addTo(map)
-        map.fitBounds(L.latLngBounds(points.map((p: [number, number]) => L.latLng(p[0], p[1]))).pad(0.1))
-      }
-    })
-    return () => { map?.remove() }
+    const el = document.getElementById('mini-map')
+    if (!el) return
+    const map = L.map(el, { zoomControl: false, attributionControl: false }).setView([30, 110], 4)
+    const tiles = colorScheme === 'dark' ? 'dark_nolabels' : 'light_nolabels'
+    L.tileLayer(`https://{s}.basemaps.cartocdn.com/${tiles}/{z}/{x}/{y}{r}.png`, { maxZoom: 19, attribution: '' }).addTo(map)
+    const points = decodePolyline(polyline)
+    if (points.length > 1) {
+      L.polyline(points, { color: '#4DD2FF', weight: 3 }).addTo(map)
+      map.fitBounds(L.latLngBounds(points.map((p) => L.latLng(p[0], p[1]))).pad(0.1))
+    }
+    return () => { map.remove() }
   }, [polyline, colorScheme])
 
   return <div id="mini-map" style={{ height: 150, marginTop: 8, borderRadius: 8, overflow: 'hidden' }} />

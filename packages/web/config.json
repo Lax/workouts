@@ -1,7 +1,16 @@
 {
-  "pages": {
-    "index":   { "url": "/",        "theme": "overview" },
-    "summary": { "url": "/summary",  "theme": "running_page" },
-    "hello":   { "url": "/hello",    "theme": "hello-world" }
+  "entries": {
+    "index": "overview",
+    "hello": "hello-world"
+  },
+  "plugins": {
+    "data-source": {},
+    "map": {},
+    "chart": {},
+    "ui": {}
+  },
+  "data": {
+    "activities": { "source": "activities.json", "optional": false },
+    "stats": { "source": "stats.json", "optional": true }
   }
 }

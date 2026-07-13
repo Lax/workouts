@@ -1,15 +1,12 @@
 import { readFileSync, writeFileSync } from 'fs'
-import { resolve, dirname } from 'path'
-import { fileURLToPath } from 'url'
+import { resolve } from 'path'
 
-const __dirname = dirname(fileURLToPath(import.meta.url))
-const root = resolve(__dirname, '..')
+const root = resolve(import.meta.dirname, '..')
+const config = JSON.parse(readFileSync(resolve(root, 'config.json'), 'utf-8'))
+const entries = config.entries ?? { index: config.theme }
+const template = readFileSync(resolve(import.meta.dirname, 'template.html'), 'utf-8')
 
-const { pages } = JSON.parse(readFileSync(resolve(root, 'config.json'), 'utf-8'))
-const template = readFileSync(resolve(__dirname, 'template.html'), 'utf-8')
-
-for (const entry of Object.keys(pages)) {
-  const { theme } = pages[entry]
-  const html = template.replaceAll('{{THEME}}', theme)
-  writeFileSync(resolve(root, `${entry}.html`), html)
+for (const key of Object.keys(entries)) {
+  const html = template.replace('{{ENTRY}}', `./src/entries/${key}.tsx`).replace('{{THEME}}', entries[key])
+  writeFileSync(resolve(root, `${key}.html`), html)
 }

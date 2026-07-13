@@ -13,6 +13,7 @@
   },
   "devDependencies": {
     "react": "^19.0.0",
+    "@types/leaflet": "^1.9.0",
     "@workouts/core": "*",
     "@workouts/plugin-map": "*",
     "@workouts/plugin-chart": "*",
@@ -24,6 +25,7 @@
     "@workouts/plugin-map": "*",
     "@workouts/plugin-chart": "*",
     "@workouts/plugin-data-source": "*",
-    "zustand": "^5.0.0"
+    "zustand": "^5.0.0",
+    "leaflet": "^1.9.4"
   }
 }

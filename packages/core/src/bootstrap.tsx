@@ -7,15 +7,27 @@ import { ErrorBoundary } from './ErrorBoundary'
 export async function bootstrap(
   config: Config,
   entry: string,
-  options?: { data?: ThemeProps['data'] },
+  options?: {
+    data?: ThemeProps['data']
+    theme?: ThemePlugin
+    plugins?: Record<string, RegularPlugin>
+  },
 ): Promise<void> {
   const themeId = config.entries?.[entry] ?? config.theme
   if (!themeId) throw new Error(`No theme configured for entry "${entry}"`)
 
-  const theme = await loadTheme(themeId)
+  const theme = options?.theme ?? await loadTheme(themeId)
   const registry = createRegistry()
 
-  await loadPlugins(config, registry)
+  if (options?.plugins) {
+    for (const [id, plugin] of Object.entries(options.plugins)) {
+      if (plugin.type === 'plugin' && plugin.setup) {
+        plugin.setup(createPluginAPI(registry, plugin.manifest.id))
+      }
+    }
+  } else {
+    await loadPlugins(config, registry)
+  }
 
   const data = options?.data ?? await fetchData(config.data ?? {})
 
