@@ -15,6 +15,7 @@ export function OverviewLayout() {
   const colorMode = useOverviewStore((s) => s.colorMode)
   const colorScheme = useOverviewStore((s) => s.colorScheme)
   const selectedYear = useOverviewStore((s) => s.selectedYear)
+  const selectedMonth = useOverviewStore((s) => s.selectedMonth)
   const filteredActivities = useOverviewStore((s) => s.filteredActivities)
   const mapHoveredId = useOverviewStore((s) => s.mapHoveredId)
   const setSelectedYear = useOverviewStore((s) => s.setSelectedYear)
@@ -63,6 +64,12 @@ export function OverviewLayout() {
               </button>
             ))}
           </div>
+          {selectedYear !== null && selectedMonth !== null && (
+            <div className="month-chip">
+              {selectedYear}-{String(selectedMonth).padStart(2, '0')}
+              <button type="button" onClick={() => useOverviewStore.getState().setSelectedMonth(null)}>×</button>
+            </div>
+          )}
         </div>
 
         <div className="ol-bl">

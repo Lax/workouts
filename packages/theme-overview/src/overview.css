@@ -20,9 +20,13 @@
 
 /* Year pills */
 .year-pills { display: flex; flex-direction: column; gap: 3px; }
-.year-pill { padding: 2px 8px; border-radius: 12px; border: 1px solid var(--color-border, #2a2a4a); background: rgba(var(--color-surface-rgb), 0.85); color: var(--color-text-secondary, #888); cursor: pointer; font-size: 0.7rem; transition: all 0.15s; backdrop-filter: blur(4px); }
+.year-pill { padding: 2px 8px; border-radius: 12px; border: 1px solid var(--color-border, #2a2a4a); background: rgba(var(--color-surface-rgb), 0.85); color: var(--color-text-secondary, #888); cursor: pointer; font-size: 0.7rem; text-align: center; line-height: 1.5; transition: all 0.15s; backdrop-filter: blur(4px); }
 .year-pill:hover { border-color: var(--color-accent, #4dd2ff); color: var(--color-accent, #4dd2ff); }
 .year-pill.active { background: var(--color-accent, #4dd2ff); color: var(--color-bg, #121212); border-color: var(--color-accent, #4dd2ff); font-weight: 600; }
+
+.month-chip { display: inline-flex; align-items: center; gap: 0.25rem; background: rgba(var(--color-surface-rgb), 0.85); border: 1px solid var(--color-border, #2a2a4a); color: var(--color-accent, #4dd2ff); border-radius: 12px; padding: 2px 8px; font-size: 0.7rem; margin-top: 3px; backdrop-filter: blur(4px); }
+.month-chip button { background: none; border: none; color: var(--color-accent, #4dd2ff); cursor: pointer; font-size: 1rem; padding: 0; line-height: 1; opacity: 0.7; }
+.month-chip button:hover { opacity: 1; }
 
 /* Legend */
 .legend-toggle { display: flex; background: rgba(var(--color-surface-rgb), 0.85); border-radius: 8px; border: 1px solid var(--color-border, #2a2a4a); overflow: hidden; backdrop-filter: blur(4px); }
@@ -102,8 +106,18 @@
 /* Detail panel */
 .detail-panel { position: fixed; inset: 0; z-index: 3; }
 .detail-backdrop { position: absolute; inset: 0; background: rgba(0,0,0,0.5); border: none; cursor: pointer; display: block; }
-.detail-content { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: none; }
-.detail-card { background: var(--color-surface); border-radius: 12px; padding: 16px; width: 90%; max-width: 400px; pointer-events: auto; animation: fadeIn 0.15s ease-out; }
+.detail-content { position: absolute; inset: 0; display: flex; align-items: flex-end; justify-content: center; pointer-events: none; }
+.detail-card { background: var(--color-surface); border-radius: 12px 12px 0 0; padding: 1rem; width: 100%; max-width: 600px; max-height: 80vh; overflow-y: auto; pointer-events: auto; animation: slideUp 0.2s ease-out; }
+
+.detail-card h2 { font-size: 1.1rem; color: var(--color-text); margin: 0; }
+.detail-meta { font-size: 0.8rem; color: var(--color-text-secondary); margin-bottom: 1rem; }
+.detail-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem; margin-bottom: 1rem; }
+.detail-stat { text-align: center; }
+.detail-stat .label { display: block; font-size: 0.7rem; color: var(--color-text-dim); }
+.detail-stat .value { font-size: 1rem; font-weight: 600; color: var(--color-text); }
+.detail-mini-map { height: 200px; border-radius: 8px; overflow: hidden; }
+
+@keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
 
 /* Chart overlay */
 .chart-overlay { position: fixed; inset: 0; z-index: 4; }
@@ -120,6 +134,7 @@
 @media (max-width: 1023px) {
   .ol-lc { left: 10px; top: 10px; bottom: auto; transform: none; }
   .ol-bl { bottom: 62px; }
+  .year-pills { flex-direction: row; overflow-x: auto; }
 }
 @media (min-width: 1024px) {
   .drawer { left: auto; right: 0; bottom: auto; top: 50%; transform: translateY(-50%) translateX(calc(100% - 48px)); width: auto; height: auto; max-height: 80vh; border-top: none; border-left: 1px solid var(--color-border, #2a2a4a); border-radius: 12px 0 0 12px; flex-direction: row-reverse; }

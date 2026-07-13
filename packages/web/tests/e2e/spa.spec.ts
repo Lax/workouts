@@ -144,19 +144,51 @@ test('detail-panel closes via backdrop click', async ({ page }) => {
   await expect(page.locator('.detail-panel')).not.toBeVisible()
 })
 
-test('chart-overlay opens via Charts button in drawer', async ({ page }) => {
+test('detail-panel shows 3-column grid with stats', async ({ page }) => {
   await gotoOverview(page)
   await page.locator('.drawer-collapsed').click()
-  // Charts button is in drawer-header when open
-  await page.locator('.drawer-header button:has-text("📊")').click()
+  const firstActivity = page.locator('.activity-row').first()
+  await expect(firstActivity).toBeVisible({ timeout: 5000 })
+  await firstActivity.click()
+  await expect(page.locator('.detail-grid')).toBeVisible()
+  // Verify 3-column grid structure: Distance, Moving Time, Avg Pace in first row
+  await expect(page.locator('.detail-grid .detail-stat')).toHaveCount(8)
+  await expect(page.locator('.detail-stat').nth(0)).toContainText('Distance')
+  await expect(page.locator('.detail-stat').nth(1)).toContainText('Moving Time')
+  await expect(page.locator('.detail-stat').nth(2)).toContainText('Avg Pace')
+})
+
+test('detail-panel shows meta info', async ({ page }) => {
+  await gotoOverview(page)
+  await page.locator('.drawer-collapsed').click()
+  const firstActivity = page.locator('.activity-row').first()
+  await expect(firstActivity).toBeVisible({ timeout: 5000 })
+  await firstActivity.click()
+  await expect(page.locator('.detail-meta')).toBeVisible()
+  // Meta contains date and source
+  const meta = page.locator('.detail-meta')
+  await expect(meta).not.toBeEmpty()
+})
+
+test('detail-panel uses h2 for activity name', async ({ page }) => {
+  await gotoOverview(page)
+  await page.locator('.drawer-collapsed').click()
+  const firstActivity = page.locator('.activity-row').first()
+  await expect(firstActivity).toBeVisible({ timeout: 5000 })
+  await firstActivity.click()
+  await expect(page.locator('.detail-card h2')).toBeVisible()
+})
+
+test('chart-overlay opens via Charts button in drawer', async ({ page }) => {
+  await gotoOverview(page)
+  await page.locator('.drawer-collapsed button:has-text("📊")').click()
   await expect(page.locator('.chart-overlay')).toBeVisible()
   await expect(page.locator('.chart-card')).toBeVisible()
 })
 
 test('chart-overlay closes via backdrop click', async ({ page }) => {
   await gotoOverview(page)
-  await page.locator('.drawer-collapsed').click()
-  await page.locator('.drawer-header button:has-text("📊")').click()
+  await page.locator('.drawer-collapsed button:has-text("📊")').click()
   await expect(page.locator('.chart-card')).toBeVisible()
   await page.mouse.click(10, 10)
   await expect(page.locator('.chart-overlay')).not.toBeVisible()
