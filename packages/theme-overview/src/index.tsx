@@ -8,3 +8,5 @@ const theme: ThemePlugin = {
 }
 
 export default theme
+export { useOverviewStore } from './store'
+export type { OverviewStore, Filters, SortField } from './store'
