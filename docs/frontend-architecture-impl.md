@@ -49,7 +49,7 @@ Core provides component registry + context. Plugins register components at init 
 
 ### 3.2 CSS: Tailwind v4
 
-**Decision:** Tailwind v4 at the application level via `@tailwindcss/vite`. Individual plugins/themes optionally use utility classes. Unused classes are purged at build.
+**Decision:** Tailwind v4 at the application level via `@tailwindcss/vite`. Individual plugins/themes optionally use utility classes. Unused classes are purged at build. Dark mode uses `data-theme` attribute rather than the `dark` CSS class, consistent with the existing project convention.
 
 **Rationale:**
 - Utility-first CSS maps directly to component composition in React
@@ -57,6 +57,7 @@ Core provides component registry + context. Plugins register components at init 
 - `@theme` directive centralizes design tokens without a separate config file
 - Build-time purging ensures non-Tailwind-using themes produce zero Tailwind output
 - `@tailwindcss/vite` has zero-config integration with Vite
+- Dark mode via `@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));`
 
 **Why not CSS Modules:** CSS Modules provide scoping but require naming every component. For ~15 components across themes, the naming overhead exceeds the scoping benefit. Tailwind's purge eliminates the unused-class concern from global CSS approaches.
 
@@ -163,6 +164,18 @@ Core provides component registry + context. Plugins register components at init 
 - Screenshot diffs cannot be meaningfully resolved in merge conflicts
 - CI environment rendering differences (OS, GPU, fonts) cause false positive diffs that are indistinguishable from real regressions without manual review
 - CI Artifact provides download-and-compare without polluting the repository
+
+### 3.11 Component Resolution: Development-Time Assertion
+
+**Decision:** Themes use a `useRequiredComponent` wrapper that warns in development when an expected plugin component is not registered. The check is dead-code-eliminated in production builds.
+
+**Rationale:**
+- The component registry is stringly-typed: a typo in a component name or a misconfigured config.json silently returns `null`
+- A development-time warning catches the "plugin missing" class of bugs before they reach CI
+- Zero production cost: Vite's `import.meta.env.DEV` tree-shakes the entire check in production
+
+**Rejected alternative:**
+- **Runtime assertion that throws:** A missing component is not a crash-worthy error — themes should gracefully degrade. Warning is the correct severity.
 
 ## 4. Implementation Order
 

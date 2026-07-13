@@ -179,7 +179,7 @@ interface WorkoutsPlugin {
 }
 
 interface ThemeProps {
-  data: { activities: Activity[]; stats: Record<string, unknown> | null }
+  data: { activities: Activity[]; stats: Record<string, unknown> | null; error?: string }
   config: Record<string, unknown>
   registry: ComponentRegistry
 }
@@ -248,6 +248,22 @@ Themes cannot override another plugin's registered component. A theme that needs
 - Conditionally renders a completely different component when MapView is available
 - Registers its own component set (theme-private, not in the global registry)
 
+### 5.4.1 Development-Time Resolution Check
+
+Themes can use a wrapper that warns in development when an expected component is not registered:
+
+```typescript
+function useRequiredComponent(pluginId: string, name: string) {
+  const Component = useComponent(pluginId, name)
+  if (process.env.NODE_ENV === 'development' && !Component) {
+    console.warn(`[${pluginId}] ${name} not loaded`)
+  }
+  return Component
+}
+```
+
+Zero runtime cost — the entire check is dead-code-eliminated in production builds.
+
 ### 5.5 Graceful Degradation
 
 | Scenario | Behavior |
@@ -255,7 +271,7 @@ Themes cannot override another plugin's registered component. A theme that needs
 | plugin-map not loaded | `useComponent` returns null. Theme renders without map. |
 | plugin-chart not loaded | Chart button hidden or disabled. |
 | data.{key}.optional = true, fetch fails | Field is null. Components handle null. |
-| data.{key}.optional = false, fetch fails | Core renders error boundary. |
+| data.{key}.optional = false, fetch fails | Core passes error info via Context (`error` field in ThemeProps). Theme Layout handles visual presentation of the error. |
 | plugin init() throws | Core logs error, skips plugin. Other plugins proceed. |
 | config.json missing/empty | Core throws descriptive error at bootstrap. |
 | config.json references unknown plugin | Core logs warning, continues without it. |
@@ -321,10 +337,7 @@ interface WorkoutsConfig {
     data?: unknown
     optional?: boolean
   }>
-  entries?: {
-    url: string
-    theme: string
-  }[]
+  entries?: Record<string, string>  // { urlPath: themeId }. "index" → /, "overview" → /overview
 }
 ```
 
@@ -360,11 +373,11 @@ interface WorkoutsConfig {
     "activities": { "type": "url", "path": "https://cdn.example.com/activities.json", "optional": false },
     "stats": { "type": "url", "path": "https://cdn.example.com/stats.json", "optional": true }
   },
-  "entries": [
-    { "url": "/", "theme": "simple" },
-    { "url": "/overview", "theme": "overview" },
-    { "url": "/hello", "theme": "hello" }
-  ]
+  "entries": {
+    "index": "simple",
+    "overview": "overview",
+    "hello": "hello"
+  }
 }
 ```
 
@@ -479,7 +492,7 @@ export const useSimpleStore = create<SimpleStore>((set) => ({
 
 ```typescript
 interface ThemeProps {
-  data: { activities: Activity[]; stats: Stats | null }
+  data: { activities: Activity[]; stats: Stats | null; error?: string }
   config: Record<string, unknown>
   registry: ComponentRegistry
 }
@@ -585,9 +598,9 @@ import tailwindcss from '@tailwindcss/vite'
 import config from './config.json'
 
 const input = Object.fromEntries(
-  (config.entries || [{ url: '/', name: 'index' }]).map(e => [
-    e.name || e.theme,
-    `src/entries/${e.theme}.tsx`
+  Object.entries(config.entries ?? { index: config.theme }).map(([key, theme]) => [
+    key === 'index' ? 'index' : key,
+    `src/entries/${theme}.tsx`,
   ])
 )
 
@@ -648,6 +661,23 @@ Design tokens are centralized in `@theme`:
 ```
 
 Dark mode: Tailwind's `dark:` prefix, driven by `data-theme` attribute on `<html>`.
+
+```css
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+```
+
+An inline `<script>` in the HTML `<head>` prevents flash of wrong theme (FOUC):
+
+```html
+<script>
+  const saved = localStorage.getItem('theme')
+  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
+  if (saved === 'dark' || (!saved && prefersDark))
+    document.documentElement.setAttribute('data-theme', 'dark')
+</script>
+```
+
+Theme switching follows system preference by default, overridden by manual toggle which persists to `localStorage`.
 
 ## 12. Testing
 
