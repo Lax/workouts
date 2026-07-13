@@ -1,0 +1,23 @@
+{
+  "name": "@workouts/plugin-data-source",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0"
+  },
+  "devDependencies": {
+    "react": "^19.0.0",
+    "@workouts/core": "*",
+    "@workouts/shared": "*"
+  },
+  "dependencies": {
+    "@workouts/core": "*",
+    "@workouts/shared": "*"
+  }
+}
