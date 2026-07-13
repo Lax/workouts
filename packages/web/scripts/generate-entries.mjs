@@ -15,8 +15,8 @@ for (const key of Object.keys(entries)) {
   writeFileSync(resolve(root, `${key}.html`), html)
 
   const shim = `import { bootstrap } from '@workouts/core'
-import config from '../../config.json'
 import theme from '@workouts/theme-${themeId}'
+import config from '../../config.json'
 
 bootstrap(config, { theme })
 `
