@@ -24,6 +24,7 @@ export function createOverviewStore(ctx: ThemeContext) {
     activities: [] as Activity[],
     stats: null as StatsJson | null,
     colorMode: 'speed' as 'speed' | 'type',
+    colorScheme: (document.documentElement.getAttribute('data-theme') || 'dark') as 'dark' | 'light',
     selectedYear: null as number | null,
     selectedMonth: null as number | null,
     drawerOpen: false,

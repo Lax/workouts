@@ -10,8 +10,6 @@
 
   let { ctx }: { ctx: ThemeContext } = $props()
 
-  setContext('theme', ctx)
-
   const storeApi = createOverviewStore(ctx)
   const store = storeApi.state
   const { setActivities, openDetail, closeDetail, openCharts, closeCharts, toggleSort, resetFilters } = storeApi
@@ -23,10 +21,10 @@
   })
 
   function toggleTheme() {
-    const cur = document.documentElement.getAttribute('data-theme') || 'dark'
-    const next = cur === 'light' ? 'dark' : 'light'
+    const next = store.colorScheme === 'light' ? 'dark' : 'light'
     document.documentElement.setAttribute('data-theme', next)
     localStorage.setItem('theme', next)
+    store.colorScheme = next
   }
 </script>
 
@@ -55,7 +53,7 @@
       <span class="sl-red"></span>
     </div>
     <button class="icon-btn" onclick={toggleTheme} aria-label="Toggle theme">
-      {ctx.theme === 'dark' ? '☀️' : '🌙'}
+      {store.colorScheme === 'dark' ? '☀️' : '🌙'}
     </button>
   </div>
 </div>

@@ -5,7 +5,6 @@
   import { getContext } from 'svelte'
   import { decodePolyline } from '$lib/polyline'
   const { state: store, closeDetail } = getContext('overview-store') as any
-  const ctx = getContext('theme') as any
   import { formatDistance, formatDuration } from '@workouts/shared'
 
   let el: HTMLDivElement
@@ -22,7 +21,7 @@
         scrollWheelZoom: false,
       }).setView([30, 110], 4)
 
-      const carto = ctx.theme === 'dark' ? 'dark_nolabels' : 'light_nolabels'
+      const carto = store.colorScheme === 'dark' ? 'dark_nolabels' : 'light_nolabels'
       L.tileLayer(
         `https://{s}.basemaps.cartocdn.com/${carto}/{z}/{x}/{y}{r}.png`,
         { maxZoom: 19 },

@@ -6,14 +6,13 @@
   import { decodePolyline } from '$lib/polyline'
   import { activityColor } from '../colorMode'
   const { state: store, openDetail } = getContext('overview-store') as any
-  const ctx = getContext('theme') as any
 
   let el: HTMLDivElement
   let map: L.Map | null = null
   let polylines: Map<string, L.Polyline> = new Map()
 
   function tileUrl(): string {
-    const carto = ctx.theme === 'dark' ? 'dark_nolabels' : 'light_nolabels'
+    const carto = store.colorScheme === 'dark' ? 'dark_nolabels' : 'light_nolabels'
     return `https://{s}.basemaps.cartocdn.com/${carto}/{z}/{x}/{y}{r}.png`
   }
 
@@ -120,7 +119,7 @@
 
   $effect(() => {
     if (!map) return
-    ctx.theme
+    store.colorScheme
     updateTileLayer()
   })
 
