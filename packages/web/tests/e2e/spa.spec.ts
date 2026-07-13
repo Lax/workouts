@@ -66,9 +66,33 @@ test('hello page shows version tables', async ({ page }) => {
 test('overview has map-overlays with correct structure', async ({ page }) => {
   await gotoOverview(page)
   await expect(page.locator('.map-overlays')).toBeVisible()
-  // Brand text and year pills inside
   await expect(page.locator('.brand')).toBeVisible()
   await expect(page.locator('.year-pill').first()).toBeVisible()
+})
+
+test('year-picker shows All button and deselects on click', async ({ page }) => {
+  await gotoOverview(page)
+  await expect(page.locator('.year-pill:has-text("All")')).toBeVisible()
+  // "All" is active by default (no year selected)
+  await expect(page.locator('.year-pill:has-text("All").active')).toBeVisible()
+  // Click a year pill → All loses active, year gets active
+  await page.locator('.year-pill').nth(1).click()
+  await expect(page.locator('.year-pill:has-text("All").active')).toHaveCount(0)
+  await expect(page.locator('.year-pill.active')).toHaveCount(1)
+  // Click All → year deselected, All active again
+  await page.locator('.year-pill:has-text("All")').click()
+  await expect(page.locator('.year-pill:has-text("All").active')).toBeVisible()
+  await expect(page.locator('.year-pill.active')).toHaveCount(1)
+})
+
+test('leaflet zoom controls use theme CSS variables', async ({ page }) => {
+  await gotoOverview(page)
+  const zoomIn = page.locator('.leaflet-control-zoom a').first()
+  await expect(zoomIn).toBeVisible()
+  // Check it uses a custom background (not default Leaflet blue #f4f4f4)
+  const bg = await zoomIn.evaluate((el) => window.getComputedStyle(el).backgroundColor)
+  // Surface color in dark theme is dark (not light gray)
+  expect(bg).not.toBe('rgb(244, 244, 244)')
 })
 
 test('legend-toggle with active class toggles', async ({ page }) => {

@@ -53,6 +53,13 @@ export function OverviewLayout() {
 
         <div className="ol-lc">
           <div className="year-pills">
+            <button
+              type="button"
+              className={`year-pill${selectedYear === null ? ' active' : ''}`}
+              onClick={() => setSelectedYear(null)}
+            >
+              All
+            </button>
             {years.map((y) => (
               <button
                 type="button"
