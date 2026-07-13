@@ -1,0 +1,60 @@
+---
+database:
+  path: data/workouts.db
+
+sync:
+  # time_budget: 300            # 单次同步最大秒数 (可选, env: SYNC__TIME_BUDGET)
+  # total_timeout: 600          # Runner 总超时秒数 (可选, env: SYNC__TOTAL_TIMEOUT)
+
+  # strava:                     # OAuth2
+  #   client_id: ""             # env: SYNC__STRAVA__CLIENT_ID
+  #   client_secret: ""         # env: SYNC__STRAVA__CLIENT_SECRET
+  #   refresh_token: ""         # env: SYNC__STRAVA__REFRESH_TOKEN
+
+  # garmin:                     # Garmin International (garmin.com)
+  #   email: "your@email.com"   # env: SYNC__GARMIN__EMAIL
+  #   password: "your_password" # env: SYNC__GARMIN__PASSWORD
+  #   auth_seed: "base64..."    # DI OAuth2 token (env: SYNC__GARMIN__AUTH_SEED)
+
+  # garmin_cn:                  # Garmin China (garmin.cn)
+  #   email: "13800138000"      # env: SYNC__GARMIN_CN__EMAIL
+  #   password: "your_password" # env: SYNC__GARMIN_CN__PASSWORD
+  #   secret: "base64..."       # OAuth1+OAuth2 token (env: SYNC__GARMIN_CN__SECRET)
+
+  # keep:
+  #   phone: "13800138000"      # env: SYNC__KEEP__PHONE
+  #   password: "your_password" # env: SYNC__KEEP__PASSWORD
+
+  # igpsport:
+  #   phone: "13800138000"      # env: SYNC__IGPSPORT__PHONE
+  #   password: "your_password" # env: SYNC__IGPSPORT__PASSWORD
+
+  # xoss:                       # XOSS International (backend.xoss.co)
+  #   email: "your@email.com"   # env: SYNC__XOSS__EMAIL
+  #   password: "your_password" # env: SYNC__XOSS__PASSWORD
+
+  # xingzhe:                    # 行者国内版 (imxingzhe.com)
+  #   email: "13800138000"      # env: SYNC__XINGZHE__EMAIL
+  #   password: "your_password" # env: SYNC__XINGZHE__PASSWORD
+
+migrate:
+  # igpsport_to_garmin:
+  #   limit: 10                 # 默认上传数量 (env: MIGRATE__IGPSPORT_TO_GARMIN__LIMIT)
+  # igpsport_to_garmin_cn:
+  #   limit: 10                 # env: MIGRATE__IGPSPORT_TO_GARMIN_CN__LIMIT
+
+export:
+  json:
+    path: site/activities.json
+  svg:
+    dir: site/svg
+  csv:
+    path: site/workouts.csv
+
+privacy:
+  start_end_range: 200
+
+system:
+  units: metric
+  log_level: info
+  timezone: UTC
