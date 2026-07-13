@@ -7,7 +7,7 @@ on:
     branches: [main]
 
 jobs:
-  test:
+  ruby-test:
     runs-on: ubuntu-latest
 
     strategy:
