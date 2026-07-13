@@ -87,10 +87,10 @@ jobs:
       - name: Export Stats
         run: bundle exec exe/workouts export stats --output site/stats.json
 
-      - name: Build Svelte frontend
+      - name: Build frontend
         run: npm run build
 
-      - name: Copy Svelte build to site/ (primary)
+      - name: Copy frontend build to site/
         run: |
           cp -r packages/web/dist/assets site/
           cp packages/web/dist/*.html site/
@@ -99,7 +99,7 @@ jobs:
         run: |
           test -f site/index.html || { echo "::error::Missing index.html"; exit 1; }
           ls site/assets/index-*.js >/dev/null 2>&1 || { echo "::error::Missing JS bundle"; exit 1; }
-          echo "OK: Svelte build present"
+          echo "OK: frontend build present"
 
       - uses: actions/upload-pages-artifact@v3
         with:

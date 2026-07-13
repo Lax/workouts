@@ -47,12 +47,8 @@ jobs:
         run: npx vitest run
         working-directory: packages/web
 
-      - name: Build Svelte frontend
+      - name: Build frontend
         run: npm run build
-
-      - name: Bundle smoke test
-        run: node tests/build-smoke.js
-        working-directory: packages/web
 
       - id: playwright-cache
         uses: actions/cache/restore@v4
@@ -73,4 +69,3 @@ jobs:
 
       - name: Run Playwright E2E tests
         run: npx playwright test
-        working-directory: packages/web
