@@ -23,6 +23,12 @@ export default defineConfig({
         entryFileNames: 'assets/[name]-[hash].js',
         chunkFileNames: 'assets/[name]-[hash].js',
         assetFileNames: 'assets/[name]-[hash][extname]',
+        manualChunks(id) {
+          if (id.includes('node_modules/leaflet')) return 'leaflet'
+          if (id.includes('node_modules/echarts')) return 'echarts'
+          if (id.includes('node_modules/react') || id.includes('node_modules/zustand')) return 'react'
+          if (id.includes('node_modules')) return 'vendor'
+        },
       },
     },
   },
