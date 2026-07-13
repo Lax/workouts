@@ -1,8 +1,9 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte'
   import L from 'leaflet'
+  import 'leaflet/dist/leaflet.css'
   import { getContext } from 'svelte'
-  import { decodePolyline } from '../polyline'
+  import { decodePolyline } from '$lib/polyline'
   const { state: store, closeDetail } = getContext('overview-store') as any
   const ctx = getContext('theme') as any
   import { formatDistance, formatDuration } from '@workouts/shared'
@@ -27,7 +28,7 @@
         { maxZoom: 19 },
       ).addTo(miniMap)
 
-      const encoded = store.selectedActivity.summary_polyline || store.selectedActivity.polyline
+      const encoded = store.selectedActivity.summary_polyline
       if (encoded) {
         const points = decodePolyline(encoded)
         if (points.length > 1) {
@@ -36,6 +37,7 @@
             weight: 3,
             opacity: 0.8,
           }).addTo(miniMap)
+          miniMap.invalidateSize()
           miniMap.fitBounds(line.getBounds().pad(0.2))
         }
       }

@@ -3,7 +3,7 @@
   import L from 'leaflet'
   import 'leaflet/dist/leaflet.css'
   import { getContext } from 'svelte'
-  import { decodePolyline } from '../polyline'
+  import { decodePolyline } from '$lib/polyline'
   import { activityColor } from '../colorMode'
   const { state: store, openDetail } = getContext('overview-store') as any
   const ctx = getContext('theme') as any
@@ -31,7 +31,7 @@
 
     for (let i = 0; i < Math.min(acts.length, maxLines); i++) {
       const a = acts[i]
-      const encoded = a.summary_polyline || a.polyline
+      const encoded = a.summary_polyline
       if (!encoded) continue
 
       const points = decodePolyline(encoded)

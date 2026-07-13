@@ -4,7 +4,10 @@
     "outDir": "./dist",
     "rootDir": "./src",
     "types": ["svelte"],
-    "verbatimModuleSyntax": true
+    "verbatimModuleSyntax": true,
+    "paths": {
+      "$lib/*": ["./src/lib/*"]
+    }
   },
   "include": ["src", "tests", "vite-env.d.ts"],
   "references": [

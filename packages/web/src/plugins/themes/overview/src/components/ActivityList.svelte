@@ -2,7 +2,7 @@
   import { getContext } from 'svelte'
   import { formatDistance, formatDuration, formatDate } from '@workouts/shared'
   import { activityColor } from '../colorMode'
-  import { decodePolyline } from '../polyline'
+  import { decodePolyline } from '$lib/polyline'
   const { state: store, toggleSort, openDetail } = getContext('overview-store') as any
 
   interface SvgPathData {
@@ -44,7 +44,7 @@
   let pathCache = $derived.by(() => {
     const map = new Map<string, SvgPathData>()
     for (const a of store.filteredActivities) {
-      const encoded = a.summary_polyline || a.polyline
+      const encoded = a.summary_polyline
       if (!encoded) { map.set(a.run_id, { points: '', sx: 0, sy: 0, ex: 0, ey: 0, hasPath: false }); continue }
       if (decodeCache.has(encoded)) {
         map.set(a.run_id, decodeCache.get(encoded)!)
@@ -101,6 +101,11 @@
 </div>
 
 <div class="list">
+  {#if store.filteredActivities.length === 0}
+    <div class="empty-state">
+      <p>No activities match your filters</p>
+    </div>
+  {:else}
   {#each store.filteredActivities as act (act.run_id)}
     {@const col = activityColor({ average_speed: act.average_speed, type: act.sport_category }, store.colorMode)}
     {@const svg = pathCache.get(act.run_id)}
@@ -135,6 +140,7 @@
       </div>
     </div>
   {/each}
+  {/if}
 </div>
 
 <style>

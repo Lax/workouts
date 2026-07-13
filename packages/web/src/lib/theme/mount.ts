@@ -15,6 +15,7 @@ export async function loadData(): Promise<DataResult> {
     const activities: Activity[] = actRes.ok ? await actRes.json() : []
     for (const a of activities) {
       if (a.type && !a.sport_category) a.sport_category = a.type
+      if (!a.summary_polyline && a.polyline) a.summary_polyline = a.polyline
     }
     const stats = statsRes.ok ? await statsRes.json() : null
     return { activities, stats }
