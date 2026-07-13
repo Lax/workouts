@@ -1,0 +1,26 @@
+{
+  "name": "@workouts/plugin-map",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0",
+    "leaflet": "^1.9.4"
+  },
+  "devDependencies": {
+    "react": "^19.0.0",
+    "@types/leaflet": "^1.9.0",
+    "@workouts/core": "*",
+    "@workouts/shared": "*"
+  },
+  "dependencies": {
+    "@workouts/core": "*",
+    "@workouts/shared": "*",
+    "leaflet": "^1.9.4"
+  }
+}
