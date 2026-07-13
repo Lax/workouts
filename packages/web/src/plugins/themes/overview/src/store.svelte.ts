@@ -15,6 +15,8 @@ export interface Filters {
   type: string; source: string; distanceMin: number | null; distanceMax: number | null; search: string
 }
 
+export { computeYears, computeAvailableTypes, computeAvailableSources, filterActivities as computeFilteredActivities }
+
 export function createOverviewStore(ctx: ThemeContext) {
   let activitiesInput: Activity[] = $state([])
 

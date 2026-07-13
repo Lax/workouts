@@ -4,7 +4,7 @@ import {
   computeAvailableTypes,
   computeAvailableSources,
   computeFilteredActivities,
-} from '../src/lib/state.svelte'
+} from '../src/plugins/themes/overview/src/store.svelte'
 import type { Activity } from '@workouts/shared'
 
 function act(overrides: Partial<Activity> = {}): Activity {
