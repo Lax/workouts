@@ -27,6 +27,7 @@ export function MapView({
   const elRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<L.Map | null>(null)
   const polylinesRef = useRef<Map<string, L.Polyline>>(new Map())
+  const fittedRef = useRef<number>(0)
 
   const tileUrl = useCallback(
     () => `https://{s}.basemaps.cartocdn.com/${colorScheme === 'dark' ? 'dark_nolabels' : 'light_nolabels'}/{z}/{x}/{y}{r}.png`,
@@ -100,9 +101,14 @@ export function MapView({
     }
 
     if (allPoints.length > 0) {
-      const bounds = L.latLngBounds(allPoints.map((p) => L.latLng(p[0], p[1])))
-      if (bounds.isValid()) {
-        map.fitBounds(bounds.pad(0.05))
+      // Fit bounds only on first load or when activity count changes
+      const actKey = activities.length
+      if (!fittedRef.current || fittedRef.current !== actKey) {
+        const bounds = L.latLngBounds(allPoints.map((p) => L.latLng(p[0], p[1])))
+        if (bounds.isValid()) {
+          map.fitBounds(bounds.pad(0.05))
+          fittedRef.current = actKey as any
+        }
       }
     }
   }, [activities, colorMode, maxLines, onActivityClick, onActivityHover])

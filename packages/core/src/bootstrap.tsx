@@ -23,6 +23,11 @@ export async function bootstrap(
   }
 
   const data = options.data ?? (await fetchData(config.data ?? {}))
+  // Normalize: Ruby export writes type instead of sport_category
+  for (const a of data.activities) {
+    if (a.type && !a.sport_category) a.sport_category = a.type
+    if (!a.summary_polyline && (a as any).polyline) a.summary_polyline = (a as any).polyline
+  }
 
   const root = document.getElementById('root')
   if (!root) throw new Error('No #root element found')
