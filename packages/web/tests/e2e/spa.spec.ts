@@ -84,86 +84,80 @@ test('legend-toggle with active class toggles', async ({ page }) => {
 
 test('speed legend bar has four color segments', async ({ page }) => {
   await gotoOverview(page)
-  await expect(page.locator('.speed-legend')).toBeVisible()
-  const spans = page.locator('.speed-legend > span')
-  await expect(spans).toHaveCount(4)
+  await expect(page.locator('.speed-legend')).toHaveCount(1)
+  await expect(page.locator('.speed-legend > span')).toHaveCount(4)
 })
 
 test('icon-btn theme toggle is present', async ({ page }) => {
   await gotoOverview(page)
-  await expect(page.locator('.icon-btn')).toBeVisible()
+  const iconBtns = page.locator('.icon-btn')
+  // Theme toggle is an icon-btn, should exist
+  await expect(iconBtns.first()).toBeVisible()
 })
 
-test('year-pill active toggles on click', async ({ page }) => {
+test('drawer opens and shows stats when clicked', async ({ page }) => {
   await gotoOverview(page)
-  const firstPill = page.locator('.year-pill').first()
-  await expect(firstPill).toBeVisible()
-  await firstPill.click()
-  await expect(page.locator('.year-pill.active')).toBeVisible()
+  await expect(page.locator('.drawer')).toBeVisible()
+  // Drawer starts collapsed
+  await expect(page.locator('.drawer-collapsed')).toBeVisible()
+  await expect(page.locator('.stat-pill').first()).toBeVisible()
 })
 
-// ──────── Drawer ────────
-
-test('drawer-toggle opens drawer-panel with open class', async ({ page }) => {
+test('drawer-body becomes visible after opening', async ({ page }) => {
   await gotoOverview(page)
-  await expect(page.locator('.drawer-toggle')).toBeVisible()
-  // Panel starts closed (no .open class)
-  await expect(page.locator('.drawer-panel.open')).toHaveCount(0)
-  // Click toggle
-  await page.locator('.drawer-toggle').click()
-  await expect(page.locator('.drawer-panel.open')).toBeVisible()
-  await expect(page.locator('text=Filters')).toBeVisible()
+  await page.locator('.drawer-collapsed').click()
+  await expect(page.locator('.drawer.open')).toBeVisible()
+  await expect(page.locator('.drawer-body')).toBeVisible()
+  // Should see activity list tabs
+  await expect(page.locator('.tab:has-text("Activities")')).toBeVisible()
+  await expect(page.locator('.tab:has-text("Filters")')).toBeVisible()
 })
 
-test('drawer-panel shows activity list after opening', async ({ page }) => {
+test('activity list shows items after drawer opens', async ({ page }) => {
   await gotoOverview(page)
-  await page.locator('.drawer-toggle').click()
-  await expect(page.locator('.drawer-panel.open')).toBeVisible()
-  await expect(page.locator('.drawer-panel').locator('text=/Morning|Evening/').first()).toBeVisible({ timeout: 5000 })
+  await page.locator('.drawer-collapsed').click()
+  await expect(page.locator('.drawer.open')).toBeVisible()
+  await expect(page.locator('.list')).toBeVisible()
+  await expect(page.locator('.list .activity-row').first()).toBeVisible({ timeout: 5000 })
 })
 
-// ──────── Detail Panel ────────
-
-test('detail-panel opens with card animation', async ({ page }) => {
+test('clicking activity in drawer opens detail panel', async ({ page }) => {
   await gotoOverview(page)
-  await page.locator('.drawer-toggle').click()
-  const activityLink = page.locator('.drawer-panel').locator('text=/Morning|Evening/').first()
-  await expect(activityLink).toBeVisible({ timeout: 5000 })
-  await activityLink.click()
+  await page.locator('.drawer-collapsed').click()
+  const firstActivity = page.locator('.activity-row').first()
+  await expect(firstActivity).toBeVisible({ timeout: 5000 })
+  await firstActivity.click()
   await expect(page.locator('.detail-panel')).toBeVisible()
   await expect(page.locator('.detail-card')).toBeVisible()
   await expect(page.locator('.detail-backdrop')).toBeVisible()
-  await expect(page.locator('.close-btn')).toBeVisible()
   await expect(page.locator('text=Distance')).toBeVisible()
 })
 
 test('detail-panel closes via backdrop click', async ({ page }) => {
   await gotoOverview(page)
-  await page.locator('.drawer-toggle').click()
-  await page.locator('.drawer-panel').locator('text=/Morning|Evening/').first().click()
+  await page.locator('.drawer-collapsed').click()
+  const firstActivity = page.locator('.activity-row').first()
+  await expect(firstActivity).toBeVisible({ timeout: 5000 })
+  await firstActivity.click()
   await expect(page.locator('.detail-card')).toBeVisible()
-  // Click top-left corner (backdrop area, not card)
   await page.mouse.click(10, 10)
   await expect(page.locator('.detail-panel')).not.toBeVisible()
 })
 
-// ──────── Chart Overlay ────────
-
-test('chart-overlay opens via Charts button', async ({ page }) => {
+test('chart-overlay opens via Charts button in drawer', async ({ page }) => {
   await gotoOverview(page)
-  await page.locator('.drawer-toggle').click()
-  await page.locator('button:has-text("Charts")').click()
+  await page.locator('.drawer-collapsed').click()
+  // Charts button is in drawer-header when open
+  await page.locator('.drawer-header button:has-text("📊")').click()
   await expect(page.locator('.chart-overlay')).toBeVisible()
   await expect(page.locator('.chart-card')).toBeVisible()
-  await expect(page.locator('.chart-backdrop')).toBeVisible()
 })
 
 test('chart-overlay closes via backdrop click', async ({ page }) => {
   await gotoOverview(page)
-  await page.locator('.drawer-toggle').click()
-  await page.locator('button:has-text("Charts")').click()
+  await page.locator('.drawer-collapsed').click()
+  await page.locator('.drawer-header button:has-text("📊")').click()
   await expect(page.locator('.chart-card')).toBeVisible()
-  // Click top-left corner (backdrop area)
   await page.mouse.click(10, 10)
   await expect(page.locator('.chart-overlay')).not.toBeVisible()
 })

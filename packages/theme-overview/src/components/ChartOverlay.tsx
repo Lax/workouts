@@ -34,7 +34,9 @@ export function ChartOverlay() {
         <div className="chart-card">
           <div className="panel-header">
             <h3 style={{ margin: 0, fontSize: '1rem' }}>Charts</h3>
-            <button type="button" className="close-btn" onClick={closeCharts}>×</button>
+            <button type="button" className="close-btn" onClick={closeCharts}>
+              ×
+            </button>
           </div>
           {Chart && (
             <Chart
