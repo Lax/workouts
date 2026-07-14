@@ -56,10 +56,24 @@ jobs:
         env:
           VITE__MAPBOX__TOKEN: ${{ secrets.MAPBOX_TOKEN }}
 
-      - name: Install Playwright browsers (ubuntu only)
+      # ── Playwright browser cache (GitHub runner) ──
+      - id: playwright-cache
         if: vars.RUNNER_LABEL != 'self-hosted'
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('packages/web/package.json') }}
+
+      - name: Install Playwright browsers
+        if: steps.playwright-cache.outputs.cache-hit != 'true' && vars.RUNNER_LABEL != 'self-hosted'
         run: npx playwright install --with-deps chromium
         working-directory: packages/web
+
+      - uses: actions/cache/save@v4
+        if: steps.playwright-cache.outputs.cache-hit != 'true' && vars.RUNNER_LABEL != 'self-hosted'
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ steps.playwright-cache.outputs.cache-primary-key }}
 
       - name: Run Playwright E2E tests
         run: npx playwright test
