@@ -96,11 +96,14 @@ jobs:
         run: |
           cp -r packages/web/dist/assets site/
           cp packages/web/dist/*.html site/
+          cp packages/web/dist/versions.json site/
 
       - name: Validate build
         run: |
-          test -f site/index.html || { echo "::error::Missing index.html"; exit 1; }
-          ls site/assets/index-*.js >/dev/null 2>&1 || { echo "::error::Missing JS bundle"; exit 1; }
+          for entry in $(ruby -rjson -e 'JSON.parse(File.read("packages/web/config.json")).fetch("entries", {"index"=>""}).each_key { |k| puts k }'); do
+            test -f "site/$entry.html" || { echo "::error::Missing $entry.html"; exit 1; }
+          done
+          test -f site/versions.json || { echo "::error::Missing versions.json"; exit 1; }
           echo "OK: frontend build present"
 
       - uses: actions/upload-pages-artifact@v3

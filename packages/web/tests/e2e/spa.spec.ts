@@ -51,7 +51,7 @@ async function gotoHello(page: Page) {
   await expect(page.locator('text=Hello World')).toBeVisible({ timeout: 10000 })
 }
 
-test('hello page shows version tables', async ({ page }) => {
+test('hello page shows version tables with data', async ({ page }) => {
   const errors: string[] = []
   page.on('pageerror', (err) => errors.push(err.message))
   await gotoHello(page)
@@ -59,6 +59,33 @@ test('hello page shows version tables', async ({ page }) => {
   await expect(page.locator('text=Workspace Packages')).toBeVisible()
   await expect(page.locator('text=Runtime Dependencies')).toBeVisible()
   await expect(page.getByRole('heading', { name: /Tooling/ })).toBeVisible()
+  await expect(page.locator('.hello-row').first()).toBeVisible()
+  await expect(page.locator('.hello-pkg').first()).toBeVisible()
+})
+
+test('hello page shows error state when versions.json fails', async ({ page }) => {
+  const errors: string[] = []
+  page.on('pageerror', (err) => errors.push(err.message))
+  await page.route('**/versions.json', (route) => route.fulfill({ status: 404 }))
+  await gotoHello(page)
+  expect(errors).toEqual([])
+  await expect(page.locator('text=Failed to load version data')).toBeVisible()
+})
+
+test('hello page shows empty state when no packages found', async ({ page }) => {
+  const errors: string[] = []
+  page.on('pageerror', (err) => errors.push(err.message))
+  await page.route('**/versions.json', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ workspace: [], runtime: [], tooling: [] }),
+    }),
+  )
+  await gotoHello(page)
+  expect(errors).toEqual([])
+  const emptyStates = page.locator('.hello-empty')
+  await expect(emptyStates).toHaveCount(3)
 })
 
 // ──────── Layout CSS Classes ────────

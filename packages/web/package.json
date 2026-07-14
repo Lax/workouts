@@ -12,7 +12,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:e2e": "playwright test",
-    "generate-fixtures": "node scripts/generate-fixtures.mjs"
+    "generate-fixtures": "node scripts/generate-fixtures.mjs",
+    "verify-build-output": "node scripts/verify-build-output.mjs"
   },
   "dependencies": {
     "@workouts/shared": "*",
