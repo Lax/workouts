@@ -16,12 +16,18 @@ export function Header({ config }: { config: SiteConfig }) {
   const colorScheme = useSimpleStore((s) => s.colorScheme)
   const toggleTheme = useSimpleStore((s) => s.toggleTheme)
 
+  const githubUser = import.meta.env.VITE_GITHUB_USER
+
   return (
     <header className="simple-header">
       <div className="logo-area">
         {config.logo ? (
           <a href={config.url}>
             <img className="logo-img" src={config.logo} alt={config.title} />
+          </a>
+        ) : githubUser ? (
+          <a href={config.url}>
+            <img className="logo-img" src={`https://github.com/${githubUser}.png`} alt={config.title} />
           </a>
         ) : (
           <a className="logo-text" href={config.url}>

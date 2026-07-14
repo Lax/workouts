@@ -91,6 +91,7 @@ jobs:
         run: npm run build
         env:
           VITE__MAPBOX__TOKEN: ${{ secrets.MAPBOX_TOKEN }}
+          VITE_GITHUB_USER: ${{ github.repository_owner }}
 
       - name: Copy frontend build to site/
         run: |

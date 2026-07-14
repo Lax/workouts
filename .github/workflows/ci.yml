@@ -57,6 +57,7 @@ jobs:
         run: npm run build
         env:
           VITE__MAPBOX__TOKEN: ${{ secrets.MAPBOX_TOKEN }}
+          VITE_GITHUB_USER: ${{ github.repository_owner }}
 
       - name: Verify build output
         run: npm run verify-build-output
