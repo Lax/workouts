@@ -1,5 +1,5 @@
 import L from 'leaflet'
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { useOverviewStore } from '../store'
 import '../overview.css'
 
@@ -65,21 +65,44 @@ function Stat({ label, value }: { label: string; value: string }) {
 }
 
 function MiniMap({ polyline, colorScheme }: { polyline: string; colorScheme: string }) {
+  const mapRef = useRef<L.Map | null>(null)
+  const polylineRef = useRef<L.Polyline | null>(null)
+
   useEffect(() => {
     const el = document.getElementById('mini-map')
-    if (!el) return
+    if (!el || mapRef.current) return
     const map = L.map(el, { zoomControl: false, attributionControl: false }).setView([30, 110], 4)
-    const tiles = colorScheme === 'dark' ? 'dark_nolabels' : 'light_nolabels'
-    L.tileLayer(`https://{s}.basemaps.cartocdn.com/${tiles}/{z}/{x}/{y}{r}.png`, { maxZoom: 19, attribution: '' }).addTo(map)
-    const points = decodePolyline(polyline)
-    if (points.length > 1) {
-      L.polyline(points, { color: '#4DD2FF', weight: 3 }).addTo(map)
-      map.fitBounds(L.latLngBounds(points.map((p) => L.latLng(p[0], p[1]))).pad(0.1))
-    }
+    mapRef.current = map
     return () => {
       map.remove()
+      mapRef.current = null
     }
-  }, [polyline, colorScheme])
+  }, [])
+
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map) return
+    map.eachLayer((layer) => {
+      if (layer instanceof L.TileLayer) map.removeLayer(layer)
+    })
+    const tiles = colorScheme === 'dark' ? 'dark_nolabels' : 'light_nolabels'
+    L.tileLayer(`https://{s}.basemaps.cartocdn.com/${tiles}/{z}/{x}/{y}{r}.png`, { maxZoom: 19, attribution: '' }).addTo(map)
+  }, [colorScheme])
+
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map) return
+    if (polylineRef.current) {
+      map.removeLayer(polylineRef.current)
+      polylineRef.current = null
+    }
+    const points = decodePolyline(polyline)
+    if (points.length > 1) {
+      const line = L.polyline(points, { color: '#4DD2FF', weight: 3 }).addTo(map)
+      polylineRef.current = line
+      map.fitBounds(L.latLngBounds(points.map((p) => L.latLng(p[0], p[1]))).pad(0.1))
+    }
+  }, [polyline])
 
   return <div id="mini-map" style={{ height: '100%' }} />
 }

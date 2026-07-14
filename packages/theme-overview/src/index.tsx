@@ -20,3 +20,4 @@ const theme: ThemePlugin = {
 export default theme
 export type { Filters, OverviewStore, SortField } from './store'
 export { useOverviewStore } from './store'
+export { DetailPanel } from './components/DetailPanel'
