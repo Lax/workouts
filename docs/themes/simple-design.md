@@ -14,8 +14,8 @@
 ├──────────────────────┬───────────────────────┤
 │  LEFT (flex: 1/3)    │  RIGHT (flex: 2/3)    │
 │  整页可滚动           │                       │
-│                      │  MapView              │
-│  Site Title + Link   │  (variant="contained")│
+│  SimpleMap (<PanelMap />)                      │
+│  Site Title + Link   │  (<PanelMap />)       │
 │                      │  + Year pills overlay │
 │  YearsStat:          │                       │
 │  ┌─ YearBlock ──┐    │  RunTable / SVGStat   │
@@ -31,29 +31,42 @@
 
 ## 关键架构决策
 
-### MapView variant prop
+### 地图组件分层 + tileUrl callback
 
-`packages/plugin-map/src/MapView.tsx`
+plugin-map 提供引擎层，不感知 tile provider：
 
-| Prop | 值 | 容器样式 | 使用场景 |
-|---|---|---|---|
-| `variant` | `'fullscreen'` (default) | `position: fixed; inset: 0` | overview 主题 |
-| | `'contained'` | `height: 100%; width: 100%` | simple 主题（父容器约束） |
-
-两种模式除 CSS 外无任何逻辑分支。Leaflet API（初始化、polyline 渲染、事件、tooltip）完全一致。
-
-simple 用法：
-```tsx
-<div className="map-wrapper">
-  <MapView variant="contained" ... />
-</div>
+```
+plugin-map
+├── useLeafletMap + useMapPolylines    核心 hooks
+├── HeroMap    全屏布局 (position: fixed)     → overview
+├── PanelMap   内嵌布局 (height: 100%)        → simple
+└── tiles.ts   tileUrl builder 工厂
 ```
 
-父容器 `.map-wrapper` 设显式高度，MapView 通过 `height: 100%` 填满。
+主题层通过 `tileUrl` callback 控制 tile 源，plugin-map 零认知：
+```tsx
+// SimpleMap
+<PanelMap tileUrl={mapbox(token, 'dark-v11')} />
+
+// 切换 provider 只需换 builder
+<PanelMap tileUrl={carto()} />
+```
+
+为何 callback 而非 prop 枚举：running_page 需要支持
+carto → openfreemap → maptiler 等多种中国可用 fallback，
+枚举会无限膨胀。callback 放权给主题层。
+
+`tiles.ts` 提供三个 builder：
+
+| builder | 用途 | Token |
+|---|---|---|
+| `carto()` | Carto CDN（默认） | 无 |
+| `openfreemap()` | OpenFreeMap（中国 fallback） | 无 |
+| `mapbox(token, style?)` | Mapbox API | pk. token |
 
 ### 两栏布局
 
-- 使用 CSS flexbox（非全屏 MapView + 浮动 overlay）
+- 使用 CSS flexbox（两栏布局）
 - Header 文档流置顶，左/右列在 Header 下方并排
 - 整页可滚动（原版 running_page 行为）
 - 断点：`<768px` 堆叠为单列
@@ -106,6 +119,7 @@ packages/theme-simple/
         ├── YearBarSVG.tsx        # Inline monthly bar chart
         ├── RunTable.tsx          # Sortable activity table
         ├── RunRow.tsx            # Table row
+        ├── SimpleMap.tsx       # <PanelMap tileUrl={mapbox(token)} />
         ├── MapOverlays.tsx       # Year pills + legend
         └── SVGStat.tsx           # Total year overview
 ```
@@ -129,7 +143,7 @@ ThemePlugin.Layout (= SimpleLayout)
       │           └── hover: YearGridSVG + YearBarSVG
       └── main.right-panel
           ├── div.map-wrapper
-          │   ├── MapView (variant="contained")
+          │   ├── SimpleMap (<PanelMap tileUrl={mapbox(token)} />)
           │   └── MapOverlays (year pills + color legend)
           └── RunTable or SVGStat (conditional: year === 'Total')
 ```
@@ -138,7 +152,7 @@ ThemePlugin.Layout (= SimpleLayout)
 
 | 功能 | running_page (React) | Simple (React 19) |
 |---|---|---|
-| 地图引擎 | react-map-gl + Mapbox | Leaflet (plugin-map MapView) |
+| 地图引擎 | react-map-gl + Mapbox | Leaflet (plugin-map useLeafletMap) |
 | 数据获取 | useActivities (自建) | useActivities (plugin-data-source) |
 | 状态管理 | useState + useMemo | zustand |
 | CSS | Tailwind + CSS Modules + CSS vars | plain CSS + CSS vars |
@@ -205,7 +219,7 @@ document.head.appendChild(link)
 | `animated-run` Source + Layer | 暂无动画（未来可用 `requestAnimationFrame`） |
 | `FullscreenControl` + `NavigationControl` | `L.control.zoom` |
 | Mapbox Language (中文) | 不需要（Carto tile 默认中文） |
-| Mapbox / Carto / Maptiler tiles | Carto `dark_nolabels` / `light_nolabels` |
+| Mapbox / Carto / Maptiler tiles | `tiles.ts` builder 切换（`carto()`/`mapbox()`/`openfreemap()`） |
 
 ### 配置字段（待实现）
 
