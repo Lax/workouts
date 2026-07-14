@@ -37,3 +37,12 @@ push → verify → fix → repeat until all pass.
 
 No unsolicited files or actions.
 No assumptions — confirm when uncertain.
+
+## Git Editor Avoidance
+
+AI 环境无终端交互，弹编辑器会导致超时。所有 git 命令必须避免交互式编辑器：
+
+- **commit**: 永远使用 `git commit -m "msg"`（禁止裸 `git commit`）
+- **amend**: `git commit --amend -m "new msg"` 或 `git commit --amend --no-edit`
+- **rebase**: `EDITOR=true git rebase -i HEAD~N` 或 `GIT_SEQUENCE_EDITOR=true git rebase -i HEAD~N`
+- **tag**: `git tag -a v1.0 -m "msg"`
