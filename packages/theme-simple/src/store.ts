@@ -23,6 +23,7 @@ export interface SimpleStore {
   toggleSort: (field: SortField) => void
   setMapHoveredId: (id: string | null) => void
   openDetail: (act: Activity) => void
+  selectByHash: (act: Activity) => void
   closeDetail: () => void
 }
 
@@ -116,6 +117,8 @@ export const useSimpleStore = create<SimpleStore>()((set) => ({
       setRunHash(act.run_id)
       return { selectedActivity: act, mapHoveredId: act.run_id }
     }),
+
+  selectByHash: (act: Activity) => set({ selectedActivity: act, mapHoveredId: act.run_id }),
 
   closeDetail: () => {
     clearRunHash()

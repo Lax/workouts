@@ -1,6 +1,6 @@
 import { useRequiredComponent } from '@workouts/core'
 import { useActivities } from '@workouts/plugin-data-source'
-import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Header } from './components/Header'
 import { MapOverlays } from './components/MapOverlays'
 import { intComma, Stat } from './components/Stat'
@@ -8,7 +8,7 @@ import { SVGStat } from './components/SVGStat'
 import { YearBarSVG } from './components/YearBarSVG'
 import { YearGridSVG } from './components/YearGridSVG'
 import { useSimpleStore } from './store'
-import { getRunIdFromHash, subscribeToRunHash } from './utils'
+import { getRunIdFromHash } from './utils'
 import './simple.css'
 
 const SITE = { title: 'Workouts', url: '/', logo: null, navLinks: [] as { name: string; url: string }[] }
@@ -30,11 +30,10 @@ export function SimpleLayout() {
   const tableRef = useRef<HTMLDivElement>(null)
   const selectedActivity = useSimpleStore((s) => s.selectedActivity)
   const openDetail = useSimpleStore((s) => s.openDetail)
+  const selectByHash = useSimpleStore((s) => s.selectByHash)
   const mapActivities = useMemo(() => (selectedActivity ? [selectedActivity] : filteredActivities), [filteredActivities, selectedActivity])
 
   const MapView = useRequiredComponent('map', 'MapView')
-
-  const hashRunId = useSyncExternalStore(subscribeToRunHash, getRunIdFromHash, () => null)
 
   useEffect(() => {
     if (!selectedActivity || !tableRef.current) return
@@ -47,10 +46,15 @@ export function SimpleLayout() {
   }, [activities, setActivities])
 
   useEffect(() => {
-    if (!hashRunId || activities.length === 0) return
-    const act = activities.find((a) => a.run_id === hashRunId)
-    if (act) openDetail(act)
-  }, [hashRunId, activities, openDetail])
+    function onHashChange() {
+      const id = getRunIdFromHash()
+      if (!id || activities.length === 0) return
+      const act = activities.find((a) => a.run_id === id)
+      if (act) selectByHash(act)
+    }
+    window.addEventListener('hashchange', onHashChange)
+    return () => window.removeEventListener('hashchange', onHashChange)
+  }, [activities, selectByHash])
 
   const totalKm = useMemo(() => intComma(Math.round(activities.reduce((s, a) => s + (a.distance ?? 0), 0) / 1000)), [activities])
 

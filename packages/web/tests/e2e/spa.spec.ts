@@ -325,11 +325,11 @@ test('clicking year block filters table', async ({ page }) => {
   await waitLoaded(page)
   const blocks = page.locator('.year-block')
   await expect(blocks.first()).toBeVisible()
-  // Click second year block (first is already active — default year)
-  const secondBlock = blocks.nth(1)
-  if (await secondBlock.isVisible()) {
-    await secondBlock.click()
-    await expect(secondBlock).toHaveClass(/active/)
+  // Click third block (idx 0=Total, 1=default selected year, 2=other year)
+  const thirdBlock = blocks.nth(2)
+  if (await thirdBlock.isVisible()) {
+    await thirdBlock.click()
+    await expect(thirdBlock).toHaveClass(/active/)
   }
   await expect(page.locator('.run-table tbody tr')).not.toHaveCount(0)
 })
