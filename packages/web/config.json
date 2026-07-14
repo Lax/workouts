@@ -8,5 +8,11 @@
   "data": {
     "activities": { "source": "activities.json", "optional": false },
     "stats": { "source": "stats.json", "optional": true }
+  },
+  "site": {
+    "title": "Workouts",
+    "url": "/workouts/",
+    "logo": null,
+    "navLinks": []
   }
 }

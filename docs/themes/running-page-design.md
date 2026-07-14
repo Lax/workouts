@@ -1,5 +1,9 @@
 # Running Page 主题设计
 
+> **DEPRECATED** — 此文档对应 Svelte 时期架构。项目已迁移至 React 19 + TypeScript，
+> 新实现在 `docs/themes/simple-design.md` (theme-simple)。
+> 保留此文件仅作为历史参考，不删除。
+
 ## 概述
 
 将 yihong0618/running_page 的 React UI 移植为 Svelte 主题。
