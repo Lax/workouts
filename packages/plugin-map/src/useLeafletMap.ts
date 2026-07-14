@@ -3,11 +3,14 @@ import 'leaflet/dist/leaflet.css'
 import { useCallback, useEffect, useRef } from 'react'
 import { resolveLabeledTileUrl, resolveTileUrl, type TileConfig } from './tiles'
 
+export type ZoomPosition = 'topleft' | 'topright' | 'bottomleft' | 'bottomright'
+
 export interface LeafletMapOptions {
   colorScheme: 'light' | 'dark'
   tileConfig?: TileConfig
   showLabels?: boolean
   zoomControl?: boolean
+  zoomPosition?: ZoomPosition
   attributionControl?: boolean
 }
 
@@ -30,8 +33,8 @@ export function useLeafletMap(elRef: React.RefObject<HTMLDivElement | null>, opt
     if (mapRef.current || !elRef.current) return
     const zoomCtrl = options.zoomControl !== false
     const attrCtrl = options.attributionControl !== false
-    const m = L.map(elRef.current, { zoomControl: zoomCtrl, attributionControl: attrCtrl }).setView([30, 110], 4)
-    if (zoomCtrl) L.control.zoom({ position: 'topright' }).addTo(m)
+    const m = L.map(elRef.current, { zoomControl: false, attributionControl: attrCtrl }).setView([30, 110], 4)
+    if (zoomCtrl) L.control.zoom({ position: options.zoomPosition ?? 'topright' }).addTo(m)
     mapRef.current = m
     return () => {
       m.remove()

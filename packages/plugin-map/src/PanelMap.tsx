@@ -34,7 +34,7 @@ export function PanelMap({
   onActivityHover,
 }: PanelMapProps) {
   const elRef = useRef<HTMLDivElement>(null)
-  const mapRef = useLeafletMap(elRef, { colorScheme, tileConfig, showLabels })
+  const mapRef = useLeafletMap(elRef, { colorScheme, tileConfig, showLabels, zoomPosition: 'bottomright' })
   const opts: PolylineOptions = {
     colorMode,
     hoveredActivityId,
