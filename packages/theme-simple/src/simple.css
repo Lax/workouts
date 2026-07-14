@@ -1,5 +1,27 @@
 /* simple theme — two-column layout, faithful to running_page */
 
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,400;0,600;0,700;1,700&family=IBM+Plex+Mono&display=swap');
+
+/* Brand color overrides — running_page palette */
+.layout {
+  --color-accent: #e0ed5e;
+  font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+[data-theme='light'] .layout {
+  --color-accent: #0c4a6e;
+}
+
+.section-divider {
+  border: none;
+  border-top: 1px solid var(--color-border);
+  margin: 1rem 0;
+}
+
+[data-theme='dark'] .section-divider {
+  border-top-color: #ef4444;
+}
+
 .simple-header {
   display: flex;
   align-items: center;
@@ -298,6 +320,7 @@
   width: 100%;
   border-collapse: collapse;
   font-size: 0.85rem;
+  font-family: 'IBM Plex Mono', 'Courier New', monospace;
 }
 
 .run-table thead th {

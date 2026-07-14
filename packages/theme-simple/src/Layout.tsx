@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'reac
 import { Header } from './components/Header'
 import { MapOverlays } from './components/MapOverlays'
 import { SVGStat } from './components/SVGStat'
+import { Stat, intComma } from './components/Stat'
 import { YearBarSVG } from './components/YearBarSVG'
 import { YearGridSVG } from './components/YearGridSVG'
 import { useSimpleStore } from './store'
@@ -49,12 +50,10 @@ export function SimpleLayout() {
     if (act) openDetail(act)
   }, [hashRunId, activities, openDetail])
 
-  useEffect(() => {
-    const link = document.createElement('link')
-    link.href = 'https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,400;0,600;0,700;1,700&family=IBM+Plex+Mono&display=swap'
-    link.rel = 'stylesheet'
-    document.head.appendChild(link)
-  }, [])
+  const totalKm = useMemo(
+    () => intComma(Math.round(activities.reduce((s, a) => s + (a.distance ?? 0), 0) / 1000)),
+    [activities],
+  )
 
   const yearRange = useMemo(() => {
     if (years.length === 0) return null
@@ -71,7 +70,9 @@ export function SimpleLayout() {
           </a>
           <section className="info-message">
             <p>
-              {years.length} years of running · {activities.length} activities · {yearRange ?? '–'}
+              记录自己跑<span style={{ fontWeight: 700 }}>{years.length > 0 ? ` ${years.length} ` : ' '}</span>年了，
+              累计跑了<span style={{ fontWeight: 700 }}> {totalKm} </span>公里
+              {yearRange ? `（${yearRange}）` : ''}
             </p>
           </section>
           <hr className="section-divider" />
@@ -166,25 +167,13 @@ function YearStats({ year }: { year: number }) {
 
   return (
     <div className="stats-row">
-      <span className="stat-item">
-        <strong>{stats.count}</strong> runs
-      </span>
-      <span className="stat-item">
-        <strong>{(stats.distance / 1000).toFixed(1)}</strong> km
-      </span>
-      {stats.elev > 0 && (
-        <span className="stat-item">
-          <strong>{Math.round(stats.elev)}</strong> m
-        </span>
-      )}
+      <Stat value={stats.count} description="runs" />
+      <Stat value={stats.distance / 1000} description="km" />
+      {stats.elev > 0 && <Stat value={Math.round(stats.elev)} description="m" />}
       <span className="stat-item">
         <strong>{paceStr}</strong> /km
       </span>
-      {stats.avgHr > 0 && (
-        <span className="stat-item">
-          <strong>{stats.avgHr.toFixed(0)}</strong> bpm
-        </span>
-      )}
+      {stats.avgHr > 0 && <Stat value={stats.avgHr} description="bpm" />}
     </div>
   )
 }
@@ -250,7 +239,7 @@ function RunTable() {
               onMouseLeave={() => setMapHoveredId(null)}
             >
               <td>{titleForRow(act)}</td>
-              <td>{act.distance ? (act.distance / 1000).toFixed(2) : '—'}</td>
+              <td>{act.distance ? intComma(Math.round(act.distance / 10) / 100) : '—'}</td>
               {hasElev && <td>{act.elevation_gain ? Math.round(act.elevation_gain).toString() : '—'}</td>}
               <td>{formatPace(act.average_speed)}</td>
               <td>{act.average_heartrate ? act.average_heartrate.toFixed(0) : '—'}</td>
