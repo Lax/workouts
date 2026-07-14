@@ -40,14 +40,13 @@ export function MapView({
 
     const map = L.map(el, { zoomControl: false, attributionControl: false }).setView([30, 110], 4)
     L.control.zoom({ position: 'topright' }).addTo(map)
-    L.tileLayer(tileUrl(), { maxZoom: 19, attribution: '' }).addTo(map)
     mapRef.current = map
 
     return () => {
       map.remove()
       mapRef.current = null
     }
-  }, [tileUrl])
+  }, [])
 
   useEffect(() => {
     const map = mapRef.current
