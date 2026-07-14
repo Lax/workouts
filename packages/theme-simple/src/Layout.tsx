@@ -3,8 +3,8 @@ import { useActivities } from '@workouts/plugin-data-source'
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import { Header } from './components/Header'
 import { MapOverlays } from './components/MapOverlays'
+import { intComma, Stat } from './components/Stat'
 import { SVGStat } from './components/SVGStat'
-import { Stat, intComma } from './components/Stat'
 import { YearBarSVG } from './components/YearBarSVG'
 import { YearGridSVG } from './components/YearGridSVG'
 import { useSimpleStore } from './store'
@@ -30,10 +30,7 @@ export function SimpleLayout() {
   const tableRef = useRef<HTMLDivElement>(null)
   const selectedActivity = useSimpleStore((s) => s.selectedActivity)
   const openDetail = useSimpleStore((s) => s.openDetail)
-  const mapActivities = useMemo(
-    () => (selectedActivity ? [selectedActivity] : filteredActivities),
-    [filteredActivities, selectedActivity],
-  )
+  const mapActivities = useMemo(() => (selectedActivity ? [selectedActivity] : filteredActivities), [filteredActivities, selectedActivity])
 
   const MapView = useRequiredComponent('map', 'MapView')
 
@@ -55,10 +52,7 @@ export function SimpleLayout() {
     if (act) openDetail(act)
   }, [hashRunId, activities, openDetail])
 
-  const totalKm = useMemo(
-    () => intComma(Math.round(activities.reduce((s, a) => s + (a.distance ?? 0), 0) / 1000)),
-    [activities],
-  )
+  const totalKm = useMemo(() => intComma(Math.round(activities.reduce((s, a) => s + (a.distance ?? 0), 0) / 1000)), [activities])
 
   const yearRange = useMemo(() => {
     if (years.length === 0) return null
@@ -75,16 +69,13 @@ export function SimpleLayout() {
           </a>
           <section className="info-message">
             <p>
-              记录自己跑<span style={{ fontWeight: 700 }}>{years.length > 0 ? ` ${years.length} ` : ' '}</span>年了，
-              累计跑了<span style={{ fontWeight: 700 }}> {totalKm} </span>公里
+              记录自己跑<span style={{ fontWeight: 700 }}>{years.length > 0 ? ` ${years.length} ` : ' '}</span>年了， 累计跑了
+              <span style={{ fontWeight: 700 }}> {totalKm} </span>公里
               {yearRange ? `（${yearRange}）` : ''}
             </p>
           </section>
           <hr className="section-divider" />
-          <div
-            className={`year-block${selectedYear === null ? ' active' : ''}`}
-            onClick={() => setSelectedYear(null)}
-          >
+          <div className={`year-block${selectedYear === null ? ' active' : ''}`} onClick={() => setSelectedYear(null)}>
             <div className="year-label">Total</div>
             <YearStats year={null} />
             <hr className="section-divider" />
