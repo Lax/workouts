@@ -40,7 +40,7 @@ function HelloWorldLayout(_props: ThemeProps) {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    fetch('/versions.json')
+    fetch('versions.json')
       .then((r) => {
         if (!r.ok) throw new Error(`HTTP ${r.status}`)
         return r.json()
