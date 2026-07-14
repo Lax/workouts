@@ -1,7 +1,9 @@
 import { useRequiredComponent } from '@workouts/core'
 import { useActivities } from '@workouts/plugin-data-source'
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Header } from './components/Header'
+import { YearBarSVG } from './components/YearBarSVG'
+import { YearGridSVG } from './components/YearGridSVG'
 import { useSimpleStore } from './store'
 import './simple.css'
 
@@ -20,11 +22,20 @@ export function SimpleLayout() {
   const years = useSimpleStore((s) => s.years)
   const setMapHoveredId = useSimpleStore((s) => s.setMapHoveredId)
 
+  const [hoveredYear, setHoveredYear] = useState<number | null>(null)
+
   const MapView = useRequiredComponent('map', 'MapView')
 
   useEffect(() => {
     setActivities(activities)
   }, [activities, setActivities])
+
+  useEffect(() => {
+    const link = document.createElement('link')
+    link.href = 'https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,400;0,600;0,700;1,700&family=IBM+Plex+Mono&display=swap'
+    link.rel = 'stylesheet'
+    document.head.appendChild(link)
+  }, [])
 
   const yearRange = useMemo(() => {
     if (years.length === 0) return null
@@ -50,9 +61,17 @@ export function SimpleLayout() {
               key={y}
               className={`year-block${selectedYear === y ? ' active' : ''}`}
               onClick={() => setSelectedYear(selectedYear === y ? null : y)}
+              onMouseEnter={() => setHoveredYear(y)}
+              onMouseLeave={() => setHoveredYear(null)}
             >
               <div className="year-label">{y}</div>
               <YearStats year={y} />
+              {hoveredYear === y && (
+                <div className="year-hover-svgs">
+                  <YearGridSVG year={y} activities={activities} />
+                  <YearBarSVG year={y} activities={activities} />
+                </div>
+              )}
               <hr className="section-divider" />
             </div>
           ))}
