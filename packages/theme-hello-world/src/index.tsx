@@ -1,4 +1,5 @@
 import type { ThemePlugin, ThemeProps } from '@workouts/core'
+import './hello.css'
 
 interface PkgMeta {
   name: string
@@ -54,44 +55,40 @@ const wsRows: Row[] = [...wsNames].sort().map((name) => {
 const runtimeRows = toRows(runtimeNames)
 const toolingRows = toRows(toolingNames)
 
-function Table({ label, rows }: { label: string; rows: Row[] }) {
+function Section({ label, rows }: { label: string; rows: Row[] }) {
   return (
-    <div style={{ marginBottom: '1.5rem' }}>
-      <h2 style={{ fontSize: '1rem', marginBottom: '0.5rem', color: 'var(--color-accent, #4dd2ff)' }}>
-        {label} ({rows.length})
+    <div className="hello-section">
+      <h2>
+        {label} <span style={{ fontWeight: 400, color: 'var(--color-text-dim)' }}>({rows.length})</span>
       </h2>
-      <table style={{ fontSize: '0.8rem', borderCollapse: 'collapse' }}>
-        <tbody>
-          {rows.map((r) => (
-            <tr key={r.name}>
-              <td style={{ padding: '2px 16px 2px 0', fontFamily: 'monospace', color: 'var(--color-text, #e0e0e0)' }}>{r.name}</td>
-              <td style={{ padding: '2px 0', fontFamily: 'monospace', color: 'var(--color-text-secondary, #888)' }}>{r.version}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <div className="hello-list">
+        {rows.length === 0 ? (
+          <div className="hello-empty">No packages found</div>
+        ) : (
+          rows.map((r) => (
+            <div key={r.name} className="hello-row">
+              <span className="hello-pkg">{r.name}</span>
+              <span className="hello-ver">{r.version}</span>
+            </div>
+          ))
+        )}
+      </div>
     </div>
   )
 }
 
 function HelloWorldLayout(_props: ThemeProps) {
   return (
-    <div
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        minHeight: '100vh',
-        padding: '2rem',
-        color: 'var(--color-text, #e0e0e0)',
-        background: 'var(--color-bg, #121212)',
-      }}
-    >
-      <h1 style={{ fontSize: '2rem', marginBottom: '1.5rem' }}>Hello World</h1>
-      <Table label="Workspace Packages" rows={wsRows} />
-      <Table label="Runtime Dependencies" rows={runtimeRows} />
-      <Table label="Tooling" rows={toolingRows} />
+    <div className="hello-container">
+      <div className="hello-header">
+        <h1>Hello World</h1>
+        <p>Workouts frontend — dependency &amp; tooling overview</p>
+      </div>
+      <div className="hello-content">
+        <Section label="Workspace Packages" rows={wsRows} />
+        <Section label="Runtime Dependencies" rows={runtimeRows} />
+        <Section label="Tooling" rows={toolingRows} />
+      </div>
     </div>
   )
 }
