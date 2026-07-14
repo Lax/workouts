@@ -298,7 +298,7 @@ test('SPA loads without page errors', async ({ page }) => {
 test('theme toggle persists across reload', async ({ page }) => {
   await waitLoaded(page)
   const before = await page.evaluate(() => document.documentElement.getAttribute('data-theme'))
-  const buttons = page.locator('button:has-text("☀️"), button:has-text("🌙")')
+  const buttons = page.locator('button[aria-label="Toggle theme"]')
   await buttons.first().click()
   const after = await page.evaluate(() => document.documentElement.getAttribute('data-theme'))
   expect(after).not.toBe(before)
