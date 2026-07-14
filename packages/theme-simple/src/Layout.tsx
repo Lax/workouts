@@ -1,8 +1,8 @@
-import { useRequiredComponent } from '@workouts/core'
 import { useActivities } from '@workouts/plugin-data-source'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Header } from './components/Header'
 import { MapOverlays } from './components/MapOverlays'
+import { SimpleMap } from './components/SimpleMap'
 import { intComma, Stat } from './components/Stat'
 import { SVGStat } from './components/SVGStat'
 import { YearBarSVG } from './components/YearBarSVG'
@@ -32,8 +32,6 @@ export function SimpleLayout() {
   const openDetail = useSimpleStore((s) => s.openDetail)
   const selectByHash = useSimpleStore((s) => s.selectByHash)
   const mapActivities = useMemo(() => (selectedActivity ? [selectedActivity] : filteredActivities), [filteredActivities, selectedActivity])
-
-  const MapView = useRequiredComponent('map', 'MapView')
 
   useEffect(() => {
     if (!selectedActivity || !tableRef.current) return
@@ -112,20 +110,14 @@ export function SimpleLayout() {
         </aside>
         <main className="right-panel">
           <div className="map-wrapper">
-            {MapView && (
-              <MapView
-                variant="contained"
-                activities={mapActivities}
-                colorScheme={colorScheme}
-                colorMode={colorMode}
-                hoveredActivityId={useSimpleStore.getState().mapHoveredId}
-                tileProvider="mapbox"
-                mapboxToken={import.meta.env.VITE__MAPBOX__TOKEN || ''}
-                mapboxStyle="dark-v11"
-                onActivityHover={setMapHoveredId}
-                onActivityClick={openDetail}
-              />
-            )}
+            <SimpleMap
+              activities={mapActivities}
+              colorScheme={colorScheme}
+              colorMode={colorMode}
+              hoveredActivityId={useSimpleStore.getState().mapHoveredId}
+              onActivityHover={setMapHoveredId}
+              onActivityClick={openDetail}
+            />
             <MapOverlays />
           </div>
           <div className="table-area" ref={tableRef}>
