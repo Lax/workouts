@@ -186,7 +186,6 @@ function levenshtein(a: string, b: string): number {
 }
 
 export * from './color-mode'
-export * from './normalize'
 export * from './theme-types'
 
 export function canonicalizeSport(str: string | null | undefined): SportCategory {

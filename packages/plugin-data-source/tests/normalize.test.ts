@@ -1,5 +1,5 @@
-import { normalize, normalizeAll } from '@workouts/shared'
 import { describe, expect, it } from 'vitest'
+import { normalize, normalizeAll } from '../src/normalize'
 
 describe('normalize', () => {
   it('prefers sport_category over type', () => {

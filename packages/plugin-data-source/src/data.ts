@@ -1,5 +1,5 @@
 import type { Activity } from '@workouts/shared'
-import { normalizeAll } from '@workouts/shared'
+import { normalizeAll } from './normalize'
 
 export interface DataResult {
   activities: Activity[]

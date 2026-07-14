@@ -1,4 +1,4 @@
-import type { Activity } from './index'
+import type { Activity } from '@workouts/shared'
 
 export function normalize(raw: unknown): Activity {
   if (!raw || typeof raw !== 'object') {
