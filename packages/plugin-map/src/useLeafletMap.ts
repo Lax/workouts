@@ -1,12 +1,11 @@
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { useCallback, useEffect, useRef } from 'react'
+import { carto, type TileUrlBuilder } from './tiles'
 
 export interface LeafletMapOptions {
   colorScheme: 'light' | 'dark'
-  tileProvider?: 'carto' | 'mapbox'
-  mapboxToken?: string
-  mapboxStyle?: string
+  tileUrl?: TileUrlBuilder
 }
 
 export interface MapInstance {
@@ -17,13 +16,9 @@ export function useLeafletMap(elRef: React.RefObject<HTMLDivElement | null>, opt
   const mapRef = useRef<L.Map | null>(null)
 
   const tileUrl = useCallback(() => {
-    const scheme = options.colorScheme === 'dark' ? 'dark_nolabels' : 'light_nolabels'
-    if (options.tileProvider === 'mapbox' && options.mapboxToken) {
-      const style = options.mapboxStyle || (options.colorScheme === 'dark' ? 'dark-v11' : 'light-v11')
-      return `https://api.mapbox.com/styles/v1/mapbox/${style}/tiles/{z}/{x}/{y}@2x?access_token=${options.mapboxToken}`
-    }
-    return `https://{s}.basemaps.cartocdn.com/${scheme}/{z}/{x}/{y}{r}.png`
-  }, [options.colorScheme, options.tileProvider, options.mapboxToken, options.mapboxStyle])
+    const builder = options.tileUrl ?? carto()
+    return builder(options.colorScheme)
+  }, [options.colorScheme, options.tileUrl])
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: one-time init
   useEffect(() => {

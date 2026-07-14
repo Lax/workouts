@@ -1,4 +1,4 @@
-import { PanelMap } from '@workouts/plugin-map'
+import { mapbox, PanelMap } from '@workouts/plugin-map'
 import type { Activity } from '@workouts/shared'
 
 interface SimpleMapProps {
@@ -10,6 +10,8 @@ interface SimpleMapProps {
   onActivityHover?: (activityId: string | null) => void
 }
 
+const MAPBOX_URL = mapbox(import.meta.env.VITE__MAPBOX__TOKEN || '', 'dark-v11')
+
 export function SimpleMap({ activities, colorScheme, colorMode, hoveredActivityId, onActivityClick, onActivityHover }: SimpleMapProps) {
   return (
     <PanelMap
@@ -17,9 +19,7 @@ export function SimpleMap({ activities, colorScheme, colorMode, hoveredActivityI
       colorScheme={colorScheme}
       colorMode={colorMode}
       hoveredActivityId={hoveredActivityId}
-      tileProvider="mapbox"
-      mapboxToken={import.meta.env.VITE__MAPBOX__TOKEN || ''}
-      mapboxStyle="dark-v11"
+      tileUrl={MAPBOX_URL}
       onActivityClick={onActivityClick}
       onActivityHover={onActivityHover}
     />

@@ -1,6 +1,7 @@
 import type { Activity } from '@workouts/shared'
 import { useRef } from 'react'
-import { type LeafletMapOptions, useLeafletMap } from './useLeafletMap'
+import type { TileUrlBuilder } from './tiles'
+import { useLeafletMap } from './useLeafletMap'
 import { type PolylineOptions, useMapPolylines } from './useMapPolylines'
 
 export type MapVariant = 'fullscreen' | 'contained'
@@ -12,9 +13,7 @@ export interface MapViewProps {
   hoveredActivityId?: string | null
   maxLines?: number
   variant?: MapVariant
-  tileProvider?: 'carto' | 'mapbox'
-  mapboxToken?: string
-  mapboxStyle?: string
+  tileUrl?: TileUrlBuilder
   onActivityClick?: (activity: Activity) => void
   onActivityHover?: (activityId: string | null) => void
 }
@@ -26,16 +25,13 @@ export function MapView({
   hoveredActivityId = null,
   maxLines = 500,
   variant = 'fullscreen',
-  tileProvider = 'carto',
-  mapboxToken = '',
-  mapboxStyle = 'dark-v11',
+  tileUrl,
   onActivityClick,
   onActivityHover,
 }: MapViewProps) {
   const elRef = useRef<HTMLDivElement>(null)
 
-  const leafletOptions: LeafletMapOptions = { colorScheme, tileProvider, mapboxToken, mapboxStyle }
-  const mapRef = useLeafletMap(elRef, leafletOptions)
+  const mapRef = useLeafletMap(elRef, { colorScheme, tileUrl })
 
   const polylineOptions: PolylineOptions = { colorMode, hoveredActivityId, maxLines, fitOnChange: true, onActivityClick, onActivityHover }
   useMapPolylines(mapRef, activities, polylineOptions)
