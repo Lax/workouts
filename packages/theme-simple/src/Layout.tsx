@@ -81,6 +81,14 @@ export function SimpleLayout() {
             </p>
           </section>
           <hr className="section-divider" />
+          <div
+            className={`year-block${selectedYear === null ? ' active' : ''}`}
+            onClick={() => setSelectedYear(null)}
+          >
+            <div className="year-label">Total</div>
+            <YearStats year={null} />
+            <hr className="section-divider" />
+          </div>
           {years.map((y) => (
             <div
               key={y}
@@ -131,9 +139,12 @@ export function SimpleLayout() {
   )
 }
 
-function YearStats({ year }: { year: number }) {
+function YearStats({ year }: { year: number | null }) {
   const activities = useSimpleStore((s) => s.activities)
-  const acts = useMemo(() => activities.filter((a) => a.start_date && new Date(a.start_date).getFullYear() === year), [activities, year])
+  const acts = useMemo(
+    () => (year === null ? activities : activities.filter((a) => a.start_date && new Date(a.start_date).getFullYear() === year)),
+    [activities, year],
+  )
 
   const stats = useMemo(() => {
     let totalDist = 0

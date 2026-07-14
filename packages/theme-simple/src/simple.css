@@ -130,7 +130,7 @@
 }
 
 .map-wrapper {
-  height: 500px;
+  height: min(600px, 50vh);
   flex-shrink: 0;
   position: relative;
 }
@@ -389,7 +389,7 @@
 }
 
 /* Responsive */
-@media (max-width: 767px) {
+@media (max-width: 768px) {
   .layout {
     flex-direction: column;
   }
@@ -405,6 +405,6 @@
   }
 
   .map-wrapper {
-    height: 350px;
+    height: 250px;
   }
 }
