@@ -58,7 +58,7 @@ test('hello page shows version tables', async ({ page }) => {
   expect(errors).toEqual([])
   await expect(page.locator('text=Workspace Packages')).toBeVisible()
   await expect(page.locator('text=Runtime Dependencies')).toBeVisible()
-  await expect(page.locator('text=Tooling')).toBeVisible()
+  await expect(page.getByRole('heading', { name: /Tooling/ })).toBeVisible()
 })
 
 // ──────── Layout CSS Classes ────────
