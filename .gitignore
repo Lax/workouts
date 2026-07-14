@@ -30,4 +30,4 @@ test-results/
 .env
 
 # Meow workflow artifacts
-/workflows/
+/.opencode/meowcycle/
