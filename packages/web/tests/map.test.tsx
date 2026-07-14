@@ -1,4 +1,4 @@
-import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('leaflet', () => {
   class MockTileLayer {
@@ -42,12 +42,12 @@ vi.mock('leaflet', () => {
   }
 })
 
-import { act } from 'react'
-import { createRoot, type Root } from 'react-dom/client'
 import { MapView } from '@workouts/plugin-map'
 import type { Activity } from '@workouts/shared'
-import { useOverviewStore, DetailPanel } from '@workouts/theme-overview'
+import { DetailPanel, useOverviewStore } from '@workouts/theme-overview'
 import L from 'leaflet'
+import { act } from 'react'
+import { createRoot, type Root } from 'react-dom/client'
 
 function MapViewWrapper() {
   const colorScheme = useOverviewStore((s) => s.colorScheme)

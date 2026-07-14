@@ -294,3 +294,26 @@ test('color mode toggles in simple theme', async ({ page }) => {
   await page.locator('button:has-text("速度")').click()
   await expect(page.locator('button:has-text("速度")')).toBeVisible()
 })
+
+// ──────── Theme Toggle — Map Stability ────────
+
+test('overview theme toggle preserves map zoom and center', async ({ page }) => {
+  await gotoOverview(page)
+  await expect(page.locator('.leaflet-container')).toBeVisible()
+  await expect(page.locator('.leaflet-tile-loaded').first()).toBeVisible({ timeout: 10000 })
+
+  const before = await page.evaluate(() => {
+    const pane = document.querySelector('.leaflet-map-pane') as HTMLElement | null
+    return pane?.style.transform || ''
+  })
+
+  await page.locator('button[aria-label="Toggle theme"]').click()
+  await page.waitForTimeout(500)
+
+  const after = await page.evaluate(() => {
+    const pane = document.querySelector('.leaflet-map-pane') as HTMLElement | null
+    return pane?.style.transform || ''
+  })
+
+  expect(after).toBe(before)
+})
