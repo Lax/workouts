@@ -1,25 +1,37 @@
 /* simple theme — two-column layout, faithful to running_page */
 
-@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,400;0,600;0,700;1,700&family=IBM+Plex+Mono&display=swap');
-
 /* Brand color overrides — running_page palette */
 .layout {
   --color-accent: #e0ed5e;
+  --color-brand: #e0ed5e;
+  --color-bg: #171717;
+  --color-surface: #262626;
+  --color-card: #404040;
+  --color-text: #e0e0e0;
+  --color-text-secondary: #d4d4d4;
+  --color-text-dim: #666666;
+  --color-border: #333333;
+  --color-hr: #ef4444;
+  --color-hover: #262626;
+  --color-selected: #e0ed5e;
+  --color-active-row: #e0ed5e;
+  --svg-color-active-cell: #4dd2ff;
+  --svg-special-color: #f7d02c;
+  --svg-special-color2: #f56c6c;
   font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 [data-theme='light'] .layout {
   --color-accent: #0c4a6e;
+  --color-brand: #0c4a6e;
+  --color-bg: #f5f5f5;
+  --color-hr: #d4d4d4;
 }
 
 .section-divider {
   border: none;
-  border-top: 1px solid var(--color-border);
+  border-top: 1px solid var(--color-hr);
   margin: 1rem 0;
-}
-
-[data-theme='dark'] .section-divider {
-  border-top-color: #ef4444;
 }
 
 .simple-header {
@@ -74,8 +86,12 @@
 .theme-btn {
   background: none;
   border: 1px solid var(--color-border);
-  border-radius: 6px;
-  padding: 4px 8px;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   color: var(--color-text-secondary);
   cursor: pointer;
   font-size: 1rem;
@@ -249,7 +265,7 @@
 /* YearsStat / YearStat components */
 .section-divider {
   border: none;
-  border-top: 1px solid var(--color-border);
+  border-top: 1px solid var(--color-hr);
   margin: 0;
 }
 
@@ -315,6 +331,7 @@
 
 .run-table {
   width: 100%;
+  min-width: 650px;
   border-collapse: collapse;
   font-size: 0.85rem;
   font-family: 'IBM Plex Mono', 'Courier New', monospace;

@@ -1,5 +1,6 @@
 import { useTheme } from '@workouts/core'
 import { useActivities } from '@workouts/plugin-data-source'
+import { formatPace } from '@workouts/shared'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { ActivityCardGrid } from './components/ActivityCardGrid'
 import { Header } from './components/Header'
@@ -16,12 +17,27 @@ import { useSimpleStore } from './store'
 import { getRunIdFromHash } from './utils'
 import './simple.css'
 
-const SITE = { title: 'Workouts', url: '/', logo: null, navLinks: [] as { name: string; url: string }[] }
-
 export function SimpleLayout() {
   const { activities } = useActivities()
   const { config } = useTheme()
   const siteConfig = config?.site as Record<string, unknown> | undefined
+
+  const SITE = useMemo(
+    () => ({
+      title: (siteConfig?.title as string) || 'Workouts',
+      url: (siteConfig?.url as string) || '/',
+      logo: (siteConfig?.logo as string | null) || null,
+      navLinks: (siteConfig?.navLinks as { name: string; url: string }[]) || [],
+    }),
+    [siteConfig],
+  )
+
+  useEffect(() => {
+    const link = document.createElement('link')
+    link.href = 'https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,400;0,600;0,700;1,700&family=IBM+Plex+Mono&display=swap'
+    link.rel = 'stylesheet'
+    document.head.appendChild(link)
+  }, [])
 
   const setActivities = useSimpleStore((s) => s.setActivities)
   const selectedYear = useSimpleStore((s) => s.selectedYear)
@@ -140,7 +156,6 @@ export function SimpleLayout() {
               colorScheme={colorScheme}
               colorMode={colorMode}
               hoveredActivityId={useSimpleStore.getState().mapHoveredId}
-              dashLines={siteConfig?.dashLines as boolean | undefined}
               privacyMode={siteConfig?.privacyMode as boolean | undefined}
               showLabels={showLabels}
               animate={!!selectedActivity}
@@ -207,14 +222,7 @@ function YearStats({ year }: { year: number | null }) {
     }
   }, [acts])
 
-  const paceStr =
-    stats.avgPace > 0
-      ? `${Math.floor(1000 / (stats.avgPace * 60))}'${Math.round(
-          (1000 / (stats.avgPace * 60) - Math.floor(1000 / (stats.avgPace * 60))) * 60,
-        )
-          .toString()
-          .padStart(2, '0')}"`
-      : '—'
+  const paceStr = formatPace(stats.avgPace > 0 ? stats.avgPace : null)
 
   return (
     <div className="stats-row">
@@ -222,7 +230,7 @@ function YearStats({ year }: { year: number | null }) {
       <Stat value={stats.distance / 1000} description="km" />
       {stats.elev > 0 && <Stat value={Math.round(stats.elev)} description="m" />}
       <span className="stat-item">
-        <strong>{paceStr}</strong> /km
+        <strong>{paceStr}</strong>
       </span>
       {stats.avgHr > 0 && <Stat value={stats.avgHr} description="bpm" />}
     </div>

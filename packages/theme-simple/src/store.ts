@@ -17,6 +17,8 @@ export interface SimpleStore {
   mapHoveredId: string | null
   selectedActivity: Activity | null
   years: number[]
+  streaks: Record<number, number>
+  totalStreak: number
   filteredActivities: Activity[]
   cityFilter: string | null
   periodFilter: string | null
@@ -46,6 +48,27 @@ function computeYears(acts: Activity[]): number[] {
     if (a.start_date) s.add(new Date(a.start_date).getFullYear())
   }
   return Array.from(s).sort((a, b) => b - a)
+}
+
+export function computeStreak(acts: Activity[]): number {
+  const dates = acts
+    .filter((a) => a.start_date)
+    .map((a) => new Date(a.start_date!).toISOString().slice(0, 10))
+    .sort()
+  if (dates.length === 0) return 0
+  const unique = [...new Set(dates)].sort()
+  let maxStreak = 1
+  let current = 1
+  for (let i = 1; i < unique.length; i++) {
+    const diff = (new Date(unique[i]).getTime() - new Date(unique[i - 1]).getTime()) / 86400000
+    if (Math.round(diff) === 1) {
+      current++
+      if (current > maxStreak) maxStreak = current
+    } else {
+      current = 1
+    }
+  }
+  return maxStreak
 }
 
 function filterActivities(
@@ -100,6 +123,8 @@ export const useSimpleStore = create<SimpleStore>()((set) => ({
   mapHoveredId: null,
   selectedActivity: null,
   years: [],
+  streaks: {},
+  totalStreak: 0,
   filteredActivities: [],
   cityFilter: null,
   periodFilter: null,
@@ -111,10 +136,17 @@ export const useSimpleStore = create<SimpleStore>()((set) => ({
     set((s) => {
       const ys = computeYears(acts)
       const initialYear = s.selectedYear === null && ys.length > 0 ? ys[0] : s.selectedYear
+      const streaks: Record<number, number> = {}
+      for (const y of ys) {
+        const yearActs = acts.filter((a) => a.start_date && new Date(a.start_date).getFullYear() === y)
+        streaks[y] = computeStreak(yearActs)
+      }
       return {
         activities: acts,
         selectedYear: initialYear,
         years: ys,
+        streaks,
+        totalStreak: computeStreak(acts),
         filteredActivities: filterActivities(acts, initialYear, s.sortField, s.sortDesc, s.cityFilter, s.periodFilter),
       }
     }),

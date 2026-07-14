@@ -16,4 +16,5 @@ const theme: ThemePlugin = {
 }
 
 export default theme
-export { useSimpleStore } from './store'
+export { colorIntensity } from './components/YearGridSVG'
+export { computeStreak, useSimpleStore } from './store'

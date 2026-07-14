@@ -1,3 +1,4 @@
+import { formatDuration, formatPace } from '@workouts/shared'
 import { type SortField, useSimpleStore } from '../store'
 
 export function RunTable() {
@@ -8,21 +9,6 @@ export function RunTable() {
   const mapHoveredId = useSimpleStore((s) => s.mapHoveredId)
   const setMapHoveredId = useSimpleStore((s) => s.setMapHoveredId)
   const openDetail = useSimpleStore((s) => s.openDetail)
-
-  function formatTime(sec: number | null): string {
-    if (sec === null || sec === undefined) return '—'
-    const m = Math.floor(sec / 60)
-    if (m < 60) return `${m}min`
-    return `${Math.floor(m / 60)}h ${m % 60}min`
-  }
-
-  function formatPace(speed: number | null): string {
-    if (speed === null || speed <= 0) return '—'
-    const pace = 1000 / (speed * 60)
-    const min = Math.floor(pace)
-    const sec = Math.round((pace - min) * 60)
-    return `${min}'${sec.toString().padStart(2, '0')}"`
-  }
 
   function titleForRow(act: (typeof filtered)[0]): string {
     if (act.name && !act.name.startsWith('Running')) return act.name
@@ -66,11 +52,11 @@ export function RunTable() {
               onMouseLeave={() => setMapHoveredId(null)}
             >
               <td>{titleForRow(act)}</td>
-              <td>{act.distance ? intComma(Math.round(act.distance / 10) / 100) : '—'}</td>
+              <td>{act.distance ? (Math.round(act.distance / 10) / 100).toLocaleString('en-US') : '—'}</td>
               <td className="elevation-col">{act.elevation_gain ? Math.round(act.elevation_gain).toString() : '—'}</td>
               <td>{formatPace(act.average_speed)}</td>
               <td>{act.average_heartrate ? act.average_heartrate.toFixed(0) : '—'}</td>
-              <td>{formatTime(act.moving_time)}</td>
+              <td>{formatDuration(act.moving_time)}</td>
               <td className="run-date">{act.start_date?.slice(0, 10) ?? '—'}</td>
             </tr>
           ))}
@@ -83,8 +69,4 @@ export function RunTable() {
       )}
     </div>
   )
-}
-
-function intComma(n: number): string {
-  return n.toLocaleString('en-US')
 }

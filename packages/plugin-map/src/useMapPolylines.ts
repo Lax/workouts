@@ -46,7 +46,6 @@ export function useMapPolylines(mapRef: MapInstance, activities: Activity[], opt
     for (const [, fid] of animFramesRef.current) cancelAnimationFrame(fid)
     animFramesRef.current.clear()
 
-    const currentYear = new Date().getFullYear()
     const allPoints: [number, number][] = []
 
     const shouldAnimate = animate && activities.length === 1
@@ -60,8 +59,7 @@ export function useMapPolylines(mapRef: MapInstance, activities: Activity[], opt
       if (points.length < 2) continue
       allPoints.push(...points)
 
-      const yearsAgo = currentYear - (a.start_date ? new Date(a.start_date).getFullYear() : currentYear)
-      const opacity = Math.max(0.35, 1.0 - yearsAgo * 0.06)
+      const opacity = 0.4
 
       const lineStyle: L.PolylineOptions = {
         color: activityColor({ average_speed: a.average_speed, type: a.sport_category }, colorMode),
@@ -69,7 +67,7 @@ export function useMapPolylines(mapRef: MapInstance, activities: Activity[], opt
         opacity,
         smoothFactor: 1,
         interactive: true,
-        dashArray: dashLines ? '10, 10' : undefined,
+        dashArray: dashLines ? [2, 2] : undefined,
       }
 
       if (shouldAnimate && points.length > 2) {
@@ -159,11 +157,10 @@ export function useMapPolylines(mapRef: MapInstance, activities: Activity[], opt
       } else {
         const a = activities.find((act) => act.run_id === id)
         if (a) {
-          const yearsAgo = new Date().getFullYear() - (a.start_date ? new Date(a.start_date).getFullYear() : new Date().getFullYear())
           line.setStyle({
             weight: 5,
             color: activityColor({ average_speed: a.average_speed, type: a.sport_category }, colorMode),
-            opacity: Math.max(0.35, 1.0 - yearsAgo * 0.06),
+            opacity: 0.4,
           })
         }
       }

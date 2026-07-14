@@ -8,6 +8,15 @@ const WEEKDAYS = ['Mon', 'Wed', 'Fri']
 const WEEKDAY_ROWS = [0, 2, 4]
 const MONTH_LABELS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
+export function colorIntensity(count: number, maxCount: number): string {
+  if (count === 0) return 'var(--color-border, #333)'
+  const ratio = count / maxCount
+  if (ratio < 0.25) return 'var(--svg-color-active-cell, #4dd2ff)'
+  if (ratio < 0.5) return 'var(--svg-color-active-cell, #4dd2ff)'
+  if (ratio < 0.75) return 'var(--svg-special-color, #f7d02c)'
+  return 'var(--svg-special-color2, #f56c6c)'
+}
+
 interface YearGridSVGProps {
   year: number
   activities: Activity[]
@@ -54,15 +63,6 @@ export function YearGridSVG({ year, activities }: YearGridSVGProps) {
     return { cells, maxCount, width, height, cols }
   }, [year, activities])
 
-  function colorIntensity(count: number): string {
-    if (count === 0) return 'var(--color-border, #333)'
-    const ratio = count / grid.maxCount
-    if (ratio < 0.25) return 'var(--color-accent, #4dd2ff)'
-    if (ratio < 0.5) return 'var(--color-accent, #4dd2ff)'
-    if (ratio < 0.75) return 'var(--color-accent, #4dd2ff)'
-    return '#fff'
-  }
-
   return (
     <svg
       viewBox={`0 0 ${grid.width + 30} ${grid.height + 20}`}
@@ -100,8 +100,8 @@ export function YearGridSVG({ year, activities }: YearGridSVGProps) {
           width={CELL_SIZE}
           height={CELL_SIZE}
           rx={2}
-          fill={colorIntensity(c.count)}
-          opacity={c.count > 0 ? 0.6 + (c.count / grid.maxCount) * 0.4 : 0.15}
+          fill={colorIntensity(c.count, grid.maxCount)}
+          opacity={1}
         />
       ))}
     </svg>

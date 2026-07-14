@@ -1,3 +1,4 @@
+import { formatPace } from '@workouts/shared'
 import { useSimpleStore } from '../store'
 
 export function ActivityCardGrid() {
@@ -21,14 +22,6 @@ export function ActivityCardGrid() {
       {filtered.map((act) => {
         const distKm = (act.distance ?? 0) / 1000
         const barPct = ((act.distance ?? 0) / maxDist) * 100
-
-        function formatPace(speed: number | null): string {
-          if (speed === null || speed <= 0) return '—'
-          const pace = 1000 / (speed * 60)
-          const min = Math.floor(pace)
-          const sec = Math.round((pace - min) * 60)
-          return `${min}'${sec.toString().padStart(2, '0')}"`
-        }
 
         return (
           <div
