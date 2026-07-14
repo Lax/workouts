@@ -1,6 +1,6 @@
 import type { Activity } from '@workouts/shared'
 import { useMemo } from 'react'
-import { computeAvailableSources, computeAvailableTypes, computeYears } from './compute'
+import { computeAvailableSources, computeAvailableTypes, computeCities, computeLocationSummary, computePeriods, computeYears } from './compute'
 import type { DerivedData, FilterOptions, SortField } from './types'
 import { useActivities } from './useActivities'
 
@@ -12,6 +12,9 @@ export function useDerivedData(): DerivedData {
       years: computeYears(acts),
       availableTypes: computeAvailableTypes(acts),
       availableSources: computeAvailableSources(acts),
+      cityStats: computeCities(acts),
+      periodStats: computePeriods(acts),
+      locationSummary: computeLocationSummary(acts),
     }),
     [acts],
   )

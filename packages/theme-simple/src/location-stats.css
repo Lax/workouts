@@ -1,0 +1,93 @@
+.location-stats {
+  padding: 0 16px;
+  font-size: 13px;
+}
+
+.loc-summary {
+  margin: 8px 0;
+}
+
+.loc-summary-text {
+  color: var(--color-text-secondary, #888);
+  line-height: 1.5;
+}
+
+.loc-empty {
+  font-style: italic;
+}
+
+.loc-cities {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 8px 0;
+}
+
+.loc-city-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 2px 0;
+}
+
+.loc-city-name {
+  color: var(--color-text, #ccc);
+  font-weight: 500;
+}
+
+.loc-city-dist {
+  color: var(--color-text-secondary, #888);
+  font-size: 12px;
+}
+
+.loc-periods {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 8px 0;
+}
+
+.loc-period-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.loc-period-label {
+  width: 36px;
+  color: var(--color-text, #ccc);
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+.loc-period-bar {
+  flex: 1;
+  height: 8px;
+  background: var(--color-border, #333);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.loc-period-fill {
+  display: block;
+  height: 100%;
+  background: var(--color-accent, #4DD2FF);
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+.loc-period-count {
+  width: 36px;
+  text-align: right;
+  color: var(--color-text-secondary, #888);
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+.loc-period-pct {
+  width: 32px;
+  text-align: right;
+  color: var(--color-text-secondary, #888);
+  font-size: 11px;
+  flex-shrink: 0;
+}

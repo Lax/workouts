@@ -187,6 +187,32 @@ function levenshtein(a: string, b: string): number {
 
 export * from './color-mode'
 export * from './theme-types'
+export * from './cities'
+
+export type PeriodLabel = 'morning' | 'noon' | 'afternoon' | 'evening' | 'night'
+
+export const PERIOD_CONFIG: Record<PeriodLabel, { label: string; range: [number, number] }> = {
+  morning: { label: 'Morning', range: [5, 11] },
+  noon: { label: 'Noon', range: [12, 13] },
+  afternoon: { label: 'Afternoon', range: [14, 17] },
+  evening: { label: 'Evening', range: [18, 20] },
+  night: { label: 'Night', range: [21, 4] },
+}
+
+export function classifyPeriod(hour: number): PeriodLabel | null {
+  if (hour >= 5 && hour <= 11) return 'morning'
+  if (hour >= 12 && hour <= 13) return 'noon'
+  if (hour >= 14 && hour <= 17) return 'afternoon'
+  if (hour >= 18 && hour <= 20) return 'evening'
+  if (hour >= 21 || hour <= 4) return 'night'
+  return null
+}
+
+const PERIOD_ORDER: Record<PeriodLabel, number> = { morning: 0, noon: 1, afternoon: 2, evening: 3, night: 4 }
+
+export function sortPeriods(periods: PeriodLabel[]): PeriodLabel[] {
+  return [...periods].sort((a, b) => PERIOD_ORDER[a] - PERIOD_ORDER[b])
+}
 
 export function canonicalizeSport(str: string | null | undefined): SportCategory {
   if (!str) return 'other'

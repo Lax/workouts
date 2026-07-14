@@ -1,4 +1,6 @@
+import { classifyPeriod, extractCity, sortPeriods, type PeriodLabel } from '@workouts/shared'
 import type { Activity } from '@workouts/shared'
+import type { CityStat, LocationSummary, PeriodStat } from './types'
 
 export function computeYears(activities: Activity[]): number[] {
   const years = new Set<number>()
@@ -83,4 +85,70 @@ export function computeFilteredActivities(
   }
 
   return [...result].sort((a, b) => (sortDesc ? cmp(b, a) : cmp(a, b)))
+}
+
+export function computeCities(activities: Activity[]): CityStat[] {
+  const cityDist = new Map<string, number>()
+  for (const a of activities) {
+    const info = extractCity(a.location_country)
+    if (!info) continue
+    const d = a.distance ?? 0
+    cityDist.set(info.name, (cityDist.get(info.name) ?? 0) + d)
+  }
+  return [...cityDist.entries()]
+    .map(([city, distance]) => ({ city, distance }))
+    .sort((a, b) => b.distance - a.distance)
+}
+
+export function computePeriods(activities: Activity[]): PeriodStat[] {
+  const counts = new Map<string, number>()
+  let total = 0
+  for (const a of activities) {
+    if (!a.start_date_local) continue
+    const d = new Date(a.start_date_local)
+    const hour = d.getHours()
+    if (Number.isNaN(hour)) continue
+    const period = classifyPeriod(hour)
+    if (!period) continue
+    counts.set(period, (counts.get(period) ?? 0) + 1)
+    total++
+  }
+  if (total === 0) return []
+  return sortPeriods([...counts.keys()] as PeriodLabel[]).map((period) => ({
+    period,
+    label: PERIOD_LABELS[period],
+    count: counts.get(period) ?? 0,
+    pct: Math.round(((counts.get(period) ?? 0) / total) * 100),
+  }))
+}
+
+const PERIOD_LABELS: Record<string, string> = {
+  morning: '晨跑',
+  noon: '午间',
+  afternoon: '午后',
+  evening: '傍晚',
+  night: '夜跑',
+}
+
+export function computeLocationSummary(activities: Activity[]): LocationSummary {
+  const countries = new Set<string>()
+  const provinces = new Set<string>()
+  const cities = new Set<string>()
+  for (const a of activities) {
+    const loc = a.location_country
+    if (!loc) continue
+    const info = extractCity(loc)
+    if (info) {
+      cities.add(info.name)
+      provinces.add(info.province)
+      countries.add(info.country)
+    } else if (loc.length < 20 && loc !== loc.toLowerCase()) {
+      countries.add(loc)
+    }
+  }
+  return {
+    countries: [...countries].sort(),
+    provinces: [...provinces].sort(),
+    cities: [...cities].sort(),
+  }
 }

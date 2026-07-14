@@ -1,4 +1,12 @@
-import { computeAvailableSources, computeAvailableTypes, computeFilteredActivities, computeYears } from '@workouts/plugin-data-source'
+import {
+  computeAvailableSources,
+  computeAvailableTypes,
+  computeCities,
+  computeFilteredActivities,
+  computeLocationSummary,
+  computePeriods,
+  computeYears,
+} from '@workouts/plugin-data-source'
 import type { Activity } from '@workouts/shared'
 import { describe, expect, it } from 'vitest'
 
@@ -134,5 +142,101 @@ describe('computeFilteredActivities', () => {
     const r = computeFilteredActivities(activities, defaultFilters, 'date', true, 2024, 1)
     expect(r).toHaveLength(1)
     expect(r[0].run_id).toBe('a')
+  })
+})
+
+describe('computeCities', () => {
+  it('groups cities and sorts by distance desc', () => {
+    const r = computeCities([
+      act({ location_country: '北京市朝阳区', distance: 10000 }),
+      act({ location_country: '上海', distance: 5000 }),
+      act({ location_country: '北京市海淀区', distance: 8000 }),
+    ])
+    expect(r).toEqual([
+      { city: '北京', distance: 18000 },
+      { city: '上海', distance: 5000 },
+    ])
+  })
+
+  it('returns empty for null location_country', () => {
+    expect(computeCities([act({ location_country: null })])).toEqual([])
+  })
+
+  it('excludes non-Chinese locations', () => {
+    expect(computeCities([act({ location_country: 'United States' }), act({ location_country: 'France' })])).toEqual([])
+  })
+
+  it('handles empty list', () => {
+    expect(computeCities([])).toEqual([])
+  })
+
+  it('handles single activity', () => {
+    const r = computeCities([act({ location_country: '深圳', distance: 15000 })])
+    expect(r).toEqual([{ city: '深圳', distance: 15000 }])
+  })
+})
+
+describe('computePeriods', () => {
+  it('classifies activities into 5 periods', () => {
+    const r = computePeriods([
+      act({ start_date_local: '2024-06-01T08:00:00' }),
+      act({ start_date_local: '2024-06-01T12:00:00' }),
+      act({ start_date_local: '2024-06-01T15:00:00' }),
+      act({ start_date_local: '2024-06-01T19:00:00' }),
+      act({ start_date_local: '2024-06-01T22:00:00' }),
+    ])
+    expect(r).toHaveLength(5)
+    expect(r.map((p) => p.period)).toEqual(['morning', 'noon', 'afternoon', 'evening', 'night'])
+    expect(r.every((p) => p.count === 1)).toBe(true)
+    expect(r.every((p) => p.pct === 20)).toBe(true)
+  })
+
+  it('returns empty for null start_date_local', () => {
+    expect(computePeriods([act({ start_date_local: null as any })])).toEqual([])
+  })
+
+  it('returns empty for empty list', () => {
+    expect(computePeriods([])).toEqual([])
+  })
+
+  it('handles garbage date string', () => {
+    expect(computePeriods([act({ start_date_local: 'not-a-date' })])).toEqual([])
+  })
+
+  it('single period returns 100%', () => {
+    const r = computePeriods([act({ start_date_local: '2024-06-01T07:00:00' })])
+    expect(r).toHaveLength(1)
+    expect(r[0].period).toBe('morning')
+    expect(r[0].pct).toBe(100)
+  })
+})
+
+describe('computeLocationSummary', () => {
+  it('aggregates countries, provinces, cities', () => {
+    const r = computeLocationSummary([
+      act({ location_country: '北京市朝阳区' }),
+      act({ location_country: '上海' }),
+      act({ location_country: 'United States' }),
+    ])
+    expect(r.countries).toContain('China')
+    expect(r.countries).toContain('United States')
+    expect(r.provinces).toContain('北京')
+    expect(r.provinces).toContain('上海')
+    expect(r.cities).toContain('北京')
+    expect(r.cities).toContain('上海')
+  })
+
+  it('returns empty for all null location_country', () => {
+    const r = computeLocationSummary([act({ location_country: null }), act({ location_country: null })])
+    expect(r).toEqual({ countries: [], provinces: [], cities: [] })
+  })
+
+  it('deduplicates countries', () => {
+    const r = computeLocationSummary([
+      act({ location_country: 'United States' }),
+      act({ location_country: 'United States' }),
+      act({ location_country: 'France' }),
+    ])
+    expect(r.countries).toEqual(['France', 'United States'])
   })
 })

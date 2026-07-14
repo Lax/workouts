@@ -1,5 +1,6 @@
 import { useTheme } from '@workouts/core'
 import { useActivities } from '@workouts/plugin-data-source'
+import { LocationStats } from './LocationStats'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Header } from './components/Header'
 import { MapOverlays } from './components/MapOverlays'
@@ -79,6 +80,7 @@ export function SimpleLayout() {
               {yearRange ? `（${yearRange}）` : ''}
             </p>
           </section>
+          <LocationStats activities={activities} />
           <hr className="section-divider" />
           <div className={`year-block${selectedYear === null ? ' active' : ''}`} onClick={() => setSelectedYear(null)}>
             <div className="year-label">Total</div>
