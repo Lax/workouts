@@ -1,6 +1,7 @@
 {
   "entries": {
     "index": "simple",
+    "simple": "simple",
     "overview": "overview",
     "hello": "hello-world"
   },
