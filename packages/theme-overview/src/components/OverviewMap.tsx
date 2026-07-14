@@ -24,7 +24,17 @@ function getTileConfig(): TileConfig {
   }
 }
 
-export function OverviewMap({ activities, colorScheme, colorMode, hoveredActivityId, dashLines, privacyMode, showLabels, onActivityClick, onActivityHover }: OverviewMapProps) {
+export function OverviewMap({
+  activities,
+  colorScheme,
+  colorMode,
+  hoveredActivityId,
+  dashLines,
+  privacyMode,
+  showLabels,
+  onActivityClick,
+  onActivityHover,
+}: OverviewMapProps) {
   return (
     <HeroMap
       activities={activities}

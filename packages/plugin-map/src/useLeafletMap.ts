@@ -1,7 +1,7 @@
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { useCallback, useEffect, useRef } from 'react'
-import { type TileConfig, resolveTileUrl, resolveLabeledTileUrl } from './tiles'
+import { resolveLabeledTileUrl, resolveTileUrl, type TileConfig } from './tiles'
 
 export interface LeafletMapOptions {
   colorScheme: 'light' | 'dark'

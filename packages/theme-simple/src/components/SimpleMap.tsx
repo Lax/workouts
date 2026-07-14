@@ -24,7 +24,17 @@ function getTileConfig(): TileConfig {
   }
 }
 
-export function SimpleMap({ activities, colorScheme, colorMode, hoveredActivityId, dashLines, privacyMode, showLabels, onActivityClick, onActivityHover }: SimpleMapProps) {
+export function SimpleMap({
+  activities,
+  colorScheme,
+  colorMode,
+  hoveredActivityId,
+  dashLines,
+  privacyMode,
+  showLabels,
+  onActivityClick,
+  onActivityHover,
+}: SimpleMapProps) {
   return (
     <PanelMap
       activities={activities}

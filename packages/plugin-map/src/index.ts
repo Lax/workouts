@@ -1,3 +1,4 @@
+export { LightsToggle } from './controls/LightsToggle'
 export type { HeroMapProps } from './HeroMap'
 export { HeroMap } from './HeroMap'
 export type { MapVariant, MapViewProps } from './MapView'
@@ -7,9 +8,19 @@ export { PanelMap } from './PanelMap'
 export { default } from './plugin'
 export { decodePolyline } from './polyline'
 export type { TileConfig, TileUrlBuilder, Vendor } from './tiles'
-export { carto, mapbox, openfreemap, maptiler, stadiamaps, resolveTileUrl, resolveLabeledTileUrl, VENDORS, getAvailableStyles, styleHasLabels } from './tiles'
+export {
+  carto,
+  getAvailableStyles,
+  mapbox,
+  maptiler,
+  openfreemap,
+  resolveLabeledTileUrl,
+  resolveTileUrl,
+  stadiamaps,
+  styleHasLabels,
+  VENDORS,
+} from './tiles'
 export type { LeafletMapOptions, MapInstance } from './useLeafletMap'
 export { useLeafletMap } from './useLeafletMap'
 export type { PolylineOptions } from './useMapPolylines'
 export { useMapPolylines } from './useMapPolylines'
-export { LightsToggle } from './controls/LightsToggle'

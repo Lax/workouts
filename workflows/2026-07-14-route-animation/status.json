@@ -1,0 +1,16 @@
+{
+  "id": "2026-07-14-route-animation",
+  "status": "pending_approval",
+  "current_phase": "plan",
+  "created": "2026-07-14T17:10:00Z",
+  "updated": "2026-07-14T17:10:00Z",
+  "phases": {
+    "requirement": { "status": "completed", "handoff": "handoffs/01-req.md", "attempts": 1 },
+    "plan":        { "status": "completed", "handoff": "handoffs/02-plan.md", "attempts": 1 },
+    "development": { "status": "pending", "handoff": "handoffs/03-dev.md", "attempts": 0 },
+    "qa":          { "status": "pending", "handoff": "handoffs/04-qa.md", "attempts": 0 },
+    "release":     { "status": "pending", "handoff": "handoffs/05-release.md", "attempts": 0 }
+  },
+  "escalations": [],
+  "retry_limits": { "development": 3, "qa": 3 }
+}

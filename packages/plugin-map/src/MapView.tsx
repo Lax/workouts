@@ -41,9 +41,23 @@ export function MapView({
 }: MapViewProps) {
   const elRef = useRef<HTMLDivElement>(null)
 
-  const mapRef = useLeafletMap(elRef, { colorScheme, tileConfig, showLabels, zoomControl: showZoomControl, attributionControl: showAttribution })
+  const mapRef = useLeafletMap(elRef, {
+    colorScheme,
+    tileConfig,
+    showLabels,
+    zoomControl: showZoomControl,
+    attributionControl: showAttribution,
+  })
 
-  const polylineOptions: PolylineOptions = { colorMode, hoveredActivityId, maxLines, fitOnChange: true, dashLines, onActivityClick, onActivityHover }
+  const polylineOptions: PolylineOptions = {
+    colorMode,
+    hoveredActivityId,
+    maxLines,
+    fitOnChange: true,
+    dashLines,
+    onActivityClick,
+    onActivityHover,
+  }
   useMapPolylines(mapRef, activities, polylineOptions)
 
   const bg = privacyMode ? 'var(--color-bg, #000)' : 'var(--color-bg)'
@@ -55,9 +69,7 @@ export function MapView({
   return (
     <div style={{ position: 'relative', width: '100%', height: '100%' }}>
       <div ref={elRef} style={containerStyle} />
-      {privacyMode && (
-        <div style={{ position: 'absolute', inset: 0, background: bg, zIndex: -1 }} />
-      )}
+      {privacyMode && <div style={{ position: 'absolute', inset: 0, background: bg, zIndex: -1 }} />}
     </div>
   )
 }
