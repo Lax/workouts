@@ -1,29 +1,29 @@
 ---
 name: meow
-description: Structured multi-phase development workflow with 5 auto-orchestrated stages (requirement → plan → development → QA → release). Each phase runs as an independent subagent with handoff communication, QA auto-loop with escalation, strict role boundaries, and 12 development principles. Use when user says "bug fix", "new feature", "improvement", "implement" or describes a task needing structured execution.
+description: Structured multi-phase development workflow with 5 auto-orchestrated stages (require → plan → develop → QA → release). Each phase runs as independent subagent with handoff communication, QA auto-loop, strict role boundaries. Use for "bug fix", "new feature", "improvement", "implement" tasks.
 ---
 
 # Meow — Multi-Agent Development Lifecycle 🐱
 
-5-phase loop: **requirement → plan → development → qa → release**
+5-phase loop: **🧭 1/5 Require → 📐 2/5 Plan → 🛠️ 3/5 Develop → 🔬 4/5 QA → 🚀 5/5 Release**
 
 ```
 skill("meow")
 ```
 
----
-
 ## Meow Anchor
 
-When activated, announce with a meow:
+Activate → announce: `🐱 Meow! Meow workflow active.`
+
+## Pipeline Overview
 
 ```
-🐱 Meow! Moew workflow active.
+🧭 1/5 Require ──→ 📐 2/5 Plan ──→ 🛠️ 3/5 Develop ──→ 🔬 4/5 QA ──→ 🚀 5/5 Release
+     ↑                 ↑ [approval]      ↑                  ↑              ↑
+   done             pending           done               passed         done + CI
 ```
 
-Serves as a heartbeat — confirms the skill loaded successfully. Not required on every output, just the initial activation.
-
----
+Escalation path: any gate fail → root cause → return to matching phase. 3 retry limit per phase → escalate to user.
 
 ## Principles
 
@@ -31,346 +31,226 @@ Serves as a heartbeat — confirms the skill loaded successfully. Not required o
 |---|---|---|
 | BIF | Bug ships with test that reproduces it | Development |
 | EPF | Error paths before happy path | Development |
-| PFC | Prefer Flat over Clever — no premature abstraction | Plan, Development |
+| PFC | Prefer Flat over Clever — extract after 3+ repetitions | Plan, Development |
 | SAP | Single Answer Principle — one standard answer per question | All phases |
-| FAI | Fail-fast with Actionable Info — every error includes fix command | Development, QA |
-| TDA | Test Duality Assertion — test both normal and error paths | Development |
+| FAI | Fail-fast with Actionable Info — error + fix command | Development, QA |
+| TDA | Test Duality Assertion — test normal + error path | Development |
 | OHA | One Hour Ahead — validate approach before implementing | Plan gate |
 | RUM | Read file fully before editing | Development |
-| MVC | Modify only what's intended, don't fix tangental issues | Development |
+| MVC | Modify only intended, don't fix tangental issues | Development |
 | KISS | Simple > clever | All phases |
 | DRY | Don't repeat existing logic | Plan, Development |
-| YAGNI | Don't implement what isn't needed | Plan |
-
----
-
-## Meow Anchor
-
-When invoked, the very first output line MUST be:
-
-```
-🐱 Meow! Moew workflow active.
-```
-
-This confirms the skill is loaded and context is intact. If this line is missing, context may have been lost — re-invoke the skill.
-
-## Workflow Loop
-
-```
-                         ┌──────────────────┐
-                         │   requirement    │ explore + general
-                         └────────┬─────────┘
-                                  │ completed
-                         ┌────────▼─────────┐
-                         │      plan        │ code-review + general
-                         └────────┬─────────┘
-                                  │ completed
-      user: n ◄──────────┌────────▼──────────┐
-                         │ pending_approval  │
-      user: y ─────────►└────────┬──────────┘
-                                  │
-                         ┌────────▼─────────┐
-                         │   development    │ per-task agent
-                         └────────┬─────────┘
-                                  │ completed
-                         ┌────────▼─────────┐
-                         │       qa         │ spec-runner + general
-                         └────────┬─────────┘
-                  ┌────────┬───────┼───────┬──────────────┐
-                  │        │       │       │              │
-              pass     minor   blocker/  inconsistent  dev/qa over
-                              major      + no root   retry_limit
-                  │        │       │       │              │
-                  ▼        ▼       ▼       ▼              ▼
-              release  continue  ┌──┴───┐  escalated ──────┐
-                  │        │     │ root │     │            │
-                  ▼        │     │cause │  user decide     │
-               DONE        │     │   ┌──┤  which phase     │
-                           │     │   │  │                  │
-                           │     │   │  │       ◄──────────┘
-                           │     │   │  ▼
-                           │     │   │ ┌──────────┐
-                           │     │   │ │ 回相符   │
-                           │     │   │ │ 阶段     │
-                           │     │   │ └────┬─────┘
-                           │     │   └──┬───┘
-                           │     │      │
-                           │     │  ┌───▼────┐
-                           │     │  │ 没有    │
-                           │     │  │ 匹配的  │
-                           │     │  │ → esc   │
-                           │     │  └────────┘
-                           │     │
-                           └─────┤
-
-escalated → user picks phase → resume
-```
+| YAGNI | Not implement what isn't needed | Plan |
 
 ## Phase Definitions
 
-### Hard Rule: All Phases Run as Subagents
+### Hard Rules
 
-Every phase MUST be executed via `task(subagent_type, prompt)`.
-The main session NEVER executes a phase directly — it only orchestrates.
+- Every phase runs as subagent via `task(subagent_type, prompt)`. Main session orchestrates only.
+- Only main session reads phase output and decides next action.
+- Gates must pass before transition (see each phase gate).
 
-Exception: only the main session can read phase output and decide next action.
-This ensures: (a) role boundaries are enforced, (b) handoff documents are produced,
-(c) no step can be skipped.
-
-### Phase Transition Gates
-
-Between each phase transition, the main session MUST verify:
-
-| Transition | Gate |
-|---|---|
-| req → plan | handoffs/01-req.md exists, Done Criteria are testable |
-| plan → dev | status.json phase=plan status=pending_approval, user confirmed y |
-| dev → qa | npm run typecheck passes, npm run test passes, npx biome ci passes, build passes |
-| qa → release | handoffs/04-qa.md status=passed, all tests green |
-| release → done | CI run on committed SHA returns success |
-
-If any gate fails → return to the phase that produced the failing output.
-
-### Phase 1: Requirement
+### Phase 1/5: Require — 需求入口
 
 | Field | Value |
 |---|---|
 | subagent_type | `explore` → `general` |
-| skill | `grill-with-docs` |
-| handoff | `handoffs/01-req.md` |
-| status | `completed / blocked` |
+| skills | `grill-with-docs` |
+| handoff | `01-req.md` |
+| gate | handoff exists, Done Criteria are testable |
+
+**Orchestrator prep** (before launching subagent):
+
+```
+MEOWCYCLE=.opencode/meoworks/YYYY-MM-DD-desc
+mkdir -p $MEOWCYCLE
+if ! grep -qxF '/.opencode/meoworks/' .gitignore; then
+  echo '/.opencode/meoworks/' >> .gitignore
+fi
+write status.json with phases all pending
+```
 
 **explore probe:**
 ```
-Scan the codebase at /path for relevant files matching the task:
+Scan the codebase at /path for relevant files:
 {task description}
-Return: file paths, brief descriptions, key types/functions relevant.
+Return: file paths, brief descriptions, key types/functions.
 ```
 
 **general prompt:**
 ```
-You are the workflow Requirement Analyst. Your input is:
-
+You are Requirement Analyst. Input:
 Task: {task description}
 Codebase scan: {explore output}
 
-Your job:
-1. Understand the problem by grilling it against existing docs (load grill-with-docs)
-2. Define:
-   - What — scope
-   - Why — value
-   - Done Criteria — verifiable conditions (must be testable)
-   - Edge Cases — at least 3
-   - Constraints — non-functional limits
-3. Write handoff to {workflow_dir}/handoffs/01-req.md
-4. Update {workflow_dir}/status.json phase to completed
+1. Load grill-with-docs, understand against existing docs.
+2. Define: What (scope), Why (value), Done Criteria (testable), Edge Cases (≥3), Constraints.
+3. Write handoff to {workflow_dir}/01-req.md
+4. Update {workflow_dir}/status.json phase=completed
 
-Follow: SAP (single answer per question), KISS
-Do NOT: propose solutions, estimate time, mention implementation
+SAP, KISS. Do NOT: propose solutions, estimate time.
 ```
 
-### Phase 2: Plan
+### Phase 2/5: Plan — 方案设计 · 需审批
 
 | Field | Value |
 |---|---|
 | subagent_type | `code-review` → `general` |
-| skill | `caveman`, `grill-with-docs` |
-| handoff | `handoffs/02-plan.md` |
-| status | `completed → pending_approval` |
+| skills | `caveman`, `grill-with-docs` |
+| handoff | `02-plan.md` |
+| gate | status=pending_approval, user confirmed y |
 
 **code-review audit:**
 ```
-Read-only audit for:
-{workflow_dir}/handoffs/01-req.md
-
-Check: are the requirements achievable with current codebase structure?
-Identify: files that will be affected, patterns to follow.
-Return: audit notes.
+Read-only audit of {workflow_dir}/01-req.md.
+Read all files mentioned in the requirement's affected file list (if any).
+Check: achievable with current codebase? Files affected? Patterns?
+Return: audit notes + file contents read (for architect reference).
 ```
 
 **general prompt:**
 ```
-You are the workflow Architect. Input:
-
-Requirement: {workflow_dir}/handoffs/01-req.md
+You are Architect. Input:
+Requirement: {workflow_dir}/01-req.md
 Audit: {code-review output}
 
-Design the solution:
-
-1. File change list — add / modify / delete
-2. Architecture decisions — why this approach, alternatives considered
+Design:
+1. File change list — add/modify/delete
+2. Architecture decisions — why this, alternatives rejected
 3. Implementation steps — ordered by dependency
 4. Test strategy — what to test at each level
 
-Grill your plan against the requirements (load grill-with-docs).
-Compress your reasoning (load caveman).
+Grill against req (grill-with-docs). Compress (caveman).
 
-Verify against:
-- KISS: what's the simplest?
-- DRY: does this repeat existing logic?
-- YAGNI: is this needed now?
-- PFC: is this abstraction justified?
-- OHA: can the implementer start within an hour?
-
-DO NOT: change requirements, write code.
-After writing handoff, update status.json to pending_approval.
-Exit and wait for user confirmation.
+Verify: KISS, DRY, YAGNI, PFC, OHA (<1h implementation).
+Do NOT: change requirements, write code.
+NOTE: If plan lists >5 files, orchestrator will split into multiple cycles.
+Design each step as an independently deliverable unit.
+Write handoff, update status.json to pending_approval. Wait for user.
 ```
 
-### Phase 3: Development
+### Phase 3/5: Develop — 编码实现
 
 | Field | Value |
 |---|---|
 | subagent_type | per task: `sync-dev` / `export-helper` / `spec-runner` / `general` |
 | skill | `caveman` |
-| handoff | `handoffs/03-dev.md` |
-| status | `pending → completed` |
+| handoff | `03-dev.md` |
+| gate | biome + test + build pass |
 
 **general prompt:**
 ```
-You are the workflow Developer. Input:
+You are Developer. Input:
+Plan: {workflow_dir}/02-plan.md
+Approved: yes
 
-Plan: {workflow_dir}/handoffs/02-plan.md
-User approved: yes
+Per step:
+1. Read file (RUM), understand conventions from neighbors.
+2. Implement: types → pure functions → components + tests (BIF, TDA).
+3. Error paths before happy (EPF). Only plan scope (MVC).
 
-For each step in the plan:
-
-1. Read the file to modify (RUM)
-2. Understand conventions by reading neighboring files
-3. Implement:
-   a. Types / data structures first
-   b. Pure functions / utilities
-   c. Components / business logic
-   d. Tests (BIF, TDA)
-4. Handle error paths before happy path (EPF)
-5. Only change what's in the plan (MVC)
-
-Integrity checks:
-- BIF: every fix has a reproducing test
-- FAI: every error message includes actionable fix
-- SAP: same patterns as existing code
-- PFC: flat code preferred, extract only after 3+ repetitions
-
-After implementing all steps:
-1. Run: npm run typecheck
-2. Run: npx biome check --write .
-3. Run: npm run test -w packages/web
-4. Write handoff to {workflow_dir}/handoffs/03-dev.md
+After all steps:
+1. npx biome check --write .
+2. npm run typecheck
+3. npm run test -w packages/web
+4. Write handoff to {workflow_dir}/03-dev.md
 5. Update status.json
 ```
 
-### Phase 4: QA
+### Phase 4/5: QA — 质量检验
 
 | Field | Value |
 |---|---|
 | subagent_type | `spec-runner` → `general` |
 | skill | `grillme` |
-| handoff | `handoffs/04-qa.md` |
-| status | `passed / failed / escalated` |
+| handoff | `04-qa.md` |
+| decision | passed / blocker→dev / escalated |
 
 **spec-runner probe:**
 ```
-Run all tests and checks:
-1. npm run test -w packages/web    (vitest)
-2. npx tsc --noEmit                (typecheck)
-3. npx biome ci .                  (lint)
-4. npm run build                   (build)
-Return: raw output of each, exit codes.
+Run:
+1. npm run test -w packages/web -- --reporter verbose
+2. npx tsc --noEmit
+3. npx biome ci .
+4. npm run build
+Return: raw output + exit codes.
 ```
 
 **general prompt:**
 ```
-You are the workflow QA Engineer. Input:
+You are QA Engineer. DO NOT propose fixes.
+Input: all handoffs + test results.
 
-Requirement: {workflow_dir}/handoffs/01-req.md
-Plan: {workflow_dir}/handoffs/02-plan.md
-Dev output: {workflow_dir}/handoffs/03-dev.md
-Test results: {spec-runner output}
+Verify:
+1. Done Criteria from 01-req.md — check each.
+2. Plan consistency — dev output vs plan (files? scope?).
+3. Requirement consistency — dev output vs done criteria.
+4. Quality: FAI? Error paths? Hardcoded values?
 
-Your job (strict role boundary — DO NOT propose fixes):
+Severity: blocker (test/type/build failure) | major (criteria missed) | minor (style/naming)
 
-1. Verify Done Criteria from 01-req.md — check each
-2. Plan consistency — diff dev output vs plan (files changed? scope correct?)
-3. Requirement consistency — diff dev output vs done criteria
-4. Quality check — FAI compliance? Error paths? Hardcoded values?
+With minor issues: "passed → release" only if zero minors.
+If minors exist and plan+req match → "continue" (回 development
+to fix minors, no re-run QA. Orchestrator applies fixes directly).
 
-Severity classification:
-- blocker:  test failure / type error / build failure
-- major:    done criteria missed / plan deviation
-- minor:    style / naming / non-functional polish
-
-Decision matrix:
-
+Decision:
 | Tests | Plan match | Req match | Result |
 |---|---|---|---|
-| pass   | yes        | yes       | passed → release |
-| pass   | yes        | no        | inconsistent → escalated |
-| pass   | no         | yes       | root cause →回 matching phase |
-| pass   | no         | no        | escalated |
-| fail   | any        | any       | blocker/major →回 development |
-| fail x3 retry | -- | --        | escalated |
+| pass | yes | yes | passed → release |
+| pass | yes | no | escalated |
+| pass | no | yes | 回 development |
+| pass | no | no | escalated |
+| fail | any | any | blocker → dev |
+| fail x3 | any | any | escalated |
 
-Root cause routing for inconsistencies:
-- dev ≠ plan → return to development
-- plan ≠ req → return to plan
-- req unclear/insufficient → return to requirement
-- multi-phase mismatch → escalated
+Root cause routing: dev≠plan → dev; plan≠req → plan; multi-phase → escalated.
 
-Escalated = pause all auto-flow, handoff marked escalated, wait for user.
-
-Write handoff to {workflow_dir}/handoffs/04-qa.md.
-Update status.json with result and target_phase if returning.
+Write handoff, update status.json.
 ```
 
-### Phase 5: Release
+### Phase 5/5: Release — 发布交付
 
 | Field | Value |
 |---|---|
 | subagent_type | `docs-writer` → `general` |
 | skill | `caveman` |
-| handoff | `handoffs/05-release.md` |
-| status | `completed / terminated` |
-| depends_on | `handoffs/04-qa.md status=passed` |
+| handoff | `05-release.md` |
+| depends_on | QA status=passed |
 
 **general prompt:**
 ```
-You are the workflow Release Manager. Input:
+You are Release Manager. Input:
+Requirement: {workflow_dir}/01-req.md
+QA report: {workflow_dir}/04-qa.md
 
-Requirement: {workflow_dir}/handoffs/01-req.md
-QA report: {workflow_dir}/handoffs/04-qa.md
+IMPORTANT: QA status MUST be "passed". If not, abort.
 
-IMPORTANT — Check QA status first:
-- QA report status MUST equal "passed". If not, DO NOT commit.
-  Return to QA phase with message: "QA not passed, release aborted."
-
-Your job:
-
-1. Generate release summary:
-   - Change summary
-   - Scope / affected files
-   - Test results from QA
-   - Known minor issues (from QA, only if approved)
-   - Rollback plan
+1. Generate summary: change summary, scope, test results, known issues, rollback.
 
 2. Stage and commit:
-   - Check git status — only intended files staged
-   - Write commit message explaining WHY (not WHAT)
-   - Push
+   - git status — only intended files staged
+   - npx biome check --write . && git add -u  ← ensure no lint CI failure
+   - Check .gitignore contains '/.opencode/meoworks/' (report if missing)
+   - Commit (WHY not WHAT), push
 
 3. Monitor CI:
-   - After push, run: gh run list --limit 1 --json conclusion,displayTitle
-   - Wait for CI to complete (up to 90s, check every 15s)
-   - If CI returns "failure": log the error, recommend rollback
-   - If CI returns "success": confirm release complete
+   - gh run-watch --compact --exit-status   ← requires gh-run-watch installed
+   - If failure → log error, recommend rollback
+   - If success → confirm release
 
-4. Write handoff to {workflow_dir}/handoffs/05-release.md
-5. Update status.json to completed
-6. Present final report to user
+4. Write handoff, update status.json to completed.
+5. Present final report.
 
-Failure to check CI → risk of merging broken code. This is a non-negotiable gate.
+CI check is non-negotiable gate.
 ```
 
----
+## Dependencies
+
+| Tool | Phase | Install |
+|---|---|---|
+| `gh-run-watch` | 5/5 CI monitoring | `cp scripts/gh-run-watch ~/.local/share/gh/extensions/gh-run-watch/ && chmod +x ~/.local/share/gh/extensions/gh-run-watch/gh-run-watch` |
+
+Predicts CI duration from recent runs (median), sleeps predictively, delegates to `gh run watch`. Supports `--compact`, `--exit-status`. Project script at `scripts/gh-run-watch`.
 
 ## Status.json
 
@@ -382,37 +262,31 @@ Failure to check CI → risk of merging broken code. This is a non-negotiable ga
   "created": "ISO datetime",
   "updated": "ISO datetime",
   "phases": {
-    "requirement": { "status": "pending / completed / blocked", "handoff": "handoffs/01-req.md", "attempts": 0 },
-    "plan":        { "status": "pending / completed / pending_approval", "handoff": "handoffs/02-plan.md", "attempts": 0 },
-    "development": { "status": "pending / completed / failed", "handoff": "handoffs/03-dev.md", "attempts": 0 },
-    "qa":          { "status": "pending / passed / failed / escalated", "handoff": "handoffs/04-qa.md", "attempts": 0 },
-    "release":     { "status": "pending / completed", "handoff": "handoffs/05-release.md", "attempts": 0 }
+    "require": { "status": "pending / completed / blocked", "handoff": "01-req.md", "attempts": 0 },
+    "plan":        { "status": "pending / completed / pending_approval", "handoff": "02-plan.md", "attempts": 0 },
+    "development": { "status": "pending / completed / failed", "handoff": "03-dev.md", "attempts": 0 },
+    "qa":          { "status": "pending / passed / failed / escalated", "handoff": "04-qa.md", "attempts": 0 },
+    "release":     { "status": "pending / completed", "handoff": "05-release.md", "attempts": 0 }
   },
   "escalations": [],
   "retry_limits": { "development": 3, "qa": 3 }
 }
 ```
 
----
-
-## Role Boundaries (May Not Cross)
+## Role Boundaries
 
 | Agent | Scope | Prohibited |
 |---|---|---|
-| Requirement | Understand problem, clarify constraints, write done criteria | Design solutions, estimate time |
-| Plan | Design solution, assess impact, define steps | Change requirements, write code |
-| Development | Implement per plan, write tests | Change requirements, redesign architecture |
-| QA | Run tests, check consistency, classify severity | Fix bugs, propose solutions |
+| Require | Understand problem, define done criteria | Design solutions, estimate time |
+| Plan | Design solution, assess impact | Change requirements, write code |
+| Develop | Implement per plan, write tests | Change reqs, redesign architecture |
+| QA | Run tests, check consistency, classify | Fix bugs, propose solutions |
 | Release | Write summary, commit, push | Change code or requirements |
-
----
 
 ## Handoff Template
 
-Each handoff follows this structure:
-
 ```markdown
-# {workflow_dir}/handoffs/NN-phase.md
+# {workflow_dir}/NN-phase.md
 
 ## Status
 - Phase: {phase_name}
@@ -421,37 +295,31 @@ Each handoff follows this structure:
 
 ## Decisions
 - {decision 1}
-- {decision 2}
 
 ## Artifacts
-- {path/to/file} — what changed
-- {path/to/file}
+- {path} — what changed
 
 ## Consistency Check
 - Plan match: {yes / no / n/a}
 - Req match: {yes / no / n/a}
 
 ## Open Issues
-- {issue 1}
-- {issue 2}
+- {issue}
 
 ## Notes
 {free text for next phase agent}
 ```
 
----
-
 ## Workflow Directory Convention
 
 ```
-workflows/YYYY-MM-DD-task-desc/
+.opencode/meoworks/YYYY-MM-DD-task-desc/
   status.json
-  handoffs/
-    01-req.md
-    02-plan.md
-    03-dev.md
-    04-qa.md
-    05-release.md
+  01-req.md
+  02-plan.md
+  03-dev.md
+  04-qa.md
+  05-release.md
 ```
 
-Created once at the start. All agents read/write from this directory.
+Created at start. Agents read/write from `{workflow_dir}` = this directory. Automatically gitignored via `/.opencode/meoworks/` in `.gitignore`.
