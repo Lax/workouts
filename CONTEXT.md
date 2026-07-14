@@ -454,7 +454,7 @@ L1 raw → L2 标准化 GPS → L3 SQLite 摘要 → L4 构建制品 → L5 部�
 packages/
   shared/             # TypeScript：Activity 类型、格式化、SportMapper、categoryColor（不变）
   core/               # React 19 核心：PluginAPI, ComponentRegistry, ThemeContext, ErrorBoundary, bootstrap()
-  plugin-data-source/ # 派生数据 hook：useDerivedData, computeYears, computeFilteredActivities
+  plugin-data-source/ # 数据层：useActivities（fetch+归一化）, useDerivedData, data.ts（内部 fetch+normalize）
   plugin-map/         # Leaflet 地图组件（MapView），polyline 解码
   plugin-chart/       # ECharts 包装（Chart），月距离/类型饼图预设
   plugin-ui/          # 通用 UI：Card, Badge
@@ -464,8 +464,9 @@ packages/
   web/                # Vite 入口 — 主力前端
     scripts/
       template.html        # HTML 模板（含 FOUC 脚本）
-      generate-entries.mjs # 根据 config.json 生成多页 HTML
+      generate-entries.mjs # 根据 config.json 生成多页 HTML + entry shim
       generate-fixtures.mjs
+      generate-real-fixtures.mjs
     config.json            # 入口 + 插件 + 数据源配置
     src/
       app.css              # CSS 变量（light/dark 双主题）
@@ -491,15 +492,18 @@ packages/
 Ruby export (JSON) → packages/web/public/ (dev)
                     → site/ (prod via gh-pages.yml)
                               ↓
-                    bootstrap(config, entry, { theme, plugins })
+                    bootstrap(config, { theme })
+                             注册插件 + 渲染骨架
                               ↓
-                    config.data → fetch('activities.json') + fetch('stats.json')
+                    theme.Layout → useActivities() (@workouts/plugin-data-source)
                               ↓
-                    ThemeProvider (data + registry via React Context)
+                    data.ts → fetch(config.data.urls) → normalizeAll()
                               ↓
-                    theme.Layout({ data, config, registry })
+                    { activities, stats } → 组件层
                               ↓
                     组件：MapView / Drawer / ChartOverlay / DetailPanel
+
+                    [远期目标] 数据流通过 HookSystem (beforeDataLoad / afterDataLoad) 编排
 ```
 
 ### 字段名约定

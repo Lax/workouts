@@ -87,7 +87,7 @@ packages/
   plugin-data-source/         # @workouts/plugin-data-source
     src/
       index.ts                # WorkoutsPlugin export
-      loader.ts               # fetch + normalize pipeline
+      data.ts                 # fetch + normalize pipeline
       normalize.ts            # Activity type normalization
       types.ts                # DataSource, DataResult
 
@@ -427,7 +427,7 @@ ThemeLayout mounts
 Done by `@workouts/plugin-data-source`, run once at load time:
 
 ```typescript
-function normalizeActivity(raw: Record<string, unknown>): Activity {
+function normalizeActivity(raw: unknown): Activity {
   return {
     ...raw,
     // Legacy field migration
