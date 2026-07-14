@@ -28,6 +28,26 @@
   justify-content: space-between;
   align-items: center;
   padding: 2px 0;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background 0.15s;
+}
+
+.loc-city-row:hover {
+  background: var(--color-active-row, rgba(255, 255, 255, 0.05));
+}
+
+.loc-city-row.active {
+  background: var(--color-accent, #e0ed5e);
+  color: #111;
+}
+
+.loc-city-row.active .loc-city-name {
+  color: #111;
+}
+
+.loc-city-row.active .loc-city-dist {
+  color: #333;
 }
 
 .loc-city-name {
@@ -51,6 +71,29 @@
   display: flex;
   align-items: center;
   gap: 8px;
+  cursor: pointer;
+  border-radius: 4px;
+  padding: 2px 4px;
+  transition: background 0.15s;
+}
+
+.loc-period-row:hover {
+  background: var(--color-active-row, rgba(255, 255, 255, 0.05));
+}
+
+.loc-period-row.active {
+  background: var(--color-accent, #e0ed5e);
+  color: #111;
+}
+
+.loc-period-row.active .loc-period-label,
+.loc-period-row.active .loc-period-count,
+.loc-period-row.active .loc-period-pct {
+  color: #111;
+}
+
+.loc-period-row.active .loc-period-fill {
+  background: #111;
 }
 
 .loc-period-label {

@@ -1,8 +1,11 @@
 import type { Activity } from '@workouts/shared'
+import { classifyPeriod, extractCity } from '@workouts/shared'
 import { create } from 'zustand'
 import { clearRunHash, setRunHash } from './utils'
 
-export type SortField = 'date' | 'distance' | 'time'
+export type SortField = 'date' | 'distance' | 'time' | 'elevation'
+
+export type ViewMode = 'table' | 'grid'
 
 export interface SimpleStore {
   activities: Activity[]
@@ -15,6 +18,10 @@ export interface SimpleStore {
   selectedActivity: Activity | null
   years: number[]
   filteredActivities: Activity[]
+  cityFilter: string | null
+  periodFilter: string | null
+  viewMode: ViewMode
+  showYearModal: number | null
 
   setActivities: (acts: Activity[]) => void
   setSelectedYear: (y: number | null) => void
@@ -25,6 +32,10 @@ export interface SimpleStore {
   openDetail: (act: Activity) => void
   selectByHash: (act: Activity) => void
   closeDetail: () => void
+  setCityFilter: (city: string | null) => void
+  setPeriodFilter: (period: string | null) => void
+  setViewMode: (mode: ViewMode) => void
+  setShowYearModal: (year: number | null) => void
 }
 
 function computeYears(acts: Activity[]): number[] {
@@ -35,10 +46,29 @@ function computeYears(acts: Activity[]): number[] {
   return Array.from(s).sort((a, b) => b - a)
 }
 
-function filterActivities(acts: Activity[], selectedYear: number | null, sortField: SortField, sortDesc: boolean): Activity[] {
+function filterActivities(
+  acts: Activity[],
+  selectedYear: number | null,
+  sortField: SortField,
+  sortDesc: boolean,
+  cityFilter: string | null,
+  periodFilter: string | null,
+): Activity[] {
   let r = [...acts]
   if (selectedYear !== null) {
     r = r.filter((a) => a.start_date && new Date(a.start_date).getFullYear() === selectedYear)
+  }
+  if (cityFilter !== null) {
+    r = r.filter((a) => extractCity(a.location_country)?.name === cityFilter)
+  }
+  if (periodFilter !== null) {
+    r = r.filter((a) => {
+      if (!a.start_date_local) return false
+      const d = new Date(a.start_date_local)
+      const hour = d.getHours()
+      if (Number.isNaN(hour)) return false
+      return classifyPeriod(hour) === periodFilter
+    })
   }
   r.sort((a, b) => {
     const d = sortDesc ? -1 : 1
@@ -49,6 +79,8 @@ function filterActivities(acts: Activity[], selectedYear: number | null, sortFie
         return d * ((a.distance ?? 0) - (b.distance ?? 0))
       case 'time':
         return d * ((a.moving_time ?? 0) - (b.moving_time ?? 0))
+      case 'elevation':
+        return d * ((a.elevation_gain ?? 0) - (b.elevation_gain ?? 0))
       default:
         return 0
     }
@@ -67,6 +99,10 @@ export const useSimpleStore = create<SimpleStore>()((set) => ({
   selectedActivity: null,
   years: [],
   filteredActivities: [],
+  cityFilter: null,
+  periodFilter: null,
+  viewMode: 'table',
+  showYearModal: null,
 
   setActivities: (acts) =>
     set((s) => {
@@ -76,14 +112,16 @@ export const useSimpleStore = create<SimpleStore>()((set) => ({
         activities: acts,
         selectedYear: initialYear,
         years: ys,
-        filteredActivities: filterActivities(acts, initialYear, s.sortField, s.sortDesc),
+        filteredActivities: filterActivities(acts, initialYear, s.sortField, s.sortDesc, s.cityFilter, s.periodFilter),
       }
     }),
 
   setSelectedYear: (y) =>
     set((s) => ({
       selectedYear: y,
-      filteredActivities: filterActivities(s.activities, y, s.sortField, s.sortDesc),
+      cityFilter: null,
+      periodFilter: null,
+      filteredActivities: filterActivities(s.activities, y, s.sortField, s.sortDesc, null, null),
     })),
 
   setColorMode: (m) => set({ colorMode: m }),
@@ -102,7 +140,7 @@ export const useSimpleStore = create<SimpleStore>()((set) => ({
       return {
         sortField: field,
         sortDesc: desc,
-        filteredActivities: filterActivities(s.activities, s.selectedYear, field, desc),
+        filteredActivities: filterActivities(s.activities, s.selectedYear, field, desc, s.cityFilter, s.periodFilter),
       }
     }),
 
@@ -124,4 +162,26 @@ export const useSimpleStore = create<SimpleStore>()((set) => ({
     clearRunHash()
     set({ selectedActivity: null, mapHoveredId: null })
   },
+
+  setCityFilter: (city) =>
+    set((s) => {
+      const next = s.cityFilter === city ? null : city
+      return {
+        cityFilter: next,
+        filteredActivities: filterActivities(s.activities, s.selectedYear, s.sortField, s.sortDesc, next, s.periodFilter),
+      }
+    }),
+
+  setPeriodFilter: (period) =>
+    set((s) => {
+      const next = s.periodFilter === period ? null : period
+      return {
+        periodFilter: next,
+        filteredActivities: filterActivities(s.activities, s.selectedYear, s.sortField, s.sortDesc, s.cityFilter, next),
+      }
+    }),
+
+  setViewMode: (mode) => set({ viewMode: mode }),
+
+  setShowYearModal: (year) => set({ showYearModal: year }),
 }))

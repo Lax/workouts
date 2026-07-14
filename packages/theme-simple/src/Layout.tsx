@@ -1,13 +1,16 @@
 import { useTheme } from '@workouts/core'
 import { useActivities } from '@workouts/plugin-data-source'
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { ActivityCardGrid } from './components/ActivityCardGrid'
 import { Header } from './components/Header'
 import { MapOverlays } from './components/MapOverlays'
+import { RunTable } from './components/RunTable'
 import { SimpleMap } from './components/SimpleMap'
 import { intComma, Stat } from './components/Stat'
 import { SVGStat } from './components/SVGStat'
 import { YearBarSVG } from './components/YearBarSVG'
 import { YearGridSVG } from './components/YearGridSVG'
+import { YearSummaryModal } from './components/YearSummaryModal'
 import { LocationStats } from './LocationStats'
 import { useSimpleStore } from './store'
 import { getRunIdFromHash } from './utils'
@@ -28,13 +31,18 @@ export function SimpleLayout() {
   const filteredActivities = useSimpleStore((s) => s.filteredActivities)
   const years = useSimpleStore((s) => s.years)
   const setMapHoveredId = useSimpleStore((s) => s.setMapHoveredId)
+  const cityFilter = useSimpleStore((s) => s.cityFilter)
+  const periodFilter = useSimpleStore((s) => s.periodFilter)
+  const viewMode = useSimpleStore((s) => s.viewMode)
+  const setViewMode = useSimpleStore((s) => s.setViewMode)
+  const setShowYearModal = useSimpleStore((s) => s.setShowYearModal)
+  const selectedActivity = useSimpleStore((s) => s.selectedActivity)
+  const openDetail = useSimpleStore((s) => s.openDetail)
+  const selectByHash = useSimpleStore((s) => s.selectByHash)
 
   const [showSvgYear, setShowSvgYear] = useState<number | null>(null)
   const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const tableRef = useRef<HTMLDivElement>(null)
-  const selectedActivity = useSimpleStore((s) => s.selectedActivity)
-  const openDetail = useSimpleStore((s) => s.openDetail)
-  const selectByHash = useSimpleStore((s) => s.selectByHash)
   const mapActivities = useMemo(() => (selectedActivity ? [selectedActivity] : filteredActivities), [filteredActivities, selectedActivity])
 
   useEffect(() => {
@@ -78,6 +86,8 @@ export function SimpleLayout() {
               记录自己跑<span style={{ fontWeight: 700 }}>{years.length > 0 ? ` ${years.length} ` : ' '}</span>年了， 累计跑了
               <span style={{ fontWeight: 700 }}> {totalKm} </span>公里
               {yearRange ? `（${yearRange}）` : ''}
+              {cityFilter && <span> · 城市: {cityFilter}</span>}
+              {periodFilter && <span> · 时段: {periodFilter}</span>}
             </p>
           </section>
           <LocationStats activities={activities} />
@@ -101,7 +111,16 @@ export function SimpleLayout() {
                 setShowSvgYear(null)
               }}
             >
-              <div className="year-label">{y}</div>
+              <div
+                className="year-label"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setShowYearModal(y)
+                }}
+                style={{ cursor: 'pointer' }}
+              >
+                {y}
+              </div>
               <YearStats year={y} />
               {showSvgYear === y && (
                 <div className="year-hover-svgs">
@@ -130,10 +149,20 @@ export function SimpleLayout() {
             <MapOverlays />
           </div>
           <div className="table-area" ref={tableRef}>
-            {selectedYear === null && years.length > 0 ? <SVGStat activities={activities} /> : <RunTable />}
+            <div className="view-toggle">
+              <button type="button" className={viewMode === 'table' ? 'active' : ''} onClick={() => setViewMode('table')}>
+                表格
+              </button>
+              <button type="button" className={viewMode === 'grid' ? 'active' : ''} onClick={() => setViewMode('grid')}>
+                卡片
+              </button>
+            </div>
+            {selectedYear === null && years.length > 0 && viewMode === 'table' ? <SVGStat activities={filteredActivities} /> : null}
+            {viewMode === 'grid' ? <ActivityCardGrid /> : <RunTable />}
           </div>
         </main>
       </div>
+      <YearSummaryModal />
     </>
   )
 }
@@ -195,86 +224,6 @@ function YearStats({ year }: { year: number | null }) {
         <strong>{paceStr}</strong> /km
       </span>
       {stats.avgHr > 0 && <Stat value={stats.avgHr} description="bpm" />}
-    </div>
-  )
-}
-
-function RunTable() {
-  const filtered = useSimpleStore((s) => s.filteredActivities)
-  const sortField = useSimpleStore((s) => s.sortField)
-  const sortDesc = useSimpleStore((s) => s.sortDesc)
-  const toggleSort = useSimpleStore((s) => s.toggleSort)
-  const mapHoveredId = useSimpleStore((s) => s.mapHoveredId)
-  const setMapHoveredId = useSimpleStore((s) => s.setMapHoveredId)
-  const openDetail = useSimpleStore((s) => s.openDetail)
-
-  const hasElev = useMemo(() => filtered.some((a) => (a.elevation_gain ?? 0) > 0), [filtered])
-
-  function formatTime(sec: number | null): string {
-    if (sec === null || sec === undefined) return '—'
-    const m = Math.floor(sec / 60)
-    if (m < 60) return `${m}min`
-    return `${Math.floor(m / 60)}h ${m % 60}min`
-  }
-
-  function formatPace(speed: number | null): string {
-    if (speed === null || speed <= 0) return '—'
-    const pace = 1000 / (speed * 60)
-    const min = Math.floor(pace)
-    const sec = Math.round((pace - min) * 60)
-    return `${min}'${sec.toString().padStart(2, '0')}"`
-  }
-
-  function titleForRow(act: (typeof filtered)[0]): string {
-    if (act.name && !act.name.startsWith('Running')) return act.name
-    if (act.sport_category === 'run') return 'Run'
-    return act.name || 'Untitled'
-  }
-
-  return (
-    <div className="table-container">
-      <table className="run-table">
-        <thead>
-          <tr>
-            <th />
-            <th className={sortField === 'distance' ? 'sorted' : ''} onClick={() => toggleSort('distance')}>
-              km {sortField === 'distance' ? (sortDesc ? '↓' : '↑') : ''}
-            </th>
-            {hasElev && <th>m</th>}
-            <th>Pace</th>
-            <th>BPM</th>
-            <th>Time</th>
-            <th className={sortField === 'date' ? 'sorted' : ''} onClick={() => toggleSort('date')}>
-              Date {sortField === 'date' ? (sortDesc ? '↓' : '↑') : ''}
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {filtered.map((act) => (
-            <tr
-              key={act.run_id}
-              className={`run-row${mapHoveredId === act.run_id ? ' selected' : ''}`}
-              data-run-id={act.run_id}
-              onClick={() => openDetail(act)}
-              onMouseEnter={() => setMapHoveredId(act.run_id)}
-              onMouseLeave={() => setMapHoveredId(null)}
-            >
-              <td>{titleForRow(act)}</td>
-              <td>{act.distance ? intComma(Math.round(act.distance / 10) / 100) : '—'}</td>
-              {hasElev && <td>{act.elevation_gain ? Math.round(act.elevation_gain).toString() : '—'}</td>}
-              <td>{formatPace(act.average_speed)}</td>
-              <td>{act.average_heartrate ? act.average_heartrate.toFixed(0) : '—'}</td>
-              <td>{formatTime(act.moving_time)}</td>
-              <td className="run-date">{act.start_date?.slice(0, 10) ?? '—'}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      {filtered.length === 0 && (
-        <div className="empty-state">
-          <p>No activities match your filters</p>
-        </div>
-      )}
     </div>
   )
 }
