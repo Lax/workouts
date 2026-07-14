@@ -1,5 +1,5 @@
-import { classifyPeriod, extractCity, sortPeriods, type PeriodLabel } from '@workouts/shared'
 import type { Activity } from '@workouts/shared'
+import { classifyPeriod, extractCity, type PeriodLabel, sortPeriods } from '@workouts/shared'
 import type { CityStat, LocationSummary, PeriodStat } from './types'
 
 export function computeYears(activities: Activity[]): number[] {
@@ -95,9 +95,7 @@ export function computeCities(activities: Activity[]): CityStat[] {
     const d = a.distance ?? 0
     cityDist.set(info.name, (cityDist.get(info.name) ?? 0) + d)
   }
-  return [...cityDist.entries()]
-    .map(([city, distance]) => ({ city, distance }))
-    .sort((a, b) => b.distance - a.distance)
+  return [...cityDist.entries()].map(([city, distance]) => ({ city, distance })).sort((a, b) => b.distance - a.distance)
 }
 
 export function computePeriods(activities: Activity[]): PeriodStat[] {

@@ -185,9 +185,9 @@ function levenshtein(a: string, b: string): number {
   return cur[m]
 }
 
+export * from './cities'
 export * from './color-mode'
 export * from './theme-types'
-export * from './cities'
 
 export type PeriodLabel = 'morning' | 'noon' | 'afternoon' | 'evening' | 'night'
 
