@@ -545,6 +545,23 @@ Ruby export (JSON) → packages/web/public/ (dev)
 - **sync.yml**: schedule → sync data → build + deploy (Ruby 全程)
 - **gh-pages.yml**: CI completed (workflow_run) 或 sync workflow_dispatch → cache DB → export → build → deploy Pages
 
+### CI 等待
+
+用 `gh-run-watch` 替代手动 `sleep` + `gh run list` 轮询：
+
+```bash
+git push && gh run-watch --compact --exit-status
+```
+
+**安装：**
+
+```bash
+cp scripts/gh-run-watch ~/.local/share/gh/extensions/gh-run-watch/
+chmod +x ~/.local/share/gh/extensions/gh-run-watch/gh-run-watch
+```
+
+**算法：** 取最近 50 次成功 CI 的耗时中位数作为预测值，首次 sleep `预测+15s`，之后委托 `gh run watch` 实时尾日志（3s 轮询 + 指数退避）。`DEBUG_CI_WAIT=1` 可查看预测明细。
+
 ## 文档架构
 
 ### 文档分类

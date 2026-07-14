@@ -82,6 +82,16 @@ SVG 支持 5 种风格：`github`、`grid`、`circular`、`month-of-life`、`yea
 
 两级机制：`run_id` 精确去重 + 跨源置信度打分（时间/距离/时长三维度），匹配结果在 SVG 上以标注显示。
 
+## CI 等待
+
+```bash
+cp scripts/gh-run-watch ~/.local/share/gh/extensions/gh-run-watch/gh-run-watch
+chmod +x ~/.local/share/gh/extensions/gh-run-watch/gh-run-watch
+git push && gh run-watch --compact --exit-status
+```
+
+预测 CI 耗时 + 自动等待 + 实时日志。详见 [docs/gh-run-watch.md](docs/gh-run-watch.md)。
+
 ## 项目状态
 
 已同步 1100+ 条活动记录，覆盖 5 个运动平台，每日 CI 自动同步 + 发布 GitHub Pages。

@@ -1,9 +1,32 @@
 #!/usr/bin/env bash
-# gh-run-watch — Watch latest CI run with smart initial delay
-# Usage: gh run-watch [-- <gh-run-watch-flags>]
+# gh-run-watch — Watch CI run with smart initial delay
 #
-# Gh CLI extension. Predicts CI duration from recent runs, sleeps
-# predictively, then delegates to `gh run watch` for real-time logs.
+# Predicts CI duration from recent 50 runs (median), sleeps predictively,
+# then delegates to `gh run watch` for real-time logs + exit code.
+#
+# Installation:
+#   cp scripts/gh-run-watch ~/.local/share/gh/extensions/gh-run-watch/
+#   chmod +x ~/.local/share/gh/extensions/gh-run-watch/gh-run-watch
+#
+# Usage:
+#   gh run-watch [run-id] [-- <gh-run-watch-flags>]
+#
+# Examples:
+#   gh run-watch                    # Watch latest run on current branch
+#   gh run-watch --compact          # Show only relevant/failed steps
+#   gh run-watch --exit-status      # Exit non-zero on failure (for CI scripts)
+#   gh run-watch 12345678           # Watch specific run
+#   git push && gh run-watch -q --compact --exit-status  # Full CI gate
+#
+# Flags (all passed through to gh run watch):
+#   --compact        Show only relevant/failed steps
+#   --exit-status    Exit with non-zero status if run fails
+#   -q               Suppress progress and summary
+#   -i, --interval   Refresh interval in seconds (default 3)
+#   -R, --repo       Select repository
+#
+# Debug:
+#   DEBUG_CI_WAIT=1 gh run-watch    # Print prediction timing
 set -euo pipefail
 
 predict_duration() {
