@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+# gh-run-watch — Watch latest CI run with smart initial delay
+# Usage: gh run-watch [-- <gh-run-watch-flags>]
+#
+# Gh CLI extension. Predicts CI duration from recent runs, sleeps
+# predictively, then delegates to `gh run watch` for real-time logs.
+set -euo pipefail
+
+predict_duration() {
+  local workflow=${1:-".github/workflows/ci.yml"} branch=${2:-"main"}
+  gh run list --workflow "$workflow" --branch "$branch" --limit 50 \
+    --json conclusion,createdAt,updatedAt --jq \
+    '.[] | select(.conclusion == "success") |
+     ((.updatedAt | fromdateiso8601) - (.createdAt | fromdateiso8601))' \
+    | sort -n | awk 'BEGIN{min=10} {a[NR]=$1}
+      END{m=int((NR+1)/2); d=(NR%2)?a[m]:(a[m]+a[m+1])/2; print (d<min)?min:d}'
+}
+
+# --- resolve run_id ---
+if [[ $# -gt 0 && "$1" != -* ]]; then
+  run_id=$1
+  shift
+else
+  branch=$(git branch --show-current 2>/dev/null || echo "main")
+  run_id=$(gh run list --branch "$branch" --limit 1 \
+    --json databaseId --jq '.[0].databaseId')
+fi
+
+if [[ -z "$run_id" || "$run_id" == "null" ]]; then
+  echo "no recent run found" >&2
+  exit 1
+fi
+
+# --- smart initial wait ---
+predicted=$(predict_duration)
+if [[ ${DEBUG_CI_WAIT:-0} -eq 1 ]]; then
+  echo "DEBUG: predicted=${predicted}s, initial_wait=$((predicted + 15))s" >&2
+fi
+
+predict_start=$(date +%s)
+sleep $((predicted + 15))
+
+# --- delegate to gh run watch ---
+exec gh run watch "$run_id" "$@"
