@@ -30,8 +30,9 @@ jobs:
           ruby -c lib/workouts.rb
           for f in $(find lib -name '*.rb'); do ruby -c "$f"; done
 
-  frontend:
-    runs-on: ubuntu-latest
+  frontend-e2e:
+    runs-on: ${{ vars.RUNNER_LABEL || 'ubuntu-latest' }}
+
     steps:
       - uses: actions/checkout@v4
 
@@ -55,47 +56,10 @@ jobs:
         env:
           VITE__MAPBOX__TOKEN: ${{ secrets.MAPBOX_TOKEN }}
 
-      - uses: actions/upload-artifact@v4
-        with:
-          name: frontend-build
-          path: packages/web/dist/
-          retention-days: 1
-
-  e2e:
-    needs: frontend
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          cache: npm
-
-      - name: Install dependencies
-        run: npm ci
-
-      - uses: actions/download-artifact@v4
-        with:
-          name: frontend-build
-          path: packages/web/dist/
-
-      - id: playwright-cache
-        uses: actions/cache/restore@v4
-        with:
-          path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ hashFiles('packages/web/package.json') }}
-
-      - name: Install Playwright browsers
-        if: steps.playwright-cache.outputs.cache-hit != 'true'
+      - name: Install Playwright browsers (ubuntu only)
+        if: vars.RUNNER_LABEL != 'self-hosted'
         run: npx playwright install --with-deps chromium
         working-directory: packages/web
-
-      - uses: actions/cache/save@v4
-        if: steps.playwright-cache.outputs.cache-hit != 'true'
-        with:
-          path: ~/.cache/ms-playwright
-          key: ${{ steps.playwright-cache.outputs.cache-primary-key }}
 
       - name: Run Playwright E2E tests
         run: npx playwright test
