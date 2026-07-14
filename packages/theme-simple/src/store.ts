@@ -101,7 +101,7 @@ export const useSimpleStore = create<SimpleStore>()((set) => ({
 
   setMapHoveredId: (id) => set({ mapHoveredId: id }),
 
-  openDetail: (act) => set({ selectedActivity: act }),
+  openDetail: (act) => set({ selectedActivity: act, mapHoveredId: act.run_id }),
 
-  closeDetail: () => set({ selectedActivity: null }),
+  closeDetail: () => set({ selectedActivity: null, mapHoveredId: null }),
 }))

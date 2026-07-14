@@ -1,7 +1,8 @@
 import { useRequiredComponent } from '@workouts/core'
 import { useActivities } from '@workouts/plugin-data-source'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Header } from './components/Header'
+import { MapOverlays } from './components/MapOverlays'
 import { YearBarSVG } from './components/YearBarSVG'
 import { YearGridSVG } from './components/YearGridSVG'
 import { useSimpleStore } from './store'
@@ -17,14 +18,22 @@ export function SimpleLayout() {
   const setSelectedYear = useSimpleStore((s) => s.setSelectedYear)
   const colorMode = useSimpleStore((s) => s.colorMode)
   const colorScheme = useSimpleStore((s) => s.colorScheme)
-  const setColorMode = useSimpleStore((s) => s.setColorMode)
   const filteredActivities = useSimpleStore((s) => s.filteredActivities)
   const years = useSimpleStore((s) => s.years)
   const setMapHoveredId = useSimpleStore((s) => s.setMapHoveredId)
 
   const [hoveredYear, setHoveredYear] = useState<number | null>(null)
+  const tableRef = useRef<HTMLDivElement>(null)
+  const selectedActivity = useSimpleStore((s) => s.selectedActivity)
+  const openDetail = useSimpleStore((s) => s.openDetail)
 
   const MapView = useRequiredComponent('map', 'MapView')
+
+  useEffect(() => {
+    if (!selectedActivity || !tableRef.current) return
+    const row = tableRef.current.querySelector(`[data-run-id="${selectedActivity.run_id}"]`)
+    if (row) row.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+  }, [selectedActivity])
 
   useEffect(() => {
     setActivities(activities)
@@ -86,55 +95,12 @@ export function SimpleLayout() {
                 colorMode={colorMode}
                 hoveredActivityId={useSimpleStore.getState().mapHoveredId}
                 onActivityHover={setMapHoveredId}
+                onActivityClick={openDetail}
               />
             )}
-            <div className="map-overlays">
-              <div className="year-pills">
-                <button
-                  type="button"
-                  className={`year-pill${selectedYear === null ? ' active' : ''}`}
-                  onClick={() => setSelectedYear(null)}
-                >
-                  All
-                </button>
-                {years.map((y) => (
-                  <button
-                    key={y}
-                    type="button"
-                    className={`year-pill${selectedYear === y ? ' active' : ''}`}
-                    onClick={() => setSelectedYear(selectedYear === y ? null : y)}
-                  >
-                    {y}
-                  </button>
-                ))}
-              </div>
-              <div className="legend-area">
-                <div className="legend-toggle">
-                  <button
-                    type="button"
-                    className={`legend-btn${colorMode === 'type' ? ' active' : ''}`}
-                    onClick={() => setColorMode('type')}
-                  >
-                    类型
-                  </button>
-                  <button
-                    type="button"
-                    className={`legend-btn${colorMode === 'speed' ? ' active' : ''}`}
-                    onClick={() => setColorMode('speed')}
-                  >
-                    速度
-                  </button>
-                </div>
-                <div className="speed-legend">
-                  <span className="sl-blue" />
-                  <span className="sl-green" />
-                  <span className="sl-yellow" />
-                  <span className="sl-red" />
-                </div>
-              </div>
-            </div>
+            <MapOverlays />
           </div>
-          <div className="table-area">
+          <div className="table-area" ref={tableRef}>
             <RunTable />
           </div>
         </main>
@@ -268,6 +234,7 @@ function RunTable() {
             <tr
               key={act.run_id}
               className={`run-row${mapHoveredId === act.run_id ? ' selected' : ''}`}
+              data-run-id={act.run_id}
               onClick={() => openDetail(act)}
               onMouseEnter={() => setMapHoveredId(act.run_id)}
               onMouseLeave={() => setMapHoveredId(null)}
