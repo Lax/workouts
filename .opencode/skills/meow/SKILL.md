@@ -43,11 +43,11 @@ Orchestrator uses `todowrite` to show live progress. Three levels:
 
 | Phase | Strategy | How it's generated |
 |---|---|---|
-| Require | Fixed | 2 sub-tasks: scan codebase → write requirement |
-| Plan | Fixed | 3 sub-tasks: code audit → design → wait approval |
+| Require | Fixed | scan → write |
+| Plan | Fixed | audit → design → approve |
 | Develop | **Dynamic** | Read `02-plan.md` file change list → one todo per file |
-| QA | Semi-fixed | Skeleton (run tests / verify / decide) + dynamic items from `03-dev.md` |
-| Release | Fixed | 3 sub-tasks: write summary → commit & push → CI monitor |
+| QA | Semi-fixed | test → verify → decide (+ dynamic from `03-dev.md`) |
+| Release | Fixed | summary → commit → CI |
 
 ### Dynamic todo rules
 
@@ -108,8 +108,8 @@ todowrite("4/5 🔬 QA" → pending, priority high)
 todowrite("5/5 🚀 Release" → pending, priority high)
 
 # Level 2 — Require sub-tasks (fixed)
-todowrite("Require: scan codebase" → in_progress)
-todowrite("Require: write requirement" → pending)
+todowrite("Require: scan" → in_progress)
+todowrite("Require: write" → pending)
 ```
 
 **explore probe:**
@@ -136,15 +136,15 @@ SAP, KISS. Do NOT: propose solutions, estimate time.
 **Orchestrator transition** (after subagent returns):
 
 ```
-todowrite("Require: scan codebase" → completed)
-todowrite("Require: write requirement" → completed)
+todowrite("Require: scan" → completed)
+todowrite("Require: write" → completed)
 todowrite("1/5 🧭 Require" → completed)
 todowrite("2/5 📐 Plan" → in_progress)
 
 # Level 2 — Plan sub-tasks (fixed: 3 steps)
-todowrite("Plan: code audit" → in_progress)
-todowrite("Plan: design solution" → pending)
-todowrite("Plan: wait approval" → pending)
+todowrite("Plan: audit" → in_progress)
+todowrite("Plan: design" → pending)
+todowrite("Plan: approve" → pending)
 ```
 
 ### Phase 2/5: Plan — 方案设计 · 需审批
@@ -188,9 +188,9 @@ Write handoff, update status.json to pending_approval. Wait for user.
 **Orchestrator transition** (after subagent returns):
 
 ```
-todowrite("Plan: code audit" → completed)
-todowrite("Plan: design solution" → completed)
-todowrite("Plan: wait approval" → completed)
+todowrite("Plan: audit" → completed)
+todowrite("Plan: design" → completed)
+todowrite("Plan: approve" → completed)
 todowrite("2/5 📐 Plan" → completed)
 todowrite("3/5 🛠️ Develop" → in_progress)
 
@@ -245,8 +245,8 @@ todowrite("3/5 🛠️ Develop" → completed)
 todowrite("4/5 🔬 QA" → in_progress)
 
 # Level 2 — QA sub-tasks (semi-fixed skeleton)
-todowrite("QA: run test suite" → in_progress)
-todowrite("QA: verify consistency" → pending)
+todowrite("QA: run tests" → in_progress)
+todowrite("QA: verify" → pending)
 todowrite("QA: decide" → pending)
 
 # Dynamic: if 03-dev.md mentions extra concerns
@@ -307,8 +307,8 @@ Write handoff, update status.json.
 **Orchestrator transition** (after subagent returns):
 
 ```
-todowrite("QA: run test suite" → completed)
-todowrite("QA: verify consistency" → completed)
+todowrite("QA: run tests" → completed)
+todowrite("QA: verify" → completed)
 todowrite("QA: decide" → completed)
 
 case {qa_decision}
@@ -316,9 +316,9 @@ when "passed"
   todowrite("4/5 🔬 QA" → passed)
   todowrite("5/5 🚀 Release" → in_progress)
   # Level 2 — Release sub-tasks (fixed)
-  todowrite("Release: write summary" → in_progress)
-  todowrite("Release: commit & push" → pending)
-  todowrite("Release: CI monitor" → pending)
+  todowrite("Release: summary" → in_progress)
+  todowrite("Release: commit" → pending)
+  todowrite("Release: CI" → pending)
 when "blocker"
   todowrite("4/5 🔬 QA" → escalated)
   todowrite("3/5 🛠️ Develop" → in_progress)
@@ -367,9 +367,9 @@ CI check is non-negotiable gate.
 **Orchestrator transition** (after subagent returns):
 
 ```
-todowrite("Release: write summary" → completed)
-todowrite("Release: commit & push" → completed)
-todowrite("Release: CI monitor" → completed)
+todowrite("Release: summary" → completed)
+todowrite("Release: commit" → completed)
+todowrite("Release: CI" → completed)
 todowrite("5/5 🚀 Release" → completed)
 ```
 
