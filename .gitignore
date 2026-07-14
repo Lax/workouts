@@ -27,3 +27,4 @@ node_modules/
 packages/*/dist/
 test-results/
 *.tsbuildinfo
+.env

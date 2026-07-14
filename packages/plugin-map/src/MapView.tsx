@@ -14,6 +14,9 @@ export interface MapViewProps {
   hoveredActivityId?: string | null
   maxLines?: number
   variant?: MapVariant
+  tileProvider?: 'carto' | 'mapbox'
+  mapboxToken?: string
+  mapboxStyle?: string
   onActivityClick?: (activity: Activity) => void
   onActivityHover?: (activityId: string | null) => void
 }
@@ -25,6 +28,9 @@ export function MapView({
   hoveredActivityId = null,
   maxLines = 500,
   variant = 'fullscreen',
+  tileProvider = 'carto',
+  mapboxToken = '',
+  mapboxStyle = 'dark-v11',
   onActivityClick,
   onActivityHover,
 }: MapViewProps) {
@@ -33,10 +39,13 @@ export function MapView({
   const polylinesRef = useRef<Map<string, L.Polyline>>(new Map())
   const fittedRef = useRef<string>('')
 
-  const tileUrl = useCallback(
-    () => `https://{s}.basemaps.cartocdn.com/${colorScheme === 'dark' ? 'dark_nolabels' : 'light_nolabels'}/{z}/{x}/{y}{r}.png`,
-    [colorScheme],
-  )
+  const tileUrl = useCallback(() => {
+    if (tileProvider === 'mapbox' && mapboxToken) {
+      const style = mapboxStyle || (colorScheme === 'dark' ? 'dark-v11' : 'light-v11')
+      return `https://api.mapbox.com/styles/v1/mapbox/${style}/tiles/{z}/{x}/{y}@2x?access_token=${mapboxToken}`
+    }
+    return `https://{s}.basemaps.cartocdn.com/${colorScheme === 'dark' ? 'dark_nolabels' : 'light_nolabels'}/{z}/{x}/{y}{r}.png`
+  }, [colorScheme, tileProvider, mapboxToken, mapboxStyle])
 
   useEffect(() => {
     const el = elRef.current

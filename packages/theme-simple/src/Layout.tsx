@@ -119,6 +119,9 @@ export function SimpleLayout() {
                 colorScheme={colorScheme}
                 colorMode={colorMode}
                 hoveredActivityId={useSimpleStore.getState().mapHoveredId}
+                tileProvider="mapbox"
+                mapboxToken={import.meta.env.VITE__MAPBOX__TOKEN || ''}
+                mapboxStyle="dark-v11"
                 onActivityHover={setMapHoveredId}
                 onActivityClick={openDetail}
               />

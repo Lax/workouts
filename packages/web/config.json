@@ -13,6 +13,8 @@
     "title": "Workouts",
     "url": "/workouts/",
     "logo": null,
-    "navLinks": []
+    "navLinks": [],
+    "mapboxToken": "__VITE__MAPBOX__TOKEN__",
+    "mapboxStyle": "dark-v11"
   }
 }

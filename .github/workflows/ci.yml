@@ -52,6 +52,8 @@ jobs:
 
       - name: Build frontend
         run: npm run build
+        env:
+          VITE__MAPBOX__TOKEN: ${{ secrets.MAPBOX_TOKEN }}
 
       - uses: actions/upload-artifact@v4
         with:

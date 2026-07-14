@@ -89,6 +89,8 @@ jobs:
 
       - name: Build frontend
         run: npm run build
+        env:
+          VITE__MAPBOX__TOKEN: ${{ secrets.MAPBOX_TOKEN }}
 
       - name: Copy frontend build to site/
         run: |
