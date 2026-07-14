@@ -36,7 +36,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
+      - name: Setup Node.js (skip on self-hosted — pre-installed)
+        if: vars.RUNNER_LABEL != 'self-hosted'
+        uses: actions/setup-node@v4
         with:
           node-version: '22'
           cache: npm
