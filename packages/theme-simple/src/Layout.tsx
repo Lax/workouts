@@ -1,14 +1,13 @@
 import { useRequiredComponent } from '@workouts/core'
 import { useActivities } from '@workouts/plugin-data-source'
-import type { Activity } from '@workouts/shared'
-import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import { Header } from './components/Header'
 import { MapOverlays } from './components/MapOverlays'
 import { SVGStat } from './components/SVGStat'
 import { YearBarSVG } from './components/YearBarSVG'
 import { YearGridSVG } from './components/YearGridSVG'
 import { useSimpleStore } from './store'
-import { getRunIdFromHash, setRunHash, subscribeToRunHash } from './utils'
+import { getRunIdFromHash, subscribeToRunHash } from './utils'
 import './simple.css'
 
 const SITE = { title: 'Workouts', url: '/', logo: null, navLinks: [] as { name: string; url: string }[] }
@@ -28,14 +27,7 @@ export function SimpleLayout() {
   const [hoveredYear, setHoveredYear] = useState<number | null>(null)
   const tableRef = useRef<HTMLDivElement>(null)
   const selectedActivity = useSimpleStore((s) => s.selectedActivity)
-  const storeOpenDetail = useSimpleStore((s) => s.openDetail)
-  const openDetail = useCallback(
-    (act: Activity) => {
-      setRunHash(act.run_id)
-      storeOpenDetail(act)
-    },
-    [storeOpenDetail],
-  )
+  const openDetail = useSimpleStore((s) => s.openDetail)
 
   const MapView = useRequiredComponent('map', 'MapView')
 

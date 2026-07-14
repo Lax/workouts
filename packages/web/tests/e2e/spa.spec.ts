@@ -38,7 +38,7 @@ test.beforeAll(() => {
 
 async function waitLoaded(page: Page) {
   await page.goto('/index.html')
-  await expect(page.locator('text=Workouts')).toBeVisible({ timeout: 10000 })
+  await expect(page.locator('.layout')).toBeVisible({ timeout: 10000 })
 }
 
 async function gotoOverview(page: Page) {
@@ -276,15 +276,41 @@ test('theme toggle persists across reload', async ({ page }) => {
   const after = await page.evaluate(() => document.documentElement.getAttribute('data-theme'))
   expect(after).not.toBe(before)
   await page.reload()
-  await waitLoaded(page)
+  await page.goto('/index.html')
+  await expect(page.locator('.layout')).toBeVisible({ timeout: 10000 })
   expect(await page.evaluate(() => document.documentElement.getAttribute('data-theme'))).toBe(after)
 })
 
-test('simple theme shows activity list', async ({ page }) => {
+test('simple theme has two-column layout', async ({ page }) => {
   await waitLoaded(page)
-  await expect(page.locator('text=Workouts')).toBeVisible()
-  const actCards = page.locator('text=km').first()
-  await expect(actCards).toBeVisible({ timeout: 5000 })
+  await expect(page.locator('.layout')).toBeVisible()
+  await expect(page.locator('.left-panel')).toBeVisible()
+  await expect(page.locator('.right-panel')).toBeVisible()
+})
+
+test('simple theme shows year blocks in left panel', async ({ page }) => {
+  await waitLoaded(page)
+  await expect(page.locator('.year-block').first()).toBeVisible()
+  await expect(page.locator('.year-label').first()).toBeVisible()
+  await expect(page.locator('.stat-item').first()).toBeVisible()
+})
+
+test('simple theme shows run table with sortable headers', async ({ page }) => {
+  await waitLoaded(page)
+  await expect(page.locator('.run-table')).toBeVisible()
+  await expect(page.locator('.run-table thead th:has-text("Date")')).toBeVisible()
+  await expect(page.locator('.run-table thead th:has-text("km")')).toBeVisible()
+  await expect(page.locator('.run-table thead th:has-text("Pace")')).toBeVisible()
+  await expect(page.locator('.run-table tbody tr')).not.toHaveCount(0)
+})
+
+test('simple theme map overlays show year pills and legend', async ({ page }) => {
+  await waitLoaded(page)
+  await expect(page.locator('.map-overlays')).toBeAttached()
+  await expect(page.locator('.year-pill:has-text("All")')).toBeVisible()
+  await expect(page.locator('.legend-toggle')).toBeVisible()
+  await expect(page.locator('.speed-legend')).toHaveCount(1)
+  await expect(page.locator('.speed-legend > span')).toHaveCount(4)
 })
 
 test('color mode toggles in simple theme', async ({ page }) => {
@@ -292,7 +318,33 @@ test('color mode toggles in simple theme', async ({ page }) => {
   await expect(page.locator('button:has-text("类型")')).toBeVisible()
   await expect(page.locator('button:has-text("速度")')).toBeVisible()
   await page.locator('button:has-text("速度")').click()
-  await expect(page.locator('button:has-text("速度")')).toBeVisible()
+  await expect(page.locator('.legend-btn.active:has-text("速度")')).toBeVisible()
+})
+
+test('clicking year block filters table', async ({ page }) => {
+  await waitLoaded(page)
+  const blocks = page.locator('.year-block')
+  await expect(blocks.first()).toBeVisible()
+  // Click second year block (first is already active — default year)
+  const secondBlock = blocks.nth(1)
+  if (await secondBlock.isVisible()) {
+    await secondBlock.click()
+    await expect(secondBlock).toHaveClass(/active/)
+  }
+  await expect(page.locator('.run-table tbody tr')).not.toHaveCount(0)
+})
+
+test('table row click highlights row and sets URL hash', async ({ page }) => {
+  await waitLoaded(page)
+  const firstRow = page.locator('.run-row').first()
+  await expect(firstRow).toBeVisible()
+  await firstRow.click()
+  await expect(firstRow).toHaveClass(/selected/)
+  // URL hash should be set after React state update
+  const hash = await page
+    .waitForFunction(() => window.location.hash.startsWith('#run_'), null, { timeout: 5000 })
+    .then(() => page.evaluate(() => window.location.hash))
+  expect(hash).toMatch(/^#run_/)
 })
 
 // ──────── Theme Toggle — Map Stability ────────

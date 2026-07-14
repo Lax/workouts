@@ -1,5 +1,6 @@
 import type { Activity } from '@workouts/shared'
 import { create } from 'zustand'
+import { clearRunHash, setRunHash } from './utils'
 
 export type SortField = 'date' | 'distance' | 'time'
 
@@ -106,7 +107,13 @@ export const useSimpleStore = create<SimpleStore>()((set) => ({
 
   setMapHoveredId: (id) => set({ mapHoveredId: id }),
 
-  openDetail: (act) => set({ selectedActivity: act, mapHoveredId: act.run_id }),
+  openDetail: (act) => {
+    setRunHash(act.run_id)
+    set({ selectedActivity: act, mapHoveredId: act.run_id })
+  },
 
-  closeDetail: () => set({ selectedActivity: null, mapHoveredId: null }),
+  closeDetail: () => {
+    clearRunHash()
+    set({ selectedActivity: null, mapHoveredId: null })
+  },
 }))
