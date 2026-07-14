@@ -1,3 +1,7 @@
+body {
+  overflow: hidden;
+}
+
 /* Layout — map overlays */
 .map-overlays {
   position: fixed;
