@@ -1,15 +1,27 @@
 ---
-name: dev-workflow
+name: meow
 description: Structured multi-phase development workflow with 5 auto-orchestrated stages (requirement → plan → development → QA → release). Each phase runs as an independent subagent with handoff communication, QA auto-loop with escalation, strict role boundaries, and 12 development principles. Use when user says "bug fix", "new feature", "improvement", "implement" or describes a task needing structured execution.
 ---
 
-# Dev Workflow — Multi-Agent Development Lifecycle
+# Meow — Multi-Agent Development Lifecycle 🐱
 
 5-phase loop: **requirement → plan → development → qa → release**
 
 ```
-skill("dev-workflow")
+skill("meow")
 ```
+
+---
+
+## Meow Anchor
+
+When activated, announce with a meow:
+
+```
+🐱 Meow! Moew workflow active.
+```
+
+Serves as a heartbeat — confirms the skill loaded successfully. Not required on every output, just the initial activation.
 
 ---
 
@@ -31,6 +43,16 @@ skill("dev-workflow")
 | YAGNI | Don't implement what isn't needed | Plan |
 
 ---
+
+## Meow Anchor
+
+When invoked, the very first output line MUST be:
+
+```
+🐱 Meow! Moew workflow active.
+```
+
+This confirms the skill is loaded and context is intact. If this line is missing, context may have been lost — re-invoke the skill.
 
 ## Workflow Loop
 

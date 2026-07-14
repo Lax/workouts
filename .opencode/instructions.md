@@ -22,13 +22,13 @@ OHA — One Hour Ahead. Validate approach before implementing. If the plan takes
 For structured multi-phase development (bug fix / feature / improvement):
 
 ```
-skill("dev-workflow")
+skill("meow")
 ```
 
 5 phases: requirement → plan (wait approval) → development → qa (auto-loop) → release.
 Each phase runs as an independent subagent. Status tracked in workflows/YYYY-MM-Desc/status.json.
 
-See .opencode/skills/dev-workflow/SKILL.md for full workflow definition.
+See .opencode/skills/meow/SKILL.md for full workflow definition.
 
 Verify callers before changing method behavior/return type/exception.
 One concern per commit. Body explains WHY, not WHAT.
