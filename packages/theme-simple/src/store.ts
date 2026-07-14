@@ -107,10 +107,15 @@ export const useSimpleStore = create<SimpleStore>()((set) => ({
 
   setMapHoveredId: (id) => set({ mapHoveredId: id }),
 
-  openDetail: (act) => {
-    setRunHash(act.run_id)
-    set({ selectedActivity: act, mapHoveredId: act.run_id })
-  },
+  openDetail: (act) =>
+    set((s) => {
+      if (s.selectedActivity?.run_id === act.run_id) {
+        clearRunHash()
+        return { selectedActivity: null, mapHoveredId: null }
+      }
+      setRunHash(act.run_id)
+      return { selectedActivity: act, mapHoveredId: act.run_id }
+    }),
 
   closeDetail: () => {
     clearRunHash()

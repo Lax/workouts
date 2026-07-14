@@ -25,10 +25,15 @@ export function SimpleLayout() {
   const years = useSimpleStore((s) => s.years)
   const setMapHoveredId = useSimpleStore((s) => s.setMapHoveredId)
 
-  const [hoveredYear, setHoveredYear] = useState<number | null>(null)
+  const [showSvgYear, setShowSvgYear] = useState<number | null>(null)
+  const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const tableRef = useRef<HTMLDivElement>(null)
   const selectedActivity = useSimpleStore((s) => s.selectedActivity)
   const openDetail = useSimpleStore((s) => s.openDetail)
+  const mapActivities = useMemo(
+    () => (selectedActivity ? [selectedActivity] : filteredActivities),
+    [filteredActivities, selectedActivity],
+  )
 
   const MapView = useRequiredComponent('map', 'MapView')
 
@@ -81,12 +86,18 @@ export function SimpleLayout() {
               key={y}
               className={`year-block${selectedYear === y ? ' active' : ''}`}
               onClick={() => setSelectedYear(selectedYear === y ? null : y)}
-              onMouseEnter={() => setHoveredYear(y)}
-              onMouseLeave={() => setHoveredYear(null)}
+              onMouseEnter={() => {
+                if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current)
+                hoverTimerRef.current = setTimeout(() => setShowSvgYear(y), 600)
+              }}
+              onMouseLeave={() => {
+                if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current)
+                setShowSvgYear(null)
+              }}
             >
               <div className="year-label">{y}</div>
               <YearStats year={y} />
-              {hoveredYear === y && (
+              {showSvgYear === y && (
                 <div className="year-hover-svgs">
                   <YearGridSVG year={y} activities={activities} />
                   <YearBarSVG year={y} activities={activities} />
@@ -101,7 +112,7 @@ export function SimpleLayout() {
             {MapView && (
               <MapView
                 variant="contained"
-                activities={filteredActivities}
+                activities={mapActivities}
                 colorScheme={colorScheme}
                 colorMode={colorMode}
                 hoveredActivityId={useSimpleStore.getState().mapHoveredId}
