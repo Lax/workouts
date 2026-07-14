@@ -576,3 +576,37 @@
   text-align: right;
   white-space: nowrap;
 }
+
+/* Map action buttons (lights toggle, fullscreen) */
+.map-actions {
+  position: absolute;
+  bottom: 10px;
+  left: 10px;
+  display: flex;
+  gap: 4px;
+  pointer-events: none;
+}
+
+.map-actions > * {
+  pointer-events: auto;
+}
+
+.control-btn {
+  width: 34px;
+  height: 34px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text);
+  font-size: 16px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+  transition: background 0.15s;
+}
+
+.control-btn:hover {
+  background: var(--color-hover);
+}

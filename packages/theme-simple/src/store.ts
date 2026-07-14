@@ -20,6 +20,7 @@ export interface SimpleStore {
   filteredActivities: Activity[]
   cityFilter: string | null
   periodFilter: string | null
+  showLabels: boolean
   viewMode: ViewMode
   showYearModal: number | null
 
@@ -36,6 +37,7 @@ export interface SimpleStore {
   setPeriodFilter: (period: string | null) => void
   setViewMode: (mode: ViewMode) => void
   setShowYearModal: (year: number | null) => void
+  setShowLabels: (v: boolean) => void
 }
 
 function computeYears(acts: Activity[]): number[] {
@@ -101,6 +103,7 @@ export const useSimpleStore = create<SimpleStore>()((set) => ({
   filteredActivities: [],
   cityFilter: null,
   periodFilter: null,
+  showLabels: true,
   viewMode: 'table',
   showYearModal: null,
 
@@ -125,6 +128,8 @@ export const useSimpleStore = create<SimpleStore>()((set) => ({
     })),
 
   setColorMode: (m) => set({ colorMode: m }),
+
+  setShowLabels: (v) => set({ showLabels: v }),
 
   toggleTheme: () =>
     set((s) => {

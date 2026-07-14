@@ -30,6 +30,7 @@ export function SimpleLayout() {
   const colorScheme = useSimpleStore((s) => s.colorScheme)
   const filteredActivities = useSimpleStore((s) => s.filteredActivities)
   const years = useSimpleStore((s) => s.years)
+  const showLabels = useSimpleStore((s) => s.showLabels)
   const setMapHoveredId = useSimpleStore((s) => s.setMapHoveredId)
   const cityFilter = useSimpleStore((s) => s.cityFilter)
   const periodFilter = useSimpleStore((s) => s.periodFilter)
@@ -141,7 +142,7 @@ export function SimpleLayout() {
               hoveredActivityId={useSimpleStore.getState().mapHoveredId}
               dashLines={siteConfig?.dashLines as boolean | undefined}
               privacyMode={siteConfig?.privacyMode as boolean | undefined}
-              showLabels={siteConfig?.showLabels !== false}
+              showLabels={showLabels}
               animate={!!selectedActivity}
               onActivityHover={setMapHoveredId}
               onActivityClick={openDetail}

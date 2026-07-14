@@ -396,3 +396,25 @@ test('overview theme toggle preserves map zoom and center', async ({ page }) => 
 
   expect(after).toBe(before)
 })
+
+// ──────── Simple Theme — Map Controls ────────
+
+test('simple theme shows lights toggle', async ({ page }) => {
+  await waitLoaded(page)
+  const lights = page.locator('button[aria-label="Hide labels"], button[aria-label="Show labels"]')
+  await expect(lights).toBeVisible()
+})
+
+test('simple theme shows fullscreen button', async ({ page }) => {
+  await waitLoaded(page)
+  const fsBtn = page.locator('button[aria-label="Fullscreen"]')
+  await expect(fsBtn).toBeVisible()
+})
+
+test('lights toggle changes aria-label on click', async ({ page }) => {
+  await waitLoaded(page)
+  const lights = page.locator('button[aria-label="Hide labels"]')
+  await expect(lights).toBeVisible()
+  await lights.click()
+  await expect(page.locator('button[aria-label="Show labels"]')).toBeVisible()
+})
