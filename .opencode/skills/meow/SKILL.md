@@ -25,6 +25,36 @@ Activate → announce: `🐱 Meow! Meow workflow active.`
 
 Escalation path: any gate fail → root cause → return to matching phase. 3 retry limit per phase → escalate to user.
 
+## Progress Display
+
+Orchestrator uses `todowrite` to show live progress. Three levels:
+
+### Level 1 — Phase todos (5 items, created at init)
+
+| # | Item | Status transitions |
+|---|---|---|
+| 1/5 | 🧭 Require | pending → in_progress → completed |
+| 2/5 | 📐 Plan | pending → in_progress → pending_approval → completed |
+| 3/5 | 🛠️ Develop | pending → in_progress → completed |
+| 4/5 | 🔬 QA | pending → in_progress → passed / escalated |
+| 5/5 | 🚀 Release | pending → in_progress → completed |
+
+### Level 2 — Sub-task todos (phase-dependent)
+
+| Phase | Strategy | How it's generated |
+|---|---|---|
+| Require | Fixed | 2 sub-tasks: scan codebase → write requirement |
+| Plan | Fixed | 3 sub-tasks: code audit → design → wait approval |
+| Develop | **Dynamic** | Read `02-plan.md` file change list → one todo per file |
+| QA | Semi-fixed | Skeleton (run tests / verify / decide) + dynamic items from `03-dev.md` |
+| Release | Fixed | 3 sub-tasks: write summary → commit & push → CI monitor |
+
+### Dynamic todo rules
+
+- Orchestrator reads handoff after each phase → generates Level 2 items
+- Retry: add `{phase} retry {N}` todo with high priority
+- Agent output mentions unexpected extra work → orchestrator creates todo
+
 ## Principles
 
 | Abbr | Full | Apply |
@@ -49,6 +79,7 @@ Escalation path: any gate fail → root cause → return to matching phase. 3 re
 - Every phase runs as subagent via `task(subagent_type, prompt)`. Main session orchestrates only.
 - Only main session reads phase output and decides next action.
 - Gates must pass before transition (see each phase gate).
+- Orchestrator maintains todowrite per Progress Display section.
 
 ### Phase 1/5: Require — 需求入口
 
@@ -62,12 +93,23 @@ Escalation path: any gate fail → root cause → return to matching phase. 3 re
 **Orchestrator prep** (before launching subagent):
 
 ```
-MEOWCYCLE=.opencode/meoworks/YYYY-MM-DD-desc
-mkdir -p $MEOWCYCLE
+MW_DIR=.opencode/meoworks/YYYY-MM-DD-desc
+mkdir -p $MW_DIR
 if ! grep -qxF '/.opencode/meoworks/' .gitignore; then
   echo '/.opencode/meoworks/' >> .gitignore
 fi
 write status.json with phases all pending
+
+# Level 1 — 5 phase todos
+todowrite("1/5 🧭 Require" → in_progress, priority high)
+todowrite("2/5 📐 Plan" → pending, priority high)
+todowrite("3/5 🛠️ Develop" → pending, priority high)
+todowrite("4/5 🔬 QA" → pending, priority high)
+todowrite("5/5 🚀 Release" → pending, priority high)
+
+# Level 2 — Require sub-tasks (fixed)
+todowrite("Require: scan codebase" → in_progress)
+todowrite("Require: write requirement" → pending)
 ```
 
 **explore probe:**
@@ -89,6 +131,20 @@ Codebase scan: {explore output}
 4. Update {workflow_dir}/status.json phase=completed
 
 SAP, KISS. Do NOT: propose solutions, estimate time.
+```
+
+**Orchestrator transition** (after subagent returns):
+
+```
+todowrite("Require: scan codebase" → completed)
+todowrite("Require: write requirement" → completed)
+todowrite("1/5 🧭 Require" → completed)
+todowrite("2/5 📐 Plan" → in_progress)
+
+# Level 2 — Plan sub-tasks (fixed: 3 steps)
+todowrite("Plan: code audit" → in_progress)
+todowrite("Plan: design solution" → pending)
+todowrite("Plan: wait approval" → pending)
 ```
 
 ### Phase 2/5: Plan — 方案设计 · 需审批
@@ -129,6 +185,23 @@ Design each step as an independently deliverable unit.
 Write handoff, update status.json to pending_approval. Wait for user.
 ```
 
+**Orchestrator transition** (after subagent returns):
+
+```
+todowrite("Plan: code audit" → completed)
+todowrite("Plan: design solution" → completed)
+todowrite("Plan: wait approval" → completed)
+todowrite("2/5 📐 Plan" → completed)
+todowrite("3/5 🛠️ Develop" → in_progress)
+
+# Level 2 — Develop sub-tasks (dynamic from 02-plan.md file change list)
+# Parse each file change entry → one todo per entry
+# Set first item in_progress, rest pending
+# Example:
+#   todowrite("+ lib/workouts/cli/export.rb" → in_progress)
+#   todowrite("~ spec/export_spec.rb" → pending)
+```
+
 ### Phase 3/5: Develop — 编码实现
 
 | Field | Value |
@@ -137,6 +210,13 @@ Write handoff, update status.json to pending_approval. Wait for user.
 | skill | `caveman` |
 | handoff | `03-dev.md` |
 | gate | biome + test + build pass |
+
+**Orchestrator prep** (before launching subagent):
+
+```
+# Level 2 dev todos already created in Phase 2 transition
+# Process them sequentially as subagent completes each step
+```
 
 **general prompt:**
 ```
@@ -155,6 +235,22 @@ After all steps:
 3. npm run test -w packages/web
 4. Write handoff to {workflow_dir}/03-dev.md
 5. Update status.json
+```
+
+**Orchestrator transition** (after subagent returns):
+
+```
+# Mark dev sub-tasks completed (orchestrator tracks per-step progress)
+todowrite("3/5 🛠️ Develop" → completed)
+todowrite("4/5 🔬 QA" → in_progress)
+
+# Level 2 — QA sub-tasks (semi-fixed skeleton)
+todowrite("QA: run test suite" → in_progress)
+todowrite("QA: verify consistency" → pending)
+todowrite("QA: decide" → pending)
+
+# Dynamic: if 03-dev.md mentions extra concerns
+# todowrite("QA: verify {specific concern}" → pending)
 ```
 
 ### Phase 4/5: QA — 质量检验
@@ -208,6 +304,30 @@ Root cause routing: dev≠plan → dev; plan≠req → plan; multi-phase → esc
 Write handoff, update status.json.
 ```
 
+**Orchestrator transition** (after subagent returns):
+
+```
+todowrite("QA: run test suite" → completed)
+todowrite("QA: verify consistency" → completed)
+todowrite("QA: decide" → completed)
+
+case {qa_decision}
+when "passed"
+  todowrite("4/5 🔬 QA" → passed)
+  todowrite("5/5 🚀 Release" → in_progress)
+  # Level 2 — Release sub-tasks (fixed)
+  todowrite("Release: write summary" → in_progress)
+  todowrite("Release: commit & push" → pending)
+  todowrite("Release: CI monitor" → pending)
+when "blocker"
+  todowrite("4/5 🔬 QA" → escalated)
+  todowrite("3/5 🛠️ Develop" → in_progress)
+  todowrite("Develop retry 1" → in_progress, priority high)
+when "escalated"
+  todowrite("4/5 🔬 QA" → escalated)
+end
+```
+
 ### Phase 5/5: Release — 发布交付
 
 | Field | Value |
@@ -242,6 +362,15 @@ IMPORTANT: QA status MUST be "passed". If not, abort.
 5. Present final report.
 
 CI check is non-negotiable gate.
+```
+
+**Orchestrator transition** (after subagent returns):
+
+```
+todowrite("Release: write summary" → completed)
+todowrite("Release: commit & push" → completed)
+todowrite("Release: CI monitor" → completed)
+todowrite("5/5 🚀 Release" → completed)
 ```
 
 ## Dependencies
