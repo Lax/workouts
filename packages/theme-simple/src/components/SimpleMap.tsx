@@ -1,6 +1,5 @@
-import { useLeafletMap, useMapPolylines } from '@workouts/plugin-map'
+import { PanelMap } from '@workouts/plugin-map'
 import type { Activity } from '@workouts/shared'
-import { useRef } from 'react'
 
 interface SimpleMapProps {
   activities: Activity[]
@@ -12,22 +11,17 @@ interface SimpleMapProps {
 }
 
 export function SimpleMap({ activities, colorScheme, colorMode, hoveredActivityId, onActivityClick, onActivityHover }: SimpleMapProps) {
-  const elRef = useRef<HTMLDivElement>(null)
-
-  const mapRef = useLeafletMap(elRef, {
-    colorScheme,
-    tileProvider: 'mapbox',
-    mapboxToken: import.meta.env.VITE__MAPBOX__TOKEN || '',
-    mapboxStyle: 'dark-v11',
-  })
-
-  useMapPolylines(mapRef, activities, {
-    colorMode,
-    hoveredActivityId,
-    fitOnChange: false,
-    onActivityClick,
-    onActivityHover,
-  })
-
-  return <div ref={elRef} style={{ height: '100%', width: '100%' }} />
+  return (
+    <PanelMap
+      activities={activities}
+      colorScheme={colorScheme}
+      colorMode={colorMode}
+      hoveredActivityId={hoveredActivityId}
+      tileProvider="mapbox"
+      mapboxToken={import.meta.env.VITE__MAPBOX__TOKEN || ''}
+      mapboxStyle="dark-v11"
+      onActivityClick={onActivityClick}
+      onActivityHover={onActivityHover}
+    />
+  )
 }

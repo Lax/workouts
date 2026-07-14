@@ -1,9 +1,9 @@
-import { useRequiredComponent } from '@workouts/core'
 import { useActivities } from '@workouts/plugin-data-source'
 import { useEffect } from 'react'
 import { ChartOverlay } from './components/ChartOverlay'
 import { DetailPanel } from './components/DetailPanel'
 import { Drawer } from './components/Drawer'
+import { OverviewMap } from './components/OverviewMap'
 import { useOverviewStore } from './store'
 import './overview.css'
 
@@ -24,24 +24,20 @@ export function OverviewLayout() {
   const openDetail = useOverviewStore((s) => s.openDetail)
   const years = useOverviewStore((s) => s.years)
 
-  const MapView = useRequiredComponent('map', 'MapView')
-
   useEffect(() => {
     setActivities(activities)
   }, [activities, setActivities])
 
   return (
     <>
-      {MapView && (
-        <MapView
-          activities={filteredActivities}
-          colorScheme={colorScheme}
-          colorMode={colorMode}
-          hoveredActivityId={mapHoveredId}
-          onActivityClick={openDetail}
-          onActivityHover={setMapHoveredId}
-        />
-      )}
+      <OverviewMap
+        activities={filteredActivities}
+        colorScheme={colorScheme}
+        colorMode={colorMode}
+        hoveredActivityId={mapHoveredId}
+        onActivityClick={openDetail}
+        onActivityHover={setMapHoveredId}
+      />
 
       <div className="map-overlays">
         <div className="ol-tl">
