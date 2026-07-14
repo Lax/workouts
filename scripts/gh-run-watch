@@ -61,7 +61,9 @@ if [[ ${DEBUG_CI_WAIT:-0} -eq 1 ]]; then
 fi
 
 predict_start=$(date +%s)
-sleep $((predicted + 15))
+predicted=${predicted:-30}
+predicted_int=${predicted%.*}
+sleep $((predicted_int + 15))
 
 # --- delegate to gh run watch ---
 exec gh run watch "$run_id" "$@"
