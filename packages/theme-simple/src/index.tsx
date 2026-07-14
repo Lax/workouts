@@ -1,10 +1,10 @@
-import { useRequiredComponent, useTheme } from '@workouts/core'
-import dsPlugin, { useDerivedData } from '@workouts/plugin-data-source'
+import { useRequiredComponent } from '@workouts/core'
+import dsPlugin, { useActivities, useDerivedData } from '@workouts/plugin-data-source'
 import mapPlugin from '@workouts/plugin-map'
 import { useMemo, useState } from 'react'
 
 function SimpleLayout() {
-  const { data } = useTheme()
+  const { activities } = useActivities()
   const { years } = useDerivedData()
   const [colorMode, setColorMode] = useState<'type' | 'speed'>('type')
   const [colorScheme, setColorScheme] = useState<'light' | 'dark'>(
@@ -12,7 +12,6 @@ function SimpleLayout() {
   )
 
   const MapView = useRequiredComponent('map', 'MapView')
-  const activities = data.activities ?? []
   const yearRange = useMemo(() => {
     if (years.length === 0) return '?–?'
     return `${Math.min(...years)}–${Math.max(...years)}`
@@ -37,12 +36,26 @@ function SimpleLayout() {
         }}
       >
         <div style={{ position: 'absolute', top: 10, left: 10, pointerEvents: 'auto' }}>
-          <span style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary, #888)', textShadow: '0 1px 3px rgba(0,0,0,0.5)' }}>
+          <span
+            style={{
+              fontSize: '0.85rem',
+              color: 'var(--color-text-secondary, #888)',
+              textShadow: '0 1px 3px rgba(0,0,0,0.5)',
+            }}
+          >
             <strong style={{ color: 'var(--color-accent, #4dd2ff)' }}>Workouts</strong> {yearRange}
           </span>
         </div>
         <div
-          style={{ position: 'absolute', bottom: 72, left: 10, pointerEvents: 'auto', display: 'flex', flexDirection: 'column', gap: 4 }}
+          style={{
+            position: 'absolute',
+            bottom: 72,
+            left: 10,
+            pointerEvents: 'auto',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 4,
+          }}
         >
           <div
             style={{
@@ -134,7 +147,14 @@ function SimpleLayout() {
                 fontSize: '0.75rem',
               }}
             >
-              <div style={{ fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              <div
+                style={{
+                  fontWeight: 600,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }}
+              >
                 {a.name || 'Untitled'}
               </div>
               <div style={{ color: 'var(--color-text-secondary)' }}>{((a.distance ?? 0) / 1000).toFixed(2)} km</div>

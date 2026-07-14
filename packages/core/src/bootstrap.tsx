@@ -22,12 +22,7 @@ export async function bootstrap(
     }
   }
 
-  const data = options.data ?? (await fetchData(config.data ?? {}))
-  // Normalize: Ruby export writes type instead of sport_category
-  for (const a of data.activities) {
-    if (a.type && !a.sport_category) a.sport_category = a.type
-    if (!a.summary_polyline && (a as any).polyline) a.summary_polyline = (a as any).polyline
-  }
+  const data = options.data ?? { activities: [], stats: null }
 
   const root = document.getElementById('root')
   if (!root) throw new Error('No #root element found')
@@ -35,35 +30,9 @@ export async function bootstrap(
   const reactRoot = createRoot(root)
   reactRoot.render(
     <ErrorBoundary>
-      <ThemeProvider data={data} config={{}} registry={registry}>
-        <theme.Layout data={data} config={{}} registry={registry} />
+      <ThemeProvider data={data} config={config as unknown as Record<string, unknown>} registry={registry}>
+        <theme.Layout data={data} config={config as unknown as Record<string, unknown>} registry={registry} />
       </ThemeProvider>
     </ErrorBoundary>,
   )
-}
-
-async function fetchData(dataConfig: Record<string, { source: string; optional?: boolean }>): Promise<ThemeProps['data']> {
-  const result: Record<string, unknown> = {}
-  let error: string | undefined
-
-  for (const [key, { source, optional }] of Object.entries(dataConfig)) {
-    try {
-      const res = await fetch(source)
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
-      result[key] = await res.json()
-    } catch (e) {
-      if (optional) {
-        result[key] = null
-      } else {
-        error = `Failed to load ${key} from ${source}: ${e}`
-        result[key] = null
-      }
-    }
-  }
-
-  return {
-    activities: (result.activities ?? []) as ThemeProps['data']['activities'],
-    stats: (result.stats ?? null) as ThemeProps['data']['stats'],
-    error,
-  }
 }

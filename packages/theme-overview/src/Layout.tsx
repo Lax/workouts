@@ -1,4 +1,5 @@
-import { useRequiredComponent, useTheme } from '@workouts/core'
+import { useRequiredComponent } from '@workouts/core'
+import { useActivities } from '@workouts/plugin-data-source'
 import { useEffect } from 'react'
 import { ChartOverlay } from './components/ChartOverlay'
 import { DetailPanel } from './components/DetailPanel'
@@ -7,9 +8,7 @@ import { useOverviewStore } from './store'
 import './overview.css'
 
 export function OverviewLayout() {
-  const { data } = useTheme()
-
-  const activities = data.activities ?? []
+  const { activities, loading: _loading, error: _error } = useActivities()
 
   const setActivities = useOverviewStore((s) => s.setActivities)
   const colorMode = useOverviewStore((s) => s.colorMode)

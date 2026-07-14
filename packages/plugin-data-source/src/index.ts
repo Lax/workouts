@@ -1,4 +1,5 @@
 export { computeAvailableSources, computeAvailableTypes, computeYears } from './compute'
 export { default } from './plugin'
 export type { DerivedData, FilterOptions, SortField } from './types'
+export { useActivities } from './useActivities'
 export { computeFilteredActivities, useDerivedData } from './useData'

@@ -1,19 +1,19 @@
-import { useTheme } from '@workouts/core'
 import type { Activity } from '@workouts/shared'
 import { useMemo } from 'react'
 import { computeAvailableSources, computeAvailableTypes, computeYears } from './compute'
 import type { DerivedData, FilterOptions, SortField } from './types'
+import { useActivities } from './useActivities'
 
 export function useDerivedData(): DerivedData {
-  const { data } = useTheme()
-  const activities = (data.activities ?? []) as Activity[]
+  const { activities, loading } = useActivities()
+  const acts = (loading ? [] : activities) as Activity[]
   return useMemo(
     () => ({
-      years: computeYears(activities),
-      availableTypes: computeAvailableTypes(activities),
-      availableSources: computeAvailableSources(activities),
+      years: computeYears(acts),
+      availableTypes: computeAvailableTypes(acts),
+      availableSources: computeAvailableSources(acts),
     }),
-    [activities],
+    [acts],
   )
 }
 
