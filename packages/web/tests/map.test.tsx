@@ -113,6 +113,97 @@ describe('MapView — dark/light toggle impact', () => {
   })
 })
 
+function getFitBounds() {
+  return (vi.mocked(L.map).mock.results[0]?.value as Record<string, unknown>)?.fitBounds as ReturnType<typeof vi.fn>
+}
+
+function activitiesA(): Activity[] {
+  return [
+    testActivity({ run_id: 'a', summary_polyline: '_p~iF~ps|U_ulLnnqC', start_date: '2024-01-01T00:00:00Z' }),
+    testActivity({ run_id: 'b', summary_polyline: '_p~iF~ps|U_ulLnnqC', start_date: '2024-06-15T00:00:00Z' }),
+    testActivity({ run_id: 'c', summary_polyline: '_p~iF~ps|U_ulLnnqC', start_date: '2025-03-01T00:00:00Z' }),
+  ]
+}
+
+function activitiesB(): Activity[] {
+  return [
+    testActivity({ run_id: 'd', summary_polyline: '_p~iF~ps|U_ulLnnqC', start_date: '2024-02-01T00:00:00Z' }),
+    testActivity({ run_id: 'e', summary_polyline: '_p~iF~ps|U_ulLnnqC', start_date: '2024-07-15T00:00:00Z' }),
+    testActivity({ run_id: 'f', summary_polyline: '_p~iF~ps|U_ulLnnqC', start_date: '2025-04-01T00:00:00Z' }),
+  ]
+}
+
+describe('MapView — fitBounds gating', () => {
+  let root: Root
+  let container: HTMLDivElement
+
+  beforeEach(() => {
+    container = document.createElement('div')
+    document.body.appendChild(container)
+    root = createRoot(container)
+    vi.clearAllMocks()
+  })
+
+  afterEach(() => {
+    act(() => root.unmount())
+    document.body.removeChild(container)
+  })
+
+  it('calls fitBounds once on initial load', async () => {
+    await act(async () => {
+      root.render(<MapView activities={activitiesA()} colorScheme="light" />)
+    })
+    expect(getFitBounds()).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not call fitBounds when empty', async () => {
+    await act(async () => {
+      root.render(<MapView activities={[]} colorScheme="light" />)
+    })
+    expect(getFitBounds()).toHaveBeenCalledTimes(0)
+  })
+
+  it('does not call fitBounds on colorMode change', async () => {
+    await act(async () => {
+      root.render(<MapView activities={activitiesA()} colorScheme="light" />)
+    })
+    const spy = getFitBounds()
+    expect(spy).toHaveBeenCalledTimes(1)
+
+    await act(async () => {
+      root.render(<MapView activities={activitiesA()} colorScheme="light" colorMode="speed" />)
+    })
+    expect(spy).toHaveBeenCalledTimes(1)
+  })
+
+  it('calls fitBounds again when activity content changes (same length)', async () => {
+    await act(async () => {
+      root.render(<MapView activities={activitiesA()} colorScheme="light" />)
+    })
+    const spy = getFitBounds()
+    expect(spy).toHaveBeenCalledTimes(1)
+
+    await act(async () => {
+      root.render(<MapView activities={activitiesB()} colorScheme="light" />)
+    })
+    expect(spy).toHaveBeenCalledTimes(2)
+  })
+
+  it('does not call fitBounds on sort (same content, different order)', async () => {
+    const sorted = [...activitiesA()].reverse()
+    await act(async () => {
+      root.render(<MapView activities={activitiesA()} colorScheme="light" />)
+    })
+    const spy = getFitBounds()
+    expect(spy).toHaveBeenCalledTimes(1)
+
+    await act(async () => {
+      root.render(<MapView activities={sorted} colorScheme="light" />)
+    })
+    expect(spy).toHaveBeenCalledTimes(1)
+  })
+})
+
 describe('MiniMap — dark/light toggle impact', () => {
   let root: Root
   let container: HTMLDivElement
