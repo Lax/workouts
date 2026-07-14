@@ -121,6 +121,7 @@ export function SimpleLayout() {
               dashLines={siteConfig?.dashLines as boolean | undefined}
               privacyMode={siteConfig?.privacyMode as boolean | undefined}
               showLabels={siteConfig?.showLabels !== false}
+              animate={!!selectedActivity}
               onActivityHover={setMapHoveredId}
               onActivityClick={openDetail}
             />

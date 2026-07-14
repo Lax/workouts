@@ -14,6 +14,7 @@ export interface PanelMapProps {
   showLabels?: boolean
   dashLines?: boolean
   privacyMode?: boolean
+  animate?: boolean
   onActivityClick?: (activity: Activity) => void
   onActivityHover?: (activityId: string | null) => void
 }
@@ -28,12 +29,22 @@ export function PanelMap({
   showLabels = true,
   dashLines = false,
   privacyMode = false,
+  animate = false,
   onActivityClick,
   onActivityHover,
 }: PanelMapProps) {
   const elRef = useRef<HTMLDivElement>(null)
   const mapRef = useLeafletMap(elRef, { colorScheme, tileConfig, showLabels })
-  const opts: PolylineOptions = { colorMode, hoveredActivityId, maxLines, fitOnChange: true, dashLines, onActivityClick, onActivityHover }
+  const opts: PolylineOptions = {
+    colorMode,
+    hoveredActivityId,
+    maxLines,
+    fitOnChange: true,
+    dashLines,
+    animate,
+    onActivityClick,
+    onActivityHover,
+  }
   useMapPolylines(mapRef, activities, opts)
   const bg = privacyMode ? 'var(--color-bg, #000)' : 'transparent'
   return <div ref={elRef} style={{ height: '100%', width: '100%', background: bg }} />

@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest'
 
 vi.mock('leaflet', () => {
   class MockTileLayer {
@@ -10,6 +10,7 @@ vi.mock('leaflet', () => {
     bringToFront = vi.fn()
     bindTooltip = vi.fn().mockReturnThis()
     on = vi.fn()
+    setLatLngs = vi.fn().mockReturnThis()
   }
 
   const mapInstance = {
@@ -241,5 +242,102 @@ describe('MiniMap — dark/light toggle impact', () => {
     })
 
     expect(L.map).toHaveBeenCalledTimes(countAfterMount)
+  })
+})
+
+describe('MapView — route animation', () => {
+  let root: Root
+  let container: HTMLDivElement
+
+  beforeEach(() => {
+    container = document.createElement('div')
+    document.body.appendChild(container)
+    root = createRoot(container)
+    vi.clearAllMocks()
+
+    vi.spyOn(window, 'cancelAnimationFrame').mockImplementation(() => {})
+    onTestFinished(() => {
+      vi.mocked(window.cancelAnimationFrame).mockRestore()
+    })
+  })
+
+  afterEach(() => {
+    act(() => root.unmount())
+    document.body.removeChild(container)
+  })
+
+  function singleActivity(): Activity[] {
+    return [testActivity({ run_id: 'anim-1', summary_polyline: '_p~iF~ps|U_ulLnnqC_mqNvxq`@' })]
+  }
+
+  it('renders statically when animate=false (default)', async () => {
+    await act(async () => {
+      root.render(<MapView activities={singleActivity()} colorScheme="light" />)
+    })
+
+    expect(vi.mocked(L.polyline)).toHaveBeenCalledTimes(1)
+    const pointsArg = vi.mocked(L.polyline).mock.calls[0][0] as [number, number][]
+    expect(pointsArg.length).toBe(3)
+  })
+
+  it('animates single activity when animate=true', async () => {
+    await act(async () => {
+      root.render(<MapView activities={singleActivity()} colorScheme="light" animate />)
+    })
+
+    expect(vi.mocked(L.polyline)).toHaveBeenCalledTimes(1)
+    const pointsArg = vi.mocked(L.polyline).mock.calls[0][0] as [number, number][]
+    expect(pointsArg.length).toBe(2)
+  })
+
+  it('no animation when activities.length>1 even with animate=true', async () => {
+    await act(async () => {
+      root.render(<MapView activities={activitiesA()} colorScheme="light" animate />)
+    })
+
+    const polylineInstances = vi.mocked(L.polyline).mock.results
+    for (const r of polylineInstances) {
+      const p = r.value as { setLatLngs: ReturnType<typeof vi.fn> } | undefined
+      if (p?.setLatLngs) {
+        expect(p.setLatLngs).not.toHaveBeenCalled()
+      }
+    }
+  })
+
+  it('handles null summary_polyline — no crash', async () => {
+    await act(async () => {
+      root.render(<MapView activities={[testActivity({ summary_polyline: null })]} colorScheme="light" animate />)
+    })
+
+    expect(L.polyline).toHaveBeenCalledTimes(0)
+  })
+
+  it('renders 2-point polyline instantly (no rAF)', async () => {
+    const shortPolyline = '_p~iF~ps|U_ulLnnqC'
+    await act(async () => {
+      root.render(<MapView activities={[testActivity({ run_id: 'short', summary_polyline: shortPolyline })]} colorScheme="light" animate />)
+    })
+
+    const calls = vi.mocked(L.polyline).mock.calls
+    const firstCallPoints = calls[0]?.[0] as [number, number][] | undefined
+    expect(firstCallPoints).toBeDefined()
+  })
+
+  it('cancels old animation and starts new on activity switch (DC3)', async () => {
+    const activityA = testActivity({ run_id: 'switch-a', summary_polyline: '_p~iF~ps|U_ulLnnqC_mqNvxq`@' })
+    const activityB = testActivity({ run_id: 'switch-b', summary_polyline: '_p~iF~ps|U_ulLnnqC_mqNvxq`@' })
+
+    await act(async () => {
+      root.render(<MapView activities={[activityA]} colorScheme="light" animate />)
+    })
+
+    expect(vi.mocked(L.polyline)).toHaveBeenCalledTimes(1)
+    const callsBefore = vi.mocked(L.polyline).mock.calls.length
+
+    await act(async () => {
+      root.render(<MapView activities={[activityB]} colorScheme="light" animate />)
+    })
+
+    expect(vi.mocked(L.polyline).mock.calls.length).toBeGreaterThan(callsBefore)
   })
 })

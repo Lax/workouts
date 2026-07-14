@@ -17,6 +17,7 @@ export interface MapViewProps {
   showLabels?: boolean
   dashLines?: boolean
   privacyMode?: boolean
+  animate?: boolean
   showZoomControl?: boolean
   showAttribution?: boolean
   onActivityClick?: (activity: Activity) => void
@@ -34,6 +35,7 @@ export function MapView({
   showLabels = true,
   dashLines = false,
   privacyMode = false,
+  animate = false,
   showZoomControl = true,
   showAttribution = false,
   onActivityClick,
@@ -55,6 +57,7 @@ export function MapView({
     maxLines,
     fitOnChange: true,
     dashLines,
+    animate,
     onActivityClick,
     onActivityHover,
   }

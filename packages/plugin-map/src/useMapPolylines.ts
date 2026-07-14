@@ -12,6 +12,7 @@ export interface PolylineOptions {
   fitOnChange?: boolean
   dashLines?: boolean
   showMarkers?: boolean
+  animate?: boolean
   onActivityClick?: (activity: Activity) => void
   onActivityHover?: (activityId: string | null) => void
 }
@@ -20,6 +21,7 @@ export function useMapPolylines(mapRef: MapInstance, activities: Activity[], opt
   const polylinesRef = useRef<Map<string, L.Polyline>>(new Map())
   const markersRef = useRef<L.CircleMarker[]>([])
   const fittedRef = useRef<string>('')
+  const animFramesRef = useRef<Map<string, number>>(new Map())
 
   const {
     colorMode,
@@ -28,6 +30,7 @@ export function useMapPolylines(mapRef: MapInstance, activities: Activity[], opt
     fitOnChange = true,
     dashLines = false,
     showMarkers = false,
+    animate = false,
     onActivityClick,
     onActivityHover,
   } = options
@@ -40,9 +43,13 @@ export function useMapPolylines(mapRef: MapInstance, activities: Activity[], opt
     polylinesRef.current.clear()
     for (const m of markersRef.current) mapInst.removeLayer(m)
     markersRef.current = []
+    for (const [, fid] of animFramesRef.current) cancelAnimationFrame(fid)
+    animFramesRef.current.clear()
 
     const currentYear = new Date().getFullYear()
     const allPoints: [number, number][] = []
+
+    const shouldAnimate = animate && activities.length === 1
 
     for (let i = 0; i < Math.min(activities.length, maxLines); i++) {
       const a = activities[i]
@@ -56,24 +63,60 @@ export function useMapPolylines(mapRef: MapInstance, activities: Activity[], opt
       const yearsAgo = currentYear - (a.start_date ? new Date(a.start_date).getFullYear() : currentYear)
       const opacity = Math.max(0.35, 1.0 - yearsAgo * 0.06)
 
-      const line = L.polyline(points, {
+      const lineStyle: L.PolylineOptions = {
         color: activityColor({ average_speed: a.average_speed, type: a.sport_category }, colorMode),
         weight: 5,
         opacity,
         smoothFactor: 1,
         interactive: true,
         dashArray: dashLines ? '10, 10' : undefined,
-      }).addTo(mapInst)
+      }
 
-      line.on('click', () => onActivityClick?.(a))
-      line.on('mouseover', () => onActivityHover?.(a.run_id))
-      line.on('mouseout', () => onActivityHover?.(null))
+      if (shouldAnimate && points.length > 2) {
+        const initial = [points[0], points[1]]
+        const line = L.polyline(initial, lineStyle).addTo(mapInst)
 
-      line.bindTooltip(`${a.name || 'Untitled'} — ${((a.distance ?? 0) / 1000).toFixed(2)} km`, {
-        sticky: true,
-      })
+        line.on('click', () => onActivityClick?.(a))
+        line.on('mouseover', () => onActivityHover?.(a.run_id))
+        line.on('mouseout', () => onActivityHover?.(null))
 
-      polylinesRef.current.set(a.run_id, line)
+        line.bindTooltip(`${a.name || 'Untitled'} — ${((a.distance ?? 0) / 1000).toFixed(2)} km`, {
+          sticky: true,
+        })
+
+        polylinesRef.current.set(a.run_id, line)
+
+        const duration = Math.min(4000, Math.max(1000, points.length * 25))
+        const startTime = performance.now()
+
+        function step(timestamp: number) {
+          const elapsed = timestamp - startTime
+          const progress = Math.min(elapsed / duration, 1)
+          const count = Math.max(2, Math.floor(points.length * progress))
+          line.setLatLngs(points.slice(0, count))
+          if (progress < 1) {
+            const fid = requestAnimationFrame(step)
+            animFramesRef.current.set(a.run_id, fid)
+          } else {
+            animFramesRef.current.delete(a.run_id)
+          }
+        }
+
+        const fid = requestAnimationFrame(step)
+        animFramesRef.current.set(a.run_id, fid)
+      } else {
+        const line = L.polyline(points, lineStyle).addTo(mapInst)
+
+        line.on('click', () => onActivityClick?.(a))
+        line.on('mouseover', () => onActivityHover?.(a.run_id))
+        line.on('mouseout', () => onActivityHover?.(null))
+
+        line.bindTooltip(`${a.name || 'Untitled'} — ${((a.distance ?? 0) / 1000).toFixed(2)} km`, {
+          sticky: true,
+        })
+
+        polylinesRef.current.set(a.run_id, line)
+      }
 
       if (showMarkers) {
         const startC = L.circleMarker(points[0], { radius: 4, color: '#22c55e', fillColor: '#22c55e', fillOpacity: 1, weight: 2 }).addTo(
@@ -103,7 +146,7 @@ export function useMapPolylines(mapRef: MapInstance, activities: Activity[], opt
         }
       }
     }
-  }, [mapRef.current, activities, colorMode, maxLines, dashLines, showMarkers, onActivityClick, onActivityHover, fitOnChange])
+  }, [mapRef.current, activities, colorMode, maxLines, dashLines, showMarkers, animate, onActivityClick, onActivityHover, fitOnChange])
 
   useEffect(() => {
     const mapInst = mapRef.current

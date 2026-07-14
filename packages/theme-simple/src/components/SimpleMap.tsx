@@ -9,6 +9,7 @@ interface SimpleMapProps {
   dashLines?: boolean
   privacyMode?: boolean
   showLabels?: boolean
+  animate?: boolean
   onActivityClick?: (activity: Activity) => void
   onActivityHover?: (activityId: string | null) => void
 }
@@ -32,6 +33,7 @@ export function SimpleMap({
   dashLines,
   privacyMode,
   showLabels,
+  animate,
   onActivityClick,
   onActivityHover,
 }: SimpleMapProps) {
@@ -45,6 +47,7 @@ export function SimpleMap({
       dashLines={dashLines}
       privacyMode={privacyMode}
       showLabels={showLabels}
+      animate={animate}
       onActivityClick={onActivityClick}
       onActivityHover={onActivityHover}
     />
