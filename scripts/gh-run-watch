@@ -45,7 +45,8 @@ if [[ $# -gt 0 && "$1" != -* ]]; then
   shift
 else
   branch=$(git branch --show-current 2>/dev/null || echo "main")
-  run_id=$(gh run list --branch "$branch" --limit 1 \
+  workflow=".github/workflows/ci.yml"
+  run_id=$(gh run list --workflow "$workflow" --branch "$branch" --limit 1 \
     --json databaseId --jq '.[0].databaseId')
 fi
 
