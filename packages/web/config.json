@@ -14,7 +14,8 @@
     "url": "/workouts/",
     "logo": null,
     "navLinks": [],
-    "mapboxToken": "__VITE__MAPBOX__TOKEN__",
-    "mapboxStyle": "dark-v11"
+    "mapTileVendor": "carto",
+    "mapTileStyle": "dark-nolabels",
+    "mapTileToken": ""
   }
 }

@@ -1,3 +1,4 @@
+import { useTheme } from '@workouts/core'
 import { useActivities } from '@workouts/plugin-data-source'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Header } from './components/Header'
@@ -15,6 +16,8 @@ const SITE = { title: 'Workouts', url: '/', logo: null, navLinks: [] as { name: 
 
 export function SimpleLayout() {
   const { activities } = useActivities()
+  const { config } = useTheme()
+  const siteConfig = config?.site as Record<string, unknown> | undefined
 
   const setActivities = useSimpleStore((s) => s.setActivities)
   const selectedYear = useSimpleStore((s) => s.selectedYear)
@@ -115,6 +118,9 @@ export function SimpleLayout() {
               colorScheme={colorScheme}
               colorMode={colorMode}
               hoveredActivityId={useSimpleStore.getState().mapHoveredId}
+              dashLines={siteConfig?.dashLines as boolean | undefined}
+              privacyMode={siteConfig?.privacyMode as boolean | undefined}
+              showLabels={siteConfig?.showLabels !== false}
               onActivityHover={setMapHoveredId}
               onActivityClick={openDetail}
             />

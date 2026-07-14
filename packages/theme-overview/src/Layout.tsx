@@ -1,3 +1,4 @@
+import { useTheme } from '@workouts/core'
 import { useActivities } from '@workouts/plugin-data-source'
 import { useEffect } from 'react'
 import { ChartOverlay } from './components/ChartOverlay'
@@ -9,6 +10,8 @@ import './overview.css'
 
 export function OverviewLayout() {
   const { activities, loading: _loading, error: _error } = useActivities()
+  const { config } = useTheme()
+  const siteConfig = config?.site as Record<string, unknown> | undefined
 
   const setActivities = useOverviewStore((s) => s.setActivities)
   const colorMode = useOverviewStore((s) => s.colorMode)
@@ -35,6 +38,9 @@ export function OverviewLayout() {
         colorScheme={colorScheme}
         colorMode={colorMode}
         hoveredActivityId={mapHoveredId}
+        dashLines={siteConfig?.dashLines as boolean | undefined}
+        privacyMode={siteConfig?.privacyMode as boolean | undefined}
+        showLabels={siteConfig?.showLabels !== false}
         onActivityClick={openDetail}
         onActivityHover={setMapHoveredId}
       />

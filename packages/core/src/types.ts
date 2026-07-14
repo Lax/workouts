@@ -1,11 +1,25 @@
 import type { Activity } from '@workouts/shared'
 import type { ComponentType } from 'react'
 
+export interface SiteConfig {
+  title?: string
+  url?: string
+  logo?: string | null
+  navLinks?: { name: string; url: string }[]
+  mapTileVendor?: string
+  mapTileStyle?: string
+  mapTileToken?: string
+  dashLines?: boolean
+  privacyMode?: boolean
+  showLabels?: boolean
+}
+
 export interface Config {
   theme?: string
   entries?: Record<string, string>
   plugins?: Record<string, Record<string, unknown>>
   data?: Record<string, { source: string; optional?: boolean }>
+  site?: SiteConfig
 }
 
 export interface PluginManifest {

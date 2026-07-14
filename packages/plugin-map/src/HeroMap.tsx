@@ -1,5 +1,6 @@
 import type { Activity } from '@workouts/shared'
 import { useRef } from 'react'
+import type { TileConfig } from './tiles'
 import { useLeafletMap } from './useLeafletMap'
 import { type PolylineOptions, useMapPolylines } from './useMapPolylines'
 
@@ -9,6 +10,10 @@ export interface HeroMapProps {
   colorMode?: 'type' | 'speed'
   hoveredActivityId?: string | null
   maxLines?: number
+  tileConfig?: TileConfig
+  showLabels?: boolean
+  dashLines?: boolean
+  privacyMode?: boolean
   onActivityClick?: (activity: Activity) => void
   onActivityHover?: (activityId: string | null) => void
 }
@@ -19,12 +24,17 @@ export function HeroMap({
   colorMode = 'type',
   hoveredActivityId = null,
   maxLines = 500,
+  tileConfig,
+  showLabels = true,
+  dashLines = false,
+  privacyMode = false,
   onActivityClick,
   onActivityHover,
 }: HeroMapProps) {
   const elRef = useRef<HTMLDivElement>(null)
-  const mapRef = useLeafletMap(elRef, { colorScheme })
-  const opts: PolylineOptions = { colorMode, hoveredActivityId, maxLines, fitOnChange: true, onActivityClick, onActivityHover }
+  const mapRef = useLeafletMap(elRef, { colorScheme, tileConfig, showLabels })
+  const opts: PolylineOptions = { colorMode, hoveredActivityId, maxLines, fitOnChange: true, dashLines, onActivityClick, onActivityHover }
   useMapPolylines(mapRef, activities, opts)
-  return <div ref={elRef} style={{ position: 'fixed', inset: 0, zIndex: 0, background: 'var(--color-bg)' }} />
+  const bg = privacyMode ? 'var(--color-bg, #000)' : 'var(--color-bg)'
+  return <div ref={elRef} style={{ position: 'fixed', inset: 0, zIndex: 0, background: bg }} />
 }

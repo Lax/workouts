@@ -10,15 +10,18 @@ export interface PolylineOptions {
   hoveredActivityId?: string | null
   maxLines?: number
   fitOnChange?: boolean
+  dashLines?: boolean
+  showMarkers?: boolean
   onActivityClick?: (activity: Activity) => void
   onActivityHover?: (activityId: string | null) => void
 }
 
 export function useMapPolylines(mapRef: MapInstance, activities: Activity[], options: PolylineOptions): void {
   const polylinesRef = useRef<Map<string, L.Polyline>>(new Map())
+  const markersRef = useRef<L.CircleMarker[]>([])
   const fittedRef = useRef<string>('')
 
-  const { colorMode, hoveredActivityId = null, maxLines = 500, fitOnChange = true, onActivityClick, onActivityHover } = options
+  const { colorMode, hoveredActivityId = null, maxLines = 500, fitOnChange = true, dashLines = false, showMarkers = false, onActivityClick, onActivityHover } = options
 
   useEffect(() => {
     const mapInst = mapRef.current
@@ -26,6 +29,8 @@ export function useMapPolylines(mapRef: MapInstance, activities: Activity[], opt
 
     for (const [, line] of polylinesRef.current) mapInst.removeLayer(line)
     polylinesRef.current.clear()
+    for (const m of markersRef.current) mapInst.removeLayer(m)
+    markersRef.current = []
 
     const currentYear = new Date().getFullYear()
     const allPoints: [number, number][] = []
@@ -48,6 +53,7 @@ export function useMapPolylines(mapRef: MapInstance, activities: Activity[], opt
         opacity,
         smoothFactor: 1,
         interactive: true,
+        dashArray: dashLines ? '10, 10' : undefined,
       }).addTo(mapInst)
 
       line.on('click', () => onActivityClick?.(a))
@@ -59,6 +65,12 @@ export function useMapPolylines(mapRef: MapInstance, activities: Activity[], opt
       })
 
       polylinesRef.current.set(a.run_id, line)
+
+      if (showMarkers) {
+        const startC = L.circleMarker(points[0], { radius: 4, color: '#22c55e', fillColor: '#22c55e', fillOpacity: 1, weight: 2 }).addTo(mapInst)
+        const endC = L.circleMarker(points[points.length - 1], { radius: 4, color: '#ef4444', fillColor: '#ef4444', fillOpacity: 1, weight: 2 }).addTo(mapInst)
+        markersRef.current.push(startC, endC)
+      }
     }
 
     if (fitOnChange && allPoints.length > 0) {
@@ -74,7 +86,7 @@ export function useMapPolylines(mapRef: MapInstance, activities: Activity[], opt
         }
       }
     }
-  }, [mapRef.current, activities, colorMode, maxLines, onActivityClick, onActivityHover, fitOnChange])
+  }, [mapRef.current, activities, colorMode, maxLines, dashLines, showMarkers, onActivityClick, onActivityHover, fitOnChange])
 
   useEffect(() => {
     const mapInst = mapRef.current

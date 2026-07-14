@@ -1,4 +1,4 @@
-import { HeroMap } from '@workouts/plugin-map'
+import { HeroMap, type TileConfig, type Vendor } from '@workouts/plugin-map'
 import type { Activity } from '@workouts/shared'
 
 interface OverviewMapProps {
@@ -6,17 +6,35 @@ interface OverviewMapProps {
   colorScheme: 'light' | 'dark'
   colorMode: 'type' | 'speed'
   hoveredActivityId: string | null
+  dashLines?: boolean
+  privacyMode?: boolean
+  showLabels?: boolean
   onActivityClick?: (activity: Activity) => void
   onActivityHover?: (activityId: string | null) => void
 }
 
-export function OverviewMap({ activities, colorScheme, colorMode, hoveredActivityId, onActivityClick, onActivityHover }: OverviewMapProps) {
+function getTileConfig(): TileConfig {
+  const envVendor = import.meta.env.VITE__MAP_TILE_VENDOR
+  const envStyle = import.meta.env.VITE__MAP_TILE_STYLE
+  const envToken = import.meta.env.VITE__MAP_TILE_TOKEN || import.meta.env.VITE__MAPBOX__TOKEN
+  return {
+    vendor: (envVendor || 'carto') as Vendor,
+    style: envStyle || undefined,
+    token: envToken || undefined,
+  }
+}
+
+export function OverviewMap({ activities, colorScheme, colorMode, hoveredActivityId, dashLines, privacyMode, showLabels, onActivityClick, onActivityHover }: OverviewMapProps) {
   return (
     <HeroMap
       activities={activities}
       colorScheme={colorScheme}
       colorMode={colorMode}
       hoveredActivityId={hoveredActivityId}
+      tileConfig={getTileConfig()}
+      dashLines={dashLines}
+      privacyMode={privacyMode}
+      showLabels={showLabels}
       onActivityClick={onActivityClick}
       onActivityHover={onActivityHover}
     />
