@@ -87,10 +87,11 @@
   color: var(--color-accent);
 }
 
-/* Layout — two-column */
+/* Layout — two-column, scrollable */
 .layout {
   display: flex;
   min-height: calc(100vh - 81px);
+  overflow: auto;
 }
 
 .left-panel {
