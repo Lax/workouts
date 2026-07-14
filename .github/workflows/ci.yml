@@ -75,6 +75,9 @@ jobs:
           path: ~/.cache/ms-playwright
           key: ${{ steps.playwright-cache.outputs.cache-primary-key }}
 
+      - name: Kill stale preview server (self-hosted cleanup)
+        run: lsof -ti:4173 | xargs -r kill -9 || true
+
       - name: Run Playwright E2E tests
         run: npx playwright test
         working-directory: packages/web
