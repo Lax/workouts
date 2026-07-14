@@ -67,11 +67,16 @@ export const useSimpleStore = create<SimpleStore>()((set) => ({
   filteredActivities: [],
 
   setActivities: (acts) =>
-    set((s) => ({
-      activities: acts,
-      years: computeYears(acts),
-      filteredActivities: filterActivities(acts, s.selectedYear, s.sortField, s.sortDesc),
-    })),
+    set((s) => {
+      const ys = computeYears(acts)
+      const initialYear = s.selectedYear === null && ys.length > 0 ? ys[0] : s.selectedYear
+      return {
+        activities: acts,
+        selectedYear: initialYear,
+        years: ys,
+        filteredActivities: filterActivities(acts, initialYear, s.sortField, s.sortDesc),
+      }
+    }),
 
   setSelectedYear: (y) =>
     set((s) => ({

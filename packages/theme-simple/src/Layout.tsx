@@ -1,11 +1,14 @@
 import { useRequiredComponent } from '@workouts/core'
 import { useActivities } from '@workouts/plugin-data-source'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import type { Activity } from '@workouts/shared'
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import { Header } from './components/Header'
 import { MapOverlays } from './components/MapOverlays'
+import { SVGStat } from './components/SVGStat'
 import { YearBarSVG } from './components/YearBarSVG'
 import { YearGridSVG } from './components/YearGridSVG'
 import { useSimpleStore } from './store'
+import { getRunIdFromHash, setRunHash, subscribeToRunHash } from './utils'
 import './simple.css'
 
 const SITE = { title: 'Workouts', url: '/', logo: null, navLinks: [] as { name: string; url: string }[] }
@@ -25,9 +28,18 @@ export function SimpleLayout() {
   const [hoveredYear, setHoveredYear] = useState<number | null>(null)
   const tableRef = useRef<HTMLDivElement>(null)
   const selectedActivity = useSimpleStore((s) => s.selectedActivity)
-  const openDetail = useSimpleStore((s) => s.openDetail)
+  const storeOpenDetail = useSimpleStore((s) => s.openDetail)
+  const openDetail = useCallback(
+    (act: Activity) => {
+      setRunHash(act.run_id)
+      storeOpenDetail(act)
+    },
+    [storeOpenDetail],
+  )
 
   const MapView = useRequiredComponent('map', 'MapView')
+
+  const hashRunId = useSyncExternalStore(subscribeToRunHash, getRunIdFromHash, () => null)
 
   useEffect(() => {
     if (!selectedActivity || !tableRef.current) return
@@ -38,6 +50,12 @@ export function SimpleLayout() {
   useEffect(() => {
     setActivities(activities)
   }, [activities, setActivities])
+
+  useEffect(() => {
+    if (!hashRunId || activities.length === 0) return
+    const act = activities.find((a) => a.run_id === hashRunId)
+    if (act) openDetail(act)
+  }, [hashRunId, activities, openDetail])
 
   useEffect(() => {
     const link = document.createElement('link')
@@ -101,7 +119,7 @@ export function SimpleLayout() {
             <MapOverlays />
           </div>
           <div className="table-area" ref={tableRef}>
-            <RunTable />
+            {selectedYear === null && years.length > 0 ? <SVGStat activities={activities} /> : <RunTable />}
           </div>
         </main>
       </div>
