@@ -1,4 +1,6 @@
+import { execSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
 
@@ -11,8 +13,18 @@ for (const key of Object.keys(entries)) {
   input[key] = `${key}.html`
 }
 
+function collectVersionsPlugin(): import('vite').Plugin {
+  return {
+    name: 'collect-versions',
+    buildStart() {
+      const script = resolve(__dirname, '../../scripts/collect-versions.mjs')
+      execSync(`node ${script}`, { cwd: resolve(__dirname, '../..'), stdio: 'inherit' })
+    },
+  }
+}
+
 export default defineConfig({
-  plugins: [react()],
+  plugins: [collectVersionsPlugin(), react()],
   base: '',
   build: {
     outDir: 'dist',
