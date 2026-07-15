@@ -13,7 +13,6 @@ import { intComma, Stat } from './components/Stat'
 import { SummaryView } from './components/SummaryView'
 import { SVGStat } from './components/SVGStat'
 import { YearSelector } from './components/YearSelector'
-import { YearSummaryDrawer } from './components/YearSummaryDrawer'
 import { LocationStats } from './LocationStats'
 import { useSimpleStore } from './store'
 import { getRunIdFromHash } from './utils'
@@ -172,7 +171,6 @@ export function SimpleLayout() {
               className="svg-stat-container"
               style={{ borderTop: '1px solid var(--color-border)', marginTop: 8, overflowX: 'hidden', maxWidth: '100%' }}
             >
-              <YearSummaryDrawer year={selectedYear} activities={activities} />
               <GithubDrawer year={selectedYear} activities={activities} />
             </div>
           )}
