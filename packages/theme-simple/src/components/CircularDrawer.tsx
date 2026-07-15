@@ -1,8 +1,8 @@
 /**
- * CircularDrawer — ring chart showing individual activity arcs.
- * Matches upstream year_YYYY.svg: each activity is a colored arc on the ring.
- * Angle = day of year, extent = distance, color = intensity gradient from red to green.
- */
+ * CircularDrawer — ring chart showing daily activity arcs.
+ * Matches upstream year_YYYY.svg: each day with activity gets a colored arc on the ring.
+ * Angle = day of year, extent = daily distance, color = intensity gradient.
+ * Same-day activities are aggregated into a single arc. */
 
 import type { Activity } from '@workouts/shared'
 import { useMemo } from 'react'
@@ -28,7 +28,7 @@ const MONTH_NAMES = [
 ]
 const INNER_R = 52
 const OUTER_R = 86
-const ARC_DEG = 0.12
+const ARC_DEG = 0.15
 const CX = 100
 const CY = 100
 
@@ -47,19 +47,23 @@ function polarToCartesian(r: number, deg: number) {
 
 export function CircularDrawer({ year, activities }: CircularDrawerProps) {
   const arcs = useMemo(() => {
-    const yearActs = activities.filter((a) => a.start_date && new Date(a.start_date).getFullYear() === year)
-    if (yearActs.length === 0) return []
-
-    const maxDist = Math.max(...yearActs.map((a) => a.distance ?? 0), 1)
+    const dayDist = new Map<string, number>()
+    for (const a of activities) {
+      if (!a.start_date || new Date(a.start_date).getFullYear() !== year) continue
+      const day = a.start_date.slice(0, 10)
+      dayDist.set(day, (dayDist.get(day) ?? 0) + (a.distance ?? 0))
+    }
+    const entries = Array.from(dayDist.entries())
+    if (entries.length === 0) return []
+    const maxDist = Math.max(...entries.map(([, d]) => d), 1)
     const startMs = new Date(year, 0, 1).getTime()
     const yearMs = new Date(year, 11, 31).getTime() - startMs
-
-    return yearActs.map((a) => {
-      const dayMs = new Date(a.start_date!).getTime() - startMs
+    return entries.map(([day, dist]) => {
+      const dayMs = new Date(day).getTime() - startMs
       const angle = (dayMs / yearMs) * 360 - 90
-      const ratio = (a.distance ?? 0) / maxDist
-      const extent = INNER_R + (OUTER_R - INNER_R) * ratio ** 0.4
-      return { angle, extent, ratio, key: a.run_id }
+      const ratio = dist / maxDist
+      const extent = INNER_R + (OUTER_R - INNER_R) * ratio ** 0.35
+      return { angle, extent, ratio, key: day }
     })
   }, [year, activities])
 
