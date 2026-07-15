@@ -239,18 +239,31 @@
   cursor: default;
 }
 
-.month-pills {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
+.month-chip {
+  display: inline-flex;
   align-items: center;
-  margin-top: 4px;
+  gap: 0.25rem;
+  background: rgba(var(--color-surface-rgb), 0.85);
+  border: 1px solid var(--color-border);
+  color: var(--color-accent);
+  border-radius: 12px;
+  padding: 2px 8px;
+  font-size: 0.7rem;
+  margin-top: 3px;
+  backdrop-filter: blur(4px);
 }
-
-@media (max-width: 768px) {
-  .year-pills--month-view .year-pill:not(.active) {
-    display: none;
-  }
+.month-chip button {
+  background: none;
+  border: none;
+  color: var(--color-accent);
+  cursor: pointer;
+  font-size: 1rem;
+  padding: 0;
+  line-height: 1;
+  opacity: 0.7;
+}
+.month-chip button:hover {
+  opacity: 1;
 }
 
 .map-overlays { position: absolute; bottom: 10px; left: 10px; z-index: 1; }

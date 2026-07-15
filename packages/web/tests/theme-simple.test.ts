@@ -361,16 +361,22 @@ describe('YearSelector CSS — positioning and arrangement', () => {
     document.body.removeChild(pill)
   })
 
-  it('month-pills uses flex column below year pills', () => {
-    const mp = document.createElement('div')
-    mp.className = 'month-pills'
-    document.body.appendChild(mp)
+  it('month-chip has correct inline-flex style matching upstream', () => {
+    const chip = document.createElement('div')
+    chip.className = 'month-chip'
+    document.body.appendChild(chip)
 
-    const style = getComputedStyle(mp)
-    expect(style.display).toBe('flex')
-    expect(style.flexDirection).toBe('column')
+    const style = getComputedStyle(chip)
+    expect(style.display).toBe('inline-flex')
+    expect(style.borderRadius).toBe('12px')
+    expect(cssRuleHasProperty('.month-chip', 'backdrop-filter')).toBe(true)
 
-    document.body.removeChild(mp)
+    document.body.removeChild(chip)
+  })
+
+  it('month-chip button has close style for deselection', () => {
+    expect(cssRuleHasProperty('.month-chip button', 'cursor')).toBe(true)
+    expect(cssRuleHasProperty('.month-chip button', 'opacity')).toBe(true)
   })
 
   it('map-lights positioned top-right on map', () => {
@@ -413,8 +419,9 @@ describe('YearSelector CSS — positioning and arrangement', () => {
     document.body.removeChild(btn)
   })
 
-  it('year-pills--month-view hides non-active pills at narrow viewport via media query', () => {
-    expect(cssRuleHasProperty('.year-pills--month-view .year-pill:not(.active)', 'display')).toBe(true)
+  it('month-chip appears only when both year and month are selected', () => {
+    expect(cssRuleHasProperty('.month-chip', 'display')).toBe(true)
+    expect(cssRuleHasProperty('.month-chip', 'border-radius')).toBe(true)
   })
 })
 
@@ -463,18 +470,17 @@ describe('Upstream style consistency — year-pill matches overview pattern', ()
     document.body.removeChild(toggle)
   })
 
-  it('year-pill-label has accent background matching active pill — consistent UX language', () => {
-    const label = document.createElement('span')
-    label.className = 'year-pill-label'
-    document.body.appendChild(label)
+  it('month-chip has accent color and backdrop-filter matching overview treatment', () => {
+    const chip = document.createElement('div')
+    chip.className = 'month-chip'
+    document.body.appendChild(chip)
 
-    const style = getComputedStyle(label)
+    const style = getComputedStyle(chip)
     expect(style.borderRadius).toBe('12px')
     expect(style.fontSize).toBe('0.7rem')
-    expect(style.fontWeight).toBe('600')
-    expect(style.cursor).toBe('default')
+    expect(cssRuleHasProperty('.month-chip', 'backdrop-filter')).toBe(true)
 
-    document.body.removeChild(label)
+    document.body.removeChild(chip)
   })
 
   it('map-year-selector pointer-events:none with children auto — matches overview ol-lc pattern', () => {

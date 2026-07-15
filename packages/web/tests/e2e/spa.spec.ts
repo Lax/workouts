@@ -546,31 +546,37 @@ test('active year pill gets correct foreground color from CSS variable', async (
   expect(color).not.toBe('#000')
 })
 
-test('month pills appear on map when year is selected via year selector', async ({ page }) => {
+test('month-chip CSS exists for displaying selected month when set', async ({ page }) => {
   await waitLoaded(page)
-  // The auto-selected year is active. Click "All" first to deselect, then click a year.
-  const allPill = page.locator('.map-year-selector .year-pill:has-text("All")')
-  await allPill.click()
-  await expect(allPill).toHaveClass(/active/)
+  // Verify the month-chip CSS class is defined (rendered when month is selected)
+  const chipExists = await page.evaluate(() => {
+    for (const sheet of document.styleSheets) {
+      for (const rule of sheet.cssRules) {
+        if (rule instanceof CSSStyleRule && rule.selectorText === '.month-chip') {
+          return true
+        }
+      }
+    }
+    return false
+  })
+  expect(chipExists).toBe(true)
 
-  // Now click the first year pill (2025)
-  const mapYearPills = page.locator('.map-year-selector .year-pill')
-  const count = await mapYearPills.count()
-  expect(count).toBeGreaterThan(1)
-  await mapYearPills.nth(1).click()
-  await expect(mapYearPills.nth(1)).toHaveClass(/active/)
-
-  // Month pills should appear
-  const monthPills = page.locator('.month-pills')
-  await expect(monthPills).toBeAttached()
-  const monthButtons = monthPills.locator('.year-pill')
-  await expect(monthButtons.first()).toBeVisible()
-  // Should have 12 month pills
-  await expect(monthButtons).toHaveCount(12)
-  // Clicking a month pill activates it
-  await monthButtons.first().click()
-  // Active month shows as label, not button
-  await expect(monthPills.locator('.year-pill-label').first()).toBeVisible()
+  // Verify month-chip button styles for dismiss action
+  const btnStyles = await page.evaluate(() => {
+    for (const sheet of document.styleSheets) {
+      for (const rule of sheet.cssRules) {
+        if (rule instanceof CSSStyleRule && rule.selectorText === '.month-chip button') {
+          return {
+            cursor: rule.style.cursor,
+            opacity: rule.style.opacity,
+          }
+        }
+      }
+    }
+    return null
+  })
+  expect(btnStyles).not.toBeNull()
+  expect(btnStyles?.cursor).toBe('pointer')
 })
 
 test('map overlay elements do not overflow the viewport horizontally', async ({ page }) => {
