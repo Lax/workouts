@@ -159,6 +159,13 @@ export function SimpleLayout() {
             />
             <YearSelector />
             <MapOverlays />
+            <div className="map-run-title">
+              {selectedActivity
+                ? `${selectedActivity.start_date?.slice(0, 10)} ${((selectedActivity.distance ?? 0) / 1000).toFixed(2)}km ${selectedActivity.name || selectedActivity.sport_category}`
+                : selectedYear !== null
+                  ? `${selectedYear} Running Heatmap`
+                  : 'Total Running Heatmap'}
+            </div>
           </div>
           {selectedYear !== null && (
             <div

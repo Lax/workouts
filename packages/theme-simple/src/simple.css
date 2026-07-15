@@ -67,7 +67,6 @@
   align-items: center;
   justify-content: space-between;
   padding: 1rem 1.5rem;
-  border-bottom: 1px solid var(--color-border);
   background: var(--color-bg);
 }
 
@@ -141,7 +140,6 @@
   width: 33.333%;
   flex-shrink: 0;
   padding: 1.5rem;
-  border-right: 1px solid var(--color-border);
 }
 
 .left-panel .site-title {
@@ -220,9 +218,9 @@
 }
 
 .year-pill.active {
-  background: var(--color-accent, #e0ed5e);
+  background: var(--color-brand, #e0ed5e);
   color: var(--color-bg, #171717);
-  border-color: var(--color-accent, #e0ed5e);
+  border-color: var(--color-brand, #e0ed5e);
   font-weight: 600;
 }
 
@@ -268,75 +266,29 @@
   opacity: 1;
 }
 
-.map-overlays { position: absolute; bottom: 10px; left: 10px; z-index: 1001; }
 .map-lights { position: absolute; right: 10px; top: 62px; z-index: 1001; opacity: 0.3; }
 .map-fullscreen { position: absolute; right: 10px; top: 10px; z-index: 1001; }
 
-.legend-area {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  align-items: flex-start;
-}
-
-.legend-toggle {
-  display: flex;
-  background: rgba(var(--color-surface-rgb), 0.85);
-  border-radius: 8px;
-  border: 1px solid var(--color-border);
-  overflow: hidden;
-  backdrop-filter: blur(4px);
-}
-
-.legend-btn {
-  padding: 3px 10px;
-  font-size: 0.7rem;
-  color: var(--color-text-secondary);
+.map-run-title {
+  position: absolute;
+  bottom: 0;
+  left: 120px;
+  height: 29px;
   cursor: pointer;
-  border: none;
-  background: transparent;
-  transition: all 0.15s;
+  color: var(--color-primary);
+  font-size: 0.9rem;
+  white-space: nowrap;
+  z-index: 1001;
+  pointer-events: none;
 }
 
-.legend-btn:hover {
-  color: var(--color-text);
-}
-
-.legend-btn.active {
-  background: var(--color-accent);
-  color: var(--color-bg);
-  font-weight: 600;
-}
-
-.legend-btn:first-child {
-  border-right: 1px solid var(--color-border);
-}
-
-.speed-legend {
-  display: flex;
-  border-radius: 6px;
-  overflow: hidden;
-  height: 8px;
-}
-
-.speed-legend span {
-  flex: 1;
-}
-
-.sl-blue {
-  background: #4a90d9;
-}
-
-.sl-green {
-  background: #50c878;
-}
-
-.sl-yellow {
-  background: #ffd700;
-}
-
-.sl-red {
-  background: #ff4500;
+@media (max-width: 768px) {
+  .map-run-title {
+    width: calc(100% - 40px);
+    left: 20px;
+    font-size: 0.8rem;
+    bottom: 5px;
+  }
 }
 
 .table-area {
@@ -346,7 +298,8 @@
 /* YearsStat / YearStat components */
 .section-divider {
   border: none;
-  border-top: 1px solid var(--color-border);
+  border-top: 1px solid;
+  border-top-color: var(--color-hr);
   margin: 2rem 0;
 }
 
@@ -494,8 +447,6 @@
 
   .left-panel {
     width: 100%;
-    border-right: none;
-    border-bottom: 1px solid var(--color-border);
   }
 
   .right-panel {

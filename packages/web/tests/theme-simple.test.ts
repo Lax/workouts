@@ -351,7 +351,7 @@ describe('YearSelector CSS — positioning and arrangement', () => {
     document.body.removeChild(pill)
   })
 
-  it('year-pill.active has accent background and bold weight', () => {
+  it('year-pill.active has brand background and bold weight', () => {
     const pill = document.createElement('button')
     pill.className = 'year-pill active'
     document.body.appendChild(pill)
@@ -394,32 +394,6 @@ describe('YearSelector CSS — positioning and arrangement', () => {
     document.body.removeChild(el)
   })
 
-  it('legend-toggle has backdrop-filter blur for readability over map tiles', () => {
-    const toggle = document.createElement('div')
-    toggle.className = 'legend-toggle'
-    document.body.appendChild(toggle)
-
-    const style = getComputedStyle(toggle)
-    expect(style.borderRadius).toBe('8px')
-    expect(style.overflow).toBe('hidden')
-    expect(cssRuleHasProperty('.legend-toggle', 'backdrop-filter')).toBe(true)
-
-    document.body.removeChild(toggle)
-  })
-
-  it('legend-btn has correct font-size matching upstream', () => {
-    const btn = document.createElement('button')
-    btn.className = 'legend-btn'
-    document.body.appendChild(btn)
-
-    const style = getComputedStyle(btn)
-    expect(style.fontSize).toBe('0.7rem')
-    expect(style.cursor).toBe('pointer')
-    expect(style.transition).toBe('all 0.15s')
-
-    document.body.removeChild(btn)
-  })
-
   it('month-chip appears only when both year and month are selected', () => {
     expect(cssRuleHasProperty('.month-chip', 'display')).toBe(true)
     expect(cssRuleHasProperty('.month-chip', 'border-radius')).toBe(true)
@@ -457,18 +431,6 @@ describe('Upstream style consistency — year-pill matches overview pattern', ()
     expect(cssRuleHasProperty('.year-pill', 'backdrop-filter')).toBe(true)
 
     document.body.removeChild(pill)
-  })
-
-  it('legend-toggle has same backdrop-filter + border-radius as overview', () => {
-    const toggle = document.createElement('div')
-    toggle.className = 'legend-toggle'
-    document.body.appendChild(toggle)
-
-    const style = getComputedStyle(toggle)
-    expect(style.borderRadius).toBe('8px')
-    expect(cssRuleHasProperty('.legend-toggle', 'backdrop-filter')).toBe(true)
-
-    document.body.removeChild(toggle)
   })
 
   it('month-chip has accent color and backdrop-filter matching overview treatment', () => {
@@ -512,55 +474,12 @@ describe('Visual integration — header and map overlays', () => {
     document.body.appendChild(header)
 
     expect(cssRuleHasProperty('.simple-header', 'background')).toBe(true)
-    expect(cssRuleHasProperty('.simple-header', 'border-bottom')).toBe(true)
 
     document.body.removeChild(header)
   })
 
-  it('simple-header border uses var(--color-border) not var(--color-hr-primary)', () => {
-    expect(cssRuleHasProperty('.simple-header', 'background')).toBe(true)
-    const hasHrBorder =
-      cssRuleHasProperty('.simple-header', 'border-bottom-color') &&
-      document.styleSheets[0]?.cssRules[0] instanceof CSSStyleRule &&
-      document.styleSheets[0].cssRules[0].cssText.includes('color-hr-primary')
-    expect(hasHrBorder).toBe(false)
-  })
-
-  it('section-divider uses var(--color-border) not var(--color-hr-primary)', () => {
-    expect(cssRuleHasProperty('.section-divider', 'border-top')).toBe(true)
-  })
-
-  it('map-overlays is absolutely positioned at bottom-left of map wrapper', () => {
-    const wrapper = document.createElement('div')
-    wrapper.className = 'map-wrapper'
-    document.body.appendChild(wrapper)
-
-    const overlays = document.createElement('div')
-    overlays.className = 'map-overlays'
-    wrapper.appendChild(overlays)
-
-    const style = getComputedStyle(overlays)
-    expect(style.position).toBe('absolute')
-    expect(style.bottom).toBe('10px')
-    expect(style.left).toBe('10px')
-    expect(style.zIndex).toBe('1001')
-
-    document.body.removeChild(wrapper)
-  })
-
-  it('legend-btn.active uses var(--color-bg) not hardcoded #000', () => {
-    const btn = document.createElement('button')
-    btn.className = 'legend-btn active'
-    document.body.appendChild(btn)
-
-    const style = getComputedStyle(btn)
-    expect(style.fontWeight).toBe('600')
-
-    document.body.removeChild(btn)
-  })
-
-  it('legend-btn:first-child has border-right separator matching upstream', () => {
-    expect(cssRuleHasProperty('.legend-btn:first-child', 'border-right')).toBe(true)
+  it('section-divider uses var(--color-hr) for visible separation', () => {
+    expect(cssRuleHasProperty('.section-divider', 'border-top-color')).toBe(true)
   })
 
   it('year-pill background uses compatible rgba syntax (not rgba(from ...))', () => {
@@ -574,26 +493,6 @@ describe('Visual integration — header and map overlays', () => {
     expect(style.background).not.toBe('rgba(0, 0, 0, 0)')
 
     document.body.removeChild(pill)
-  })
-
-  it('left-panel responsive border-bottom uses var(--color-border) at narrow viewport', () => {
-    const mediaQuery = window.matchMedia('(max-width: 768px)')
-    if (mediaQuery.matches) {
-      expect(cssRuleHasProperty('.left-panel', 'border-bottom')).toBe(true)
-    }
-  })
-
-  it('legend-btn:first-child border-right is opaque (not transparent)', () => {
-    for (const sheet of document.styleSheets) {
-      for (const rule of sheet.cssRules) {
-        if (rule instanceof CSSStyleRule && rule.selectorText === '.legend-btn:first-child') {
-          const borderRight = rule.style.getPropertyValue('border-right')
-          expect(borderRight).toBeTruthy()
-          expect(borderRight).not.toBe('0px')
-          expect(borderRight).not.toBe('none')
-        }
-      }
-    }
   })
 
   it('no rgba(from ...) syntax remains in any CSS rule — ensures browser compatibility', () => {
@@ -621,7 +520,7 @@ describe('Z-stack layer integrity — prevent regression of tiles-over-overlays 
   })
 
   it('all map overlay containers have z-index > 1000 (above Leaflet highest pane)', () => {
-    const selectors = ['.map-year-selector', '.map-overlays', '.map-lights', '.map-fullscreen']
+    const selectors = ['.map-year-selector', '.map-lights', '.map-fullscreen']
     for (const sel of selectors) {
       expect(cssRuleHasProperty(sel, 'z-index')).toBe(true)
     }
@@ -630,7 +529,7 @@ describe('Z-stack layer integrity — prevent regression of tiles-over-overlays 
   it('map-year-selector z-index matches other overlays (all use same z-index)', () => {
     // Parse z-index values from CSS rules
     const zIndices: number[] = []
-    const selectors = ['.map-year-selector', '.map-overlays', '.map-lights', '.map-fullscreen']
+    const selectors = ['.map-year-selector', '.map-lights', '.map-fullscreen']
     for (const sheet of document.styleSheets) {
       for (const rule of sheet.cssRules) {
         if (rule instanceof CSSStyleRule && selectors.includes(rule.selectorText)) {
