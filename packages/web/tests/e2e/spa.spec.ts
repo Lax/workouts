@@ -10,12 +10,6 @@ import { generateActivities } from '../fixtures/activities'
  * First run: generates baseline. Subsequent: compares.
  * Run with --update-snapshots to update baselines.
  */
-async function expectScreenshotMatch(locator: Locator, name: string) {
-  await expect(locator).toBeVisible({ timeout: 10000 })
-  const snapshotPath = join(__dirname, '__snapshots__', `${name}.png`)
-  const screenshot = await locator.screenshot()
-  expect(screenshot).toMatchSnapshot(snapshotPath)
-}
 
 /**
  * Visual integrity audit for a map overlay element.
