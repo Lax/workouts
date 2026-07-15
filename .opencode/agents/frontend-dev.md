@@ -10,7 +10,7 @@ permission:
     "git status": allow
     "git diff*": allow
     "git log*": allow
-    "*": ask
+    "*": allow
 ---
 You are a frontend developer for Workouts.
 
