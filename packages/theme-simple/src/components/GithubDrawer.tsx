@@ -1,7 +1,7 @@
 /** GithubDrawer — draws a year activity calendar grid.
  *  Maps to upstream GithubDrawer / --type github / github_YYYY.svg.
  *  7-row × N-column matrix of day cells; color intensity encodes daily distance.
- *  Replaces the running_page contribution heatmap poster. */
+ *  When year is null, renders ALL activities combined (Total view). */
 
 import type { Activity } from '@workouts/shared'
 import { useMemo } from 'react'
@@ -23,33 +23,44 @@ export function colorIntensity(count: number, maxCount: number): string {
 }
 
 interface GithubDrawerProps {
-  year: number
+  year: number | null
   activities: Activity[]
 }
 
 export function GithubDrawer({ year, activities }: GithubDrawerProps) {
   const grid = useMemo(() => {
     const dayCount = new Map<string, number>()
+    let minYear = Infinity
+    let maxYear = -Infinity
+
     for (const a of activities) {
       if (!a.start_date) continue
       const d = new Date(a.start_date)
-      if (d.getFullYear() !== year) continue
-      const key = `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`
+      const y = d.getFullYear()
+      if (year !== null && y !== year) continue
+      if (y < minYear) minYear = y
+      if (y > maxYear) maxYear = y
+      const key = `${y}-${d.getMonth() + 1}-${d.getDate()}`
       dayCount.set(key, (dayCount.get(key) || 0) + 1)
     }
 
-    const start = new Date(year, 0, 1)
-    const end = new Date(year, 11, 31)
+    if (year === null && minYear === Infinity) return null
+    const startYear = year ?? minYear
+    const endYear = year ?? maxYear
+    const start = new Date(startYear, 0, 1)
+    const end = new Date(endYear, 11, 31)
     const startDow = start.getDay()
-    const cols = Math.ceil((end.getTime() - start.getTime()) / (86400000 * 7)) + 1
+    const totalDays = Math.round((end.getTime() - start.getTime()) / 86400000) + 1
+    const cols = Math.ceil(totalDays / 7) + 1
 
     const cells: { x: number; y: number; count: number; date: string }[] = []
 
     for (let w = 0; w < cols; w++) {
       for (let d = 0; d < ROWS; d++) {
         const dayOffset = w * 7 + d - startDow
-        const dt = new Date(year, 0, 1 + dayOffset)
-        if (dt.getFullYear() !== year) continue
+        const dt = new Date(startYear, 0, 1 + dayOffset)
+        if (dt.getFullYear() < startYear || dt.getFullYear() > endYear) continue
+        if (year !== null && dt.getFullYear() !== year) continue
         const key = `${dt.getFullYear()}-${dt.getMonth() + 1}-${dt.getDate()}`
         const count = dayCount.get(key) || 0
         cells.push({
@@ -65,17 +76,21 @@ export function GithubDrawer({ year, activities }: GithubDrawerProps) {
     const width = cols * (CELL_SIZE + CELL_GAP)
     const height = ROWS * (CELL_SIZE + CELL_GAP)
 
-    return { cells, maxCount, width, height, cols }
+    return { cells, maxCount, width, height, cols, startYear, endYear }
   }, [year, activities])
+
+  if (!grid) return <div className="empty-state">No activity data</div>
+
+  const label = year !== null ? String(year) : `${grid.startYear}–${grid.endYear}`
 
   return (
     <svg
       viewBox={`0 0 ${grid.width + 30} ${grid.height + 20}`}
       style={{ width: '100%', height: 'auto' }}
       role="img"
-      aria-label={`Activity grid for ${year}`}
+      aria-label={`Activity grid for ${label}`}
     >
-      <title>{`Activity grid for ${year}`}</title>
+      <title>{`Activity grid for ${label}`}</title>
       {WEEKDAY_ROWS.map((r, i) => (
         <text key={r} x={0} y={r * (CELL_SIZE + CELL_GAP) + CELL_SIZE - 1} fill="var(--color-text-dim)" fontSize={8}>
           {WEEKDAYS[i]}
@@ -84,9 +99,10 @@ export function GithubDrawer({ year, activities }: GithubDrawerProps) {
       {(() => {
         const labels: React.ReactNode[] = []
         for (let i = 0; i < grid.cols; i++) {
-          const dt = new Date(year, 0, 1 + i * 7)
+          const dt = new Date(grid.startYear, 0, 1 + i * 7)
+          if (dt.getFullYear() > grid.endYear) break
           const m = dt.getMonth()
-          const prevM = i > 0 ? new Date(year, 0, 1 + (i - 1) * 7).getMonth() : -1
+          const prevM = i > 0 ? new Date(grid.startYear, 0, 1 + (i - 1) * 7).getMonth() : -1
           if (m !== prevM) {
             labels.push(
               <text key={`ml-${m}`} x={i * (CELL_SIZE + CELL_GAP) + 20} y={grid.height + 12} fill="var(--color-text-dim)" fontSize={8}>

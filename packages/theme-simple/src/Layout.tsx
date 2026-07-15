@@ -176,18 +176,20 @@ export function SimpleLayout() {
               <GithubDrawer year={selectedYear} activities={activities} />
             </div>
           )}
-          <div className="table-area" ref={tableRef}>
-            <div className="view-toggle">
-              <button type="button" className={viewMode === 'table' ? 'active' : ''} onClick={() => setViewMode('table')}>
-                表格
-              </button>
-              <button type="button" className={viewMode === 'grid' ? 'active' : ''} onClick={() => setViewMode('grid')}>
-                卡片
-              </button>
+          {selectedYear !== null && (
+            <div className="table-area" ref={tableRef}>
+              <div className="view-toggle">
+                <button type="button" className={viewMode === 'table' ? 'active' : ''} onClick={() => setViewMode('table')}>
+                  表格
+                </button>
+                <button type="button" className={viewMode === 'grid' ? 'active' : ''} onClick={() => setViewMode('grid')}>
+                  卡片
+                </button>
+              </div>
+              {viewMode === 'grid' ? <ActivityCardGrid /> : <RunTable />}
             </div>
-            {selectedYear === null && years.length > 0 && viewMode === 'table' ? <SVGStat activities={filteredActivities} /> : null}
-            {viewMode === 'grid' ? <ActivityCardGrid /> : <RunTable />}
-          </div>
+          )}
+          {selectedYear === null && <SVGStat activities={filteredActivities} />}
         </main>
       </div>
     </div>

@@ -1,14 +1,14 @@
 /** GridDrawer — draws a grid of route traces.
  *  Maps to upstream GridDrawer / --type grid / grid.svg.
  *  Composes RoutePreviewSVG thumbnails into a N×M grid layout.
- *  Shows activities with polyline data, each in a small bounding-box cell. */
+ *  When year is null, renders ALL activities (Total view). */
 
 import type { Activity } from '@workouts/shared'
 import { useMemo } from 'react'
 import { RoutePreviewSVG } from './RoutePreviewSVG'
 
 interface GridDrawerProps {
-  year: number
+  year: number | null
   activities: Activity[]
   maxTracks?: number
   columns?: number
@@ -16,14 +16,14 @@ interface GridDrawerProps {
 
 export function GridDrawer({ year, activities, maxTracks = 20, columns = 4 }: GridDrawerProps) {
   const tracks = useMemo(() => {
-    const yearActs = year === 0 ? activities : activities.filter((a) => a.start_date && new Date(a.start_date).getFullYear() === year)
+    const yearActs = year === null ? activities : activities.filter((a) => a.start_date && new Date(a.start_date).getFullYear() === year)
     return yearActs
       .filter((a) => a.summary_polyline)
       .sort((a, b) => (b.distance ?? 0) - (a.distance ?? 0))
       .slice(0, maxTracks)
   }, [year, activities, maxTracks])
 
-  if (tracks.length === 0) return <div className="empty-state">No route data for this year</div>
+  if (tracks.length === 0) return <div className="empty-state">No route data</div>
 
   const cellW = 100,
     cellH = 80
