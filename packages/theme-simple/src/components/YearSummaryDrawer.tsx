@@ -1,6 +1,6 @@
 /** YearSummaryDrawer — draws a year summary dashboard.
  *  Maps to upstream YearSummaryDrawer / --type year_summary / year_summary_YYYY.svg.
- *  Calendar dot matrix (12 cols × 31 rows) + stats panel. */
+ *  Calendar dot matrix (12 month columns with day rows) + stats panel. */
 
 import type { Activity } from '@workouts/shared'
 import { useMemo } from 'react'
@@ -10,18 +10,27 @@ interface YearSummaryDrawerProps {
   activities: Activity[]
 }
 
+function dotColor(dist: number, maxDist: number): string {
+  if (dist === 0) return 'var(--color-border, #444)'
+  const ratio = dist / maxDist
+  if (ratio > 0.7) return 'var(--svg-special-color2, #f56c6c)'
+  if (ratio > 0.4) return 'var(--svg-special-color, #f7d02c)'
+  if (ratio > 0.15) return 'var(--svg-color-active-cell, #4dd2ff)'
+  return 'var(--color-text-dim, #666)'
+}
+
+const MONTH_LABELS = ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D']
+
 export function YearSummaryDrawer({ year, activities }: YearSummaryDrawerProps) {
   const stats = useMemo(() => {
     const acts = activities.filter((a) => a.start_date && new Date(a.start_date).getFullYear() === year)
     let totalDist = 0,
-      totalTime = 0,
       hrCount = 0,
       totalHr = 0,
       totalPaceDist = 0,
       totalPaceTime = 0
     for (const a of acts) {
       totalDist += a.distance ?? 0
-      totalTime += a.moving_time ?? 0
       totalHr += a.average_heartrate ?? 0
       if (a.average_heartrate) hrCount++
       if (a.average_speed && a.average_speed > 0) {
@@ -37,17 +46,11 @@ export function YearSummaryDrawer({ year, activities }: YearSummaryDrawerProps) 
       const paceSec = Math.round((paceMinPerKm - paceMin) * 60)
       paceDisplay = `${paceMin}m ${String(paceSec).padStart(2, '0')}s`
     }
-    return {
-      count: acts.length,
-      distance: totalDist,
-      time: totalTime,
-      avgHr: hrCount > 0 ? Math.round(totalHr / hrCount) : 0,
-      pace: paceDisplay,
-    }
+    return { count: acts.length, distance: totalDist, avgHr: hrCount > 0 ? Math.round(totalHr / hrCount) : 0, pace: paceDisplay }
   }, [year, activities])
 
-  // Compute dot matrix: month × day
-  const dots = useMemo(() => {
+  // Group dots by month as column arrays
+  const monthColumns = useMemo(() => {
     const map = new Map<string, number>()
     for (const a of activities) {
       if (!a.start_date || new Date(a.start_date).getFullYear() !== year) continue
@@ -56,26 +59,14 @@ export function YearSummaryDrawer({ year, activities }: YearSummaryDrawerProps) 
       map.set(key, (map.get(key) ?? 0) + (a.distance ?? 0))
     }
     const maxDist = Math.max(...map.values(), 1)
-    const result: { month: number; day: number; dist: number; color: string }[] = []
-    for (let m = 0; m < 12; m++) {
+    return Array.from({ length: 12 }, (_, m) => {
       const daysInMonth = new Date(year, m + 1, 0).getDate()
-      for (let d = 1; d <= daysInMonth; d++) {
-        const dist = map.get(`${m + 1}-${d}`) ?? 0
-        const ratio = dist / maxDist
-        const color =
-          dist === 0
-            ? 'var(--color-border, #444)'
-            : ratio > 0.7
-              ? 'var(--svg-special-color2, #f56c6c)'
-              : ratio > 0.4
-                ? 'var(--svg-special-color, #f7d02c)'
-                : ratio > 0.15
-                  ? 'var(--svg-color-active-cell, #4dd2ff)'
-                  : 'var(--color-text-dim, #666)'
-        result.push({ month: m + 1, day: d, dist, color })
-      }
-    }
-    return result
+      const days = Array.from({ length: daysInMonth }, (_, d) => {
+        const dist = map.get(`${m + 1}-${d + 1}`) ?? 0
+        return { day: d + 1, dist, color: dotColor(dist, maxDist) }
+      })
+      return { month: m, label: MONTH_LABELS[m], days }
+    })
   }, [year, activities])
 
   return (
@@ -97,18 +88,18 @@ export function YearSummaryDrawer({ year, activities }: YearSummaryDrawerProps) 
         </div>
       </div>
       <div style={{ flex: 1, overflow: 'auto' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: 1 }}>
-          {['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'].map((label) => (
-            <div key={`mhl-${label}`} style={{ fontSize: 7, textAlign: 'center', color: 'var(--color-text-dim, #666)' }}>
-              {label}
+        <div style={{ display: 'flex', gap: 2 }}>
+          {monthColumns.map((col) => (
+            <div key={col.month} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1, flex: 1 }}>
+              <div style={{ fontSize: 7, color: 'var(--color-text-dim, #666)' }}>{col.label}</div>
+              {col.days.map((dot) => (
+                <div
+                  key={dot.day}
+                  style={{ width: 6, height: 6, borderRadius: '50%', background: dot.color, flexShrink: 0 }}
+                  title={`${col.month + 1}/${dot.day}: ${(dot.dist / 1000).toFixed(1)}km`}
+                />
+              ))}
             </div>
-          ))}
-          {dots.map((dot) => (
-            <div
-              key={`${dot.month}-${dot.day}`}
-              style={{ width: 6, height: 6, borderRadius: '50%', background: dot.color, margin: '0 auto' }}
-              title={`${dot.month}/${dot.day}: ${(dot.dist / 1000).toFixed(1)}km`}
-            />
           ))}
         </div>
       </div>
