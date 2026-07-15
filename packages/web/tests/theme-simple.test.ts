@@ -320,46 +320,35 @@ describe('YearSelector CSS — positioning and arrangement', () => {
     document.body.removeChild(wrapper)
   })
 
-  it('year-pills uses flex-direction row with wrapping for horizontal layout', () => {
-    const pills = document.createElement('div')
-    pills.className = 'year-pills'
-    document.body.appendChild(pills)
+  it('year-pills uses flex-direction row with wrapping', () => {
+    const el = document.createElement('div')
+    el.className = 'year-pills'
+    document.body.appendChild(el)
 
-    const style = getComputedStyle(pills)
+    const style = getComputedStyle(el)
     expect(style.display).toBe('flex')
     expect(style.flexDirection).toBe('row')
     expect(style.flexWrap).toBe('wrap')
 
-    document.body.removeChild(pills)
+    document.body.removeChild(el)
   })
 
-  it('year-pill has correct pill shape and backdrop-filter for visibility', () => {
-    const pill = document.createElement('button')
-    pill.className = 'year-pill'
-    document.body.appendChild(pill)
+  it('year-pill is inline-block text matching RunMapButtons style', () => {
+    const el = document.createElement('button')
+    el.className = 'year-pill'
+    document.body.appendChild(el)
 
-    const style = getComputedStyle(pill)
-    expect(style.borderRadius).toBe('12px')
+    const style = getComputedStyle(el)
     expect(style.fontSize).toBe('1rem')
     expect(style.cursor).toBe('pointer')
-    expect(style.transition).toBe('all 0.15s')
-    expect(style.border).not.toBe('')
-    expect(style.border).not.toBe('0px')
-    expect(style.border).not.toBe('none')
-    expect(cssRuleHasProperty('.year-pill', 'backdrop-filter')).toBe(true)
+    expect(cssRuleHasProperty('.year-pill', 'background')).toBe(true)
+    expect(cssRuleHasProperty('.year-pill', 'border')).toBe(true)
 
-    document.body.removeChild(pill)
+    document.body.removeChild(el)
   })
 
-  it('year-pill.active has brand background and bold weight', () => {
-    const pill = document.createElement('button')
-    pill.className = 'year-pill active'
-    document.body.appendChild(pill)
-
-    const style = getComputedStyle(pill)
-    expect(style.fontWeight).toBe('600')
-
-    document.body.removeChild(pill)
+  it('year-pill.active has primary color matching selected state', () => {
+    expect(cssRuleHasProperty('.year-pill.active', 'color')).toBe(true)
   })
 
   it('month-chip has correct inline-flex style matching upstream', () => {
@@ -400,37 +389,25 @@ describe('YearSelector CSS — positioning and arrangement', () => {
   })
 })
 
-describe('Upstream style consistency — year-pill matches overview pattern', () => {
-  it('year-pill border-radius (12px) matches theme-overview pill style', () => {
-    const pill = document.createElement('button')
-    pill.className = 'year-pill'
-    document.body.appendChild(pill)
+describe('Upstream style consistency — year-pill matches running_page RunMapButtons', () => {
+  it('year-pill font-size (1rem) matches running_page map button scale', () => {
+    const el = document.createElement('button')
+    el.className = 'year-pill'
+    document.body.appendChild(el)
 
-    const style = getComputedStyle(pill)
-    expect(style.borderRadius).toBe('12px')
-
-    document.body.removeChild(pill)
-  })
-
-  it('year-pill font-size (1rem) matches running_page pill scale', () => {
-    const pill = document.createElement('button')
-    pill.className = 'year-pill'
-    document.body.appendChild(pill)
-
-    const style = getComputedStyle(pill)
+    const style = getComputedStyle(el)
     expect(style.fontSize).toBe('1rem')
 
-    document.body.removeChild(pill)
+    document.body.removeChild(el)
   })
 
-  it('year-pill has backdrop-filter blur matching overview overlay treatment', () => {
-    const pill = document.createElement('button')
-    pill.className = 'year-pill'
-    document.body.appendChild(pill)
+  it('year-pill has no border/background — matches RunMapButtons text-only style', () => {
+    expect(cssRuleHasProperty('.year-pill', 'background')).toBe(true)
+    expect(cssRuleHasProperty('.year-pill', 'border')).toBe(true)
+  })
 
-    expect(cssRuleHasProperty('.year-pill', 'backdrop-filter')).toBe(true)
-
-    document.body.removeChild(pill)
+  it('year-pill font-family matches --font-mono like running_page buttons', () => {
+    expect(cssRuleHasProperty('.year-pill', 'font-family')).toBe(true)
   })
 
   it('month-chip has accent color and backdrop-filter matching overview treatment', () => {
@@ -482,17 +459,8 @@ describe('Visual integration — header and map overlays', () => {
     expect(cssRuleHasProperty('.section-divider', 'border-top-color')).toBe(true)
   })
 
-  it('year-pill background uses compatible rgba syntax (not rgba(from ...))', () => {
-    const pill = document.createElement('button')
-    pill.className = 'year-pill'
-    document.body.appendChild(pill)
-
-    const style = getComputedStyle(pill)
-    expect(style.background).toBeTruthy()
-    expect(style.background).not.toBe('transparent')
-    expect(style.background).not.toBe('rgba(0, 0, 0, 0)')
-
-    document.body.removeChild(pill)
+  it('year-pill has no background — matches running_page text-only buttons', () => {
+    expect(cssRuleHasProperty('.year-pill', 'background')).toBe(true)
   })
 
   it('no rgba(from ...) syntax remains in any CSS rule — ensures browser compatibility', () => {

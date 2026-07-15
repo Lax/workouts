@@ -1,5 +1,8 @@
 /* simple theme — two-column layout, faithful to running_page */
 
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,100..700;1,100..700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;1,100;1,200;1,300;1,400;1,500;1,600;1,700&display=swap');
+
 [data-theme='dark'] {
   --color-brand: #e0ed5e;
   --color-secondary: #ccd94a;
@@ -9,6 +12,7 @@
   --color-text: #e0e0e0;
   --color-text-secondary: #d4d4d4;
   --color-text-dim: #666666;
+  --color-accent: #e0ed5e;
   --color-border: #333333;
   --color-hr: #ef4444;
   --color-hover: #262626;
@@ -23,6 +27,7 @@
   --color-activity-card: #404040;
   --color-hr-primary: var(--color-hr, #ef4444);
   --color-primary: var(--color-brand, #e0ed5e);
+  --font-sans: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif;
   --font-mono: 'IBM Plex Mono', 'Courier New', monospace;
 }
 
@@ -35,6 +40,7 @@
   --color-text: #1a1a1a;
   --color-text-secondary: #555555;
   --color-text-dim: #94a3b8;
+  --color-accent: #0c4a6e;
   --color-border: #d4d4d4;
   --color-hr: #d4d4d4;
   --color-hover: #f0f9ff;
@@ -49,6 +55,7 @@
   --color-activity-card: #d4d4d4;
   --color-hr-primary: var(--color-hr, #d4d4d4);
   --color-primary: var(--color-brand, #0c4a6e);
+  --font-sans: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif;
   --font-mono: 'IBM Plex Mono', 'Courier New', monospace;
 }
 
@@ -173,7 +180,7 @@
 /* Layout — two-column */
 .layout {
   display: flex;
-  font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: var(--font-sans);
 }
 
 .left-panel {
@@ -183,7 +190,7 @@
 }
 
 .left-panel .site-title {
-  font-size: 2.5rem;
+  font-size: 3rem;
   font-weight: 800;
   font-style: italic;
   margin-bottom: 1.5rem;
@@ -233,35 +240,24 @@
   display: flex;
   flex-direction: row;
   flex-wrap: wrap;
-  gap: 3px;
 }
 
 .year-pill {
+  display: inline-block;
   padding: 0.5rem 0.4rem;
-  border-radius: 12px;
-  border: 1px solid var(--color-border, #333);
-  background: rgba(var(--color-surface-rgb), 0.85);
-  backdrop-filter: blur(4px);
   font-size: 1rem;
   font-family: var(--font-mono);
-  color: var(--color-text-secondary, #d4d4d4);
+  color: var(--color-run-date);
   cursor: pointer;
-  transition: all 0.15s;
   text-align: center;
   line-height: 1.5;
   white-space: nowrap;
-}
-
-.year-pill:hover {
-  border-color: var(--color-accent, #e0ed5e);
-  color: var(--color-accent, #e0ed5e);
+  background: none;
+  border: none;
 }
 
 .year-pill.active {
-  background: var(--color-brand, #e0ed5e);
-  color: var(--color-bg, #171717);
-  border-color: var(--color-brand, #e0ed5e);
-  font-weight: 600;
+  color: var(--color-primary);
 }
 
 .year-pill-label {
@@ -455,6 +451,7 @@
   cursor: pointer;
   user-select: none;
   white-space: nowrap;
+  transition: color 0.2s ease;
 }
 
 .run-table thead th:hover {
@@ -530,6 +527,10 @@
   .map-wrapper {
     height: 250px;
   }
+
+  .left-panel .site-title {
+    font-size: 2.5rem;
+  }
 }
 
 /* View toggle (table / grid) */
@@ -575,13 +576,14 @@
   border-radius: 8px;
   padding: 12px;
   cursor: pointer;
-  transition: border-color 0.15s, background 0.15s;
+  transition: border-color 0.15s, background 0.15s, transform 0.2s;
   background: var(--color-surface, transparent);
 }
 
 .activity-card:hover {
   border-color: var(--color-accent);
   background: var(--color-active-row, rgba(255, 255, 255, 0.03));
+  transform: translateY(-2px);
 }
 
 .activity-card-row {

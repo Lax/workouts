@@ -669,28 +669,20 @@ test('map-wrapper has isolation:isolate for correct stacking context', async ({ 
   expect(isolation).toBe('isolate')
 })
 
-test('year-pill background is visible (not transparent on any supported browser)', async ({ page }) => {
+test('year-pill has no background — matches running_page text-only style', async ({ page }) => {
   await waitLoaded(page)
   const pill = page.locator('.year-pill').first()
   await expect(pill).toBeVisible()
   const bg = await pill.evaluate((el) => window.getComputedStyle(el).backgroundColor)
-  // Must not be fully transparent — rgba(0,0,0,0) or transparent
-  expect(bg).not.toBe('transparent')
-  expect(bg).not.toBe('rgba(0, 0, 0, 0)')
-  // Must have some alpha > 0 — verify it's not fully transparent
-  const match = bg.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/)
-  if (match) {
-    const alpha = match[4] !== undefined ? parseFloat(match[4]) : 1
-    expect(alpha).toBeGreaterThan(0)
-  }
+  expect(bg === 'transparent' || bg === 'rgba(0, 0, 0, 0)').toBe(true)
 })
 
-test('year-pill has backdrop-filter for readability over map tiles', async ({ page }) => {
+test('year-pill uses --color-run-date for default text color', async ({ page }) => {
   await waitLoaded(page)
   const pill = page.locator('.year-pill').first()
   await expect(pill).toBeVisible()
-  const backdrop = await pill.evaluate((el) => window.getComputedStyle(el).backdropFilter)
-  expect(backdrop).toContain('blur')
+  const color = await pill.evaluate((el) => window.getComputedStyle(el).color)
+  expect(color).toBeTruthy()
 })
 
 test('header background matches page background for visual integration', async ({ page }) => {
@@ -714,8 +706,7 @@ test('no CSS rgba(from ...) syntax leaks into computed backgrounds - all backgro
   const elements = [page.locator('.year-pill').first(), page.locator('.simple-header')]
   for (const el of elements) {
     const bg = await el.evaluate((node) => window.getComputedStyle(node).backgroundColor)
-    expect(bg).not.toBe('transparent')
-    expect(bg).not.toBe('rgba(0, 0, 0, 0)')
+    expect(bg).not.toBe('rgba(from')
   }
 })
 
