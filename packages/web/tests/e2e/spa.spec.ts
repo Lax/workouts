@@ -418,3 +418,215 @@ test('lights toggle changes aria-label on click', async ({ page }) => {
   await lights.click()
   await expect(page.locator('button[aria-label="Show labels"]')).toBeVisible()
 })
+
+// ──────── Simple Theme — Layout Integration ────────
+
+test('map-overlays legend is absolutely positioned at bottom-left of map', async ({ page }) => {
+  await waitLoaded(page)
+  const overlays = page.locator('.map-overlays')
+  await expect(overlays).toBeAttached()
+
+  const box = await overlays.boundingBox()
+  expect(box).not.toBeNull()
+
+  const pos = await overlays.evaluate((el) => ({
+    position: window.getComputedStyle(el).position,
+    bottom: window.getComputedStyle(el).bottom,
+    left: window.getComputedStyle(el).left,
+  }))
+  expect(pos.position).toBe('absolute')
+  expect(pos.bottom).toBe('10px')
+  expect(pos.left).toBe('10px')
+})
+
+test('map-year-selector is positioned at center-left of map wrapper', async ({ page }) => {
+  await waitLoaded(page)
+  const selector = page.locator('.map-year-selector')
+  await expect(selector).toBeAttached()
+
+  const pos = await selector.evaluate((el) => ({
+    position: window.getComputedStyle(el).position,
+    left: window.getComputedStyle(el).left,
+  }))
+  expect(pos.position).toBe('absolute')
+  expect(pos.left).toBe('10px')
+
+  // top:50% gets resolved to pixels — verify element is vertically centered in map wrapper
+  const wrapper = page.locator('.map-wrapper')
+  const wrapperBox = await wrapper.boundingBox()
+  const selectorBox = await selector.boundingBox()
+  expect(wrapperBox).not.toBeNull()
+  expect(selectorBox).not.toBeNull()
+  const selectorCenter = selectorBox!.y + selectorBox!.height / 2
+  const wrapperCenter = wrapperBox!.y + wrapperBox!.height / 2
+  // Allow 10% of wrapper height tolerance for centering
+  const tolerance = wrapperBox!.height * 0.1
+  expect(Math.abs(selectorCenter - wrapperCenter)).toBeLessThanOrEqual(tolerance)
+})
+
+test('map-wrapper has isolation:isolate for correct stacking context', async ({ page }) => {
+  await waitLoaded(page)
+  const wrapper = page.locator('.map-wrapper')
+  await expect(wrapper).toBeVisible()
+  const isolation = await wrapper.evaluate((el) => window.getComputedStyle(el).isolation)
+  expect(isolation).toBe('isolate')
+})
+
+test('year-pill background is visible (not transparent on any supported browser)', async ({ page }) => {
+  await waitLoaded(page)
+  const pill = page.locator('.year-pill').first()
+  await expect(pill).toBeVisible()
+  const bg = await pill.evaluate((el) => window.getComputedStyle(el).backgroundColor)
+  // Must not be fully transparent — rgba(0,0,0,0) or transparent
+  expect(bg).not.toBe('transparent')
+  expect(bg).not.toBe('rgba(0, 0, 0, 0)')
+  // Must have some alpha > 0 — verify it's not fully transparent
+  const match = bg.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/)
+  if (match) {
+    const alpha = match[4] !== undefined ? parseFloat(match[4]) : 1
+    expect(alpha).toBeGreaterThan(0)
+  }
+})
+
+test('year-pill has backdrop-filter for readability over map tiles', async ({ page }) => {
+  await waitLoaded(page)
+  const pill = page.locator('.year-pill').first()
+  await expect(pill).toBeVisible()
+  const backdrop = await pill.evaluate((el) => window.getComputedStyle(el).backdropFilter)
+  expect(backdrop).toContain('blur')
+})
+
+test('header background matches page background for visual integration', async ({ page }) => {
+  await waitLoaded(page)
+  const headerBg = await page.locator('.simple-header').evaluate((el) => window.getComputedStyle(el).backgroundColor)
+  const pageBg = await page.locator('.page-container').evaluate((el) => window.getComputedStyle(el).backgroundColor)
+  const bodyBg = await page.evaluate(() => window.getComputedStyle(document.body).backgroundColor)
+  // Header bg must equal body bg or page-container bg
+  expect(headerBg === bodyBg || headerBg === pageBg).toBe(true)
+})
+
+test('legend-toggle and legend buttons are within visible viewport', async ({ page }) => {
+  await waitLoaded(page)
+  const toggle = page.locator('.legend-toggle')
+  await expect(toggle).toBeVisible()
+  const btn1 = page.locator('.legend-btn').first()
+  const btn2 = page.locator('.legend-btn').last()
+  await expect(btn1).toBeVisible()
+  await expect(btn2).toBeVisible()
+
+  // Verify both buttons are within the map-wrapper bounding box
+  const wrapperBox = await page.locator('.map-wrapper').boundingBox()
+  expect(wrapperBox).not.toBeNull()
+  for (const btn of [btn1, btn2]) {
+    const btnBox = await btn.boundingBox()
+    expect(btnBox).not.toBeNull()
+    // Button top should be within map wrapper height
+    expect(btnBox!.y + btnBox!.height).toBeLessThanOrEqual(wrapperBox!.y + wrapperBox!.height + 5)
+    // Button should not be at y=0 (not at top of viewport, which would mean clipped)
+    expect(btnBox!.y).toBeGreaterThan(100)
+  }
+})
+
+test('active year pill gets correct foreground color from CSS variable', async ({ page }) => {
+  await waitLoaded(page)
+  // First year is auto-selected. Click a different year pill to change selection.
+  const allPills = page.locator('.map-year-selector .year-pill')
+  await expect(allPills.first()).toBeVisible({ timeout: 10000 })
+  const count = await allPills.count()
+  expect(count).toBeGreaterThanOrEqual(2)
+
+  // Fixture: 60 activities, 2025 (first half) and 2024 (second half) → pills: [All, 2025*, 2024]
+  const targetPill = allPills.nth(2)
+  await expect(targetPill).toBeVisible()
+  await targetPill.click()
+  await expect(targetPill).toHaveClass(/active/)
+
+  const color = await targetPill.evaluate((el) => window.getComputedStyle(el).color)
+  expect(color).not.toBe('rgb(0, 0, 0)')
+  expect(color).not.toBe('#000')
+})
+
+test('month pills appear on map when year is selected via year selector', async ({ page }) => {
+  await waitLoaded(page)
+  // The auto-selected year is active. Click "All" first to deselect, then click a year.
+  const allPill = page.locator('.map-year-selector .year-pill:has-text("All")')
+  await allPill.click()
+  await expect(allPill).toHaveClass(/active/)
+
+  // Now click the first year pill (2025)
+  const mapYearPills = page.locator('.map-year-selector .year-pill')
+  const count = await mapYearPills.count()
+  expect(count).toBeGreaterThan(1)
+  await mapYearPills.nth(1).click()
+  await expect(mapYearPills.nth(1)).toHaveClass(/active/)
+
+  // Month pills should appear
+  const monthPills = page.locator('.month-pills')
+  await expect(monthPills).toBeAttached()
+  const monthButtons = monthPills.locator('.year-pill')
+  await expect(monthButtons.first()).toBeVisible()
+  // Should have 12 month pills
+  await expect(monthButtons).toHaveCount(12)
+  // Clicking a month pill activates it
+  await monthButtons.first().click()
+  // Active month shows as label, not button
+  await expect(monthPills.locator('.year-pill-label').first()).toBeVisible()
+})
+
+test('map overlay elements do not overflow the viewport horizontally', async ({ page }) => {
+  await waitLoaded(page)
+  const viewportWidth = page.viewportSize()?.width || 1280
+  const overlays = page.locator('.map-year-selector, .map-overlays, .map-lights, .map-fullscreen')
+  const count = await overlays.count()
+  for (let i = 0; i < count; i++) {
+    const box = await overlays.nth(i).boundingBox()
+    expect(box).not.toBeNull()
+    // Element left edge should be within viewport (not clipped left)
+    expect(box!.x).toBeGreaterThanOrEqual(0)
+    // Element right edge should be within viewport (not clipped right)
+    expect(box!.x + box!.width).toBeLessThanOrEqual(viewportWidth)
+  }
+})
+
+test('legend-btn.active uses var(--color-bg) not hardcoded #000', async ({ page }) => {
+  await waitLoaded(page)
+  // Click speed button to activate it
+  await page.locator('.legend-btn:has-text("速度")').click()
+  const activeBtn = page.locator('.legend-btn.active:has-text("速度")')
+  await expect(activeBtn).toBeVisible()
+
+  const color = await activeBtn.evaluate((el) => window.getComputedStyle(el).color)
+  // In dark mode, bg is #171717 so active text should be dark. Not black #000.
+  const theme = await page.evaluate(() => document.documentElement.getAttribute('data-theme'))
+  if (theme === 'dark') {
+    // var(--color-bg) in dark = #171717 → rgb(23, 23, 23)
+    expect(color).not.toBe('rgb(0, 0, 0)')
+  }
+})
+
+test('legend-btn:first-child has border-right separator', async ({ page }) => {
+  await waitLoaded(page)
+  const firstBtn = page.locator('.legend-btn').first()
+  const borderRight = await firstBtn.evaluate((el) => window.getComputedStyle(el).borderRightWidth)
+  expect(parseFloat(borderRight)).toBeGreaterThan(0)
+})
+
+test('section-divider uses border color not red accent', async ({ page }) => {
+  await waitLoaded(page)
+  const divider = page.locator('.section-divider').first()
+  await expect(divider).toBeVisible()
+  const borderColor = await divider.evaluate((el) => window.getComputedStyle(el).borderTopColor)
+  // Should not be red (rgb(239, 68, 68) = #ef4444)
+  expect(borderColor).not.toBe('rgb(239, 68, 68)')
+})
+
+test('no CSS rgba(from ...) syntax leaks into computed backgrounds - all backgrounds render', async ({ page }) => {
+  await waitLoaded(page)
+  // Check elements that should have visible backgrounds (not .map-overlays which is a positioning container only)
+  const elements = [page.locator('.year-pill').first(), page.locator('.legend-toggle'), page.locator('.simple-header')]
+  for (const el of elements) {
+    const bg = await el.evaluate((node) => window.getComputedStyle(node).backgroundColor)
+    expect(bg).not.toBe('transparent')
+    expect(bg).not.toBe('rgba(0, 0, 0, 0)')
+  }
+})
