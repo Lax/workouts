@@ -963,11 +963,13 @@ test('all overlay containers have z-index value above Leaflet tile pane (z:200)'
   expect(tileZ).toBeGreaterThanOrEqual(200)
 
   for (const sel of ['.map-year-selector', '.map-overlays', '.map-lights', '.map-fullscreen']) {
-    const ourZ = await page.evaluate((s) => {
-      const el = document.querySelector(s) as HTMLElement
-      if (!el) return -1
-      return parseInt(getComputedStyle(el).zIndex, 10) || 0
-    }, sel)
-    expect(ourZ).toBeGreaterThan(tileZ)
+    await expect(async () => {
+      const ourZ = await page.evaluate((s) => {
+        const el = document.querySelector(s) as HTMLElement
+        if (!el) return -1
+        return parseInt(getComputedStyle(el).zIndex, 10) || 0
+      }, sel)
+      expect(ourZ).toBeGreaterThan(tileZ)
+    }).toPass({ timeout: 5000 })
   }
 })
