@@ -5,6 +5,19 @@ import { expect, type Locator, type Page, test } from '@playwright/test'
 import { generateActivities } from '../fixtures/activities'
 
 /**
+ * Visual regression snapshot for a specific page region.
+ * Uses Playwright's built-in toMatchSnapshot with local baselines.
+ * First run: generates baseline. Subsequent: compares.
+ * Run with --update-snapshots to update baselines.
+ */
+async function expectScreenshotMatch(locator: Locator, name: string) {
+  await expect(locator).toBeVisible({ timeout: 10000 })
+  const snapshotPath = join(__dirname, '__snapshots__', `${name}.png`)
+  const screenshot = await locator.screenshot()
+  expect(screenshot).toMatchSnapshot(snapshotPath)
+}
+
+/**
  * Visual integrity audit for a map overlay element.
  * Catches: z-index too low, hidden behind tiles, clipped by overflow, off-screen.
  */
@@ -424,6 +437,51 @@ test('visual integrity: all map overlays pass occlusion, clipping, and viewport 
       await expectOverlayVisible(sel)
     })
   }
+})
+
+test('visual regression: map overlay regions match expected appearance', async ({ page }) => {
+  await waitLoaded(page)
+  await page.waitForTimeout(2000)
+
+  // Year selector pills
+  await test.step('year selector', async () => {
+    const region = page.locator('.map-year-selector')
+    await expect(region).toBeAttached()
+    const box = await region.boundingBox()
+    expect(box).not.toBeNull()
+    if (box!.width > 10 && box!.height > 10) {
+      expect(await region.screenshot()).toMatchSnapshot('simple-year-selector.png')
+    }
+  })
+
+  // Legend toggle + speed bar
+  await test.step('legend area', async () => {
+    const region = page.locator('.map-overlays')
+    await expect(region).toBeAttached()
+    const box = await region.boundingBox()
+    expect(box).not.toBeNull()
+    if (box!.width > 10 && box!.height > 10) {
+      expect(await region.screenshot()).toMatchSnapshot('simple-legend.png')
+    }
+  })
+
+  // Top-right controls (lights + fullscreen)
+  await test.step('top-right controls', async () => {
+    const lights = page.locator('.map-lights')
+    const fullscreen = page.locator('.map-fullscreen')
+    const lightsBox = await lights.boundingBox()
+    const fsBox = await fullscreen.boundingBox()
+    if (lightsBox && fsBox) {
+      const clip = {
+        x: Math.min(lightsBox.x, fsBox.x) - 5,
+        y: Math.min(lightsBox.y, fsBox.y) - 5,
+        width: Math.max(lightsBox.x + lightsBox.width, fsBox.x + fsBox.width) - Math.min(lightsBox.x, fsBox.x) + 10,
+        height: Math.max(lightsBox.y + lightsBox.height, fsBox.y + fsBox.height) - Math.min(lightsBox.y, fsBox.y) + 10,
+      }
+      const shot = await page.screenshot({ clip })
+      expect(shot).toMatchSnapshot('simple-top-right.png')
+    }
+  })
 })
 
 test('color mode toggles in simple theme', async ({ page }) => {
