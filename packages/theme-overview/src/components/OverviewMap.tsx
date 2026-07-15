@@ -8,6 +8,7 @@ interface OverviewMapProps {
   hoveredActivityId: string | null
   dashLines?: boolean
   privacyMode?: boolean
+  lightsOn?: boolean
   showLabels?: boolean
   onActivityClick?: (activity: Activity) => void
   onActivityHover?: (activityId: string | null) => void
@@ -31,6 +32,7 @@ export function OverviewMap({
   hoveredActivityId,
   dashLines,
   privacyMode,
+  lightsOn,
   showLabels,
   onActivityClick,
   onActivityHover,
@@ -44,6 +46,7 @@ export function OverviewMap({
       tileConfig={getTileConfig()}
       dashLines={dashLines}
       privacyMode={privacyMode}
+      lightsOn={lightsOn}
       showLabels={showLabels}
       onActivityClick={onActivityClick}
       onActivityHover={onActivityHover}

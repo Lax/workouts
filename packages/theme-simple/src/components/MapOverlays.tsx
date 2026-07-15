@@ -1,20 +1,12 @@
 import { LightsToggle } from '@workouts/plugin-map'
-import { useEffect, useState } from 'react'
 import { useSimpleStore } from '../store'
+import { useFullscreenSync } from '../useFullscreenSync'
 
 export function MapOverlays() {
-  const showLabels = useSimpleStore((s) => s.showLabels)
-  const setShowLabels = useSimpleStore((s) => s.setShowLabels)
+  const lightsOn = useSimpleStore((s) => s.lightsOn)
+  const setLightsOn = useSimpleStore((s) => s.setLightsOn)
 
-  const [fullscreen, setFullscreen] = useState(false)
-
-  useEffect(() => {
-    function onChange() {
-      setFullscreen(!!document.fullscreenElement)
-    }
-    document.addEventListener('fullscreenchange', onChange)
-    return () => document.removeEventListener('fullscreenchange', onChange)
-  }, [])
+  const isFullscreen = useFullscreenSync()
 
   const fsSupported = !!document.documentElement.requestFullscreen
 
@@ -29,7 +21,7 @@ export function MapOverlays() {
   return (
     <>
       <div className="map-lights">
-        <LightsToggle showLabels={showLabels} onToggle={() => setShowLabels(!showLabels)} />
+        <LightsToggle showLabels={lightsOn} onToggle={() => setLightsOn(!lightsOn)} />
       </div>
       {fsSupported && (
         <div className="map-fullscreen">
@@ -38,9 +30,9 @@ export function MapOverlays() {
             className="control-btn"
             onClick={toggleFullscreen}
             aria-label="Fullscreen"
-            title={fullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
+            title={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
           >
-            {fullscreen ? '✕' : '⛶'}
+            {isFullscreen ? '✕' : '⛶'}
           </button>
         </div>
       )}

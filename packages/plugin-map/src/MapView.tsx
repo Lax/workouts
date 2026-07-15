@@ -14,6 +14,7 @@ export interface MapViewProps {
   maxLines?: number
   variant?: MapVariant
   tileConfig?: TileConfig
+  lightsOn?: boolean
   showLabels?: boolean
   dashLines?: boolean
   privacyMode?: boolean
@@ -32,7 +33,8 @@ export function MapView({
   maxLines = 500,
   variant = 'fullscreen',
   tileConfig,
-  showLabels = true,
+  lightsOn = true,
+  showLabels = false,
   dashLines = false,
   privacyMode = false,
   animate = false,
@@ -46,6 +48,7 @@ export function MapView({
   const mapRef = useLeafletMap(elRef, {
     colorScheme,
     tileConfig,
+    lightsOn,
     showLabels,
     zoomControl: showZoomControl,
     attributionControl: showAttribution,

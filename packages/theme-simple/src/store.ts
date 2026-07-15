@@ -25,7 +25,7 @@ export interface SimpleStore {
   filteredActivities: Activity[]
   cityFilter: string | null
   periodFilter: string | null
-  showLabels: boolean
+  lightsOn: boolean
   viewMode: ViewMode
   showYearModal: number | null
 
@@ -48,7 +48,7 @@ export interface SimpleStore {
   setPeriodFilter: (period: string | null) => void
   setViewMode: (mode: ViewMode) => void
   setShowYearModal: (year: number | null) => void
-  setShowLabels: (v: boolean) => void
+  setLightsOn: (v: boolean) => void
   setView: (v: 'main' | 'summary') => void
   setSummaryInterval: (i: SummaryInterval) => void
   setSummarySportType: (t: string) => void
@@ -146,7 +146,7 @@ export const useSimpleStore = create<SimpleStore>()((set) => ({
   filteredActivities: [],
   cityFilter: null,
   periodFilter: null,
-  showLabels: true,
+  lightsOn: false,
   viewMode: 'table',
   showYearModal: null,
 
@@ -191,7 +191,7 @@ export const useSimpleStore = create<SimpleStore>()((set) => ({
 
   setColorMode: (m) => set({ colorMode: m }),
 
-  setShowLabels: (v) => set({ showLabels: v }),
+  setLightsOn: (v: boolean) => set({ lightsOn: v }),
 
   toggleTheme: () =>
     set((s) => {

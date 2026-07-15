@@ -7,6 +7,7 @@ interface SimpleMapProps {
   colorMode: 'type' | 'speed'
   hoveredActivityId: string | null
   privacyMode?: boolean
+  lightsOn?: boolean
   showLabels?: boolean
   animate?: boolean
   onActivityClick?: (activity: Activity) => void
@@ -30,6 +31,7 @@ export function SimpleMap({
   colorMode,
   hoveredActivityId,
   privacyMode,
+  lightsOn,
   showLabels,
   animate,
   onActivityClick,
@@ -44,6 +46,7 @@ export function SimpleMap({
       tileConfig={getTileConfig()}
       dashLines={true}
       privacyMode={privacyMode}
+      lightsOn={lightsOn}
       showLabels={showLabels}
       animate={animate}
       onActivityClick={onActivityClick}

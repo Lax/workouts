@@ -15,6 +15,7 @@ import { SVGStat } from './components/SVGStat'
 import { YearSelector } from './components/YearSelector'
 import { LocationStats } from './LocationStats'
 import { useSimpleStore } from './store'
+import { useFullscreenSync } from './useFullscreenSync'
 import { getRunIdFromHash } from './utils'
 import './simple.css'
 
@@ -47,7 +48,9 @@ export function SimpleLayout() {
   const colorScheme = useSimpleStore((s) => s.colorScheme)
   const filteredActivities = useSimpleStore((s) => s.filteredActivities)
   const years = useSimpleStore((s) => s.years)
-  const showLabels = useSimpleStore((s) => s.showLabels)
+  const lightsOn = useSimpleStore((s) => s.lightsOn)
+  const isFullscreen = useFullscreenSync()
+  const showLabels = isFullscreen && lightsOn
   const setMapHoveredId = useSimpleStore((s) => s.setMapHoveredId)
   const cityFilter = useSimpleStore((s) => s.cityFilter)
   const periodFilter = useSimpleStore((s) => s.periodFilter)
@@ -157,6 +160,7 @@ export function SimpleLayout() {
               colorMode={colorMode}
               hoveredActivityId={useSimpleStore.getState().mapHoveredId}
               privacyMode={siteConfig?.privacyMode as boolean | undefined}
+              lightsOn={lightsOn}
               showLabels={showLabels}
               animate={!!selectedActivity}
               onActivityHover={setMapHoveredId}

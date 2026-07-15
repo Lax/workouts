@@ -11,6 +11,7 @@ export interface HeroMapProps {
   hoveredActivityId?: string | null
   maxLines?: number
   tileConfig?: TileConfig
+  lightsOn?: boolean
   showLabels?: boolean
   dashLines?: boolean
   privacyMode?: boolean
@@ -25,14 +26,15 @@ export function HeroMap({
   hoveredActivityId = null,
   maxLines = 500,
   tileConfig,
-  showLabels = true,
+  lightsOn = true,
+  showLabels = false,
   dashLines = false,
   privacyMode = false,
   onActivityClick,
   onActivityHover,
 }: HeroMapProps) {
   const elRef = useRef<HTMLDivElement>(null)
-  const mapRef = useLeafletMap(elRef, { colorScheme, tileConfig, showLabels })
+  const mapRef = useLeafletMap(elRef, { colorScheme, tileConfig, lightsOn, showLabels })
   const opts: PolylineOptions = { colorMode, hoveredActivityId, maxLines, fitOnChange: true, dashLines, onActivityClick, onActivityHover }
   useMapPolylines(mapRef, activities, opts)
   const bg = privacyMode ? 'var(--color-bg, #000)' : 'var(--color-bg)'

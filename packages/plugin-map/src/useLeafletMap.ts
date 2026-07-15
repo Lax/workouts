@@ -1,13 +1,14 @@
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { useCallback, useEffect, useRef } from 'react'
-import { resolveLabeledTileUrl, type TileConfig } from './tiles'
+import { resolveLabeledTileUrl, resolveTileUrl, type TileConfig } from './tiles'
 
 export type ZoomPosition = 'topleft' | 'topright' | 'bottomleft' | 'bottomright'
 
 export interface LeafletMapOptions {
   colorScheme: 'light' | 'dark'
   tileConfig?: TileConfig
+  lightsOn?: boolean
   showLabels?: boolean
   zoomControl?: boolean
   zoomPosition?: ZoomPosition
@@ -23,11 +24,15 @@ export function useLeafletMap(elRef: React.RefObject<HTMLDivElement | null>, opt
   const tileLayerRef = useRef<L.TileLayer | null>(null)
   const prevTileKeyRef = useRef<string>('')
 
+  const lightsOn = options.lightsOn ?? true
+  const showLabels = options.showLabels ?? false
+
   const tileUrl = useCallback(() => {
-    if (!options.showLabels) return ''
+    if (!lightsOn) return ''
     const tc = options.tileConfig ?? { vendor: 'carto' }
-    return resolveLabeledTileUrl(tc, options.colorScheme)
-  }, [options.colorScheme, options.tileConfig, options.showLabels])
+    if (showLabels) return resolveLabeledTileUrl(tc, options.colorScheme)
+    return resolveTileUrl(tc, options.colorScheme)
+  }, [options.colorScheme, options.tileConfig, lightsOn, showLabels])
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: one-time init
   useEffect(() => {
@@ -47,7 +52,7 @@ export function useLeafletMap(elRef: React.RefObject<HTMLDivElement | null>, opt
     const m = mapRef.current
     if (!m) return
     const url = tileUrl()
-    const key = `${options.colorScheme}|${url}|${String(!!options.showLabels)}`
+    const key = `${options.colorScheme}|${url}|${String(lightsOn)}|${String(showLabels)}`
     if (prevTileKeyRef.current === key) return
     prevTileKeyRef.current = key
     if (tileLayerRef.current) {
@@ -58,7 +63,7 @@ export function useLeafletMap(elRef: React.RefObject<HTMLDivElement | null>, opt
       layer.addTo(m)
       tileLayerRef.current = layer
     }
-  }, [tileUrl, options.colorScheme, options.showLabels])
+  }, [tileUrl, options.colorScheme, lightsOn, showLabels])
 
   return mapRef
 }

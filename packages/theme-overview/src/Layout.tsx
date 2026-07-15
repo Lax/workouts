@@ -40,7 +40,8 @@ export function OverviewLayout() {
         hoveredActivityId={mapHoveredId}
         dashLines={siteConfig?.dashLines as boolean | undefined}
         privacyMode={siteConfig?.privacyMode as boolean | undefined}
-        showLabels={siteConfig?.showLabels !== false}
+        lightsOn={true}
+        showLabels={siteConfig?.showLabels === true}
         onActivityClick={openDetail}
         onActivityHover={setMapHoveredId}
       />
