@@ -334,7 +334,7 @@ test('simple theme shows run table with sortable headers', async ({ page }) => {
 test('simple theme map overlays show year selector and legend', async ({ page }) => {
   await waitLoaded(page)
   await expect(page.locator('.map-overlays')).toBeAttached()
-  await expect(page.locator('.map-year-selector li:has-text("All")')).toBeVisible()
+  await expect(page.locator('.map-year-selector .year-pill:has-text("All")')).toBeVisible()
   await expect(page.locator('.legend-toggle')).toBeVisible()
   await expect(page.locator('.speed-legend')).toHaveCount(1)
   await expect(page.locator('.speed-legend > span')).toHaveCount(4)
