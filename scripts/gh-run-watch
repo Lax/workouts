@@ -46,8 +46,23 @@ if [[ $# -gt 0 && "$1" != -* ]]; then
 else
   branch=$(git branch --show-current 2>/dev/null || echo "main")
   workflow=".github/workflows/ci.yml"
-  run_id=$(gh run list --workflow "$workflow" --branch "$branch" --limit 1 \
-    --json databaseId --jq '.[0].databaseId')
+  commit=$(git rev-parse HEAD 2>/dev/null || true)
+
+  # Retry loop: CI run may not appear in gh run list immediately after push
+  for attempt in 1 2 3; do
+    if [[ -n "$commit" ]]; then
+      run_id=$(gh run list --workflow "$workflow" --branch "$branch" --limit 10 \
+        --json databaseId,headSha --jq \
+        '.[] | select(.headSha == "'"$commit"'") | .databaseId' | head -1)
+    fi
+    if [[ -n "$run_id" && "$run_id" != "null" ]]; then break; fi
+    sleep 3
+  done
+
+  if [[ -z "$run_id" || "$run_id" == "null" ]]; then
+    run_id=$(gh run list --workflow "$workflow" --branch "$branch" --limit 1 \
+      --json databaseId --jq '.[0].databaseId')
+  fi
 fi
 
 if [[ -z "$run_id" || "$run_id" == "null" ]]; then
