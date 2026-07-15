@@ -206,7 +206,7 @@ todowrite("3/5 🛠️ Develop" → in_progress)
 
 | Field | Value |
 |---|---|
-| subagent_type | per task: `sync-dev` / `export-helper` / `spec-runner` / `general` |
+| subagent_type | per task: `sync-dev` / `export-helper` / `spec-runner` / `frontend-dev` / `general` |
 | skill | `caveman` |
 | handoff | `03-dev.md` |
 | gate | biome + test + build pass |
@@ -257,7 +257,7 @@ todowrite("QA: decide" → pending)
 
 | Field | Value |
 |---|---|
-| subagent_type | `spec-runner` → `general` |
+| subagent_type | `frontend-dev` → `general` |
 | skill | `grillme` |
 | handoff | `04-qa.md` |
 | decision | passed / blocker→dev / escalated |
