@@ -340,7 +340,7 @@ describe('YearSelector CSS — positioning and arrangement', () => {
 
     const style = getComputedStyle(pill)
     expect(style.borderRadius).toBe('12px')
-    expect(style.fontSize).toBe('0.7rem')
+    expect(style.fontSize).toBe('1rem')
     expect(style.cursor).toBe('pointer')
     expect(style.transition).toBe('all 0.15s')
     expect(style.border).not.toBe('')
@@ -388,7 +388,7 @@ describe('YearSelector CSS — positioning and arrangement', () => {
     const style = getComputedStyle(el)
     expect(style.position).toBe('absolute')
     expect(style.right).toBe('10px')
-    expect(style.top).toBe('48px')
+    expect(style.top).toBe('62px')
     expect(style.zIndex).toBe('1001')
 
     document.body.removeChild(el)
@@ -438,13 +438,13 @@ describe('Upstream style consistency — year-pill matches overview pattern', ()
     document.body.removeChild(pill)
   })
 
-  it('year-pill font-size (0.7rem) matches theme-overview compact pill scale', () => {
+  it('year-pill font-size (1rem) matches running_page pill scale', () => {
     const pill = document.createElement('button')
     pill.className = 'year-pill'
     document.body.appendChild(pill)
 
     const style = getComputedStyle(pill)
-    expect(style.fontSize).toBe('0.7rem')
+    expect(style.fontSize).toBe('1rem')
 
     document.body.removeChild(pill)
   })

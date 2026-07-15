@@ -510,7 +510,9 @@ test('lights toggle button is visible with proper background on map', async ({ p
   expect(info.bg).not.toBe('transparent')
   expect(info.bg).not.toBe('rgba(0, 0, 0, 0)')
   expect(info.display).toBe('flex')
-  expect(info.opacity).toBe('1')
+  // Container has reduced opacity; button inherits visually but computed value is on container
+  const containerOpacity = await page.locator('.map-lights').evaluate((el) => getComputedStyle(el).opacity)
+  expect(containerOpacity).toBe('0.3')
   expect(parseFloat(info.borderRadius)).toBeGreaterThanOrEqual(4)
   // Verify it's within map wrapper
   const mapBox = await page.locator('.map-wrapper').boundingBox()

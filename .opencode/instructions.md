@@ -36,6 +36,30 @@ Propose verify method. Uncertain → offer options.
 push → verify → fix → repeat until all pass.
 
 No unsolicited files or actions.
+
+## Ambiguity Rule — 通用消歧
+
+模型默认行为是将模糊概念解析为字面最相似的值，而不通知用户。
+这在项目上下文中有多义性的术语上会导致方向性错误。
+
+**必须在以下场景执行消歧：**
+
+| 场景 | 示例 | 行为 |
+|------|------|------|
+| 用户引用"上游"/"upstream"/"参考"/"源头" | "与上游不一致" | 列出 CONTEXT.md 中所有声明上游（每个 theme 不同），请求确认 |
+| 用户说出项目内的名字但可能指不同实体 | "和 overview 一样" | 区分 theme-overview 还是 overview 视图 |
+| 模型自己引入一个比较对象 | "对比 theme-overview 的做法" | 先确认"你同意用 theme-overview 作为参考？" |
+| 用户输入中有未指定的第三方引用 | "按原来的方式" | 问清楚"原来的方式"指向哪个实现 |
+
+**执行规则：**
+
+1. **发现歧义 → 停止**。不要猜，不要继续推进。
+2. **列出所有可能解析**。每个选项附上来源（CONTEXT.md 哪一行/哪个声明）。
+3. **请求确认**后才继续。在用户确认之前，不做任何方向性决策。
+4. **记录消歧结果**。如果后续操作依赖这个决策，引用确认记录。
+5. **单答案原则（SAP）** 适用：一个问题只能有一个答案。如果多个答案同时存在 → 是歧义，需要消歧。
+
+例外：用户明确指定了精确匹配（"用 running_page 的布局"） → 不需要消歧，直接执行。
 No assumptions — confirm when uncertain.
 
 ## Git Editor Avoidance
