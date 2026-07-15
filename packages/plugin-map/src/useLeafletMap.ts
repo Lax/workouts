@@ -1,7 +1,7 @@
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { useCallback, useEffect, useRef } from 'react'
-import { resolveLabeledTileUrl, resolveTileUrl, type TileConfig } from './tiles'
+import { resolveLabeledTileUrl, type TileConfig } from './tiles'
 
 export type ZoomPosition = 'topleft' | 'topright' | 'bottomleft' | 'bottomright'
 
@@ -24,8 +24,9 @@ export function useLeafletMap(elRef: React.RefObject<HTMLDivElement | null>, opt
   const prevTileKeyRef = useRef<string>('')
 
   const tileUrl = useCallback(() => {
+    if (!options.showLabels) return ''
     const tc = options.tileConfig ?? { vendor: 'carto' }
-    return options.showLabels ? resolveLabeledTileUrl(tc, options.colorScheme) : resolveTileUrl(tc, options.colorScheme)
+    return resolveLabeledTileUrl(tc, options.colorScheme)
   }, [options.colorScheme, options.tileConfig, options.showLabels])
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: one-time init

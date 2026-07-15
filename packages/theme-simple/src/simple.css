@@ -269,6 +269,10 @@
 .map-lights { position: absolute; right: 10px; top: 62px; z-index: 1001; opacity: 0.3; }
 .map-fullscreen { position: absolute; right: 10px; top: 10px; z-index: 1001; }
 
+.map-wrapper .leaflet-container {
+  background: var(--color-bg);
+}
+
 .map-run-title {
   position: absolute;
   bottom: 0;

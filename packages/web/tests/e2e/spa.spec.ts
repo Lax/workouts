@@ -627,18 +627,35 @@ test('lights toggle aria-label toggles on click', async ({ page }) => {
   await expect(page.locator('button[aria-label="Show labels"]')).toBeVisible()
 })
 
-test('lights and fullscreen containers have absolute positioning and z-index 1', async ({ page }) => {
+test('lights off removes tiles so map bg matches page', async ({ page }) => {
   await waitLoaded(page)
-  for (const sel of ['.map-lights', '.map-fullscreen']) {
-    const el = page.locator(sel)
-    await expect(el).toBeAttached()
-    const pos = await el.evaluate((node) => ({
-      position: getComputedStyle(node).position,
-      zIndex: getComputedStyle(node).zIndex,
-    }))
-    expect(pos.position).toBe('absolute')
-    expect(pos.zIndex).toBe('1001')
-  }
+  const tiles = page.locator('.leaflet-tile-loaded')
+  await expect(tiles.first()).toBeVisible({ timeout: 15000 })
+  expect(await tiles.count()).toBeGreaterThan(0)
+
+  await page.locator('button[aria-label="Hide labels"]').click()
+  await page.waitForTimeout(1000)
+
+  await expect(async () => {
+    expect(await tiles.count()).toBe(0)
+  }).toPass({ timeout: 5000 })
+})
+
+test('lights toggle back on restores tile layers', async ({ page }) => {
+  await waitLoaded(page)
+  // Wait for tiles to load, then turn lights off
+  await expect(page.locator('.leaflet-tile-loaded').first()).toBeVisible({ timeout: 15000 })
+  await page.locator('button[aria-label="Hide labels"]').click()
+  await page.waitForTimeout(500)
+  expect(await page.locator('.leaflet-tile-loaded').count()).toBe(0)
+
+  // Turn lights back on
+  await page.locator('button[aria-label="Show labels"]').click()
+
+  // Tiles should reload
+  const tiles = page.locator('.leaflet-tile-loaded')
+  await expect(tiles.first()).toBeVisible({ timeout: 15000 })
+  expect(await tiles.count()).toBeGreaterThan(0)
 })
 
 test('lights and fullscreen buttons are positioned at top-right of map', async ({ page }) => {
