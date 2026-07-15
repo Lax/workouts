@@ -18,4 +18,5 @@ const theme: ThemePlugin = {
 export default theme
 export { colorIntensity } from './components/GithubDrawer'
 export { decodePolyline } from './components/RoutePreviewSVG'
+export { YearSelector } from './components/YearSelector'
 export { computeStreak, type SortField, type SummaryInterval, useSimpleStore, type ViewMode } from './store'

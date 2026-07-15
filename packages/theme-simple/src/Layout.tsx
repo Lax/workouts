@@ -163,7 +163,7 @@ export function SimpleLayout() {
           {selectedYear !== null && (
             <div
               className="svg-stat-container"
-              style={{ borderTop: '1px solid var(--color-hr-primary, #ef4444)', marginTop: 8, overflowX: 'hidden', maxWidth: '100%' }}
+              style={{ borderTop: '1px solid var(--color-border)', marginTop: 8, overflowX: 'hidden', maxWidth: '100%' }}
             >
               <YearSummaryDrawer year={selectedYear} activities={activities} />
               <GithubDrawer year={selectedYear} activities={activities} />
