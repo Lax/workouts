@@ -12,6 +12,7 @@ export type SummaryInterval = 'year' | 'month' | 'week' | 'day' | 'life'
 export interface SimpleStore {
   activities: Activity[]
   selectedYear: number | null
+  selectedMonth: number | null
   colorMode: 'type' | 'speed'
   colorScheme: 'light' | 'dark'
   sortField: SortField
@@ -35,6 +36,7 @@ export interface SimpleStore {
 
   setActivities: (acts: Activity[]) => void
   setSelectedYear: (y: number | null) => void
+  setSelectedMonth: (m: number | null) => void
   setColorMode: (m: 'type' | 'speed') => void
   toggleTheme: () => void
   toggleSort: (field: SortField) => void
@@ -85,6 +87,7 @@ export function computeStreak(acts: Activity[]): number {
 function filterActivities(
   acts: Activity[],
   selectedYear: number | null,
+  selectedMonth: number | null,
   sortField: SortField,
   sortDesc: boolean,
   cityFilter: string | null,
@@ -93,6 +96,9 @@ function filterActivities(
   let r = [...acts]
   if (selectedYear !== null) {
     r = r.filter((a) => a.start_date && new Date(a.start_date).getFullYear() === selectedYear)
+  }
+  if (selectedMonth !== null && selectedYear !== null) {
+    r = r.filter((a) => a.start_date && new Date(a.start_date).getMonth() + 1 === selectedMonth)
   }
   if (cityFilter !== null) {
     r = r.filter((a) => extractCity(a.location_country)?.name === cityFilter)
@@ -127,6 +133,7 @@ function filterActivities(
 export const useSimpleStore = create<SimpleStore>()((set) => ({
   activities: [],
   selectedYear: null,
+  selectedMonth: null,
   colorMode: 'type',
   colorScheme: (document.documentElement.getAttribute('data-theme') || 'dark') as 'light' | 'dark',
   sortField: 'date',
@@ -163,16 +170,23 @@ export const useSimpleStore = create<SimpleStore>()((set) => ({
         years: ys,
         streaks,
         totalStreak: computeStreak(acts),
-        filteredActivities: filterActivities(acts, initialYear, s.sortField, s.sortDesc, s.cityFilter, s.periodFilter),
+        filteredActivities: filterActivities(acts, initialYear, s.selectedMonth, s.sortField, s.sortDesc, s.cityFilter, s.periodFilter),
       }
     }),
 
   setSelectedYear: (y) =>
     set((s) => ({
       selectedYear: y,
+      selectedMonth: null,
       cityFilter: null,
       periodFilter: null,
-      filteredActivities: filterActivities(s.activities, y, s.sortField, s.sortDesc, null, null),
+      filteredActivities: filterActivities(s.activities, y, null, s.sortField, s.sortDesc, null, null),
+    })),
+
+  setSelectedMonth: (m) =>
+    set((s) => ({
+      selectedMonth: m,
+      filteredActivities: filterActivities(s.activities, s.selectedYear, m, s.sortField, s.sortDesc, s.cityFilter, s.periodFilter),
     })),
 
   setColorMode: (m) => set({ colorMode: m }),
@@ -193,7 +207,7 @@ export const useSimpleStore = create<SimpleStore>()((set) => ({
       return {
         sortField: field,
         sortDesc: desc,
-        filteredActivities: filterActivities(s.activities, s.selectedYear, field, desc, s.cityFilter, s.periodFilter),
+        filteredActivities: filterActivities(s.activities, s.selectedYear, s.selectedMonth, field, desc, s.cityFilter, s.periodFilter),
       }
     }),
 
@@ -221,7 +235,7 @@ export const useSimpleStore = create<SimpleStore>()((set) => ({
       const next = s.cityFilter === city ? null : city
       return {
         cityFilter: next,
-        filteredActivities: filterActivities(s.activities, s.selectedYear, s.sortField, s.sortDesc, next, s.periodFilter),
+        filteredActivities: filterActivities(s.activities, s.selectedYear, s.selectedMonth, s.sortField, s.sortDesc, next, s.periodFilter),
       }
     }),
 
@@ -230,7 +244,7 @@ export const useSimpleStore = create<SimpleStore>()((set) => ({
       const next = s.periodFilter === period ? null : period
       return {
         periodFilter: next,
-        filteredActivities: filterActivities(s.activities, s.selectedYear, s.sortField, s.sortDesc, s.cityFilter, next),
+        filteredActivities: filterActivities(s.activities, s.selectedYear, s.selectedMonth, s.sortField, s.sortDesc, s.cityFilter, next),
       }
     }),
 

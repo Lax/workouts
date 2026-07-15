@@ -37,7 +37,16 @@ export function CircularDrawer({ year, activities }: CircularDrawerProps) {
       const endAngle = startAngle + anglePerMonth
       const ratio = m.totalDist / maxDist
       const outerR = 25 + 52 * ratio
-      const color = m.totalDist === 0 ? '#333' : ratio > 0.7 ? '#ff4500' : ratio > 0.4 ? '#ff8c00' : ratio > 0.15 ? '#4dd2ff' : '#555'
+      const color =
+        m.totalDist === 0
+          ? 'var(--color-border, #333)'
+          : ratio > 0.7
+            ? 'var(--svg-special-color2, #f56c6c)'
+            : ratio > 0.4
+              ? 'var(--svg-special-color, #f7d02c)'
+              : ratio > 0.15
+                ? 'var(--svg-color-active-cell, #4dd2ff)'
+                : 'var(--color-text-dim, #666)'
       const seg = { ...m, label: monthNames[m.month - 1], startAngle, endAngle, outerR, color }
       startAngle = endAngle
       return seg

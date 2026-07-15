@@ -62,7 +62,16 @@ export function YearSummaryDrawer({ year, activities }: YearSummaryDrawerProps) 
       for (let d = 1; d <= daysInMonth; d++) {
         const dist = map.get(`${m + 1}-${d}`) ?? 0
         const ratio = dist / maxDist
-        const color = dist === 0 ? '#444' : ratio > 0.7 ? '#ff4500' : ratio > 0.4 ? '#ff8c00' : ratio > 0.15 ? '#4dd2ff' : '#555'
+        const color =
+          dist === 0
+            ? 'var(--color-border, #444)'
+            : ratio > 0.7
+              ? 'var(--svg-special-color2, #f56c6c)'
+              : ratio > 0.4
+                ? 'var(--svg-special-color, #f7d02c)'
+                : ratio > 0.15
+                  ? 'var(--svg-color-active-cell, #4dd2ff)'
+                  : 'var(--color-text-dim, #666)'
         result.push({ month: m + 1, day: d, dist, color })
       }
     }

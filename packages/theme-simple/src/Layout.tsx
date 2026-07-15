@@ -125,7 +125,7 @@ export function SimpleLayout() {
               onClick={() => setSelectedYear(selectedYear === y ? null : y)}
               onMouseEnter={() => {
                 if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current)
-                hoverTimerRef.current = setTimeout(() => setShowSvgYear(y), 1000)
+                hoverTimerRef.current = setTimeout(() => setShowSvgYear(y), 300)
               }}
               onMouseLeave={() => {
                 if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current)
@@ -161,7 +161,10 @@ export function SimpleLayout() {
             <MapOverlays />
           </div>
           {selectedYear !== null && (
-            <div className="svg-stat-container" style={{ borderTop: '1px solid var(--color-hr-primary, #ef4444)', marginTop: 8 }}>
+            <div
+              className="svg-stat-container"
+              style={{ borderTop: '1px solid var(--color-hr-primary, #ef4444)', marginTop: 8, overflowX: 'hidden', maxWidth: '100%' }}
+            >
               <YearSummaryDrawer year={selectedYear} activities={activities} />
               <GithubDrawer year={selectedYear} activities={activities} />
             </div>
