@@ -586,21 +586,30 @@ test('lights and fullscreen buttons maintain correct background in dark mode', a
 
 test('lights toggle aria-label toggles on click', async ({ page }) => {
   await waitLoaded(page)
-  const lights = page.locator('button[aria-label="Hide labels"]')
+  // Initial: lights off → button says "Show labels"
+  const lights = page.locator('button[aria-label="Show labels"]')
   await expect(lights).toBeVisible()
   await lights.click()
+  await expect(page.locator('button[aria-label="Hide labels"]')).toBeVisible()
+  // Toggle back off
+  await page.locator('button[aria-label="Hide labels"]').click()
   await expect(page.locator('button[aria-label="Show labels"]')).toBeVisible()
 })
 
 test('lights off removes tiles so map bg matches page', async ({ page }) => {
   await waitLoaded(page)
+  // Initial: lights off, no tiles
+  expect(await page.locator('.leaflet-tile-loaded').count()).toBe(0)
+
+  // Turn lights on → tiles appear
+  await page.locator('button[aria-label="Show labels"]').click()
   const tiles = page.locator('.leaflet-tile-loaded')
   await expect(tiles.first()).toBeVisible({ timeout: 15000 })
   expect(await tiles.count()).toBeGreaterThan(0)
 
+  // Turn lights off → tiles disappear
   await page.locator('button[aria-label="Hide labels"]').click()
   await page.waitForTimeout(1000)
-
   await expect(async () => {
     expect(await tiles.count()).toBe(0)
   }).toPass({ timeout: 5000 })
@@ -608,8 +617,13 @@ test('lights off removes tiles so map bg matches page', async ({ page }) => {
 
 test('lights toggle back on restores tile layers', async ({ page }) => {
   await waitLoaded(page)
-  // Wait for tiles to load, then turn lights off
+  // Initial: lights off, no tiles
+
+  // Turn lights on → tiles appear
+  await page.locator('button[aria-label="Show labels"]').click()
   await expect(page.locator('.leaflet-tile-loaded').first()).toBeVisible({ timeout: 15000 })
+
+  // Turn lights off → tiles disappear
   await page.locator('button[aria-label="Hide labels"]').click()
   await page.waitForTimeout(500)
   expect(await page.locator('.leaflet-tile-loaded').count()).toBe(0)
