@@ -1,6 +1,6 @@
 import type { Activity } from '@workouts/shared'
 import { formatDuration, formatPace } from '@workouts/shared'
-import { colorIntensity, computeStreak } from '@workouts/theme-simple'
+import { colorIntensity, computeStreak, decodePolyline, useSimpleStore } from '@workouts/theme-simple'
 import { describe, expect, it } from 'vitest'
 
 function act(start_date: string): Activity {
@@ -106,5 +106,51 @@ describe('colorIntensity — YearGridSVG', () => {
   it('handles maxCount 1 correctly', () => {
     expect(colorIntensity(0, 1)).toBe('var(--color-border, #333)')
     expect(colorIntensity(1, 1)).toBe('var(--svg-special-color2, #f56c6c)')
+  })
+})
+
+describe('decodePolyline', () => {
+  it('returns empty array for empty string', () => {
+    expect(decodePolyline('')).toEqual([])
+  })
+
+  it('decodes a known polyline', () => {
+    const result = decodePolyline('_p~iF~ps|U_ulLnnqC_mqNvxq`@')
+    expect(result.length).toBe(3)
+    expect(result[0][0]).toBeCloseTo(38.5, 1)
+    expect(result[0][1]).toBeCloseTo(-120.2, 1)
+  })
+
+  it('decodes a single point', () => {
+    const result = decodePolyline('_p~iF~ps|U')
+    expect(result.length).toBe(1)
+  })
+})
+
+describe('SummaryInterval store actions', () => {
+  it('setView updates view state', () => {
+    const store = useSimpleStore.getState()
+    expect(store.view).toBe('main')
+    store.setView('summary')
+    expect(useSimpleStore.getState().view).toBe('summary')
+    store.setView('main')
+    expect(useSimpleStore.getState().view).toBe('main')
+  })
+
+  it('setSummaryInterval updates interval', () => {
+    const store = useSimpleStore.getState()
+    store.setSummaryInterval('year')
+    expect(useSimpleStore.getState().summaryInterval).toBe('year')
+    store.setSummaryInterval('life')
+    expect(useSimpleStore.getState().summaryInterval).toBe('life')
+  })
+
+  it('setSummaryLifeYear updates life year', () => {
+    const store = useSimpleStore.getState()
+    expect(useSimpleStore.getState().summaryLifeYear).toBeNull()
+    store.setSummaryLifeYear(2024)
+    expect(useSimpleStore.getState().summaryLifeYear).toBe(2024)
+    store.setSummaryLifeYear(null)
+    expect(useSimpleStore.getState().summaryLifeYear).toBeNull()
   })
 })

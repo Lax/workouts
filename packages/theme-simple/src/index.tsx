@@ -16,5 +16,6 @@ const theme: ThemePlugin = {
 }
 
 export default theme
+export { decodePolyline } from './components/RoutePreviewSVG'
 export { colorIntensity } from './components/YearGridSVG'
-export { computeStreak, useSimpleStore } from './store'
+export { computeStreak, type SortField, type SummaryInterval, useSimpleStore, type ViewMode } from './store'

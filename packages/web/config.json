@@ -13,7 +13,12 @@
     "title": "Workouts",
     "url": "/workouts/",
     "logo": null,
-    "navLinks": [],
+    "navLinks": [
+      { "name": "Workouts", "url": "https://lax.github.io/workouts/" },
+      { "name": "Token Burn", "url": "/token-hot/" },
+      { "name": "阅读理解", "url": "https://yuedulijie.com" },
+      { "name": "Lax", "url": "https://liulantao.com" }
+    ],
     "mapTileVendor": "carto",
     "mapTileStyle": "dark-nolabels",
     "mapTileToken": ""

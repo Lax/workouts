@@ -8,6 +8,7 @@ import { MapOverlays } from './components/MapOverlays'
 import { RunTable } from './components/RunTable'
 import { SimpleMap } from './components/SimpleMap'
 import { intComma, Stat } from './components/Stat'
+import { SummaryView } from './components/SummaryView'
 import { SVGStat } from './components/SVGStat'
 import { YearBarSVG } from './components/YearBarSVG'
 import { YearGridSVG } from './components/YearGridSVG'
@@ -53,6 +54,7 @@ export function SimpleLayout() {
   const viewMode = useSimpleStore((s) => s.viewMode)
   const setViewMode = useSimpleStore((s) => s.setViewMode)
   const setShowYearModal = useSimpleStore((s) => s.setShowYearModal)
+  const view = useSimpleStore((s) => s.view)
   const selectedActivity = useSimpleStore((s) => s.selectedActivity)
   const openDetail = useSimpleStore((s) => s.openDetail)
   const selectByHash = useSimpleStore((s) => s.selectByHash)
@@ -89,6 +91,8 @@ export function SimpleLayout() {
     if (years.length === 0) return null
     return `${Math.min(...years)}–${Math.max(...years)}`
   }, [years])
+
+  if (view === 'summary') return <SummaryView />
 
   return (
     <>

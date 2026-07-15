@@ -15,6 +15,8 @@ interface SiteConfig {
 export function Header({ config }: { config: SiteConfig }) {
   const colorScheme = useSimpleStore((s) => s.colorScheme)
   const toggleTheme = useSimpleStore((s) => s.toggleTheme)
+  const view = useSimpleStore((s) => s.view)
+  const setView = useSimpleStore((s) => s.setView)
 
   const githubUser = import.meta.env.VITE_GITHUB_USER
 
@@ -41,6 +43,16 @@ export function Header({ config }: { config: SiteConfig }) {
             {n.name}
           </a>
         ))}
+        {view === 'main' && (
+          <button
+            type="button"
+            className="nav-link"
+            onClick={() => setView('summary')}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 'inherit' }}
+          >
+            Summary
+          </button>
+        )}
         <button type="button" className="theme-btn" onClick={toggleTheme} aria-label="Toggle theme">
           {colorScheme === 'dark' ? (
             <svg

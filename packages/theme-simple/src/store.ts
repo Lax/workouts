@@ -7,6 +7,8 @@ export type SortField = 'date' | 'distance' | 'time' | 'elevation'
 
 export type ViewMode = 'table' | 'grid'
 
+export type SummaryInterval = 'year' | 'month' | 'week' | 'day' | 'life'
+
 export interface SimpleStore {
   activities: Activity[]
   selectedYear: number | null
@@ -26,6 +28,11 @@ export interface SimpleStore {
   viewMode: ViewMode
   showYearModal: number | null
 
+  view: 'main' | 'summary'
+  summaryInterval: SummaryInterval
+  summarySportType: string
+  summaryLifeYear: number | null
+
   setActivities: (acts: Activity[]) => void
   setSelectedYear: (y: number | null) => void
   setColorMode: (m: 'type' | 'speed') => void
@@ -40,6 +47,10 @@ export interface SimpleStore {
   setViewMode: (mode: ViewMode) => void
   setShowYearModal: (year: number | null) => void
   setShowLabels: (v: boolean) => void
+  setView: (v: 'main' | 'summary') => void
+  setSummaryInterval: (i: SummaryInterval) => void
+  setSummarySportType: (t: string) => void
+  setSummaryLifeYear: (y: number | null) => void
 }
 
 function computeYears(acts: Activity[]): number[] {
@@ -132,6 +143,11 @@ export const useSimpleStore = create<SimpleStore>()((set) => ({
   viewMode: 'table',
   showYearModal: null,
 
+  view: 'main',
+  summaryInterval: 'month',
+  summarySportType: '',
+  summaryLifeYear: null,
+
   setActivities: (acts) =>
     set((s) => {
       const ys = computeYears(acts)
@@ -221,4 +237,9 @@ export const useSimpleStore = create<SimpleStore>()((set) => ({
   setViewMode: (mode) => set({ viewMode: mode }),
 
   setShowYearModal: (year) => set({ showYearModal: year }),
+
+  setView: (v) => set({ view: v }),
+  setSummaryInterval: (i) => set({ summaryInterval: i }),
+  setSummarySportType: (t) => set({ summarySportType: t }),
+  setSummaryLifeYear: (y) => set({ summaryLifeYear: y }),
 }))
