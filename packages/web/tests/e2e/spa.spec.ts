@@ -1,8 +1,72 @@
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { expect, type Page, test } from '@playwright/test'
+import { expect, type Locator, type Page, test } from '@playwright/test'
 import { generateActivities } from '../fixtures/activities'
+
+/**
+ * Visual integrity audit for a map overlay element.
+ * Catches: z-index too low, hidden behind tiles, clipped by overflow, off-screen.
+ */
+async function expectOverlayVisible(overlay: Locator) {
+  await expect(overlay).toBeAttached()
+  await expect(overlay).toBeVisible()
+
+  const box = await overlay.boundingBox()
+  expect(box, 'overlay must have non-zero bounding box').not.toBeNull()
+  expect(box!.width, 'overlay width must be > 0').toBeGreaterThan(0)
+  expect(box!.height, 'overlay height must be > 0').toBeGreaterThan(0)
+
+  // Check 1: within viewport (not off-screen)
+  const vp = await overlay.page().evaluate(() => ({ w: window.innerWidth, h: window.innerHeight }))
+  expect(box!.x + box!.width, 'right edge must be within viewport').toBeLessThanOrEqual(vp.w + 2)
+  expect(box!.y + box!.height, 'bottom edge must be within viewport').toBeLessThanOrEqual(vp.h + 2)
+  expect(box!.x, 'left edge must be >= 0').toBeGreaterThanOrEqual(0)
+  expect(box!.y, 'top edge must be >= 0').toBeGreaterThanOrEqual(0)
+
+  // Check 2: not clipped by overflow:hidden parent (tolerate 2px for intentional clipping like rounded corners)
+  const notClipped = await overlay.evaluate((el) => {
+    let parent = el.parentElement
+    while (parent && parent !== document.body) {
+      const cs = getComputedStyle(parent)
+      if (cs.overflow === 'hidden' || cs.overflowX === 'hidden' || cs.overflowY === 'hidden') {
+        const pr = parent.getBoundingClientRect()
+        const er = el.getBoundingClientRect()
+        if (er.right > pr.right + 2 || er.bottom > pr.bottom + 2 || er.left < pr.left - 2 || er.top < pr.top - 2) {
+          return { clipped: true, by: parent.className.slice(0, 40) }
+        }
+      }
+      parent = parent.parentElement
+    }
+    return { clipped: false, by: '' }
+  })
+  expect(notClipped.clipped, `overlay must not be clipped by overflow:hidden parent (${notClipped.by})`).toBe(false)
+
+  // Check 3: not occluded — temporarily disable pointer-events:none for true hit test
+  const occluded = await overlay.evaluate((el) => {
+    const all = document.querySelectorAll('*')
+    const restored: { el: HTMLElement; val: string }[] = []
+    for (const e of all) {
+      const ht = e as HTMLElement
+      const pe = getComputedStyle(ht).pointerEvents
+      if (pe === 'none') {
+        ht.style.pointerEvents = 'auto'
+        restored.push({ el: ht, val: pe })
+      }
+    }
+    const r = el.getBoundingClientRect()
+    const cx = r.x + r.width / 2
+    const cy = r.y + r.height / 2
+    const top = document.elementFromPoint(cx, cy)
+    for (const x of restored) x.el.style.pointerEvents = x.val
+    const isSelf =
+      top === el ||
+      el.contains(top) ||
+      (top as HTMLElement)?.closest?.(el.className ? `.${el.className.split(' ')[0]}` : el.tagName) !== null
+    return { occluded: !isSelf, topEl: top?.tagName || '', topCls: (top as HTMLElement)?.className?.slice(0, 40) || '' }
+  })
+  expect(occluded.occluded, `overlay must be at top of visual stack (found: ${occluded.topEl}.${occluded.topCls})`).toBe(false)
+}
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -340,6 +404,28 @@ test('simple theme map overlays show year selector and legend', async ({ page })
   await expect(page.locator('.speed-legend > span')).toHaveCount(4)
 })
 
+test('visual integrity: all map overlays pass occlusion, clipping, and viewport checks', async ({ page }) => {
+  await waitLoaded(page)
+  const overlays = [
+    { name: 'lights toggle', sel: page.locator('.map-lights button') },
+    { name: 'fullscreen', sel: page.locator('.map-fullscreen button') },
+    { name: 'year pills', sel: page.locator('.map-year-selector .year-pill').first() },
+    { name: 'legend toggle', sel: page.locator('.legend-toggle') },
+    { name: 'legend buttons', sel: page.locator('.legend-btn').first() },
+    { name: 'month-chip', sel: page.locator('.month-chip') },
+  ]
+  for (const { name, sel } of overlays) {
+    const exists = await sel.count()
+    if (exists === 0) {
+      console.log(`  SKIP ${name} — not rendered (conditional)`)
+      continue
+    }
+    await test.step(`visual integrity: ${name}`, async () => {
+      await expectOverlayVisible(sel)
+    })
+  }
+})
+
 test('color mode toggles in simple theme', async ({ page }) => {
   await waitLoaded(page)
   await expect(page.locator('button:has-text("类型")')).toBeVisible()
@@ -436,8 +522,7 @@ test('lights toggle button is visible with proper background on map', async ({ p
   if (await zoomBtn.isVisible()) {
     const zb = await zoomBtn.boundingBox()
     if (zb) {
-      const noOverlap = info.rect.right < zb.x || info.rect.x > zb.x + zb.width ||
-        info.rect.bottom < zb.y || info.rect.y > zb.y + zb.height
+      const noOverlap = info.rect.right < zb.x || info.rect.x > zb.x + zb.width || info.rect.bottom < zb.y || info.rect.y > zb.y + zb.height
       expect(noOverlap).toBe(true)
     }
   }
@@ -484,7 +569,7 @@ test('lights and fullscreen buttons maintain correct background in dark mode', a
 
   for (const ariaLabel of ['Hide labels', 'Show labels', 'Fullscreen']) {
     const btn = page.locator(`button[aria-label="${ariaLabel}"]`)
-    if (await btn.count() === 0) continue
+    if ((await btn.count()) === 0) continue
     const bg = await btn.evaluate((el) => getComputedStyle(el).backgroundColor)
     expect(bg).not.toBe('transparent')
     expect(bg).not.toBe('rgba(0, 0, 0, 0)')
@@ -552,7 +637,7 @@ test('map-overlays legend is absolutely positioned at bottom-left of map', async
   expect(pos.left).toBe('10px')
 })
 
-test('map-year-selector is positioned at center-left of map wrapper', async ({ page }) => {
+test('map-year-selector is positioned at top-left of map wrapper (horizontal pills)', async ({ page }) => {
   await waitLoaded(page)
   const selector = page.locator('.map-year-selector')
   await expect(selector).toBeAttached()
@@ -560,21 +645,16 @@ test('map-year-selector is positioned at center-left of map wrapper', async ({ p
   const pos = await selector.evaluate((el) => ({
     position: window.getComputedStyle(el).position,
     left: window.getComputedStyle(el).left,
+    top: window.getComputedStyle(el).top,
   }))
   expect(pos.position).toBe('absolute')
   expect(pos.left).toBe('10px')
+  expect(pos.top).toBe('10px')
 
-  // top:50% gets resolved to pixels — verify element is vertically centered in map wrapper
-  const wrapper = page.locator('.map-wrapper')
-  const wrapperBox = await wrapper.boundingBox()
-  const selectorBox = await selector.boundingBox()
-  expect(wrapperBox).not.toBeNull()
-  expect(selectorBox).not.toBeNull()
-  const selectorCenter = selectorBox!.y + selectorBox!.height / 2
-  const wrapperCenter = wrapperBox!.y + wrapperBox!.height / 2
-  // Allow 10% of wrapper height tolerance for centering
-  const tolerance = wrapperBox!.height * 0.1
-  expect(Math.abs(selectorCenter - wrapperCenter)).toBeLessThanOrEqual(tolerance)
+  // Verify pills are horizontal (row) not vertical (column)
+  const pills = page.locator('.year-pills')
+  const flexDir = await pills.evaluate((el) => getComputedStyle(el).flexDirection)
+  expect(flexDir).toBe('row')
 })
 
 test('map-wrapper has isolation:isolate for correct stacking context', async ({ page }) => {
@@ -747,5 +827,93 @@ test('no CSS rgba(from ...) syntax leaks into computed backgrounds - all backgro
     const bg = await el.evaluate((node) => window.getComputedStyle(node).backgroundColor)
     expect(bg).not.toBe('transparent')
     expect(bg).not.toBe('rgba(0, 0, 0, 0)')
+  }
+})
+
+// ──────── Z-stack Layer Audit ────────
+
+test('overlay z-index exceeds highest Leaflet pane z-index within map-wrapper', async ({ page }) => {
+  await waitLoaded(page)
+
+  // Direct querySelector approach — more reliable than z-stack parsing
+  const overlayZ = await page.evaluate(() => {
+    const els = ['.map-year-selector', '.map-overlays', '.map-lights', '.map-fullscreen']
+      .map((s) => document.querySelector(s) as HTMLElement | null)
+      .filter(Boolean)
+    if (els.length === 0) return { error: 'no overlays found', z: 0 }
+    const z = Math.min(...els.map((el) => parseInt(getComputedStyle(el!).zIndex, 10) || 0))
+    return { z, count: els.length }
+  })
+  expect(overlayZ.count, 'at least one overlay element must exist').toBeGreaterThan(0)
+  expect(overlayZ.z, 'overlay z-index must be > 0').toBeGreaterThan(0)
+
+  const leafletZ = await page.evaluate(() => {
+    const panes = document.querySelectorAll(
+      '.leaflet-tile-pane, .leaflet-overlay-pane, .leaflet-shadow-pane, .leaflet-marker-pane, .leaflet-popup-pane',
+    )
+    let maxZ = 0
+    for (const p of panes) {
+      const z = parseInt(getComputedStyle(p).zIndex, 10) || 0
+      if (z > maxZ) maxZ = z
+    }
+    return maxZ
+  })
+  expect(leafletZ, 'Leaflet pane z-index must be > 0').toBeGreaterThan(0)
+  expect(overlayZ.z, `overlay z-index (${overlayZ.z}) must exceed Leaflet tile pane z-index (${leafletZ})`).toBeGreaterThan(leafletZ)
+})
+
+test('overlay renders above tiles after disabling pointer-events:none on tile pane', async ({ page }) => {
+  await waitLoaded(page)
+  const onTop = await page.evaluate(() => {
+    // Remove pointer-events:none from tile panes to get true visual hit test
+    const tiles = document.querySelectorAll('.leaflet-tile-pane, .leaflet-tile-container, .leaflet-layer')
+    const restored: { el: HTMLElement; val: string }[] = []
+    for (const t of tiles) {
+      const ht = t as HTMLElement
+      const cur = ht.style.pointerEvents
+      ht.style.pointerEvents = 'auto'
+      restored.push({ el: ht, val: cur })
+    }
+
+    const checks: { name: string; onTop: boolean }[] = []
+    for (const sel of ['.map-lights button', '.map-fullscreen button', '.map-year-selector .year-pill']) {
+      const btn = document.querySelector(sel) as HTMLElement | null
+      if (!btn) continue
+      const r = btn.getBoundingClientRect()
+      if (r.width === 0 || r.height === 0) continue
+      const cx = r.x + r.width / 2
+      const cy = r.y + r.height / 2
+      const top = document.elementFromPoint(cx, cy)
+      const isBtn = top === btn || btn.contains(top as Node) || (top as HTMLElement)?.closest?.(sel) !== null
+      checks.push({ name: sel, onTop: isBtn })
+    }
+
+    // Restore pointer-events
+    for (const r of restored) r.el.style.pointerEvents = r.val
+
+    return checks
+  })
+
+  for (const c of onTop) {
+    expect(c.onTop).toBe(true)
+  }
+})
+
+test('all overlay containers have z-index value above Leaflet tile pane (z:200)', async ({ page }) => {
+  await waitLoaded(page)
+  const tileZ = await page.evaluate(() => {
+    const pane = document.querySelector('.leaflet-tile-pane') as HTMLElement
+    if (!pane) return 0
+    return parseInt(getComputedStyle(pane).zIndex, 10) || 0
+  })
+  expect(tileZ).toBeGreaterThanOrEqual(200)
+
+  for (const sel of ['.map-year-selector', '.map-overlays', '.map-lights', '.map-fullscreen']) {
+    const ourZ = await page.evaluate((s) => {
+      const el = document.querySelector(s) as HTMLElement
+      if (!el) return -1
+      return parseInt(getComputedStyle(el).zIndex, 10) || 0
+    }, sel)
+    expect(ourZ).toBeGreaterThan(tileZ)
   }
 })

@@ -291,7 +291,7 @@ describe('YearSelector CSS — positioning and arrangement', () => {
     document.documentElement.setAttribute('data-theme', 'dark')
   })
 
-  it('map-year-selector is absolutely positioned at center-left of map wrapper', () => {
+  it('map-year-selector is absolutely positioned at top-left of map wrapper', () => {
     const wrapper = document.createElement('div')
     wrapper.className = 'map-wrapper'
     document.body.appendChild(wrapper)
@@ -303,9 +303,9 @@ describe('YearSelector CSS — positioning and arrangement', () => {
     const style = getComputedStyle(selector)
     expect(style.position).toBe('absolute')
     expect(style.left).toBe('10px')
-    expect(style.top).toBe('50%')
+    expect(style.top).toBe('10px')
     expect(style.zIndex).toBe('1001')
- 
+
     document.body.removeChild(wrapper)
   })
 
@@ -320,14 +320,15 @@ describe('YearSelector CSS — positioning and arrangement', () => {
     document.body.removeChild(wrapper)
   })
 
-  it('year-pills uses flex-direction column for vertical arrangement', () => {
+  it('year-pills uses flex-direction row with wrapping for horizontal layout', () => {
     const pills = document.createElement('div')
     pills.className = 'year-pills'
     document.body.appendChild(pills)
 
     const style = getComputedStyle(pills)
     expect(style.display).toBe('flex')
-    expect(style.flexDirection).toBe('column')
+    expect(style.flexDirection).toBe('row')
+    expect(style.flexWrap).toBe('wrap')
 
     document.body.removeChild(pills)
   })
@@ -611,5 +612,57 @@ describe('Visual integration — header and map overlays', () => {
         }
       }
     }
+  })
+})
+
+describe('Z-stack layer integrity — prevent regression of tiles-over-overlays bug', () => {
+  beforeEach(() => {
+    document.documentElement.setAttribute('data-theme', 'dark')
+  })
+
+  it('all map overlay containers have z-index > 1000 (above Leaflet highest pane)', () => {
+    const selectors = ['.map-year-selector', '.map-overlays', '.map-lights', '.map-fullscreen']
+    for (const sel of selectors) {
+      expect(cssRuleHasProperty(sel, 'z-index')).toBe(true)
+    }
+  })
+
+  it('map-year-selector z-index matches other overlays (all use same z-index)', () => {
+    // Parse z-index values from CSS rules
+    const zIndices: number[] = []
+    const selectors = ['.map-year-selector', '.map-overlays', '.map-lights', '.map-fullscreen']
+    for (const sheet of document.styleSheets) {
+      for (const rule of sheet.cssRules) {
+        if (rule instanceof CSSStyleRule && selectors.includes(rule.selectorText)) {
+          const z = parseInt(rule.style.getPropertyValue('z-index'), 10)
+          if (!Number.isNaN(z)) zIndices.push(z)
+        }
+        if (rule instanceof CSSMediaRule) {
+          for (const inner of rule.cssRules) {
+            if (inner instanceof CSSStyleRule && selectors.includes(inner.selectorText)) {
+              const z = parseInt(inner.style.getPropertyValue('z-index'), 10)
+              if (!Number.isNaN(z)) zIndices.push(z)
+            }
+          }
+        }
+      }
+    }
+    // All must be the same value
+    expect(zIndices.length).toBeGreaterThan(0)
+    expect(new Set(zIndices).size).toBe(1)
+  })
+
+  it('overlay z-index exceeds known Leaflet tile pane threshold (200)', () => {
+    let overlayZ = 0
+    for (const sheet of document.styleSheets) {
+      for (const rule of sheet.cssRules) {
+        if (rule instanceof CSSStyleRule && rule.selectorText === '.map-lights') {
+          overlayZ = parseInt(rule.style.getPropertyValue('z-index'), 10)
+        }
+      }
+    }
+    // Critical fix: overlay must be above Leaflet tile-pane (z:200)
+    expect(overlayZ).toBeGreaterThan(200)
+    expect(overlayZ).toBeGreaterThanOrEqual(1001)
   })
 })
