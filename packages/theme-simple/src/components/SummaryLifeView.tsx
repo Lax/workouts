@@ -1,7 +1,7 @@
 import { useEffect, useMemo } from 'react'
 import { useSimpleStore } from '../store'
+import { GithubDrawer } from './GithubDrawer'
 import { YearBarSVG } from './YearBarSVG'
-import { YearGridSVG } from './YearGridSVG'
 
 export function SummaryLifeView() {
   const activities = useSimpleStore((s) => s.activities)
@@ -59,7 +59,7 @@ export function SummaryLifeView() {
       </div>
       {summaryLifeYear && (
         <div className="life-svgs">
-          <YearGridSVG year={summaryLifeYear} activities={filteredByYear} />
+          <GithubDrawer year={summaryLifeYear} activities={filteredByYear} />
           <YearBarSVG year={summaryLifeYear} activities={filteredByYear} />
         </div>
       )}

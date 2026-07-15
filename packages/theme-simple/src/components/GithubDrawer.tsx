@@ -1,3 +1,8 @@
+/** GithubDrawer — draws a year activity calendar grid.
+ *  Maps to upstream GithubDrawer / --type github / github_YYYY.svg.
+ *  7-row × N-column matrix of day cells; color intensity encodes daily distance.
+ *  Replaces the running_page contribution heatmap poster. */
+
 import type { Activity } from '@workouts/shared'
 import { useMemo } from 'react'
 
@@ -17,12 +22,12 @@ export function colorIntensity(count: number, maxCount: number): string {
   return 'var(--svg-special-color2, #f56c6c)'
 }
 
-interface YearGridSVGProps {
+interface GithubDrawerProps {
   year: number
   activities: Activity[]
 }
 
-export function YearGridSVG({ year, activities }: YearGridSVGProps) {
+export function GithubDrawer({ year, activities }: GithubDrawerProps) {
   const grid = useMemo(() => {
     const dayCount = new Map<string, number>()
     for (const a of activities) {

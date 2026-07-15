@@ -1,7 +1,7 @@
 import type { Activity } from '@workouts/shared'
 import { useMemo } from 'react'
+import { GithubDrawer } from './GithubDrawer'
 import { YearBarSVG } from './YearBarSVG'
-import { YearGridSVG } from './YearGridSVG'
 
 interface SVGStatProps {
   activities: Activity[]
@@ -21,7 +21,7 @@ export function SVGStat({ activities }: SVGStatProps) {
       {years.map((y) => (
         <div key={y}>
           <h3 style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)', marginBottom: '0.5rem' }}>{y}</h3>
-          <YearGridSVG year={y} activities={activities} />
+          <GithubDrawer year={y} activities={activities} />
           <YearBarSVG year={y} activities={activities} />
         </div>
       ))}

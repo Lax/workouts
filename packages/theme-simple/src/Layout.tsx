@@ -3,6 +3,8 @@ import { useActivities } from '@workouts/plugin-data-source'
 import { formatPace } from '@workouts/shared'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { ActivityCardGrid } from './components/ActivityCardGrid'
+import { CircularDrawer } from './components/CircularDrawer'
+import { GithubDrawer } from './components/GithubDrawer'
 import { Header } from './components/Header'
 import { MapOverlays } from './components/MapOverlays'
 import { RunTable } from './components/RunTable'
@@ -10,9 +12,8 @@ import { SimpleMap } from './components/SimpleMap'
 import { intComma, Stat } from './components/Stat'
 import { SummaryView } from './components/SummaryView'
 import { SVGStat } from './components/SVGStat'
-import { YearBarSVG } from './components/YearBarSVG'
-import { YearGridSVG } from './components/YearGridSVG'
-import { YearSummaryModal } from './components/YearSummaryModal'
+import { YearSelector } from './components/YearSelector'
+import { YearSummaryDrawer } from './components/YearSummaryDrawer'
 import { LocationStats } from './LocationStats'
 import { useSimpleStore } from './store'
 import { getRunIdFromHash } from './utils'
@@ -53,7 +54,6 @@ export function SimpleLayout() {
   const periodFilter = useSimpleStore((s) => s.periodFilter)
   const viewMode = useSimpleStore((s) => s.viewMode)
   const setViewMode = useSimpleStore((s) => s.setViewMode)
-  const setShowYearModal = useSimpleStore((s) => s.setShowYearModal)
   const view = useSimpleStore((s) => s.view)
   const selectedActivity = useSimpleStore((s) => s.selectedActivity)
   const openDetail = useSimpleStore((s) => s.openDetail)
@@ -95,7 +95,7 @@ export function SimpleLayout() {
   if (view === 'summary') return <SummaryView />
 
   return (
-    <>
+    <div className="page-container">
       <Header config={SITE} />
       <div className="layout">
         <aside className="left-panel">
@@ -125,28 +125,19 @@ export function SimpleLayout() {
               onClick={() => setSelectedYear(selectedYear === y ? null : y)}
               onMouseEnter={() => {
                 if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current)
-                hoverTimerRef.current = setTimeout(() => setShowSvgYear(y), 600)
+                hoverTimerRef.current = setTimeout(() => setShowSvgYear(y), 1000)
               }}
               onMouseLeave={() => {
                 if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current)
                 setShowSvgYear(null)
               }}
             >
-              <div
-                className="year-label"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  setShowYearModal(y)
-                }}
-                style={{ cursor: 'pointer' }}
-              >
-                {y}
-              </div>
+              <div className="year-label">{y}</div>
               <YearStats year={y} />
               {showSvgYear === y && (
                 <div className="year-hover-svgs">
-                  <YearGridSVG year={y} activities={activities} />
-                  <YearBarSVG year={y} activities={activities} />
+                  <CircularDrawer year={y} activities={activities} />
+                  <GithubDrawer year={y} activities={activities} />
                 </div>
               )}
               <hr className="section-divider" />
@@ -166,8 +157,15 @@ export function SimpleLayout() {
               onActivityHover={setMapHoveredId}
               onActivityClick={openDetail}
             />
+            <YearSelector />
             <MapOverlays />
           </div>
+          {selectedYear !== null && (
+            <div className="svg-stat-container" style={{ borderTop: '1px solid var(--color-hr-primary, #ef4444)', marginTop: 8 }}>
+              <YearSummaryDrawer year={selectedYear} activities={activities} />
+              <GithubDrawer year={selectedYear} activities={activities} />
+            </div>
+          )}
           <div className="table-area" ref={tableRef}>
             <div className="view-toggle">
               <button type="button" className={viewMode === 'table' ? 'active' : ''} onClick={() => setViewMode('table')}>
@@ -182,8 +180,7 @@ export function SimpleLayout() {
           </div>
         </main>
       </div>
-      <YearSummaryModal />
-    </>
+    </div>
   )
 }
 
@@ -228,15 +225,38 @@ function YearStats({ year }: { year: number | null }) {
 
   const paceStr = formatPace(stats.avgPace > 0 ? stats.avgPace : null)
 
+  const catStats = useMemo(() => {
+    const map = new Map<string, { count: number; distance: number }>()
+    for (const a of acts) {
+      const cat = a.sport_category ?? 'other'
+      const cur = map.get(cat) || { count: 0, distance: 0 }
+      cur.count++
+      cur.distance += a.distance ?? 0
+      map.set(cat, cur)
+    }
+    return Array.from(map.entries()).sort((a, b) => b[1].distance - a[1].distance)
+  }, [acts])
+
   return (
-    <div className="stats-row">
-      <Stat value={stats.count} description="runs" />
-      <Stat value={stats.distance / 1000} description="km" />
-      {stats.elev > 0 && <Stat value={Math.round(stats.elev)} description="m" />}
-      <span className="stat-item">
-        <strong>{paceStr}</strong>
-      </span>
-      {stats.avgHr > 0 && <Stat value={stats.avgHr} description="bpm" />}
+    <div>
+      <div className="stats-row">
+        <Stat value={stats.count} description="runs" />
+        <Stat value={stats.distance / 1000} description="km" />
+        {stats.elev > 0 && <Stat value={Math.round(stats.elev)} description="m" />}
+        <span className="stat-item">
+          <strong>{paceStr}</strong>
+        </span>
+        {stats.avgHr > 0 && <Stat value={stats.avgHr} description="bpm" />}
+      </div>
+      {catStats.length > 1 && (
+        <div style={{ marginTop: '0.3rem', fontSize: '0.75rem', color: 'var(--color-text-dim)' }}>
+          {catStats.map(([cat, st]) => (
+            <span key={cat} style={{ marginRight: '0.75rem' }}>
+              {cat}: {st.count} / {(st.distance / 1000).toFixed(0)}km
+            </span>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
