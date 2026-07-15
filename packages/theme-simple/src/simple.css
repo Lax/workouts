@@ -319,13 +319,6 @@
   padding-right: 1.5rem;
 }
 
-.year-block.active {
-  background: var(--color-active-row);
-  margin: 0 -1.5rem;
-  padding-left: 1.5rem;
-  padding-right: 1.5rem;
-}
-
 .year-label {
   font-size: 1.1rem;
   font-weight: 700;
@@ -333,7 +326,7 @@
   margin-bottom: 0.5rem;
 }
 
-.stats-row {
+.year-stats {
   display: flex;
   flex-wrap: wrap;
   gap: 0.25rem 0.75rem;
@@ -347,6 +340,12 @@
 .stat-item strong {
   color: var(--color-text);
   font-weight: 600;
+}
+
+.stat-desc {
+  font-size: 0.8rem;
+  color: var(--color-text-secondary);
+  margin-left: 0.15rem;
 }
 
 .year-hover-svgs {

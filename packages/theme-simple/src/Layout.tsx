@@ -115,33 +115,40 @@ export function SimpleLayout() {
           <div className={`year-block${selectedYear === null ? ' active' : ''}`} onClick={() => setSelectedYear(null)}>
             <div className="year-label">Total</div>
             <YearStats year={null} />
-            <hr className="section-divider" />
           </div>
-          {years.map((y) => (
-            <div
-              key={y}
-              className={`year-block${selectedYear === y ? ' active' : ''}`}
-              onClick={() => setSelectedYear(selectedYear === y ? null : y)}
-              onMouseEnter={() => {
-                if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current)
-                hoverTimerRef.current = setTimeout(() => setShowSvgYear(y), 300)
-              }}
-              onMouseLeave={() => {
-                if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current)
-                setShowSvgYear(null)
-              }}
-            >
-              <div className="year-label">{y}</div>
-              <YearStats year={y} />
-              {showSvgYear === y && (
-                <div className="year-hover-svgs">
-                  <CircularDrawer year={y} activities={activities} />
-                  <GithubDrawer year={y} activities={activities} />
-                </div>
-              )}
-              <hr className="section-divider" />
+          {/* Selected year first, then other years descending */}
+          {selectedYear !== null && (
+            <div key={selectedYear} className="year-block" onClick={() => setSelectedYear(null)}>
+              <div className="year-label">{selectedYear}</div>
+              <YearStats year={selectedYear} />
             </div>
-          ))}
+          )}
+          {years
+            .filter((y) => y !== selectedYear)
+            .map((y) => (
+              <div
+                key={y}
+                className="year-block"
+                onClick={() => setSelectedYear(selectedYear === y ? null : y)}
+                onMouseEnter={() => {
+                  if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current)
+                  hoverTimerRef.current = setTimeout(() => setShowSvgYear(y), 1000)
+                }}
+                onMouseLeave={() => {
+                  if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current)
+                  setShowSvgYear(null)
+                }}
+              >
+                <div className="year-label">{y}</div>
+                <YearStats year={y} />
+                {showSvgYear === y && (
+                  <div className="year-hover-svgs">
+                    <CircularDrawer year={y} activities={activities} />
+                    <GithubDrawer year={y} activities={activities} />
+                  </div>
+                )}
+              </div>
+            ))}
         </aside>
         <main className="right-panel">
           <div className="map-wrapper">
@@ -202,71 +209,65 @@ function YearStats({ year }: { year: number | null }) {
   )
 
   const stats = useMemo(() => {
-    let totalDist = 0
-    let totalTime = 0
-    let totalHr = 0
-    let hrCount = 0
-    let totalElev = 0
-    let totalPaceDist = 0
-    let totalPaceTime = 0
+    let totalDist = 0,
+      hrTotal = 0,
+      hrCount = 0,
+      totalElev = 0,
+      totalPaceDist = 0,
+      totalPaceTime = 0
+    const daySet = new Set<string>()
+    const dates: string[] = []
     for (const a of acts) {
       totalDist += a.distance ?? 0
-      totalTime += a.moving_time ?? 0
       totalElev += a.elevation_gain ?? 0
       if (a.average_heartrate) {
-        totalHr += a.average_heartrate
+        hrTotal += a.average_heartrate
         hrCount++
       }
       if (a.average_speed && a.average_speed > 0) {
         totalPaceDist += a.distance ?? 0
         totalPaceTime += (a.distance ?? 0) / a.average_speed
       }
+      const dayKey = a.start_date?.slice(0, 10)
+      if (dayKey && !daySet.has(dayKey)) {
+        daySet.add(dayKey)
+        dates.push(dayKey)
+      }
+    }
+    dates.sort()
+    let streak = dates.length > 0 ? 1 : 0,
+      current = 1
+    for (let i = 1; i < dates.length; i++) {
+      const diff = (new Date(dates[i]).getTime() - new Date(dates[i - 1]).getTime()) / 86400000
+      if (Math.round(diff) === 1) {
+        current++
+        if (current > streak) streak = current
+      } else current = 1
     }
     const avgPace = totalPaceTime > 0 ? totalPaceDist / totalPaceTime : 0
     return {
       count: acts.length,
       distance: totalDist,
-      time: totalTime,
       elev: totalElev,
-      avgHr: hrCount > 0 ? totalHr / hrCount : 0,
+      avgHr: hrCount > 0 ? Math.round(hrTotal / hrCount) : 0,
       avgPace,
+      streak,
     }
   }, [acts])
 
   const paceStr = formatPace(stats.avgPace > 0 ? stats.avgPace : null)
 
-  const catStats = useMemo(() => {
-    const map = new Map<string, { count: number; distance: number }>()
-    for (const a of acts) {
-      const cat = a.sport_category ?? 'other'
-      const cur = map.get(cat) || { count: 0, distance: 0 }
-      cur.count++
-      cur.distance += a.distance ?? 0
-      map.set(cat, cur)
-    }
-    return Array.from(map.entries()).sort((a, b) => b[1].distance - a[1].distance)
-  }, [acts])
-
   return (
-    <div>
-      <div className="stats-row">
-        <Stat value={stats.count} description="runs" />
-        <Stat value={stats.distance / 1000} description="km" />
-        {stats.elev > 0 && <Stat value={Math.round(stats.elev)} description="m" />}
-        <span className="stat-item">
-          <strong>{paceStr}</strong>
-        </span>
-        {stats.avgHr > 0 && <Stat value={stats.avgHr} description="bpm" />}
-      </div>
-      {catStats.length > 1 && (
-        <div style={{ marginTop: '0.3rem', fontSize: '0.75rem', color: 'var(--color-text-dim)' }}>
-          {catStats.map(([cat, st]) => (
-            <span key={cat} style={{ marginRight: '0.75rem' }}>
-              {cat}: {st.count} / {(st.distance / 1000).toFixed(0)}km
-            </span>
-          ))}
-        </div>
-      )}
+    <div className="year-stats">
+      <Stat value={stats.count} description=" Runs" />
+      <Stat value={(stats.distance / 1000).toFixed(1)} description=" km" />
+      {stats.elev > 0 && <Stat value={Math.round(stats.elev)} description=" Elevation Gain" />}
+      <span className="stat-item">
+        <strong>{paceStr}</strong>
+        <span className="stat-desc"> Avg Pace</span>
+      </span>
+      <Stat value={`${stats.streak} day`} description=" Streak" />
+      {stats.avgHr > 0 && <Stat value={stats.avgHr} description=" Avg Heart Rate" />}
     </div>
   )
 }
