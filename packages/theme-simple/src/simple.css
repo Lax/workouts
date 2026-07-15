@@ -179,7 +179,7 @@
 }
 
 .map-year-selector {
-  position: absolute; left: 10px; top: 50%; transform: translateY(-50%); z-index: 1;
+  position: absolute; left: 10px; top: 50%; transform: translateY(-50%); z-index: 1001;
   pointer-events: none;
   display: flex;
   flex-direction: column;
@@ -266,9 +266,9 @@
   opacity: 1;
 }
 
-.map-overlays { position: absolute; bottom: 10px; left: 10px; z-index: 1; }
-.map-lights { position: absolute; right: 10px; top: 48px; z-index: 1; }
-.map-fullscreen { position: absolute; right: 10px; top: 10px; z-index: 1; }
+.map-overlays { position: absolute; bottom: 10px; left: 10px; z-index: 1001; }
+.map-lights { position: absolute; right: 10px; top: 48px; z-index: 1001; }
+.map-fullscreen { position: absolute; right: 10px; top: 10px; z-index: 1001; }
 
 .legend-area {
   display: flex;

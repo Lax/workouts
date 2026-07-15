@@ -304,8 +304,8 @@ describe('YearSelector CSS — positioning and arrangement', () => {
     expect(style.position).toBe('absolute')
     expect(style.left).toBe('10px')
     expect(style.top).toBe('50%')
-    expect(style.zIndex).toBe('1')
-
+    expect(style.zIndex).toBe('1001')
+ 
     document.body.removeChild(wrapper)
   })
 
@@ -388,7 +388,7 @@ describe('YearSelector CSS — positioning and arrangement', () => {
     expect(style.position).toBe('absolute')
     expect(style.right).toBe('10px')
     expect(style.top).toBe('48px')
-    expect(style.zIndex).toBe('1')
+    expect(style.zIndex).toBe('1001')
 
     document.body.removeChild(el)
   })
@@ -542,7 +542,7 @@ describe('Visual integration — header and map overlays', () => {
     expect(style.position).toBe('absolute')
     expect(style.bottom).toBe('10px')
     expect(style.left).toBe('10px')
-    expect(style.zIndex).toBe('1')
+    expect(style.zIndex).toBe('1001')
 
     document.body.removeChild(wrapper)
   })

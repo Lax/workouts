@@ -399,24 +399,137 @@ test('overview theme toggle preserves map zoom and center', async ({ page }) => 
 
 // ──────── Simple Theme — Map Controls ────────
 
-test('simple theme shows lights toggle', async ({ page }) => {
+test('lights toggle button is visible with proper background on map', async ({ page }) => {
   await waitLoaded(page)
   const lights = page.locator('button[aria-label="Hide labels"], button[aria-label="Show labels"]')
   await expect(lights).toBeVisible()
+
+  const box = await lights.boundingBox()
+  expect(box).not.toBeNull()
+  expect(box!.width).toBe(34)
+  expect(box!.height).toBe(34)
+
+  const info = await lights.evaluate((el) => {
+    const cs = getComputedStyle(el)
+    return {
+      bg: cs.backgroundColor,
+      border: cs.border,
+      shadow: cs.boxShadow,
+      borderRadius: cs.borderRadius,
+      display: cs.display,
+      opacity: cs.opacity,
+      rect: el.getBoundingClientRect(),
+    }
+  })
+  expect(info.bg).not.toBe('transparent')
+  expect(info.bg).not.toBe('rgba(0, 0, 0, 0)')
+  expect(info.display).toBe('flex')
+  expect(info.opacity).toBe('1')
+  expect(parseFloat(info.borderRadius)).toBeGreaterThanOrEqual(4)
+  // Verify it's within map wrapper
+  const mapBox = await page.locator('.map-wrapper').boundingBox()
+  expect(mapBox).not.toBeNull()
+  expect(info.rect.x).toBeGreaterThanOrEqual(mapBox!.x - 1)
+  expect(info.rect.x + info.rect.width).toBeLessThanOrEqual(mapBox!.x + mapBox!.width + 1)
+  // Verify it doesn't overlap Leaflet zoom
+  const zoomBtn = page.locator('.leaflet-control-zoom a').first()
+  if (await zoomBtn.isVisible()) {
+    const zb = await zoomBtn.boundingBox()
+    if (zb) {
+      const noOverlap = info.rect.right < zb.x || info.rect.x > zb.x + zb.width ||
+        info.rect.bottom < zb.y || info.rect.y > zb.y + zb.height
+      expect(noOverlap).toBe(true)
+    }
+  }
 })
 
-test('simple theme shows fullscreen button', async ({ page }) => {
+test('fullscreen button has control-btn styling and visible background', async ({ page }) => {
   await waitLoaded(page)
   const fsBtn = page.locator('button[aria-label="Fullscreen"]')
   await expect(fsBtn).toBeVisible()
+
+  const box = await fsBtn.boundingBox()
+  expect(box).not.toBeNull()
+  expect(box!.width).toBe(34)
+  expect(box!.height).toBe(34)
+
+  const info = await fsBtn.evaluate((el) => {
+    const cs = getComputedStyle(el)
+    return {
+      bg: cs.backgroundColor,
+      border: cs.border,
+      shadow: cs.boxShadow,
+      borderRadius: cs.borderRadius,
+      display: cs.display,
+      opacity: cs.opacity,
+      rect: el.getBoundingClientRect(),
+    }
+  })
+  expect(info.bg).not.toBe('transparent')
+  expect(info.bg).not.toBe('rgba(0, 0, 0, 0)')
+  expect(info.display).toBe('flex')
+  expect(info.opacity).toBe('1')
+  expect(parseFloat(info.borderRadius)).toBeGreaterThanOrEqual(4)
+
+  const mapBox = await page.locator('.map-wrapper').boundingBox()
+  expect(mapBox).not.toBeNull()
+  expect(info.rect.x).toBeGreaterThanOrEqual(mapBox!.x)
+  expect(info.rect.x + info.rect.width).toBeLessThanOrEqual(mapBox!.x + mapBox!.width + 1)
 })
 
-test('lights toggle changes aria-label on click', async ({ page }) => {
+test('lights and fullscreen buttons maintain correct background in dark mode', async ({ page }) => {
+  await waitLoaded(page)
+  await page.evaluate(() => document.documentElement.setAttribute('data-theme', 'dark'))
+  await page.waitForTimeout(500)
+
+  for (const ariaLabel of ['Hide labels', 'Show labels', 'Fullscreen']) {
+    const btn = page.locator(`button[aria-label="${ariaLabel}"]`)
+    if (await btn.count() === 0) continue
+    const bg = await btn.evaluate((el) => getComputedStyle(el).backgroundColor)
+    expect(bg).not.toBe('transparent')
+    expect(bg).not.toBe('rgba(0, 0, 0, 0)')
+    // In dark mode, surface is dark (not white)
+    const isDark = bg !== 'rgb(255, 255, 255)' && bg !== 'rgba(255, 255, 255, 1)'
+    expect(isDark).toBe(true)
+  }
+})
+
+test('lights toggle aria-label toggles on click', async ({ page }) => {
   await waitLoaded(page)
   const lights = page.locator('button[aria-label="Hide labels"]')
   await expect(lights).toBeVisible()
   await lights.click()
   await expect(page.locator('button[aria-label="Show labels"]')).toBeVisible()
+})
+
+test('lights and fullscreen containers have absolute positioning and z-index 1', async ({ page }) => {
+  await waitLoaded(page)
+  for (const sel of ['.map-lights', '.map-fullscreen']) {
+    const el = page.locator(sel)
+    await expect(el).toBeAttached()
+    const pos = await el.evaluate((node) => ({
+      position: getComputedStyle(node).position,
+      zIndex: getComputedStyle(node).zIndex,
+    }))
+    expect(pos.position).toBe('absolute')
+    expect(pos.zIndex).toBe('1001')
+  }
+})
+
+test('lights and fullscreen buttons are positioned at top-right of map', async ({ page }) => {
+  await waitLoaded(page)
+  const mapBox = await page.locator('.map-wrapper').boundingBox()
+  expect(mapBox).not.toBeNull()
+  const mapRight = mapBox!.x + mapBox!.width
+
+  for (const sel of ['.map-lights', '.map-fullscreen']) {
+    const box = await page.locator(sel).boundingBox()
+    expect(box).not.toBeNull()
+    // Within the right 50px of the map wrapper
+    expect(box!.x + box!.width).toBeGreaterThan(mapRight - 50)
+    // In the top half of the map wrapper
+    expect(box!.y).toBeLessThan(mapBox!.y + mapBox!.height / 2)
+  }
 })
 
 // ──────── Simple Theme — Layout Integration ────────
