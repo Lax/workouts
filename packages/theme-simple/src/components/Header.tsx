@@ -1,15 +1,17 @@
+import { useState } from 'react'
 import { useSimpleStore } from '../store'
 
-interface NavLink {
+interface NavLinkItem {
   name: string
-  url: string
+  url?: string
+  children?: { name: string; url: string }[]
 }
 
 interface SiteConfig {
   title: string
   url: string
   logo: string | null
-  navLinks: NavLink[]
+  navLinks: NavLinkItem[]
 }
 
 export function Header({ config }: { config: SiteConfig }) {
@@ -17,6 +19,7 @@ export function Header({ config }: { config: SiteConfig }) {
   const toggleTheme = useSimpleStore((s) => s.toggleTheme)
   const view = useSimpleStore((s) => s.view)
   const setView = useSimpleStore((s) => s.setView)
+  const [menuOpen, setMenuOpen] = useState(false)
 
   const githubUser = import.meta.env.VITE_GITHUB_USER
 
@@ -38,22 +41,27 @@ export function Header({ config }: { config: SiteConfig }) {
         )}
       </div>
       <div className="nav-area">
-        {config.navLinks.map((n) => (
-          <a key={n.url} className="nav-link" href={n.url}>
-            {n.name}
-          </a>
-        ))}
         {view === 'main' && (
-          <button
-            type="button"
-            className="nav-link"
-            onClick={() => setView('summary')}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 'inherit' }}
-          >
-            Summary
+          <button type="button" className="header-btn" onClick={() => setView('summary')} aria-label="Summary">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth={1.5}
+              stroke="currentColor"
+              width={20}
+              height={20}
+              aria-hidden="true"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z"
+              />
+            </svg>
           </button>
         )}
-        <button type="button" className="theme-btn" onClick={toggleTheme} aria-label="Toggle theme">
+        <button type="button" className="header-btn" onClick={toggleTheme} aria-label="Toggle theme">
           {colorScheme === 'dark' ? (
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -90,6 +98,49 @@ export function Header({ config }: { config: SiteConfig }) {
             </svg>
           )}
         </button>
+        <div className="header-dropdown">
+          <button type="button" className="header-btn" onClick={() => setMenuOpen(!menuOpen)} aria-label="Menu" aria-expanded={menuOpen}>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth={1.5}
+              stroke="currentColor"
+              width={20}
+              height={20}
+              aria-hidden="true"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d={menuOpen ? 'M6 18 18 6M6 6l12 12' : 'M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5'}
+              />
+            </svg>
+          </button>
+          {menuOpen && (
+            <>
+              <div className="header-dropdown-backdrop" onClick={() => setMenuOpen(false)} />
+              <div className="header-dropdown-menu">
+                {config.navLinks.map((item) =>
+                  item.children ? (
+                    <div key={item.name} className="header-dropdown-group">
+                      <div className="header-dropdown-group-label">{item.name}</div>
+                      {item.children.map((child) => (
+                        <a key={child.url} className="header-dropdown-item" href={child.url} onClick={() => setMenuOpen(false)}>
+                          {child.name}
+                        </a>
+                      ))}
+                    </div>
+                  ) : (
+                    <a key={item.url} className="header-dropdown-item" href={item.url!} onClick={() => setMenuOpen(false)}>
+                      {item.name}
+                    </a>
+                  ),
+                )}
+              </div>
+            </>
+          )}
+        </div>
       </div>
     </header>
   )
