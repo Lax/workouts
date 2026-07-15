@@ -112,15 +112,11 @@ export function SimpleLayout() {
           </section>
           <LocationStats activities={activities} />
           <hr className="section-divider" />
-          <div className={`year-block${selectedYear === null ? ' active' : ''}`} onClick={() => setSelectedYear(null)}>
-            <div className="year-label">Total</div>
-            <YearStats year={null} />
-          </div>
-          {/* Selected year first, then other years descending */}
+          {/* Selected year first, then other years descending, then Total */}
           {selectedYear !== null && (
-            <div key={selectedYear} className="year-block" onClick={() => setSelectedYear(null)}>
-              <div className="year-label">{selectedYear}</div>
+            <div className="year-block year-block-selected" onClick={() => setSelectedYear(null)}>
               <YearStats year={selectedYear} />
+              <hr className="section-divider" />
             </div>
           )}
           {years
@@ -139,7 +135,6 @@ export function SimpleLayout() {
                   setShowSvgYear(null)
                 }}
               >
-                <div className="year-label">{y}</div>
                 <YearStats year={y} />
                 {showSvgYear === y && (
                   <div className="year-hover-svgs">
@@ -147,8 +142,12 @@ export function SimpleLayout() {
                     <GithubDrawer year={y} activities={activities} />
                   </div>
                 )}
+                <hr className="section-divider" />
               </div>
             ))}
+          <div className="year-block" onClick={() => setSelectedYear(null)}>
+            <YearStats year={null} />
+          </div>
         </aside>
         <main className="right-panel">
           <div className="map-wrapper">
@@ -258,16 +257,21 @@ function YearStats({ year }: { year: number | null }) {
   const paceStr = formatPace(stats.avgPace > 0 ? stats.avgPace : null)
 
   return (
-    <div className="year-stats">
-      <Stat value={stats.count} description=" Runs" />
-      <Stat value={(stats.distance / 1000).toFixed(1)} description=" km" />
-      {stats.elev > 0 && <Stat value={Math.round(stats.elev)} description=" Elevation Gain" />}
-      <span className="stat-item">
-        <strong>{paceStr}</strong>
-        <span className="stat-desc"> Avg Pace</span>
-      </span>
-      <Stat value={`${stats.streak} day`} description=" Streak" />
-      {stats.avgHr > 0 && <Stat value={stats.avgHr} description=" Avg Heart Rate" />}
+    <div>
+      {[
+        { v: year !== null ? String(year) : 'Total', d: ' Journey' },
+        { v: stats.count, d: ' Runs' },
+        { v: (stats.distance / 1000).toFixed(1), d: ' km' },
+        ...(stats.elev > 0 ? [{ v: Math.round(stats.elev), d: ' Elevation Gain' }] : []),
+        { v: paceStr, d: ' Avg Pace' },
+        { v: `${stats.streak} day`, d: ' Streak' },
+        ...(stats.avgHr > 0 ? [{ v: stats.avgHr, d: ' Avg Heart Rate' }] : []),
+      ].map((s) => (
+        <div key={s.d} className="stat-line">
+          <span className="stat-val">{s.v}</span>
+          <span className="stat-label">{s.d}</span>
+        </div>
+      ))}
     </div>
   )
 }

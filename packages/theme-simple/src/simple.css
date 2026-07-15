@@ -332,20 +332,51 @@
   gap: 0.25rem 0.75rem;
 }
 
-.stat-item {
-  font-size: 0.8rem;
-  color: var(--color-text-secondary);
-}
-
-.stat-item strong {
+.stat-value {
+  font-size: 1rem;
+  font-weight: 700;
+  font-style: italic;
   color: var(--color-text);
-  font-weight: 600;
+  margin-right: 0.15rem;
 }
 
 .stat-desc {
   font-size: 0.8rem;
+  font-weight: 600;
+  font-style: italic;
   color: var(--color-text-secondary);
-  margin-left: 0.15rem;
+}
+
+.year-block-selected {
+  cursor: pointer;
+  padding: 0.75rem 0;
+}
+
+.year-block-selected:hover {
+  background: transparent;
+  margin: 0 -1.5rem;
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
+}
+
+.stat-line {
+  padding-bottom: 0.5rem;
+  width: 100%;
+}
+
+.stat-val {
+  font-size: 1rem;
+  font-weight: 700;
+  font-style: italic;
+  color: var(--color-text);
+  margin-right: 0.15rem;
+}
+
+.stat-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  font-style: italic;
+  color: var(--color-text-secondary);
 }
 
 .year-hover-svgs {

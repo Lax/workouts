@@ -389,8 +389,8 @@ test('simple theme has two-column layout', async ({ page }) => {
 test('simple theme shows year blocks in left panel', async ({ page }) => {
   await waitLoaded(page)
   await expect(page.locator('.year-block').first()).toBeVisible()
-  await expect(page.locator('.year-label').first()).toBeVisible()
-  await expect(page.locator('.stat-item').first()).toBeVisible()
+  await expect(page.locator('.stat-val').first()).toBeVisible()
+  await expect(page.locator('.stat-label').first()).toBeVisible()
 })
 
 test('simple theme shows run table with sortable headers', async ({ page }) => {
@@ -476,11 +476,10 @@ test('clicking year block filters table', async ({ page }) => {
   await waitLoaded(page)
   const blocks = page.locator('.year-block')
   await expect(blocks.first()).toBeVisible()
-  // Click third block (idx 0=Total, 1=default selected year, 2=other year)
-  const thirdBlock = blocks.nth(2)
-  if (await thirdBlock.isVisible()) {
-    await thirdBlock.click()
-    // Selected year moves to first position; verify table still renders
+  // Click second block (idx 0=auto-selected year, 1=other year)
+  const secondBlock = blocks.nth(1)
+  if (await secondBlock.isVisible()) {
+    await secondBlock.click()
   }
   await expect(page.locator('.run-table tbody tr')).not.toHaveCount(0)
 })
