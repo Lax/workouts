@@ -1,11 +1,11 @@
 ---
 name: meow
-description: Structured multi-phase development workflow with 5 auto-orchestrated stages (require → plan → develop → QA → release). Each phase runs as independent subagent with handoff communication, QA auto-loop, strict role boundaries. Use for "bug fix", "new feature", "improvement", "implement" tasks.
+description: Structured multi-phase development workflow with 5 auto-orchestrated stages (spec → plan → craft → verify → deliver). Each phase runs as independent subagent with handoff communication, verify auto-loop, strict role boundaries. Use for "bug fix", "new feature", "improvement", "implement" tasks.
 ---
 
 # Meow — Multi-Agent Development Lifecycle 🐱
 
-5-phase loop: **🧭 1/5 Require → 📐 2/5 Plan → 🛠️ 3/5 Develop → 🔬 4/5 QA → 🚀 5/5 Release**
+5-phase loop: **📋 1/5 Spec → 📐 2/5 Plan → 🔨 3/5 Craft → 🔬 4/5 Verify → 🚀 5/5 Deliver**
 
 ```
 skill("meow")
@@ -18,7 +18,7 @@ Activate → announce: `🐱 Meow! Meow workflow active.`
 ## Pipeline Overview
 
 ```
-🧭 1/5 Require ──→ 📐 2/5 Plan ──→ 🛠️ 3/5 Develop ──→ 🔬 4/5 QA ──→ 🚀 5/5 Release
+📋 1/5 Spec ──→ 📐 2/5 Plan ──→ 🔨 3/5 Craft ──→ 🔬 4/5 Verify ──→ 🚀 5/5 Deliver
      ↑                 ↑ [approval]      ↑                  ↑              ↑
    done             pending           done               passed         done + CI
 ```
@@ -33,21 +33,21 @@ Orchestrator uses `todowrite` to show live progress. Three levels:
 
 | # | Item | Status transitions |
 |---|---|---|
-| 1/5 | 🧭 Require | pending → in_progress → completed |
+| 1/5 | 📋 Spec | pending → in_progress → completed |
 | 2/5 | 📐 Plan | pending → in_progress → pending_approval → completed |
-| 3/5 | 🛠️ Develop | pending → in_progress → completed |
-| 4/5 | 🔬 QA | pending → in_progress → passed / escalated |
-| 5/5 | 🚀 Release | pending → in_progress → completed |
+| 3/5 | 🔨 Craft | pending → in_progress → completed |
+| 4/5 | 🔬 Verify | pending → in_progress → passed / escalated |
+| 5/5 | 🚀 Deliver | pending → in_progress → completed |
 
 ### Level 2 — Sub-task todos (phase-dependent)
 
 | Phase | Strategy | How it's generated |
 |---|---|---|
-| Require | Fixed | scan → write |
+| Spec | Fixed | scan → write |
 | Plan | Fixed | audit → design → approve |
-| Develop | **Dynamic** | Read `02-plan.md` file change list → one todo per file |
-| QA | Semi-fixed | test → verify → decide (+ dynamic from `03-dev.md`) |
-| Release | Fixed | summary → commit → CI |
+| Craft | **Dynamic** | Read `02-plan.md` file change list → one todo per file |
+| Verify | Semi-fixed | test → check → decide (+ dynamic from `03-craft.md`) |
+| Deliver | Fixed | summary → commit → CI |
 
 ### Dynamic todo rules
 
@@ -59,17 +59,17 @@ Orchestrator uses `todowrite` to show live progress. Three levels:
 
 | Abbr | Full | Apply |
 |---|---|---|
-| BIF | Bug ships with test that reproduces it | Development |
-| EPF | Error paths before happy path | Development |
-| PFC | Prefer Flat over Clever — extract after 3+ repetitions | Plan, Development |
+| BIF | Bug ships with test that reproduces it | Craft |
+| EPF | Error paths before happy path | Craft |
+| PFC | Prefer Flat over Clever — extract after 3+ repetitions | Plan, Craft |
 | SAP | Single Answer Principle — one standard answer per question | All phases |
-| FAI | Fail-fast with Actionable Info — error + fix command | Development, QA |
-| TDA | Test Duality Assertion — test normal + error path | Development |
+| FAI | Fail-fast with Actionable Info — error + fix command | Craft, Verify |
+| TDA | Test Duality Assertion — test normal + error path | Craft |
 | OHA | One Hour Ahead — validate approach before implementing | Plan gate |
-| RUM | Read file fully before editing | Development |
-| MVC | Modify only intended, don't fix tangental issues | Development |
+| RUM | Read file fully before editing | Craft |
+| MVC | Modify only intended, don't fix tangental issues | Craft |
 | KISS | Simple > clever | All phases |
-| DRY | Don't repeat existing logic | Plan, Development |
+| DRY | Don't repeat existing logic | Plan, Craft |
 | YAGNI | Not implement what isn't needed | Plan |
 
 ## Phase Definitions
@@ -81,13 +81,13 @@ Orchestrator uses `todowrite` to show live progress. Three levels:
 - Gates must pass before transition (see each phase gate).
 - Orchestrator maintains todowrite per Progress Display section.
 
-### Phase 1/5: Require — 需求入口
+### Phase 1/5: Spec — 规格定义
 
 | Field | Value |
 |---|---|
 | subagent_type | `explore` → `general` |
 | skills | `grill-with-docs` |
-| handoff | `01-req.md` |
+| handoff | `01-spec.md` |
 | gate | handoff exists, Done Criteria are testable |
 
 **Orchestrator prep** (before launching subagent):
@@ -101,15 +101,15 @@ fi
 write status.json with phases all pending
 
 # Level 1 — 5 phase todos
-todowrite("1/5 🧭 Require" → in_progress, priority high)
+todowrite("1/5 📋 Spec" → in_progress, priority high)
 todowrite("2/5 📐 Plan" → pending, priority high)
-todowrite("3/5 🛠️ Develop" → pending, priority high)
-todowrite("4/5 🔬 QA" → pending, priority high)
-todowrite("5/5 🚀 Release" → pending, priority high)
+todowrite("3/5 🔨 Craft" → pending, priority high)
+todowrite("4/5 🔬 Verify" → pending, priority high)
+todowrite("5/5 🚀 Deliver" → pending, priority high)
 
-# Level 2 — Require sub-tasks (fixed)
-todowrite("Require: scan" → in_progress)
-todowrite("Require: write" → pending)
+# Level 2 — Spec sub-tasks (fixed)
+todowrite("Spec: scan" → in_progress)
+todowrite("Spec: write" → pending)
 ```
 
 **explore probe:**
@@ -121,13 +121,13 @@ Return: file paths, brief descriptions, key types/functions.
 
 **general prompt:**
 ```
-You are Requirement Analyst. Input:
+You are Specifier. Input:
 Task: {task description}
 Codebase scan: {explore output}
 
 1. Load grill-with-docs, understand against existing docs.
 2. Define: What (scope), Why (value), Done Criteria (testable), Edge Cases (≥3), Constraints.
-3. Write handoff to {workflow_dir}/01-req.md
+3. Write handoff to {workflow_dir}/01-spec.md
 4. Update {workflow_dir}/status.json phase=completed
 
 SAP, KISS. Do NOT: propose solutions, estimate time.
@@ -136,9 +136,9 @@ SAP, KISS. Do NOT: propose solutions, estimate time.
 **Orchestrator transition** (after subagent returns):
 
 ```
-todowrite("Require: scan" → completed)
-todowrite("Require: write" → completed)
-todowrite("1/5 🧭 Require" → completed)
+todowrite("Spec: scan" → completed)
+todowrite("Spec: write" → completed)
+todowrite("1/5 📋 Spec" → completed)
 todowrite("2/5 📐 Plan" → in_progress)
 
 # Level 2 — Plan sub-tasks (fixed: 3 steps)
@@ -158,16 +158,16 @@ todowrite("Plan: approve" → pending)
 
 **code-review audit:**
 ```
-Read-only audit of {workflow_dir}/01-req.md.
-Read all files mentioned in the requirement's affected file list (if any).
+Read-only audit of {workflow_dir}/01-spec.md.
+Read all files mentioned in the spec's affected file list (if any).
 Check: achievable with current codebase? Files affected? Patterns?
-Return: audit notes + file contents read (for architect reference).
+Return: audit notes + file contents read (for planner reference).
 ```
 
 **general prompt:**
 ```
-You are Architect. Input:
-Requirement: {workflow_dir}/01-req.md
+You are Planner. Input:
+Spec: {workflow_dir}/01-spec.md
 Audit: {code-review output}
 
 Design:
@@ -176,7 +176,7 @@ Design:
 3. Implementation steps — ordered by dependency
 4. Test strategy — what to test at each level
 
-Grill against req (grill-with-docs). Compress (caveman).
+Grill against spec (grill-with-docs). Compress (caveman).
 
 Verify: KISS, DRY, YAGNI, PFC, OHA (<1h implementation).
 Do NOT: change requirements, write code.
@@ -192,9 +192,9 @@ todowrite("Plan: audit" → completed)
 todowrite("Plan: design" → completed)
 todowrite("Plan: approve" → completed)
 todowrite("2/5 📐 Plan" → completed)
-todowrite("3/5 🛠️ Develop" → in_progress)
+todowrite("3/5 🔨 Craft" → in_progress)
 
-# Level 2 — Develop sub-tasks (dynamic from 02-plan.md file change list)
+# Level 2 — Craft sub-tasks (dynamic from 02-plan.md file change list)
 # Parse each file change entry → one todo per entry
 # Set first item in_progress, rest pending
 # Example:
@@ -202,25 +202,25 @@ todowrite("3/5 🛠️ Develop" → in_progress)
 #   todowrite("~ spec/export_spec.rb" → pending)
 ```
 
-### Phase 3/5: Develop — 编码实现
+### Phase 3/5: Craft — 编码实现
 
 | Field | Value |
 |---|---|
 | subagent_type | per task: `sync-dev` / `export-helper` / `spec-runner` / `frontend-dev` / `general` |
 | skill | `caveman` |
-| handoff | `03-dev.md` |
+| handoff | `03-craft.md` |
 | gate | biome + test + build pass |
 
 **Orchestrator prep** (before launching subagent):
 
 ```
-# Level 2 dev todos already created in Phase 2 transition
+# Level 2 craft todos already created in Phase 2 transition
 # Process them sequentially as subagent completes each step
 ```
 
 **general prompt:**
 ```
-You are Developer. Input:
+You are Crafter. Input:
 Plan: {workflow_dir}/02-plan.md
 Approved: yes
 
@@ -233,34 +233,34 @@ After all steps:
 1. npx biome check --write .
 2. npm run typecheck
 3. npm run test -w packages/web
-4. Write handoff to {workflow_dir}/03-dev.md
+4. Write handoff to {workflow_dir}/03-craft.md
 5. Update status.json
 ```
 
 **Orchestrator transition** (after subagent returns):
 
 ```
-# Mark dev sub-tasks completed (orchestrator tracks per-step progress)
-todowrite("3/5 🛠️ Develop" → completed)
-todowrite("4/5 🔬 QA" → in_progress)
+# Mark craft sub-tasks completed (orchestrator tracks per-step progress)
+todowrite("3/5 🔨 Craft" → completed)
+todowrite("4/5 🔬 Verify" → in_progress)
 
-# Level 2 — QA sub-tasks (semi-fixed skeleton)
-todowrite("QA: run tests" → in_progress)
-todowrite("QA: verify" → pending)
-todowrite("QA: decide" → pending)
+# Level 2 — Verify sub-tasks (semi-fixed skeleton)
+todowrite("Verify: run tests" → in_progress)
+todowrite("Verify: check" → pending)
+todowrite("Verify: decide" → pending)
 
-# Dynamic: if 03-dev.md mentions extra concerns
-# todowrite("QA: verify {specific concern}" → pending)
+# Dynamic: if 03-craft.md mentions extra concerns
+# todowrite("Verify: check {specific concern}" → pending)
 ```
 
-### Phase 4/5: QA — 质量检验
+### Phase 4/5: Verify — 质量核验
 
 | Field | Value |
 |---|---|
 | subagent_type | `frontend-dev` → `general` |
 | skill | `grillme` |
-| handoff | `04-qa.md` |
-| decision | passed / blocker→dev / escalated |
+| handoff | `04-verify.md` |
+| decision | passed / blocker→craft / escalated |
 
 **spec-runner probe:**
 ```
@@ -274,32 +274,32 @@ Return: raw output + exit codes.
 
 **general prompt:**
 ```
-You are QA Engineer. DO NOT propose fixes.
+You are Verifier. DO NOT propose fixes.
 Input: all handoffs + test results.
 
 Verify:
-1. Done Criteria from 01-req.md — check each.
-2. Plan consistency — dev output vs plan (files? scope?).
-3. Requirement consistency — dev output vs done criteria.
+1. Done Criteria from 01-spec.md — check each.
+2. Plan consistency — craft output vs plan (files? scope?).
+3. Spec consistency — craft output vs done criteria.
 4. Quality: FAI? Error paths? Hardcoded values?
 
 Severity: blocker (test/type/build failure) | major (criteria missed) | minor (style/naming)
 
-With minor issues: "passed → release" only if zero minors.
-If minors exist and plan+req match → "continue" (回 development
-to fix minors, no re-run QA. Orchestrator applies fixes directly).
+With minor issues: "passed → deliver" only if zero minors.
+If minors exist and plan+spec match → "continue" (回 craft
+to fix minors, no re-run Verify. Orchestrator applies fixes directly).
 
 Decision:
-| Tests | Plan match | Req match | Result |
+| Tests | Plan match | Spec match | Result |
 |---|---|---|---|
-| pass | yes | yes | passed → release |
+| pass | yes | yes | passed → deliver |
 | pass | yes | no | escalated |
-| pass | no | yes | 回 development |
+| pass | no | yes | 回 craft |
 | pass | no | no | escalated |
-| fail | any | any | blocker → dev |
+| fail | any | any | blocker → craft |
 | fail x3 | any | any | escalated |
 
-Root cause routing: dev≠plan → dev; plan≠req → plan; multi-phase → escalated.
+Root cause routing: craft≠plan → craft; plan≠spec → plan; multi-phase → escalated.
 
 Write handoff, update status.json.
 ```
@@ -307,43 +307,43 @@ Write handoff, update status.json.
 **Orchestrator transition** (after subagent returns):
 
 ```
-todowrite("QA: run tests" → completed)
-todowrite("QA: verify" → completed)
-todowrite("QA: decide" → completed)
+todowrite("Verify: run tests" → completed)
+todowrite("Verify: check" → completed)
+todowrite("Verify: decide" → completed)
 
-case {qa_decision}
+case {verify_decision}
 when "passed"
-  todowrite("4/5 🔬 QA" → passed)
-  todowrite("5/5 🚀 Release" → in_progress)
-  # Level 2 — Release sub-tasks (fixed)
-  todowrite("Release: summary" → in_progress)
-  todowrite("Release: commit" → pending)
-  todowrite("Release: CI" → pending)
+  todowrite("4/5 🔬 Verify" → passed)
+  todowrite("5/5 🚀 Deliver" → in_progress)
+  # Level 2 — Deliver sub-tasks (fixed)
+  todowrite("Deliver: summary" → in_progress)
+  todowrite("Deliver: commit" → pending)
+  todowrite("Deliver: CI" → pending)
 when "blocker"
-  todowrite("4/5 🔬 QA" → escalated)
-  todowrite("3/5 🛠️ Develop" → in_progress)
-  todowrite("Develop retry 1" → in_progress, priority high)
+  todowrite("4/5 🔬 Verify" → escalated)
+  todowrite("3/5 🔨 Craft" → in_progress)
+  todowrite("Craft retry 1" → in_progress, priority high)
 when "escalated"
-  todowrite("4/5 🔬 QA" → escalated)
+  todowrite("4/5 🔬 Verify" → escalated)
 end
 ```
 
-### Phase 5/5: Release — 发布交付
+### Phase 5/5: Deliver — 交付上线
 
 | Field | Value |
 |---|---|
 | subagent_type | `docs-writer` → `general` |
 | skill | `caveman` |
-| handoff | `05-release.md` |
-| depends_on | QA status=passed |
+| handoff | `05-deliver.md` |
+| depends_on | Verify status=passed |
 
 **general prompt:**
 ```
-You are Release Manager. Input:
-Requirement: {workflow_dir}/01-req.md
-QA report: {workflow_dir}/04-qa.md
+You are Deliverer. Input:
+Spec: {workflow_dir}/01-spec.md
+Verify report: {workflow_dir}/04-verify.md
 
-IMPORTANT: QA status MUST be "passed". If not, abort.
+IMPORTANT: Verify status MUST be "passed". If not, abort.
 
 1. Generate summary: change summary, scope, test results, known issues, rollback.
 
@@ -356,7 +356,7 @@ IMPORTANT: QA status MUST be "passed". If not, abort.
 3. Monitor CI:
    - gh run-watch --compact --exit-status   ← requires gh-run-watch installed
    - If failure → log error, recommend rollback
-   - If success → confirm release
+   - If success → confirm deliver
 
 4. Write handoff, update status.json to completed.
 5. Present final report.
@@ -367,10 +367,10 @@ CI check is non-negotiable gate.
 **Orchestrator transition** (after subagent returns):
 
 ```
-todowrite("Release: summary" → completed)
-todowrite("Release: commit" → completed)
-todowrite("Release: CI" → completed)
-todowrite("5/5 🚀 Release" → completed)
+todowrite("Deliver: summary" → completed)
+todowrite("Deliver: commit" → completed)
+todowrite("Deliver: CI" → completed)
+todowrite("5/5 🚀 Deliver" → completed)
 ```
 
 ## Dependencies
@@ -391,14 +391,14 @@ Predicts CI duration from recent runs (median), sleeps predictively, delegates t
   "created": "ISO datetime",
   "updated": "ISO datetime",
   "phases": {
-    "require": { "status": "pending / completed / blocked", "handoff": "01-req.md", "attempts": 0 },
-    "plan":        { "status": "pending / completed / pending_approval", "handoff": "02-plan.md", "attempts": 0 },
-    "development": { "status": "pending / completed / failed", "handoff": "03-dev.md", "attempts": 0 },
-    "qa":          { "status": "pending / passed / failed / escalated", "handoff": "04-qa.md", "attempts": 0 },
-    "release":     { "status": "pending / completed", "handoff": "05-release.md", "attempts": 0 }
+    "spec":     { "status": "pending / completed / blocked", "handoff": "01-spec.md", "attempts": 0 },
+    "plan":     { "status": "pending / completed / pending_approval", "handoff": "02-plan.md", "attempts": 0 },
+    "craft":    { "status": "pending / completed / failed", "handoff": "03-craft.md", "attempts": 0 },
+    "verify":   { "status": "pending / passed / failed / escalated", "handoff": "04-verify.md", "attempts": 0 },
+    "deliver":  { "status": "pending / completed", "handoff": "05-deliver.md", "attempts": 0 }
   },
   "escalations": [],
-  "retry_limits": { "development": 3, "qa": 3 }
+  "retry_limits": { "craft": 3, "verify": 3 }
 }
 ```
 
@@ -406,11 +406,11 @@ Predicts CI duration from recent runs (median), sleeps predictively, delegates t
 
 | Agent | Scope | Prohibited |
 |---|---|---|
-| Require | Understand problem, define done criteria | Design solutions, estimate time |
-| Plan | Design solution, assess impact | Change requirements, write code |
-| Develop | Implement per plan, write tests | Change reqs, redesign architecture |
-| QA | Run tests, check consistency, classify | Fix bugs, propose solutions |
-| Release | Write summary, commit, push | Change code or requirements |
+| Specifier | Understand problem, define done criteria | Design solutions, estimate time |
+| Planner | Design solution, assess impact | Change requirements, write code |
+| Crafter | Implement per plan, write tests | Change reqs, redesign architecture |
+| Verifier | Run tests, check consistency, classify | Fix bugs, propose solutions |
+| Deliverer | Write summary, commit, push | Change code or requirements |
 
 ## Handoff Template
 
@@ -430,7 +430,7 @@ Predicts CI duration from recent runs (median), sleeps predictively, delegates t
 
 ## Consistency Check
 - Plan match: {yes / no / n/a}
-- Req match: {yes / no / n/a}
+- Spec match: {yes / no / n/a}
 
 ## Open Issues
 - {issue}
@@ -444,11 +444,11 @@ Predicts CI duration from recent runs (median), sleeps predictively, delegates t
 ```
 .opencode/meoworks/YYYY-MM-DD-task-desc/
   status.json
-  01-req.md
+  01-spec.md
   02-plan.md
-  03-dev.md
-  04-qa.md
-  05-release.md
+  03-craft.md
+  04-verify.md
+  05-deliver.md
 ```
 
 Created at start. Agents read/write from `{workflow_dir}` = this directory. Automatically gitignored via `/.opencode/meoworks/` in `.gitignore`.
