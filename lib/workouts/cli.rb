@@ -1,6 +1,7 @@
 module Workouts
   require_relative "cli/export"
   require_relative "cli/db"
+  require_relative "cli/geo"
   require_relative "cli/migrate"
   require_relative "cli/sync"
 
@@ -58,6 +59,9 @@ module Workouts
 
     desc "db SUBCOMMAND", "Database operations"
     subcommand "db", DbCLI
+
+    desc "geo SUBCOMMAND", "Detect geographical administrative regions"
+    subcommand "geo", GeoCLI
 
     desc "init", "Generate default config.yml"
     def init

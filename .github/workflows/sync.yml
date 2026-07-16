@@ -98,6 +98,21 @@ jobs:
           MIGRATE__IGPSPORT_TO_GARMIN_CN__LIMIT: ${{ vars.MIGRATE_IGPSPORT_TO_GARMIN_CN_LIMIT || 10 }}
         run: bundle exec exe/workouts sync
 
+      - name: Restore geo cache
+        uses: actions/cache/restore@v4
+        id: geo-cache
+        with:
+          path: data/cache/geo-*.json
+          key: workouts-geo-v1-${{ hashFiles('db/migrations/*.rb') }}-${{ github.run_id }}
+          restore-keys: workouts-geo-v1-${{ hashFiles('db/migrations/*.rb') }}-
+
+      - name: Geo region detection
+        env:
+          AMAP_API_KEY: ${{ secrets.AMAP_API_KEY }}
+        run: |
+          bash scripts/run_geo_detection.sh \
+            "" 20 proportional 300
+
       - id: cron
         run: echo "N=$(grep -oP '/\K\d+(?= \* \*)' .github/workflows/sync.yml | head -1)" >> $GITHUB_OUTPUT
 
@@ -183,6 +198,15 @@ jobs:
           key: ${{ steps.db-cache.outputs.cache-primary-key }}
 
       - uses: ./.github/actions/sources-cache/save
+
+      - name: Save geo cache
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            data/cache/geo-activities.json
+            data/cache/geo-point.jsonl
+          key: ${{ steps.geo-cache.outputs.cache-primary-key }}
 
       - name: Upload DB artifact
         uses: actions/upload-artifact@v4

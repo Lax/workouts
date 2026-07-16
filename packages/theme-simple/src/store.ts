@@ -1,4 +1,3 @@
-import { detectLocation } from '@workouts/plugin-data-source'
 import type { Activity } from '@workouts/shared'
 import { classifyPeriod3 } from '@workouts/shared'
 import { create } from 'zustand'
@@ -86,8 +85,11 @@ function filterActivities(
   }
   if (regionFilter !== null) {
     r = r.filter((a) => {
-      const loc = detectLocation(a)
-      return loc.type !== 'unknown' && loc.name === regionFilter
+      const regions = a.location_region
+      if (!regions || regions.length === 0) {
+        return a.location_country?.includes(regionFilter) ?? false
+      }
+      return regions.some((reg) => reg.p === regionFilter || reg.c === regionFilter)
     })
   }
   if (period3Filter !== null) {

@@ -21,7 +21,7 @@ module Workouts
       private
 
       def format_activity(a)
-        {
+        base = {
           run_id: a[:run_id],
           name: a[:name],
           distance: a[:distance],
@@ -45,6 +45,10 @@ module Workouts
           elevation_gain: a[:elevation_gain],
           source: a[:source],
         }
+        if a[:region_info]
+          base[:location_region] = JSON.parse(a[:region_info])
+        end
+        base
       end
 
 
