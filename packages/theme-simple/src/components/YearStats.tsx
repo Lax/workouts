@@ -24,7 +24,9 @@ export function YearStats({ year }: YearStatsProps) {
       {stats.categoryBreakdown.map((c) => (
         <div key={c.category} className="stat-line">
           <span className="stat-val">{c.distanceKm.toFixed(0)}km</span>
-          <span className="stat-label">×{c.count} {c.category}</span>
+          <span className="stat-label">
+            ×{c.count} {c.category}
+          </span>
         </div>
       ))}
       <Stat variant="year-stat" value={`${stats.streak} day`} description="Streak" />
