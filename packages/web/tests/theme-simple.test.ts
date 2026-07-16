@@ -1,7 +1,11 @@
 import type { Activity } from '@workouts/shared'
 import { formatDuration, formatPace } from '@workouts/shared'
-import { colorIntensity, computeStreak, decodePolyline, useSimpleStore } from '@workouts/theme-simple'
+import { colorIntensity, computeStreak, computeYearStats, decodePolyline, useSimpleStore } from '@workouts/theme-simple'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+
+vi.mock('leaflet', () => ({
+  default: { map: vi.fn(), tileLayer: vi.fn(), polyline: vi.fn(), control: { zoom: vi.fn() }, latLngBounds: vi.fn(), latLng: vi.fn() },
+}))
 
 function cssRuleHasProperty(selector: string, property: string): boolean {
   function checkRules(rules: CSSRuleList): boolean {
@@ -531,5 +535,131 @@ describe('Z-stack layer integrity — prevent regression of tiles-over-overlays 
     // Critical fix: overlay must be above Leaflet tile-pane (z:200)
     expect(overlayZ).toBeGreaterThan(200)
     expect(overlayZ).toBeGreaterThanOrEqual(1001)
+  })
+})
+
+describe('D10 — regression: YearStats renders correct values for known fixture data', () => {
+  function makeAct(overrides: Partial<Activity> & { start_date: string }): Activity {
+    return {
+      run_id: '',
+      name: null,
+      distance: null,
+      moving_time: null,
+      elapsed_time: null,
+      sport_category: 'run',
+      start_date_local: null,
+      location_country: null,
+      source: null,
+      average_heartrate: null,
+      max_heartrate: null,
+      average_cadence: null,
+      max_cadence: null,
+      average_power: null,
+      max_power: null,
+      average_temperature: null,
+      calories: null,
+      average_speed: null,
+      elevation_gain: null,
+      summary_polyline: null,
+      ...overrides,
+    }
+  }
+
+  beforeEach(() => {
+    useSimpleStore.setState({
+      activities: [],
+      filteredActivities: [],
+      years: [],
+      cityFilter: null,
+      periodFilter: null,
+      selectedYear: null,
+      selectedMonth: null,
+    })
+  })
+
+  it('renders expected stat values for sample activities', () => {
+    const acts = [
+      makeAct({
+        start_date: '2024-06-01T00:00:00Z',
+        distance: 5000,
+        moving_time: 1500,
+        elevation_gain: 50,
+        average_heartrate: 140,
+        average_speed: 5000 / 1500,
+        sport_category: 'run',
+      }),
+      makeAct({
+        start_date: '2024-06-02T00:00:00Z',
+        distance: 10000,
+        moving_time: 3000,
+        elevation_gain: 100,
+        average_heartrate: 150,
+        average_speed: 10000 / 3000,
+        sport_category: 'run',
+      }),
+      makeAct({
+        start_date: '2024-06-03T00:00:00Z',
+        distance: 3000,
+        moving_time: 1200,
+        elevation_gain: 20,
+        average_heartrate: null,
+        average_speed: 3000 / 1200,
+        sport_category: 'ride',
+      }),
+    ]
+    const stats = computeYearStats(acts)
+    expect(stats.count).toBe(3)
+    expect(stats.distance).toBe(18000)
+    expect(stats.movingTime).toBe(5700)
+    expect(stats.elevationGain).toBe(170)
+    // Pace: only from run category (2 runs: 5k/1500s + 10k/3000s)
+    // pace = totalDist / totalTime = 15000 / (1500+3000) = 15000/4500 = 3.333 m/s
+    expect(stats.pace).toBeCloseTo(3.333, 2)
+    // avgHeartrate: only from first 2 activities (third has null)
+    expect(stats.avgHeartrate).toBeCloseTo(145, 0)
+    // categoryBreakdown: run=15km, ride=3km
+    expect(stats.categoryBreakdown).toHaveLength(2)
+    expect(stats.categoryBreakdown[0].category).toBe('run')
+    expect(stats.categoryBreakdown[0].distanceKm).toBeCloseTo(15, 0)
+    expect(stats.categoryBreakdown[1].category).toBe('ride')
+    expect(stats.categoryBreakdown[1].distanceKm).toBeCloseTo(3, 0)
+  })
+
+  it('existing YearStats renders all stat lines that were in the old implementation', () => {
+    const acts = [
+      makeAct({
+        start_date: '2024-01-01T00:00:00Z',
+        distance: 10000,
+        moving_time: 3600,
+        elevation_gain: 100,
+        average_heartrate: 140,
+        average_speed: 10000 / 3600,
+        sport_category: 'run',
+        calories: 800,
+      }),
+    ]
+    const stats = computeYearStats(acts)
+    // Old implementation had: count, distance, elev, pace, streak, avgHr
+    expect(stats.count).toBe(1)
+    expect(stats.distance).toBe(10000)
+    expect(stats.elevationGain).toBe(100)
+    expect(stats.pace).not.toBeNull()
+    expect(stats.streak).toBe(1)
+    expect(stats.avgHeartrate).toBe(140)
+    // New fields should also be present
+    expect(stats.movingTime).toBe(3600)
+    expect(stats.calories).toBeGreaterThan(0)
+  })
+
+  it('handles empty array same as old implementation', () => {
+    const stats = computeYearStats([])
+    expect(stats.count).toBe(0)
+    expect(stats.distance).toBe(0)
+    expect(stats.movingTime).toBe(0)
+    expect(stats.elevationGain).toBe(0)
+    expect(stats.avgHeartrate).toBeNull()
+    expect(stats.pace).toBeNull()
+    expect(stats.streak).toBe(0)
+    expect(stats.categoryBreakdown).toEqual([])
   })
 })

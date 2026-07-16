@@ -1,6 +1,5 @@
 import { useTheme } from '@workouts/core'
 import { useActivities } from '@workouts/plugin-data-source'
-import { formatPace } from '@workouts/shared'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { ActivityCardGrid } from './components/ActivityCardGrid'
 import { CircularDrawer } from './components/CircularDrawer'
@@ -9,18 +8,40 @@ import { Header } from './components/Header'
 import { MapOverlays } from './components/MapOverlays'
 import { RunTable } from './components/RunTable'
 import { SimpleMap } from './components/SimpleMap'
-import { intComma, Stat } from './components/Stat'
+import { intComma } from './components/Stat'
 import { SummaryView } from './components/SummaryView'
 import { SVGStat } from './components/SVGStat'
 import { YearSelector } from './components/YearSelector'
+import { YearStats } from './components/YearStats'
 import { LocationStats } from './LocationStats'
 import { useSimpleStore } from './store'
 import { useFullscreenSync } from './useFullscreenSync'
 import { getRunIdFromHash } from './utils'
 import './simple.css'
 
+const DEFAULT_INFO = 'Tracking for {years} year(s), {distance} km total'
+
+function formatInfoMessage(
+  siteConfig: Record<string, unknown> | undefined,
+  yearsCount: number,
+  totalKm: string,
+  yearRange: string | null,
+  cityFilter: string | null,
+  periodFilter: string | null,
+): string {
+  const template = (siteConfig?.infoMessage as string) || DEFAULT_INFO
+  let msg = template
+    .replace('{years}', String(yearsCount))
+    .replace('{distance}', totalKm)
+    .replace('{yearRange}', yearRange || '')
+    .replace('{city}', cityFilter || '')
+    .replace('{period}', periodFilter || '')
+  msg = msg.replace(/\s+/g, ' ').trim()
+  return msg
+}
+
 export function SimpleLayout() {
-  const { activities } = useActivities()
+  const { activities, loading } = useActivities()
   const { config } = useTheme()
   const siteConfig = config?.site as Record<string, unknown> | undefined
 
@@ -105,15 +126,9 @@ export function SimpleLayout() {
             {SITE.title}
           </a>
           <section className="info-message">
-            <p>
-              记录自己跑<span style={{ fontWeight: 700 }}>{years.length > 0 ? ` ${years.length} ` : ' '}</span>年了， 累计跑了
-              <span style={{ fontWeight: 700 }}> {totalKm} </span>公里
-              {yearRange ? `（${yearRange}）` : ''}
-              {cityFilter && <span> · 城市: {cityFilter}</span>}
-              {periodFilter && <span> · 时段: {periodFilter}</span>}
-            </p>
+            <p>{formatInfoMessage(siteConfig, years.length, totalKm, yearRange, cityFilter, periodFilter)}</p>
           </section>
-          <LocationStats activities={activities} />
+          <LocationStats activities={activities} loading={loading} />
           <hr className="section-divider" />
           {/* Selected year first, then other years descending, then Total */}
           {selectedYear !== null && (
@@ -200,82 +215,6 @@ export function SimpleLayout() {
           {selectedYear === null && <SVGStat activities={filteredActivities} />}
         </main>
       </div>
-    </div>
-  )
-}
-
-function YearStats({ year }: { year: number | null }) {
-  const activities = useSimpleStore((s) => s.activities)
-  const acts = useMemo(
-    () => (year === null ? activities : activities.filter((a) => a.start_date && new Date(a.start_date).getFullYear() === year)),
-    [activities, year],
-  )
-
-  const stats = useMemo(() => {
-    let totalDist = 0,
-      hrTotal = 0,
-      hrCount = 0,
-      totalElev = 0,
-      totalPaceDist = 0,
-      totalPaceTime = 0
-    const daySet = new Set<string>()
-    const dates: string[] = []
-    for (const a of acts) {
-      totalDist += a.distance ?? 0
-      totalElev += a.elevation_gain ?? 0
-      if (a.average_heartrate) {
-        hrTotal += a.average_heartrate
-        hrCount++
-      }
-      if (a.average_speed && a.average_speed > 0) {
-        totalPaceDist += a.distance ?? 0
-        totalPaceTime += (a.distance ?? 0) / a.average_speed
-      }
-      const dayKey = a.start_date?.slice(0, 10)
-      if (dayKey && !daySet.has(dayKey)) {
-        daySet.add(dayKey)
-        dates.push(dayKey)
-      }
-    }
-    dates.sort()
-    let streak = dates.length > 0 ? 1 : 0,
-      current = 1
-    for (let i = 1; i < dates.length; i++) {
-      const diff = (new Date(dates[i]).getTime() - new Date(dates[i - 1]).getTime()) / 86400000
-      if (Math.round(diff) === 1) {
-        current++
-        if (current > streak) streak = current
-      } else current = 1
-    }
-    const avgPace = totalPaceTime > 0 ? totalPaceDist / totalPaceTime : 0
-    return {
-      count: acts.length,
-      distance: totalDist,
-      elev: totalElev,
-      avgHr: hrCount > 0 ? Math.round(hrTotal / hrCount) : 0,
-      avgPace,
-      streak,
-    }
-  }, [acts])
-
-  const paceStr = formatPace(stats.avgPace > 0 ? stats.avgPace : null)
-
-  return (
-    <div>
-      {[
-        { v: year !== null ? String(year) : 'Total', d: ' Journey' },
-        { v: stats.count, d: ' Runs' },
-        { v: (stats.distance / 1000).toFixed(1), d: ' km' },
-        ...(stats.elev > 0 ? [{ v: Math.round(stats.elev), d: ' Elevation Gain' }] : []),
-        { v: paceStr, d: ' Avg Pace' },
-        { v: `${stats.streak} day`, d: ' Streak' },
-        ...(stats.avgHr > 0 ? [{ v: stats.avgHr, d: ' Avg Heart Rate' }] : []),
-      ].map((s) => (
-        <div key={s.d} className="stat-line">
-          <span className="stat-val">{s.v}</span>
-          <span className="stat-label">{s.d}</span>
-        </div>
-      ))}
     </div>
   )
 }

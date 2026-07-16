@@ -16,6 +16,16 @@
   font-style: italic;
 }
 
+.loc-loading {
+  color: var(--color-text-secondary, #888);
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 1; }
+}
+
 .loc-cities {
   display: flex;
   flex-direction: column;

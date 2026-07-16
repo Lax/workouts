@@ -6,9 +6,10 @@ import './location-stats.css'
 
 interface LocationStatsProps {
   activities: Activity[]
+  loading?: boolean
 }
 
-export function LocationStats({ activities }: LocationStatsProps) {
+export function LocationStats({ activities, loading }: LocationStatsProps) {
   const cityFilter = useSimpleStore((s) => s.cityFilter)
   const periodFilter = useSimpleStore((s) => s.periodFilter)
   const setCityFilter = useSimpleStore((s) => s.setCityFilter)
@@ -17,6 +18,16 @@ export function LocationStats({ activities }: LocationStatsProps) {
   const cities = useMemo(() => computeCities(activities), [activities])
   const periods = useMemo(() => computePeriods(activities), [activities])
   const summary = useMemo(() => computeLocationSummary(activities), [activities])
+
+  if (loading) {
+    return (
+      <section className="location-stats">
+        <div className="loc-summary">
+          <span className="loc-loading">Loading...</span>
+        </div>
+      </section>
+    )
+  }
 
   return (
     <section className="location-stats">

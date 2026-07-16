@@ -2,10 +2,19 @@ interface StatProps {
   value: string | number
   description: string
   className?: string
+  variant?: 'default' | 'year-stat'
 }
 
-export function Stat({ value, description, className = '' }: StatProps) {
+export function Stat({ value, description, className = '', variant = 'default' }: StatProps) {
   const formatted = typeof value === 'number' ? intComma(value) : value
+  if (variant === 'year-stat') {
+    return (
+      <div className={`stat-line ${className}`}>
+        <span className="stat-val">{formatted}</span>
+        <span className="stat-label">{description}</span>
+      </div>
+    )
+  }
   return (
     <span className={`stat-item ${className}`}>
       <strong>{formatted}</strong> {description}

@@ -1,6 +1,7 @@
 import type { Activity } from '@workouts/shared'
 import { classifyPeriod, extractCity } from '@workouts/shared'
 import { create } from 'zustand'
+import { computeStreak } from './compute'
 import { clearRunHash, setRunHash } from './utils'
 
 export type SortField = 'date' | 'distance' | 'time' | 'elevation'
@@ -61,27 +62,6 @@ function computeYears(acts: Activity[]): number[] {
     if (a.start_date) s.add(new Date(a.start_date).getFullYear())
   }
   return Array.from(s).sort((a, b) => b - a)
-}
-
-export function computeStreak(acts: Activity[]): number {
-  const dates = acts
-    .filter((a) => a.start_date)
-    .map((a) => new Date(a.start_date!).toISOString().slice(0, 10))
-    .sort()
-  if (dates.length === 0) return 0
-  const unique = [...new Set(dates)].sort()
-  let maxStreak = 1
-  let current = 1
-  for (let i = 1; i < unique.length; i++) {
-    const diff = (new Date(unique[i]).getTime() - new Date(unique[i - 1]).getTime()) / 86400000
-    if (Math.round(diff) === 1) {
-      current++
-      if (current > maxStreak) maxStreak = current
-    } else {
-      current = 1
-    }
-  }
-  return maxStreak
 }
 
 function filterActivities(

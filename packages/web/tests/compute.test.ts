@@ -8,7 +8,12 @@ import {
   computeYears,
 } from '@workouts/plugin-data-source'
 import type { Activity } from '@workouts/shared'
-import { describe, expect, it } from 'vitest'
+import { computeYearStats } from '@workouts/theme-simple'
+import { describe, expect, it, vi } from 'vitest'
+
+vi.mock('leaflet', () => ({
+  default: { map: vi.fn(), tileLayer: vi.fn(), polyline: vi.fn(), control: { zoom: vi.fn() }, latLngBounds: vi.fn(), latLng: vi.fn() },
+}))
 
 function act(overrides: Partial<Activity> = {}): Activity {
   return {
@@ -238,5 +243,154 @@ describe('computeLocationSummary', () => {
       act({ location_country: 'France' }),
     ])
     expect(r.countries).toEqual(['France', 'United States'])
+  })
+})
+
+describe('computeYearStats', () => {
+  it('normal: 3 runs with known values', () => {
+    const acts = [
+      act({
+        run_id: '1',
+        sport_category: 'run',
+        distance: 10000,
+        moving_time: 1800,
+        average_speed: 4,
+        average_heartrate: 150,
+        max_heartrate: 165,
+        elevation_gain: 200,
+        start_date: '2024-01-01T00:00:00Z',
+      }),
+      act({
+        run_id: '2',
+        sport_category: 'run',
+        distance: 10000,
+        moving_time: 1800,
+        average_speed: 4,
+        average_heartrate: 150,
+        max_heartrate: 165,
+        elevation_gain: 200,
+        start_date: '2024-01-02T00:00:00Z',
+      }),
+      act({
+        run_id: '3',
+        sport_category: 'run',
+        distance: 10000,
+        moving_time: 1800,
+        average_speed: 4,
+        average_heartrate: 150,
+        max_heartrate: 165,
+        elevation_gain: 200,
+        start_date: '2024-01-03T00:00:00Z',
+      }),
+    ]
+    const r = computeYearStats(acts)
+    expect(r.count).toBe(3)
+    expect(r.distance).toBe(30000)
+    expect(r.movingTime).toBe(5400)
+    expect(r.elevationGain).toBe(600)
+    expect(r.avgHeartrate).toBe(150)
+    expect(r.maxHeartrate).toBe(165)
+    expect(r.avgCadence).toBeNull()
+    expect(r.avgPower).toBeNull()
+    expect(r.avgTemperature).toBeNull()
+    expect(r.calories).toBe(0)
+    expect(r.avgSpeed).toBe(4)
+    expect(r.pace).toBe(4)
+    expect(r.streak).toBe(3)
+    expect(r.categoryBreakdown).toEqual([{ category: 'run', distanceKm: 30, count: 3 }])
+  })
+
+  it('null fields: all optional fields null', () => {
+    const acts = [act({ distance: 5000, moving_time: 1800, start_date: '2024-06-01T00:00:00Z' })]
+    const r = computeYearStats(acts)
+    expect(r.count).toBe(1)
+    expect(r.distance).toBe(5000)
+    expect(r.movingTime).toBe(1800)
+    expect(r.elevationGain).toBe(0)
+    expect(r.avgHeartrate).toBeNull()
+    expect(r.maxHeartrate).toBeNull()
+    expect(r.avgCadence).toBeNull()
+    expect(r.maxCadence).toBeNull()
+    expect(r.avgPower).toBeNull()
+    expect(r.maxPower).toBeNull()
+    expect(r.avgTemperature).toBeNull()
+    expect(r.calories).toBe(0)
+    expect(r.avgSpeed).toBeNull()
+    expect(r.pace).toBeNull()
+    expect(r.streak).toBe(1)
+    expect(r.categoryBreakdown).toEqual([{ category: 'run', distanceKm: 5, count: 1 }])
+  })
+
+  it('empty: empty array', () => {
+    const r = computeYearStats([])
+    expect(r.count).toBe(0)
+    expect(r.distance).toBe(0)
+    expect(r.movingTime).toBe(0)
+    expect(r.avgHeartrate).toBeNull()
+    expect(r.avgSpeed).toBeNull()
+    expect(r.pace).toBeNull()
+    expect(r.streak).toBe(0)
+    expect(r.categoryBreakdown).toEqual([])
+  })
+
+  it('mixed categories: run + ride', () => {
+    const acts = [
+      act({
+        run_id: '1',
+        sport_category: 'ride',
+        distance: 40000,
+        moving_time: 3600,
+        average_speed: 8,
+        start_date: '2024-01-01T00:00:00Z',
+      }),
+      act({ run_id: '2', sport_category: 'run', distance: 10000, moving_time: 1800, average_speed: 4, start_date: '2024-01-02T00:00:00Z' }),
+    ]
+    const r = computeYearStats(acts)
+    expect(r.count).toBe(2)
+    expect(r.distance).toBe(50000)
+    expect(r.avgSpeed).toBe(6)
+    expect(r.pace).toBe(4)
+    expect(r.categoryBreakdown).toEqual([
+      { category: 'ride', distanceKm: 40, count: 1 },
+      { category: 'run', distanceKm: 10, count: 1 },
+    ])
+  })
+
+  it('single activity: streak=1', () => {
+    const r = computeYearStats([act({ start_date: '2024-01-01T00:00:00Z' })])
+    expect(r.streak).toBe(1)
+  })
+
+  it('pace guard: zero average_speed and valid speed', () => {
+    const acts = [
+      act({ run_id: '1', sport_category: 'run', distance: 10000, average_speed: 0, start_date: '2024-01-01T00:00:00Z' }),
+      act({ run_id: '2', sport_category: 'run', distance: 10000, average_speed: 4, start_date: '2024-01-02T00:00:00Z' }),
+    ]
+    const r = computeYearStats(acts)
+    expect(r.avgSpeed).toBe(4)
+    expect(r.pace).toBe(4)
+
+    const allZero = [
+      act({ run_id: '1', sport_category: 'run', distance: 10000, average_speed: 0, start_date: '2024-01-01T00:00:00Z' }),
+      act({ run_id: '2', sport_category: 'run', distance: 10000, average_speed: 0, start_date: '2024-01-02T00:00:00Z' }),
+    ]
+    const r2 = computeYearStats(allZero)
+    expect(r2.pace).toBeNull()
+    expect(r2.avgSpeed).toBeNull()
+  })
+
+  it('categoryBreakdown: multiple categories sorted by distance desc', () => {
+    const acts = [
+      act({ run_id: '1', sport_category: 'run', distance: 20000, start_date: '2024-01-01T00:00:00Z' }),
+      act({ run_id: '2', sport_category: 'ride', distance: 50000, start_date: '2024-02-01T00:00:00Z' }),
+      act({ run_id: '3', sport_category: 'run', distance: 10000, start_date: '2024-03-01T00:00:00Z' }),
+      act({ run_id: '4', sport_category: 'swim', distance: 3000, start_date: '2024-04-01T00:00:00Z' }),
+    ]
+    const r = computeYearStats(acts)
+    expect(r.categoryBreakdown).toEqual([
+      { category: 'ride', distanceKm: 50, count: 1 },
+      { category: 'run', distanceKm: 30, count: 2 },
+      { category: 'swim', distanceKm: 3, count: 1 },
+    ])
   })
 })

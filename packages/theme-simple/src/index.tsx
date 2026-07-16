@@ -19,4 +19,7 @@ export default theme
 export { colorIntensity } from './components/GithubDrawer'
 export { decodePolyline } from './components/RoutePreviewSVG'
 export { YearSelector } from './components/YearSelector'
-export { computeStreak, type SortField, type SummaryInterval, useSimpleStore, type ViewMode } from './store'
+export { YearStats } from './components/YearStats'
+export { computeStreak, computeYearStats } from './compute'
+export { LocationStats } from './LocationStats'
+export { type SortField, type SummaryInterval, useSimpleStore, type ViewMode } from './store'
