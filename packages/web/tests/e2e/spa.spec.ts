@@ -490,7 +490,7 @@ test('overview theme toggle preserves map zoom and center', async ({ page }) => 
 
 test('lights toggle button is visible with proper background on map', async ({ page }) => {
   await waitLoaded(page)
-  const lights = page.locator('button[aria-label="Hide labels"], button[aria-label="Show labels"]')
+  const lights = page.locator('button[aria-label="Turn off map lights"], button[aria-label="Turn on map lights"]')
   await expect(lights).toBeVisible()
 
   const box = await lights.boundingBox()
@@ -572,7 +572,7 @@ test('lights and fullscreen buttons maintain correct background in dark mode', a
   await page.evaluate(() => document.documentElement.setAttribute('data-theme', 'dark'))
   await page.waitForTimeout(500)
 
-  for (const ariaLabel of ['Hide labels', 'Show labels', 'Fullscreen']) {
+  for (const ariaLabel of ['Turn off map lights', 'Turn on map lights', 'Fullscreen']) {
     const btn = page.locator(`button[aria-label="${ariaLabel}"]`)
     if ((await btn.count()) === 0) continue
     const bg = await btn.evaluate((el) => getComputedStyle(el).backgroundColor)
@@ -586,14 +586,14 @@ test('lights and fullscreen buttons maintain correct background in dark mode', a
 
 test('lights toggle aria-label toggles on click', async ({ page }) => {
   await waitLoaded(page)
-  // Initial: lights off → button says "Show labels"
-  const lights = page.locator('button[aria-label="Show labels"]')
+  // Initial: lights off → button says "Turn on map lights"
+  const lights = page.locator('button[aria-label="Turn on map lights"]')
   await expect(lights).toBeVisible()
   await lights.click()
-  await expect(page.locator('button[aria-label="Hide labels"]')).toBeVisible()
+  await expect(page.locator('button[aria-label="Turn off map lights"]')).toBeVisible()
   // Toggle back off
-  await page.locator('button[aria-label="Hide labels"]').click()
-  await expect(page.locator('button[aria-label="Show labels"]')).toBeVisible()
+  await page.locator('button[aria-label="Turn off map lights"]').click()
+  await expect(page.locator('button[aria-label="Turn on map lights"]')).toBeVisible()
 })
 
 test('lights off removes tiles so map bg matches page', async ({ page }) => {
@@ -602,13 +602,13 @@ test('lights off removes tiles so map bg matches page', async ({ page }) => {
   expect(await page.locator('.leaflet-tile-loaded').count()).toBe(0)
 
   // Turn lights on → tiles appear
-  await page.locator('button[aria-label="Show labels"]').click()
+  await page.locator('button[aria-label="Turn on map lights"]').click()
   const tiles = page.locator('.leaflet-tile-loaded')
   await expect(tiles.first()).toBeVisible({ timeout: 15000 })
   expect(await tiles.count()).toBeGreaterThan(0)
 
   // Turn lights off → tiles disappear
-  await page.locator('button[aria-label="Hide labels"]').click()
+  await page.locator('button[aria-label="Turn off map lights"]').click()
   await page.waitForTimeout(1000)
   await expect(async () => {
     expect(await tiles.count()).toBe(0)
@@ -620,16 +620,16 @@ test('lights toggle back on restores tile layers', async ({ page }) => {
   // Initial: lights off, no tiles
 
   // Turn lights on → tiles appear
-  await page.locator('button[aria-label="Show labels"]').click()
+  await page.locator('button[aria-label="Turn on map lights"]').click()
   await expect(page.locator('.leaflet-tile-loaded').first()).toBeVisible({ timeout: 15000 })
 
   // Turn lights off → tiles disappear
-  await page.locator('button[aria-label="Hide labels"]').click()
+  await page.locator('button[aria-label="Turn off map lights"]').click()
   await page.waitForTimeout(500)
   expect(await page.locator('.leaflet-tile-loaded').count()).toBe(0)
 
   // Turn lights back on
-  await page.locator('button[aria-label="Show labels"]').click()
+  await page.locator('button[aria-label="Turn on map lights"]').click()
 
   // Tiles should reload
   const tiles = page.locator('.leaflet-tile-loaded')
