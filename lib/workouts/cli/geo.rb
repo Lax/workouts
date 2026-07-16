@@ -11,7 +11,7 @@ module Workouts
       def detect
         config = Workouts::Config.new
         db = Workouts::DB::Connection.new(config.db_path).db
-        amap_key = ENV["AMAP_API_KEY"] || config.sync_config.dig("amap", "api_key")
+        amap_key = ENV["AMAP_API_KEY"] || config.sync_config("amap")["api_key"]
         detector = Workouts::Geo::RegionDetector.new(
           db: db,
           amap_key: amap_key,

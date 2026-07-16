@@ -1,7 +1,6 @@
 require "json"
 require "fileutils"
 require_relative "reverse_geocode"
-require_relative "../polyline"
 
 module Workouts
   module Geo
