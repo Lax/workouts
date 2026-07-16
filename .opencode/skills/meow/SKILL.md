@@ -85,10 +85,10 @@ Orchestrator uses `todowrite` to show live progress. Three levels:
 
 | Field | Value |
 |---|---|
-| subagent_type | `explore` → `general` |
+| subagent_type | `explore` → `general` → `general` (消歧) |
 | skills | `grill-with-docs` |
 | handoff | `01-spec.md` |
-| gate | handoff exists, Done Criteria are testable |
+| gate | handoff exists, Done Criteria are testable, **零歧义确认** |
 
 **Orchestrator prep** (before launching subagent):
 
@@ -109,6 +109,7 @@ todowrite("5/5 🚀 Deliver" → pending, priority high)
 
 # Level 2 — Spec sub-tasks (fixed)
 todowrite("Spec: scan" → in_progress)
+todowrite("Spec: disambiguate" → pending)
 todowrite("Spec: write" → pending)
 ```
 
@@ -117,34 +118,121 @@ todowrite("Spec: write" → pending)
 Scan the codebase at /path for relevant files:
 {task description}
 Return: file paths, brief descriptions, key types/functions.
+
+IMPORTANT: Return raw facts only. Do NOT interpret "upstream" or "reference" —
+just return what the files say.
 ```
 
-**general prompt:**
+**Pre-flight Ambiguity Scan (PFAS) — 在写需求之前强制消歧:**
+
+Orchestrator launches a general agent with this prompt BEFORE the Spec writer:
+
+```
+You are Disambiguator. Your ONLY job is to find ambiguous references.
+Do NOT design solutions, write specs, or estimate effort.
+
+Input:
+- User task: {task description}
+- Codebase scan: {explore output}
+- CONTEXT.md at CONTEXT.md
+
+Instructions:
+
+1. Extract all "referenced external concepts" from the user task.
+   External concepts include: "上游", "upstream", "reference implementation",
+   "来源", "参考", "源头", "original", "like X", "similar to X".
+   Also include any named projects, frameworks, or themes mentioned.
+
+2. For each external concept, find ALL declarations in CONTEXT.md:
+   - Each project/theme may declare its own upstream in CONTEXT.md
+   - Example: CONTEXT.md for this project says theme-simple is "faithful to running_page"
+   - If the user says "上游" but multiple upstreams exist, that's ambiguity
+
+3. Cross-reference: Does the user's statement match CONTEXT.md's declaration?
+   - User says X → CONTEXT.md says Y → ⛔ AMBIGUITY
+   - User says nothing specific → CONTEXT.md declares Y for this context → ✅ IMPLICIT (use Y)
+   - User says X → CONTEXT.md also says X → ✅ CLEAR
+
+4. If ANY ambiguity found:
+   - Write {workflow_dir}/01-ambiguity.md with:
+     - Each ambiguous term
+     - Conflicting definitions (user statement vs CONTEXT.md)
+     - Required clarification question
+   - Set status.json spec.status = "blocked"
+   - STOP. Do NOT proceed to write the spec.
+
+5. If zero ambiguity:
+   - Write {workflow_dir}/01-ambiguity.md with:
+     - "status": "clear"
+     - List of resolved terms and their confirmed definitions
+   - Set status.json spec.status = "in_progress" (so spec writer can proceed)
+   - Return "CLEAR" as final message.
+
+Strict rules:
+- Do NOT guess. If uncertain → flag as ambiguous.
+- Do NOT assume user's intent matches a convenient comparison target.
+- Do NOT merge multiple upstream definitions silently.
+- SAP: one answer per concept. If multiple exist, block.
+```
+
+**Orchestrator transition after PFAS:**
+
+```
+if ambiguity found (spec.status === "blocked"):
+  - Read 01-ambiguity.md
+  - Present ambiguity to user for clarification
+  - Wait for user response
+  - Update ambiguity file with user's resolution
+  - Re-launch PFAS to verify resolution
+  - Only proceed to spec writer when spec.status === "in_progress"
+
+if clear (spec.status === "in_progress"):
+  - Proceed to spec writer
+```
+
+**spec writer (general) prompt:**
 ```
 You are Specifier. Input:
 Task: {task description}
 Codebase scan: {explore output}
+Ambiguity resolution: {workflow_dir}/01-ambiguity.md
 
 1. Load grill-with-docs, understand against existing docs.
 2. Define: What (scope), Why (value), Done Criteria (testable), Edge Cases (≥3), Constraints.
-3. Write handoff to {workflow_dir}/01-spec.md
-4. Update {workflow_dir}/status.json phase=completed
+3. Use the disambiguated definitions from 01-ambiguity.md for ALL external references.
+   Do NOT introduce new external references without disambiguation.
+4. Write handoff to {workflow_dir}/01-spec.md
+5. Update {workflow_dir}/status.json phase=completed
 
 SAP, KISS. Do NOT: propose solutions, estimate time.
 ```
 
-**Orchestrator transition** (after subagent returns):
+**Orchestrator transition** (after spec writer returns):
 
 ```
-todowrite("Spec: scan" → completed)
-todowrite("Spec: write" → completed)
-todowrite("1/5 📋 Spec" → completed)
-todowrite("2/5 📐 Plan" → in_progress)
+# The Consistency Gate — 在 Spec→Plan 之间强制执行
+# 1. Read 01-spec.md
+# 2. Read 01-ambiguity.md to confirm all references were used correctly
+# 3. Verify spec's "Constraints" section matches CONTEXT.md declarations
+# 4. If spec introduces a reference not in the ambiguity resolution → BLOCK
+# 5. If spec contradicts CONTEXT.md on any project declaration → BLOCK
 
-# Level 2 — Plan sub-tasks (fixed: 3 steps)
-todowrite("Plan: audit" → in_progress)
-todowrite("Plan: design" → pending)
-todowrite("Plan: approve" → pending)
+if gate passes:
+  todowrite("Spec: scan" → completed)
+  todowrite("Spec: disambiguate" → completed)
+  todowrite("Spec: write" → completed)
+  todowrite("1/5 📋 Spec" → completed)
+  todowrite("2/5 📐 Plan" → in_progress)
+
+  # Level 2 — Plan sub-tasks (fixed: 3 steps)
+  todowrite("Plan: audit" → in_progress)
+  todowrite("Plan: design" → pending)
+  todowrite("Plan: approve" → pending)
+
+if gate blocks:
+  todowrite("1/5 📋 Spec" → blocked)
+  Report: "SPEC GATE: spec references {X} not in ambiguity resolution"
+  Present to user for resolution.
 ```
 
 ### Phase 2/5: Plan — 方案设计 · 需审批
