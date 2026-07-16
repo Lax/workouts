@@ -46,7 +46,7 @@ module Workouts
           source: a[:source],
         }
         if a[:region_info]
-          base[:location_region] = JSON.parse(a[:region_info])
+          base[:location_region] = ::JSON.parse(a[:region_info])
         end
         base
       end
