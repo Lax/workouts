@@ -147,7 +147,7 @@ export const useSimpleStore = create<SimpleStore>()((set) => ({
   cityFilter: null,
   periodFilter: null,
   lightsOn: false,
-  viewMode: 'table',
+  viewMode: typeof window !== 'undefined' && window.innerWidth < 768 ? 'grid' : 'table',
   showYearModal: null,
 
   view: 'main',
