@@ -401,7 +401,7 @@
 }
 
 .stat-val {
-  font-size: 1rem;
+  font-size: 3rem;
   font-weight: 700;
   font-style: italic;
   color: var(--color-text);
@@ -409,10 +409,10 @@
 }
 
 .stat-label {
-  font-size: 0.8rem;
+  font-size: 1.125rem;
   font-weight: 600;
   font-style: italic;
-  color: var(--color-text-secondary);
+  color: var(--color-text);
 }
 
 .year-hover-svgs {
