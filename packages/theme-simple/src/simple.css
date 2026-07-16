@@ -415,6 +415,22 @@
   color: var(--color-text);
 }
 
+.stats-toggle {
+  background: none;
+  border: none;
+  color: var(--color-accent);
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-style: italic;
+  padding: 0.25rem 0;
+  width: 100%;
+  text-align: left;
+}
+
+.stats-toggle:hover {
+  opacity: 0.8;
+}
+
 .year-hover-svgs {
   margin-top: 0.75rem;
   display: flex;
