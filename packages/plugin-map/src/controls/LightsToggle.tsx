@@ -11,8 +11,8 @@ export function LightsToggle({ showLabels, onToggle }: LightsToggleProps) {
     <button
       type="button"
       onClick={onToggle}
-      aria-label={showLabels ? 'Hide labels' : 'Show labels'}
-      title={showLabels ? 'Hide map labels' : 'Show map labels'}
+      aria-label={showLabels ? 'Turn off map lights' : 'Turn on map lights'}
+      title={showLabels ? 'Turn off map lights' : 'Turn on map lights'}
       style={{
         width: 34,
         height: 34,

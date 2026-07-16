@@ -243,6 +243,7 @@
   top: 0;
   z-index: 1;
   isolation: isolate;
+  background: var(--color-bg);
 }
 
 .map-year-selector {
@@ -329,6 +330,11 @@
 
 .map-wrapper .leaflet-container {
   background: var(--color-bg);
+}
+
+.map-wrapper .leaflet-control-attribution {
+  left: 0;
+  right: auto;
 }
 
 .map-run-title {
