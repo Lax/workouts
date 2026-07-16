@@ -45,8 +45,8 @@ module Workouts
           elevation_gain: a[:elevation_gain],
           source: a[:source],
         }
-        if a[:region_info]
-          base[:location_region] = ::JSON.parse(a[:region_info])
+        if a[:divisions]
+          base[:divisions] = ::JSON.parse(a[:divisions])
         end
         base
       end

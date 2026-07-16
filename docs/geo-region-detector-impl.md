@@ -1,20 +1,20 @@
-# Geo Region Detector — Implementation Notes
+# Geo Division Detector — Implementation Notes
 
 ## Overview
 
-Post-sync step that detects administrative regions (province/city/district/township) for activities with GPS polyline data. Results are stored in DB and exported to frontend JSON.
+Post-sync step that detects administrative divisions (province/city/district/township) for activities with GPS polyline data. Results are stored in DB and exported to frontend JSON.
 
 ## Data Flow
 
 ```
-sync → workouts geo detect → DB[region_info] → export json → activities.json[location_region]
-                                                                     ↓
-                                                              StatsPanel reads directly
+sync → workouts geo detect → DB[divisions] → export json → activities.json[divisions]
+                                                                    ↓
+                                                             StatsPanel reads directly
 ```
 
 ## DB Field
 
-`region_info TEXT` — JSON array of region objects:
+`divisions TEXT` — JSON array of division objects:
 
 ```json
 [
@@ -44,10 +44,10 @@ data/cache/
 ### Point Cache Format (`geo-point.jsonl`)
 
 ```jsonl
-{"c":"31.0123,121.4567","p":"上海市","city":"上海市","dist":"松江区","source":"amap"}
+{"ck":"31.0123,121.4567","p":"上海市","city":"上海市","dist":"松江区","source":"amap"}
 ```
 
-- `c`: coordinate key `"lat,lng"`
+- `ck`: coordinate key `"lat,lng"`
 - Per-provider: AMap returns detailed Chinese admin, Nominatim returns country/state
 
 ## Sampling
@@ -55,7 +55,7 @@ data/cache/
 - GPS points sampled at 0.01° intervals (~1km)
 - Each sampled coordinate looked up in point cache first
 - Cache miss → API call → cache append
-- Results aggregated into regions with proportional weights
+- Results aggregated into divisions with proportional weights
 
 ## API Providers
 

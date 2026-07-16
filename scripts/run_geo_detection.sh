@@ -1,5 +1,5 @@
 #!/bin/bash
-# Run geo region detection after sync
+# Run geo division detection after sync
 # Called from sync.yml
 set -e
 

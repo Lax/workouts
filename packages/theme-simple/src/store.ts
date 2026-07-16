@@ -85,7 +85,7 @@ function filterActivities(
   }
   if (regionFilter !== null) {
     r = r.filter((a) => {
-      const regions = a.location_region
+      const regions = a.divisions
       if (!regions || regions.length === 0) {
         return a.location_country?.includes(regionFilter) ?? false
       }

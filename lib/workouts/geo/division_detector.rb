@@ -4,7 +4,7 @@ require_relative "reverse_geocode"
 
 module Workouts
   module Geo
-    class RegionDetector
+    class DivisionDetector
       KEEP_PLACEHOLDER = "AAAA".freeze
       SAMPLE_INTERVAL_DEG = 0.01
       CACHE_DIR = "data/cache"
@@ -44,7 +44,7 @@ module Workouts
         dataset = @db[:activities]
           .where(Sequel.lit("summary_polyline IS NOT NULL"))
           .where(Sequel.lit("summary_polyline != ''"))
-          .where(Sequel.lit("region_info IS NULL"))
+          .where(Sequel.lit("divisions IS NULL"))
           .order(Sequel.desc(:start_date))
         dataset = dataset.limit(@limit) if @limit
         dataset.all
@@ -74,10 +74,10 @@ module Workouts
         samples = sample_points(points)
         return if samples.empty?
 
-        regions = resolve_regions(samples)
-        return if regions.empty?
+        divisions = resolve_divisions(samples)
+        return if divisions.empty?
 
-        summary = build_summary(regions, samples.size)
+        summary = build_summary(divisions, samples.size)
         cache_activity(run_id, summary)
         update_db(run_id, summary) unless @dry_run
         @processed += 1
@@ -106,7 +106,7 @@ module Workouts
         samples
       end
 
-      def resolve_regions(samples)
+      def resolve_divisions(samples)
         key_counts = Hash.new(0)
         samples.each do |lat, lng|
           coord_key = "#{lat},#{lng}"
@@ -117,7 +117,7 @@ module Workouts
           end
           result = normalize_entry(raw)
           next unless result
-          key = region_key(result)
+          key = division_key(result)
           key_counts[key] += 1
         end
         key_counts.map do |key, count|
@@ -151,13 +151,13 @@ module Workouts
         v.is_a?(String) && !v.empty? && !v.match?(/^-?\d+\.\d+,-?\d+\.\d+$/)
       end
 
-      def region_key(result)
+      def division_key(result)
         [result[:province], result[:city], result[:district], result[:township]].join("|")
       end
 
-      def build_summary(regions, total_points)
+      def build_summary(divisions, total_points)
         total = total_points.to_f
-        region_list = regions.map do |r|
+        division_list = divisions.map do |r|
           h = { p: r[:province] }
           h[:c] = r[:city] if r[:city]
           h[:d] = r[:district] if r[:district]
@@ -165,7 +165,7 @@ module Workouts
           h[:w] = (r[:count] / total).round(4)
           h
         end
-        { regions: region_list, total_sampled: total_points, source: "amap", processed_at: Time.now.utc.iso8601 }
+        { divisions: division_list, total_sampled: total_points, source: "amap", processed_at: Time.now.utc.iso8601 }
       end
 
       def lookup_point_cache(coord_key)
@@ -195,7 +195,7 @@ module Workouts
       end
 
       def update_db(run_id, summary)
-        @db[:activities].where(run_id: run_id).update(region_info: JSON.generate(summary[:regions]))
+        @db[:activities].where(run_id: run_id).update(divisions: JSON.generate(summary[:divisions]))
       end
 
       def load_caches

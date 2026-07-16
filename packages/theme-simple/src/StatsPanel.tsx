@@ -19,7 +19,7 @@ function computeRegionStats(activities: Activity[]): RegionStat[] {
   const regionDist = new Map<string, number>()
   const regionCount = new Map<string, number>()
   for (const a of activities) {
-    const regions = a.location_region
+    const regions = a.divisions
     if (!regions || regions.length === 0) {
       // Fallback: try text-based province from location_country
       if (a.location_country) {

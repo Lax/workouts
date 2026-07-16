@@ -31,7 +31,7 @@ export interface Activity {
   source: string | null
   duplicate_info?: string | null
   /** From Ruby geo detection: array of {p:province, c?:city, d?:district, w:weight} */
-  location_region?: Array<{ p: string; c?: string; d?: string; t?: string; w: number }>
+  divisions?: Array<{ p: string; c?: string; d?: string; t?: string; w: number }>
 }
 
 export type SportCategory = 'run' | 'ride' | 'hike' | 'walk' | 'swim' | 'ski' | 'workout' | 'other'

@@ -2,7 +2,7 @@ require "thor"
 
 module Workouts
   class GeoCLI < Thor
-      desc "detect", "Detect administrative regions for activities with GPS data"
+      desc "detect", "Detect administrative divisions for activities with GPS data"
       option :limit,    type: :numeric, aliases: "-l", desc: "Max activities to process"
       option :batch,    type: :numeric, aliases: "-b", desc: "Batch size", default: 20
       option :strategy, type: :string,  aliases: "-s", desc: "Strategy: proportional|start_end", default: "proportional"
@@ -12,7 +12,7 @@ module Workouts
         config = Workouts::Config.new
         db = Workouts::DB::Connection.new(config.db_path).db
         amap_key = ENV["AMAP_API_KEY"] || config.sync_config("amap")["api_key"]
-        detector = Workouts::Geo::RegionDetector.new(
+        detector = Workouts::Geo::DivisionDetector.new(
           db: db,
           amap_key: amap_key,
           batch: options[:batch],
