@@ -108,26 +108,34 @@ module Workouts
 
       def resolve_regions(samples)
         key_counts = Hash.new(0)
-
         samples.each do |lat, lng|
           coord_key = "#{lat},#{lng}"
-          result = lookup_point_cache(coord_key)
-
-          unless result
-            result = @geocoder.lookup(lat, lng)
-            save_point_cache(coord_key, result) if result[:province]
+          raw = lookup_point_cache(coord_key)
+          unless raw
+            raw = @geocoder.lookup(lat, lng)
+            save_point_cache(coord_key, raw) if raw[:province]
           end
-
-          if result[:province]
-            region_key = region_key(result)
-            key_counts[region_key] += 1
-          end
+          result = normalize_entry(raw)
+          next unless result
+          key = region_key(result)
+          key_counts[key] += 1
         end
-
         key_counts.map do |key, count|
           province, city, district, township = key.split("|")
           { province: province, city: city, district: district, township: township, count: count }
         end.sort_by { |r| -r[:count] }
+      end
+
+      def normalize_entry(raw)
+        return nil unless raw
+        province = raw[:province] || raw["p"] || raw["province"]
+        return nil unless province
+        {
+          province: province,
+          city: raw[:city] || raw["city"] || raw["c"],
+          district: raw[:district] || raw["dist"] || raw["d"],
+          township: raw[:township] || raw["town"] || raw["t"],
+        }
       end
 
       def region_key(result)

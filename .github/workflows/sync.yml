@@ -113,7 +113,7 @@ jobs:
           AMAP_API_KEY: ${{ secrets.AMAP_API_KEY }}
         run: |
           bash scripts/run_geo_detection.sh \
-            "" 20 proportional 300
+            200 20 proportional 300
 
       - id: cron
         run: echo "N=$(grep -oP '/\K\d+(?= \* \*)' .github/workflows/sync.yml | head -1)" >> $GITHUB_OUTPUT

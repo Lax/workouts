@@ -3,7 +3,7 @@
 # Called from sync.yml
 set -e
 
-LIMIT="${1:-}"
+LIMIT="${1:-200}"  # 默认每批条数上限
 BATCH="${2:-20}"
 STRATEGY="${3:-proportional}"
 TIME_BUDGET="${4:-300}"
