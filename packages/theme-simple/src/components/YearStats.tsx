@@ -23,10 +23,8 @@ export function YearStats({ year }: YearStatsProps) {
       <Stat variant="year-stat" value={year !== null ? String(year) : 'Total'} description="Journey" />
       {stats.categoryBreakdown.map((c) => (
         <div key={c.category} className="stat-line">
-          <span className="stat-val">{c.count}</span>
-          <span className="stat-label">
-            {capitalize(c.category)} ({c.distanceKm.toFixed(0)}km)
-          </span>
+          <span className="stat-val">{c.count} {c.category}</span>
+          <span className="stat-label">{c.distanceKm.toFixed(0)}km</span>
         </div>
       ))}
       <Stat variant="year-stat" value={`${stats.streak} day`} description="Streak" />
@@ -36,6 +34,4 @@ export function YearStats({ year }: YearStatsProps) {
   )
 }
 
-function capitalize(s: string): string {
-  return s.charAt(0).toUpperCase() + s.slice(1)
-}
+

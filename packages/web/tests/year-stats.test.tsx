@@ -114,7 +114,8 @@ describe('YearStats', () => {
       root.render(<YearStats year={2024} />)
     })
     expect(container.textContent).toContain('2024Journey')
-    expect(container.textContent).toContain('3Run (30km)')
+    expect(container.textContent).toContain('3 run')
+    expect(container.textContent).toContain('30km')
     expect(container.textContent).toContain('3 dayStreak')
     expect(container.textContent).toContain('Moving Time')
     expect(container.textContent).toContain('Elevation Gain')
@@ -140,7 +141,8 @@ describe('YearStats', () => {
       root.render(<YearStats year={null} />)
     })
     expect(container.textContent).toContain('TotalJourney')
-    expect(container.textContent).toContain('2Run (15km)')
+    expect(container.textContent).toContain('2 run')
+    expect(container.textContent).toContain('15km')
   })
 
   it('category breakdown: multiple sport types', () => {
@@ -160,8 +162,10 @@ describe('YearStats', () => {
     act(() => {
       root.render(<YearStats year={2024} />)
     })
-    expect(container.textContent).toContain('1Ride (40km)')
-    expect(container.textContent).toContain('2Run (30km)')
+    expect(container.textContent).toContain('1 ride')
+    expect(container.textContent).toContain('40km')
+    expect(container.textContent).toContain('2 run')
+    expect(container.textContent).toContain('30km')
   })
 
   it('moving time hides when zero', () => {
