@@ -1,4 +1,4 @@
-import { computePeriods3, computeTypeBreakdown } from '@workouts/plugin-data-source'
+import { computeTypeBreakdown } from '@workouts/plugin-data-source'
 import type { Activity } from '@workouts/shared'
 import { useMemo } from 'react'
 import { useSimpleStore } from './store'
@@ -55,14 +55,11 @@ function extractProvince(loc: string): string | null {
 
 export function StatsPanel({ activities, loading }: StatsPanelProps) {
   const regionFilter = useSimpleStore((s) => s.regionFilter)
-  const period3Filter = useSimpleStore((s) => s.period3Filter)
   const typeFilter = useSimpleStore((s) => s.typeFilter)
   const setRegionFilter = useSimpleStore((s) => s.setRegionFilter)
-  const setPeriod3Filter = useSimpleStore((s) => s.setPeriod3Filter)
   const setTypeFilter = useSimpleStore((s) => s.setTypeFilter)
 
   const regionStats = useMemo(() => computeRegionStats(activities), [activities])
-  const periods3 = useMemo(() => computePeriods3(activities), [activities])
   const typeBreakdown = useMemo(() => computeTypeBreakdown(activities), [activities])
 
   const showTypeSection = typeBreakdown.length >= 2
@@ -112,28 +109,6 @@ export function StatsPanel({ activities, loading }: StatsPanelProps) {
         <div className="sp-summary">
           <span className="sp-summary-text sp-empty">暂无位置数据</span>
         </div>
-      )}
-
-      {periods3.length > 0 && (
-        <>
-          <hr className="section-divider" />
-          <div className="sp-periods">
-            {periods3.map((p) => (
-              <div
-                key={p.period}
-                className={`sp-period-row${period3Filter === p.period ? ' active' : ''}`}
-                onClick={() => setPeriod3Filter(p.period)}
-              >
-                <span className="sp-period-label">{p.label}</span>
-                <span className="sp-period-bar">
-                  <span className="sp-period-fill" style={{ width: `${p.pct}%` }} />
-                </span>
-                <span className="sp-period-count">{p.count} 次</span>
-                <span className="sp-period-pct">{p.pct}%</span>
-              </div>
-            ))}
-          </div>
-        </>
       )}
 
       {showTypeSection && (

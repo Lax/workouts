@@ -42,7 +42,6 @@ describe('StatsPanel', () => {
     useSimpleStore.setState({
       activities: [],
       regionFilter: null,
-      period3Filter: null,
       typeFilter: null,
     })
   })
@@ -78,23 +77,6 @@ describe('StatsPanel', () => {
     expect(container.textContent).toContain('上海')
     expect(container.textContent).toContain('10 km')
     expect(container.textContent).toContain('5 km')
-  })
-
-  it('renders period3 section with 早/中/晚 labels', () => {
-    const acts = [
-      baseAct({ run_id: '1', start_date_local: '2024-06-01T06:00:00' }),
-      baseAct({ run_id: '2', start_date_local: '2024-06-01T14:00:00' }),
-      baseAct({ run_id: '3', start_date_local: '2024-06-01T20:00:00' }),
-    ]
-    act(() => {
-      root.render(<StatsPanel activities={acts} loading={false} />)
-    })
-    expect(container.textContent).toContain('早')
-    expect(container.textContent).toContain('中')
-    expect(container.textContent).toContain('晚')
-    // Each period shows individual count (1 each)
-    const match = container.textContent?.match(/1 次/g)
-    expect(match).toHaveLength(3)
   })
 
   it('renders type section when multiple sport categories exist', () => {
@@ -136,20 +118,6 @@ describe('StatsPanel', () => {
     expect(useSimpleStore.getState().regionFilter).toBe('北京')
   })
 
-  it('click period3 row sets period3Filter in store', () => {
-    const acts = [baseAct({ run_id: '1', start_date_local: '2024-06-01T06:00:00' })]
-    act(() => {
-      root.render(<StatsPanel activities={acts} loading={false} />)
-    })
-    const periodRow = container.querySelector('.sp-period-row')
-    expect(periodRow).not.toBeNull()
-
-    act(() => {
-      ;(periodRow as HTMLElement).click()
-    })
-    expect(useSimpleStore.getState().period3Filter).toBe('morning')
-  })
-
   it('click type row sets typeFilter in store', () => {
     const acts = [
       baseAct({ run_id: '1', sport_category: 'run', distance: 10000 }),
@@ -166,13 +134,5 @@ describe('StatsPanel', () => {
     })
     // First row is ride (highest distance)
     expect(useSimpleStore.getState().typeFilter).toBe('ride')
-  })
-
-  it('does not render period section when all start_date_local are null', () => {
-    const acts = [baseAct({ run_id: '1', start_date_local: null as any }), baseAct({ run_id: '2', start_date_local: null as any })]
-    act(() => {
-      root.render(<StatsPanel activities={acts} loading={false} />)
-    })
-    expect(container.querySelector('.sp-periods')).toBeNull()
   })
 })

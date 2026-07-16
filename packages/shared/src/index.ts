@@ -193,12 +193,10 @@ export * from './geo'
 export {
   type Boundary,
   type CityBoundary,
-  classifyPeriod3,
   decodePolyline,
   getStartCoords,
   haversine,
   matchPolygons,
-  PERIOD3_LABELS,
   pointInPolygon,
 } from './geo'
 export * from './geo-boundaries'

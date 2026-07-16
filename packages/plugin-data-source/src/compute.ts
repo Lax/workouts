@@ -3,12 +3,10 @@ import {
   CATEGORY_LABELS,
   CONTINENT_BOUNDARIES,
   classifyPeriod,
-  classifyPeriod3,
   extractCity,
   getStartCoords,
   matchPolygons,
   OCEAN_BOUNDARIES,
-  PERIOD3_LABELS,
   type PeriodLabel,
   PROVINCE_BOUNDARIES,
   sortPeriods,
@@ -190,31 +188,6 @@ export function computeLocationSummary(activities: Activity[]): LocationSummary 
     provinces: [...provinces].sort(),
     cities: [...cities].sort(),
   }
-}
-
-export function computePeriods3(activities: Activity[]): PeriodStat[] {
-  const counts = new Map<string, number>()
-  let total = 0
-  for (const a of activities) {
-    if (!a.start_date_local) continue
-    const d = new Date(a.start_date_local)
-    const hour = d.getHours()
-    if (Number.isNaN(hour)) continue
-    const period = classifyPeriod3(hour)
-    if (!period) continue
-    counts.set(period, (counts.get(period) ?? 0) + 1)
-    total++
-  }
-  if (total === 0) return []
-  const order = ['morning', 'afternoon', 'evening']
-  return order
-    .map((period) => ({
-      period,
-      label: PERIOD3_LABELS[period] ?? period,
-      count: counts.get(period) ?? 0,
-      pct: total > 0 ? Math.round(((counts.get(period) ?? 0) / total) * 100) : 0,
-    }))
-    .filter((p) => p.count > 0)
 }
 
 export function computeTypeBreakdown(activities: Activity[]): TypeStat[] {

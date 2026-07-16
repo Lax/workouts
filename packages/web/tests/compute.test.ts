@@ -4,7 +4,6 @@ import {
   computeFilteredActivities,
   computeLocationSummary,
   computePeriods,
-  computePeriods3,
   computeProvinceStats,
   computeTypeBreakdown,
   computeYears,
@@ -353,44 +352,6 @@ describe('computeYearStats', () => {
       { category: 'run', distanceKm: 30, count: 2 },
       { category: 'swim', distanceKm: 3, count: 1 },
     ])
-  })
-})
-
-describe('computePeriods3', () => {
-  it('classifies activities into 3 periods', () => {
-    const r = computePeriods3([
-      act({ start_date_local: '2024-06-01T06:00:00' }),
-      act({ start_date_local: '2024-06-01T14:00:00' }),
-      act({ start_date_local: '2024-06-01T20:00:00' }),
-    ])
-    expect(r).toHaveLength(3)
-    expect(r.map((p) => p.period)).toEqual(['morning', 'afternoon', 'evening'])
-    expect(r.every((p) => p.count === 1)).toBe(true)
-    expect(r.every((p) => p.pct === 33)).toBe(true)
-  })
-
-  it('uses correct labels', () => {
-    const r = computePeriods3([act({ start_date_local: '2024-06-01T06:00:00' })])
-    expect(r[0].label).toBe('早')
-  })
-
-  it('returns empty for null start_date_local', () => {
-    expect(computePeriods3([act({ start_date_local: null as any })])).toEqual([])
-  })
-
-  it('returns empty for empty list', () => {
-    expect(computePeriods3([])).toEqual([])
-  })
-
-  it('handles garbage date string', () => {
-    expect(computePeriods3([act({ start_date_local: 'not-a-date' })])).toEqual([])
-  })
-
-  it('single period returns 100%', () => {
-    const r = computePeriods3([act({ start_date_local: '2024-06-01T06:00:00' })])
-    expect(r).toHaveLength(1)
-    expect(r[0].period).toBe('morning')
-    expect(r[0].pct).toBe(100)
   })
 })
 

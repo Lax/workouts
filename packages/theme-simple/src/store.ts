@@ -1,5 +1,4 @@
 import type { Activity } from '@workouts/shared'
-import { classifyPeriod3 } from '@workouts/shared'
 import { create } from 'zustand'
 import { computeStreak } from './compute'
 import { clearRunHash, setRunHash } from './utils'
@@ -25,7 +24,6 @@ export interface SimpleStore {
   totalStreak: number
   filteredActivities: Activity[]
   regionFilter: string | null
-  period3Filter: string | null
   typeFilter: string | null
   lightsOn: boolean
   viewMode: ViewMode
@@ -47,7 +45,6 @@ export interface SimpleStore {
   selectByHash: (act: Activity) => void
   closeDetail: () => void
   setRegionFilter: (region: string | null) => void
-  setPeriod3Filter: (period: string | null) => void
   setTypeFilter: (type: string | null) => void
   setViewMode: (mode: ViewMode) => void
   setShowYearModal: (year: number | null) => void
@@ -73,7 +70,6 @@ function filterActivities(
   sortField: SortField,
   sortDesc: boolean,
   regionFilter: string | null,
-  period3Filter: string | null,
   typeFilter: string | null,
 ): Activity[] {
   let r = [...acts]
@@ -90,15 +86,6 @@ function filterActivities(
         return a.location_country?.includes(regionFilter) ?? false
       }
       return regions.some((reg) => reg.p === regionFilter || reg.c === regionFilter)
-    })
-  }
-  if (period3Filter !== null) {
-    r = r.filter((a) => {
-      if (!a.start_date_local) return false
-      const d = new Date(a.start_date_local)
-      const hour = d.getHours()
-      if (Number.isNaN(hour)) return false
-      return classifyPeriod3(hour) === period3Filter
     })
   }
   if (typeFilter !== null) {
@@ -137,7 +124,6 @@ export const useSimpleStore = create<SimpleStore>()((set) => ({
   totalStreak: 0,
   filteredActivities: [],
   regionFilter: null,
-  period3Filter: null,
   typeFilter: null,
   lightsOn: false,
   viewMode: typeof window !== 'undefined' && window.innerWidth < 768 ? 'grid' : 'table',
@@ -163,16 +149,7 @@ export const useSimpleStore = create<SimpleStore>()((set) => ({
         years: ys,
         streaks,
         totalStreak: computeStreak(acts),
-        filteredActivities: filterActivities(
-          acts,
-          initialYear,
-          s.selectedMonth,
-          s.sortField,
-          s.sortDesc,
-          s.regionFilter,
-          s.period3Filter,
-          s.typeFilter,
-        ),
+        filteredActivities: filterActivities(acts, initialYear, s.selectedMonth, s.sortField, s.sortDesc, s.regionFilter, s.typeFilter),
       }
     }),
 
@@ -181,24 +158,14 @@ export const useSimpleStore = create<SimpleStore>()((set) => ({
       selectedYear: y,
       selectedMonth: null,
       regionFilter: null,
-      period3Filter: null,
       typeFilter: null,
-      filteredActivities: filterActivities(s.activities, y, null, s.sortField, s.sortDesc, null, null, null),
+      filteredActivities: filterActivities(s.activities, y, null, s.sortField, s.sortDesc, null, null),
     })),
 
   setSelectedMonth: (m) =>
     set((s) => ({
       selectedMonth: m,
-      filteredActivities: filterActivities(
-        s.activities,
-        s.selectedYear,
-        m,
-        s.sortField,
-        s.sortDesc,
-        s.regionFilter,
-        s.period3Filter,
-        s.typeFilter,
-      ),
+      filteredActivities: filterActivities(s.activities, s.selectedYear, m, s.sortField, s.sortDesc, s.regionFilter, s.typeFilter),
     })),
 
   setColorMode: (m) => set({ colorMode: m }),
@@ -219,16 +186,7 @@ export const useSimpleStore = create<SimpleStore>()((set) => ({
       return {
         sortField: field,
         sortDesc: desc,
-        filteredActivities: filterActivities(
-          s.activities,
-          s.selectedYear,
-          s.selectedMonth,
-          field,
-          desc,
-          s.regionFilter,
-          s.period3Filter,
-          s.typeFilter,
-        ),
+        filteredActivities: filterActivities(s.activities, s.selectedYear, s.selectedMonth, field, desc, s.regionFilter, s.typeFilter),
       }
     }),
 
@@ -256,34 +214,7 @@ export const useSimpleStore = create<SimpleStore>()((set) => ({
       const next = s.regionFilter === region ? null : region
       return {
         regionFilter: next,
-        filteredActivities: filterActivities(
-          s.activities,
-          s.selectedYear,
-          s.selectedMonth,
-          s.sortField,
-          s.sortDesc,
-          next,
-          s.period3Filter,
-          s.typeFilter,
-        ),
-      }
-    }),
-
-  setPeriod3Filter: (period) =>
-    set((s) => {
-      const next = s.period3Filter === period ? null : period
-      return {
-        period3Filter: next,
-        filteredActivities: filterActivities(
-          s.activities,
-          s.selectedYear,
-          s.selectedMonth,
-          s.sortField,
-          s.sortDesc,
-          s.regionFilter,
-          next,
-          s.typeFilter,
-        ),
+        filteredActivities: filterActivities(s.activities, s.selectedYear, s.selectedMonth, s.sortField, s.sortDesc, next, s.typeFilter),
       }
     }),
 
@@ -292,16 +223,7 @@ export const useSimpleStore = create<SimpleStore>()((set) => ({
       const next = s.typeFilter === type ? null : type
       return {
         typeFilter: next,
-        filteredActivities: filterActivities(
-          s.activities,
-          s.selectedYear,
-          s.selectedMonth,
-          s.sortField,
-          s.sortDesc,
-          s.regionFilter,
-          s.period3Filter,
-          next,
-        ),
+        filteredActivities: filterActivities(s.activities, s.selectedYear, s.selectedMonth, s.sortField, s.sortDesc, s.regionFilter, next),
       }
     }),
 

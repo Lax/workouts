@@ -3,7 +3,6 @@ export {
   computeAvailableTypes,
   computeLocationSummary,
   computePeriods,
-  computePeriods3,
   computeProvinceStats,
   computeTypeBreakdown,
   computeYears,

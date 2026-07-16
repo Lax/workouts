@@ -85,19 +85,6 @@ export function getStartCoords(polyline: string | null | undefined): [number, nu
   return pts[0]
 }
 
-export function classifyPeriod3(hour: number): 'morning' | 'afternoon' | 'evening' | null {
-  if (hour >= 3 && hour <= 9) return 'morning'
-  if (hour >= 10 && hour <= 17) return 'afternoon'
-  if (hour >= 18 || hour <= 2) return 'evening'
-  return null
-}
-
-export const PERIOD3_LABELS: Record<string, string> = {
-  morning: '早',
-  afternoon: '中',
-  evening: '晚',
-}
-
 export interface GeoLocation {
   type: 'province' | 'continent' | 'ocean' | 'text_fallback' | 'unknown'
   name: string
