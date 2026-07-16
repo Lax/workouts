@@ -129,13 +129,26 @@ module Workouts
       def normalize_entry(raw)
         return nil unless raw
         province = raw[:province] || raw["p"] || raw["province"]
+        province = nil if province.is_a?(Array) || province.to_s.empty? || province == "中华人民共和国"
         return nil unless province
         {
           province: province,
-          city: raw[:city] || raw["city"] || raw["c"],
-          district: raw[:district] || raw["dist"] || raw["d"],
-          township: raw[:township] || raw["town"] || raw["t"],
+          city: pick_field(raw, :city, "city", "c", "city") { |v| valid_name?(v) },
+          district: pick_field(raw, :district, "dist", "d"),
+          township: pick_field(raw, :township, "town", "t"),
         }
+      end
+
+      def pick_field(raw, *keys)
+        keys.each do |k|
+          v = raw[k] || raw[k.to_s]
+          return v if block_given? ? yield(v) : v.is_a?(String) && !v.empty?
+        end
+        nil
+      end
+
+      def valid_name?(v)
+        v.is_a?(String) && !v.empty? && !v.match?(/^-?\d+\.\d+,-?\d+\.\d+$/)
       end
 
       def region_key(result)
@@ -160,14 +173,14 @@ module Workouts
         File.open(POINT_CACHE_FILE, "r") do |f|
           f.each_line do |line|
             entry = JSON.parse(line) rescue next
-            return entry if entry["c"] == coord_key
+            return entry if entry["ck"] == coord_key
           end
         end
         nil
       end
 
       def save_point_cache(coord_key, result)
-        entry = { c: coord_key, p: result[:province], source: result[:source] }
+        entry = { ck: coord_key, p: result[:province], source: result[:source] }
         entry[:city] = result[:city] if result[:city]
         entry[:dist] = result[:district] if result[:district]
         entry[:town] = result[:township] if result[:township]
