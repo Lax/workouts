@@ -133,7 +133,7 @@ export function SimpleLayout() {
           {/* Selected year first, then other years descending, then Total */}
           {selectedYear !== null && (
             <div className="year-block year-block-selected" onClick={() => setSelectedYear(null)}>
-              <YearStats year={selectedYear} defaultCompact={false} />
+              <YearStats year={selectedYear} />
               <hr className="section-divider" />
             </div>
           )}

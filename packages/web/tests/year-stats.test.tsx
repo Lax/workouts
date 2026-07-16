@@ -53,19 +53,16 @@ describe('YearStats', () => {
     document.body.removeChild(container)
   })
 
-  it('empty: no activities renders Total label, 0 Runs, 0 km, 0 day Streak, no category breakdown', () => {
+  it('empty: no activities renders Total label, 0 streak, no categories', () => {
     act(() => {
       root.render(<YearStats year={null} />)
     })
     expect(container.textContent).toContain('TotalJourney')
-    expect(container.textContent).toContain('0Runs')
-    expect(container.textContent).toContain('0.0km')
     expect(container.textContent).toContain('0 dayStreak')
-    expect(container.textContent).not.toContain('Elevation Gain')
-    expect(container.textContent).not.toContain('Avg Heart Rate')
-    expect(container.textContent).not.toContain('Avg Pace')
     expect(container.textContent).not.toContain('Moving Time')
-    expect(container.textContent).not.toContain('·')
+    expect(container.textContent).not.toContain('Elevation Gain')
+    expect(container.textContent).not.toContain('More')
+    expect(container.textContent).not.toContain('Less')
   })
 
   it('empty with year filter shows year label', () => {
@@ -73,11 +70,11 @@ describe('YearStats', () => {
       root.render(<YearStats year={2024} />)
     })
     expect(container.textContent).toContain('2024Journey')
-    expect(container.textContent).toContain('0Runs')
-    expect(container.textContent).toContain('0.0km')
+    expect(container.textContent).not.toContain('Runs')
+    expect(container.textContent).not.toContain('km')
   })
 
-  it('populated: renders stats for given year (compact: core only)', () => {
+  it('populated: renders stats for given year', () => {
     const acts = [
       baseAct({
         run_id: '1',
@@ -85,10 +82,7 @@ describe('YearStats', () => {
         distance: 10000,
         moving_time: 1800,
         average_speed: 4,
-        average_heartrate: 150,
-        max_heartrate: 165,
         elevation_gain: 200,
-        calories: 500,
         start_date: '2024-01-01T00:00:00Z',
       }),
       baseAct({
@@ -96,11 +90,7 @@ describe('YearStats', () => {
         sport_category: 'run',
         distance: 10000,
         moving_time: 1800,
-        average_speed: 4,
-        average_heartrate: 150,
-        max_heartrate: 165,
         elevation_gain: 200,
-        calories: 500,
         start_date: '2024-01-02T00:00:00Z',
       }),
       baseAct({
@@ -108,11 +98,7 @@ describe('YearStats', () => {
         sport_category: 'run',
         distance: 10000,
         moving_time: 1800,
-        average_speed: 4,
-        average_heartrate: 150,
-        max_heartrate: 165,
         elevation_gain: 200,
-        calories: 500,
         start_date: '2024-01-03T00:00:00Z',
       }),
     ]
@@ -128,123 +114,13 @@ describe('YearStats', () => {
       root.render(<YearStats year={2024} />)
     })
     expect(container.textContent).toContain('2024Journey')
-    expect(container.textContent).toContain('3Runs')
-    expect(container.textContent).toContain('30.0km')
+    expect(container.textContent).toContain('3Run (30km)')
     expect(container.textContent).toContain('3 dayStreak')
-    // Compact: hidden by default
-    expect(container.textContent).not.toContain('Moving Time')
-    expect(container.textContent).not.toContain('Elevation Gain')
-    expect(container.textContent).not.toContain('Avg Heart Rate')
-    expect(container.textContent).not.toContain('Calories')
-    // Compact: More button present
-    expect(container.textContent).toContain('More')
-  })
-
-  it('populated: defaultCompact=false shows all stats', () => {
-    const acts = [
-      baseAct({
-        run_id: '1',
-        distance: 10000,
-        moving_time: 1800,
-        average_speed: 4,
-        average_heartrate: 150,
-        max_heartrate: 165,
-        elevation_gain: 200,
-        calories: 500,
-        start_date: '2024-01-01T00:00:00Z',
-      }),
-    ]
-    useSimpleStore.setState({
-      activities: acts,
-      selectedYear: null,
-      selectedMonth: null,
-      years: [2024],
-      filteredActivities: acts,
-    })
-
-    act(() => {
-      root.render(<YearStats year={2024} defaultCompact={false} />)
-    })
-    expect(container.textContent).toContain('30mMoving Time')
-    expect(container.textContent).toContain('200Elevation Gain')
-    expect(container.textContent).toContain('150Avg Heart Rate')
-    expect(container.textContent).toContain('165Max Heart Rate')
-    expect(container.textContent).toContain('500Calories')
+    expect(container.textContent).toContain('Moving Time')
+    expect(container.textContent).toContain('Elevation Gain')
+    expect(container.textContent).not.toContain('Runs')
     expect(container.textContent).not.toContain('More')
-  })
-
-  it('toggle: clicking More shows extra stats, Less hides them', () => {
-    const acts = [
-      baseAct({
-        run_id: '1',
-        distance: 10000,
-        moving_time: 1800,
-        average_speed: 4,
-        average_heartrate: 140,
-        calories: 300,
-        start_date: '2024-01-01T00:00:00Z',
-      }),
-    ]
-    useSimpleStore.setState({
-      activities: acts,
-      selectedYear: null,
-      selectedMonth: null,
-      years: [2024],
-      filteredActivities: acts,
-    })
-
-    act(() => {
-      root.render(<YearStats year={2024} />)
-    })
-    expect(container.textContent).not.toContain('Moving Time')
-    expect(container.textContent).toContain('More')
     expect(container.textContent).not.toContain('Less')
-
-    const moreBtn = container.querySelector('.stats-toggle')!
-    act(() => {
-      ;(moreBtn as HTMLButtonElement).click()
-    })
-    expect(container.textContent).toContain('30mMoving Time')
-    expect(container.textContent).toContain('140Avg Heart Rate')
-    expect(container.textContent).toContain('300Calories')
-    expect(container.textContent).toContain('Less')
-    expect(container.textContent).not.toContain('More')
-
-    act(() => {
-      ;(moreBtn as HTMLButtonElement).click()
-    })
-    expect(container.textContent).not.toContain('Moving Time')
-    expect(container.textContent).toContain('More')
-  })
-
-  it('compact: no More button when no extra data', () => {
-    const acts = [
-      baseAct({
-        run_id: '1',
-        distance: 5000,
-        moving_time: 0,
-        elevation_gain: 0,
-        calories: 0,
-        average_heartrate: null,
-        max_heartrate: null,
-        average_cadence: null,
-        average_power: null,
-        average_temperature: null,
-        start_date: '2024-01-01T00:00:00Z',
-      }),
-    ]
-    useSimpleStore.setState({
-      activities: acts,
-      selectedYear: null,
-      selectedMonth: null,
-      years: [2024],
-      filteredActivities: acts,
-    })
-
-    act(() => {
-      root.render(<YearStats year={2024} />)
-    })
-    expect(container.textContent).not.toContain('More')
   })
 
   it('null year (Total): aggregates all activities', () => {
@@ -264,12 +140,10 @@ describe('YearStats', () => {
       root.render(<YearStats year={null} />)
     })
     expect(container.textContent).toContain('TotalJourney')
-    expect(container.textContent).toContain('2Runs')
-    expect(container.textContent).toContain('15.0km')
-    expect(container.textContent).toContain('1 dayStreak')
+    expect(container.textContent).toContain('2Run (15km)')
   })
 
-  it('category breakdown: shows in full mode only (compact hides it)', () => {
+  it('category breakdown: multiple sport types', () => {
     const acts = [
       baseAct({ run_id: '1', sport_category: 'run', distance: 10000, start_date: '2024-01-01T00:00:00Z' }),
       baseAct({ run_id: '2', sport_category: 'ride', distance: 40000, start_date: '2024-01-02T00:00:00Z' }),
@@ -286,17 +160,11 @@ describe('YearStats', () => {
     act(() => {
       root.render(<YearStats year={2024} />)
     })
-    expect(container.textContent).not.toContain('Ride 40km')
-    expect(container.textContent).not.toContain('·')
-
-    act(() => {
-      root.render(<YearStats year={2024} defaultCompact={false} />)
-    })
-    expect(container.textContent).toContain('Ride 40km')
-    expect(container.textContent).toContain('Run 30km')
+    expect(container.textContent).toContain('1Ride (40km)')
+    expect(container.textContent).toContain('2Run (30km)')
   })
 
-  it('moving time hides when zero (full mode)', () => {
+  it('moving time hides when zero', () => {
     const acts = [baseAct({ run_id: '1', distance: 5000, moving_time: 0, start_date: '2024-01-01T00:00:00Z' })]
     useSimpleStore.setState({
       activities: acts,
@@ -307,8 +175,24 @@ describe('YearStats', () => {
     })
 
     act(() => {
-      root.render(<YearStats year={2024} defaultCompact={false} />)
+      root.render(<YearStats year={2024} />)
     })
     expect(container.textContent).not.toContain('Moving Time')
+  })
+
+  it('elevation gain hides when zero', () => {
+    const acts = [baseAct({ run_id: '1', distance: 5000, elevation_gain: 0, start_date: '2024-01-01T00:00:00Z' })]
+    useSimpleStore.setState({
+      activities: acts,
+      selectedYear: null,
+      selectedMonth: null,
+      years: [2024],
+      filteredActivities: acts,
+    })
+
+    act(() => {
+      root.render(<YearStats year={2024} />)
+    })
+    expect(container.textContent).not.toContain('Elevation Gain')
   })
 })
