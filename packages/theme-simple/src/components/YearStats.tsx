@@ -59,7 +59,14 @@ export function YearStats({ year, defaultCompact = true }: YearStatsProps) {
         </>
       )}
       {defaultCompact && hasExtra && (
-        <button type="button" className="stats-toggle" onClick={() => setShowAll(!showAll)}>
+        <button
+          type="button"
+          className="stats-toggle"
+          onClick={(e) => {
+            e.stopPropagation()
+            setShowAll(!showAll)
+          }}
+        >
           {showAll ? 'Less' : 'More'}
         </button>
       )}

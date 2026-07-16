@@ -178,6 +178,7 @@ export function SimpleLayout() {
               lightsOn={lightsOn}
               showLabels={showLabels}
               animate={!!selectedActivity}
+              initialScrollDisabled={true}
               onActivityHover={setMapHoveredId}
               onActivityClick={openDetail}
             />

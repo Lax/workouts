@@ -16,6 +16,7 @@ export interface PanelMapProps {
   dashLines?: boolean
   privacyMode?: boolean
   animate?: boolean
+  initialScrollDisabled?: boolean
   onActivityClick?: (activity: Activity) => void
   onActivityHover?: (activityId: string | null) => void
 }
@@ -32,11 +33,12 @@ export function PanelMap({
   dashLines = false,
   privacyMode = false,
   animate = false,
+  initialScrollDisabled,
   onActivityClick,
   onActivityHover,
 }: PanelMapProps) {
   const elRef = useRef<HTMLDivElement>(null)
-  const mapRef = useLeafletMap(elRef, { colorScheme, tileConfig, lightsOn, showLabels, zoomPosition: 'bottomright' })
+  const mapRef = useLeafletMap(elRef, { colorScheme, tileConfig, lightsOn, showLabels, zoomPosition: 'bottomright', initialScrollDisabled })
   const opts: PolylineOptions = {
     colorMode,
     hoveredActivityId,

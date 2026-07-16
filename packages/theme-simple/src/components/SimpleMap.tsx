@@ -10,6 +10,7 @@ interface SimpleMapProps {
   lightsOn?: boolean
   showLabels?: boolean
   animate?: boolean
+  initialScrollDisabled?: boolean
   onActivityClick?: (activity: Activity) => void
   onActivityHover?: (activityId: string | null) => void
 }
@@ -34,6 +35,7 @@ export function SimpleMap({
   lightsOn,
   showLabels,
   animate,
+  initialScrollDisabled,
   onActivityClick,
   onActivityHover,
 }: SimpleMapProps) {
@@ -49,6 +51,7 @@ export function SimpleMap({
       lightsOn={lightsOn}
       showLabels={showLabels}
       animate={animate}
+      initialScrollDisabled={initialScrollDisabled}
       onActivityClick={onActivityClick}
       onActivityHover={onActivityHover}
     />

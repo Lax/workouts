@@ -219,7 +219,10 @@
 .map-wrapper {
   height: min(600px, 50vh);
   flex-shrink: 0;
-  position: relative;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  align-self: flex-start;
   isolation: isolate;
 }
 
