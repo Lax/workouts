@@ -6,6 +6,9 @@ sync:
   # time_budget: 300            # 单次同步最大秒数 (可选, env: SYNC__TIME_BUDGET)
   # total_timeout: 600          # Runner 总超时秒数 (可选, env: SYNC__TOTAL_TIMEOUT)
 
+  # amap:                       # 高德 Web 服务 API (行政区逆地理编码)
+  #   api_key: "your_key"       # env: AMAP_API_KEY
+
   # strava:                     # OAuth2
   #   client_id: ""             # env: SYNC__STRAVA__CLIENT_ID
   #   client_secret: ""         # env: SYNC__STRAVA__CLIENT_SECRET
