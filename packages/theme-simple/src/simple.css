@@ -59,6 +59,26 @@
   --font-mono: 'IBM Plex Mono', 'Courier New', monospace;
 }
 
+/* Zone color levels — override --color-text vars per area */
+.simple-header,
+.left-panel {
+  --color-text: var(--color-accent);
+  --color-text-secondary: var(--color-accent);
+  --color-text-dim: var(--color-accent);
+}
+
+[data-theme='dark'] .right-panel {
+  --color-text: #ffffff;
+  --color-text-secondary: #ffffff;
+  --color-text-dim: #ffffff;
+}
+
+.year-block-selected {
+  --color-text: #ffffff;
+  --color-text-secondary: #ffffff;
+  --color-text-dim: #ffffff;
+}
+
 .page-container {
   margin: 0 auto;
   margin-bottom: 4rem;
