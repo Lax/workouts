@@ -23,15 +23,13 @@ export function YearStats({ year }: YearStatsProps) {
       <Stat variant="year-stat" value={year !== null ? String(year) : 'Total'} description="Journey" />
       {stats.categoryBreakdown.map((c) => (
         <div key={c.category} className="stat-line">
-          <span className="stat-val">
-            {c.count} {c.category}
-          </span>
-          <span className="stat-label">{c.distanceKm.toFixed(0)}km</span>
+          <span className="stat-val">{c.distanceKm.toFixed(0)}km</span>
+          <span className="stat-label">×{c.count} {c.category}</span>
         </div>
       ))}
       <Stat variant="year-stat" value={`${stats.streak} day`} description="Streak" />
       {stats.movingTime > 0 && <Stat variant="year-stat" value={movingTimeStr} description="Moving Time" />}
-      {stats.elevationGain > 0 && <Stat variant="year-stat" value={Math.round(stats.elevationGain)} description="Elevation Gain" />}
+      {stats.elevationGain > 0 && <Stat variant="year-stat" value={`${Math.round(stats.elevationGain)}m`} description="Elevation" />}
     </div>
   )
 }
