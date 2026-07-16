@@ -135,3 +135,268 @@ export function getAllCities(): string[] {
   }
   return result
 }
+
+// Country + admin region text matching (for international activities)
+const COUNTRY_NAMES = [
+  'United States',
+  'USA',
+  'US',
+  'America',
+  '美国',
+  'Canada',
+  '加拿大',
+  'United Kingdom',
+  'UK',
+  'Britain',
+  'England',
+  '英国',
+  'France',
+  '法国',
+  'Germany',
+  '德国',
+  'Italy',
+  '意大利',
+  'Spain',
+  '西班牙',
+  'Portugal',
+  '葡萄牙',
+  'Netherlands',
+  'Holland',
+  '荷兰',
+  'Belgium',
+  '比利时',
+  'Switzerland',
+  '瑞士',
+  'Austria',
+  '奥地利',
+  'Sweden',
+  '瑞典',
+  'Norway',
+  '挪威',
+  'Denmark',
+  '丹麦',
+  'Finland',
+  '芬兰',
+  'Poland',
+  '波兰',
+  'Czech Republic',
+  'Czechia',
+  '捷克',
+  'Hungary',
+  '匈牙利',
+  'Greece',
+  '希腊',
+  'Turkey',
+  '土耳其',
+  'Russia',
+  '俄罗斯',
+  'Japan',
+  '日本',
+  'South Korea',
+  'Korea',
+  '韩国',
+  'Australia',
+  '澳大利亚',
+  'New Zealand',
+  '新西兰',
+  'India',
+  '印度',
+  'Brazil',
+  '巴西',
+  'Mexico',
+  '墨西哥',
+  'Argentina',
+  '阿根廷',
+  'Chile',
+  '智利',
+  'Colombia',
+  '哥伦比亚',
+  'South Africa',
+  '南非',
+  'Egypt',
+  '埃及',
+  'Nigeria',
+  '尼日利亚',
+  'Kenya',
+  '肯尼亚',
+  'Thailand',
+  '泰国',
+  'Vietnam',
+  '越南',
+  'Malaysia',
+  '马来西亚',
+  'Indonesia',
+  '印度尼西亚',
+  'Philippines',
+  '菲律宾',
+  'Singapore',
+  '新加坡',
+  'Taiwan',
+  '台湾',
+  'Hong Kong',
+  '香港',
+  'Macau',
+  'Macao',
+  '澳门',
+]
+
+const ADMIN_REGIONS: Record<string, string[]> = {
+  'United States': [
+    'Alabama',
+    'Alaska',
+    'Arizona',
+    'Arkansas',
+    'California',
+    'Colorado',
+    'Connecticut',
+    'Delaware',
+    'Florida',
+    'Georgia',
+    'Hawaii',
+    'Idaho',
+    'Illinois',
+    'Indiana',
+    'Iowa',
+    'Kansas',
+    'Kentucky',
+    'Louisiana',
+    'Maine',
+    'Maryland',
+    'Massachusetts',
+    'Michigan',
+    'Minnesota',
+    'Mississippi',
+    'Missouri',
+    'Montana',
+    'Nebraska',
+    'Nevada',
+    'New Hampshire',
+    'New Jersey',
+    'New Mexico',
+    'New York',
+    'North Carolina',
+    'North Dakota',
+    'Ohio',
+    'Oklahoma',
+    'Oregon',
+    'Pennsylvania',
+    'Rhode Island',
+    'South Carolina',
+    'South Dakota',
+    'Tennessee',
+    'Texas',
+    'Utah',
+    'Vermont',
+    'Virginia',
+    'Washington',
+    'West Virginia',
+    'Wisconsin',
+    'Wyoming',
+  ],
+  Canada: [
+    'Alberta',
+    'British Columbia',
+    'Manitoba',
+    'New Brunswick',
+    'Newfoundland and Labrador',
+    'Nova Scotia',
+    'Ontario',
+    'Prince Edward Island',
+    'Quebec',
+    'Saskatchewan',
+  ],
+  Australia: [
+    'New South Wales',
+    'Victoria',
+    'Queensland',
+    'Western Australia',
+    'South Australia',
+    'Tasmania',
+    'Australian Capital Territory',
+    'Northern Territory',
+  ],
+  'United Kingdom': ['England', 'Scotland', 'Wales', 'Northern Ireland'],
+  Germany: [
+    'Bavaria',
+    'Berlin',
+    'North Rhine-Westphalia',
+    'Hesse',
+    'Saxony',
+    'Baden-Württemberg',
+    'Lower Saxony',
+    'Hamburg',
+    'Brandenburg',
+  ],
+  Japan: [
+    'Hokkaido',
+    'Aomori',
+    'Tokyo',
+    'Osaka',
+    'Kyoto',
+    'Kanagawa',
+    'Saitama',
+    'Chiba',
+    'Fukuoka',
+    'Nagoya',
+    'Yokohama',
+    'Okinawa',
+    'Nara',
+    'Hyogo',
+    'Hiroshima',
+    'Miyagi',
+  ],
+}
+
+export function extractInternationalLocation(location: string | null): { country: string; region: string | null } | null {
+  if (!location) return null
+  // Split on common delimiters: comma, semicolon, dash
+  const parts = location
+    .split(/[,;–—-]/)
+    .map((p) => p.trim())
+    .filter(Boolean)
+  if (parts.length === 0) return null
+
+  let matchedCountry: string | null = null
+  let matchedRegion: string | null = null
+
+  // First pass: find country in parts
+  for (const part of parts) {
+    const found = COUNTRY_NAMES.find((name) => part.includes(name) || name.includes(part))
+    if (found) {
+      matchedCountry = found
+      break
+    }
+  }
+
+  if (!matchedCountry) return null
+
+  // Second pass: find region
+  // Normalize country name to lookup key
+  const countryKey =
+    matchedCountry === 'USA' || matchedCountry === 'US' || matchedCountry === 'America'
+      ? 'United States'
+      : matchedCountry === 'UK' || matchedCountry === 'Britain' || matchedCountry === 'England'
+        ? 'United Kingdom'
+        : matchedCountry === 'Holland'
+          ? 'Netherlands'
+          : matchedCountry === 'Czechia'
+            ? 'Czech Republic'
+            : matchedCountry === 'Korea'
+              ? 'South Korea'
+              : matchedCountry === 'Macao'
+                ? 'Macau'
+                : matchedCountry
+
+  const regions = ADMIN_REGIONS[countryKey]
+  if (regions) {
+    for (const part of parts) {
+      const found = regions.find((r) => part.includes(r) || r.includes(part))
+      if (found) {
+        matchedRegion = found
+        break
+      }
+    }
+  }
+
+  return { country: matchedCountry, region: matchedRegion }
+}

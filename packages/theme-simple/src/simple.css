@@ -332,10 +332,6 @@
   background: var(--color-bg);
 }
 
-.map-wrapper .leaflet-control-attribution {
-  left: 0;
-  right: auto;
-}
 
 .map-run-title {
   position: absolute;

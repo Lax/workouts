@@ -187,6 +187,19 @@ function levenshtein(a: string, b: string): number {
 
 export * from './cities'
 export * from './color-mode'
+export * from './geo'
+export {
+  type Boundary,
+  type CityBoundary,
+  classifyPeriod3,
+  decodePolyline,
+  getStartCoords,
+  haversine,
+  matchPolygons,
+  PERIOD3_LABELS,
+  pointInPolygon,
+} from './geo'
+export * from './geo-boundaries'
 export * from './theme-types'
 
 export type PeriodLabel = 'morning' | 'noon' | 'afternoon' | 'evening' | 'night'

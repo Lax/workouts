@@ -1,12 +1,15 @@
 export {
   computeAvailableSources,
   computeAvailableTypes,
-  computeCities,
   computeLocationSummary,
   computePeriods,
+  computePeriods3,
+  computeProvinceStats,
+  computeTypeBreakdown,
   computeYears,
+  detectLocation,
 } from './compute'
 export { default } from './plugin'
-export type { CityStat, DerivedData, FilterOptions, LocationSummary, PeriodStat, SortField } from './types'
+export type { CityStat, DerivedData, FilterOptions, LocationSummary, PeriodStat, ProvinceStat, SortField, TypeStat } from './types'
 export { useActivities } from './useActivities'
 export { computeFilteredActivities, useDerivedData } from './useData'

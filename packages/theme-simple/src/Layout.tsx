@@ -13,7 +13,7 @@ import { SummaryView } from './components/SummaryView'
 import { SVGStat } from './components/SVGStat'
 import { YearSelector } from './components/YearSelector'
 import { YearStats } from './components/YearStats'
-import { LocationStats } from './LocationStats'
+import { StatsPanel } from './StatsPanel'
 import { useSimpleStore } from './store'
 import { useFullscreenSync } from './useFullscreenSync'
 import { getRunIdFromHash } from './utils'
@@ -26,16 +26,12 @@ function formatInfoMessage(
   yearsCount: number,
   totalKm: string,
   yearRange: string | null,
-  cityFilter: string | null,
-  periodFilter: string | null,
 ): string {
   const template = (siteConfig?.infoMessage as string) || DEFAULT_INFO
   let msg = template
     .replace('{years}', String(yearsCount))
     .replace('{distance}', totalKm)
     .replace('{yearRange}', yearRange || '')
-    .replace('{city}', cityFilter || '')
-    .replace('{period}', periodFilter || '')
   msg = msg.replace(/\s+/g, ' ').trim()
   return msg
 }
@@ -73,8 +69,6 @@ export function SimpleLayout() {
   const isFullscreen = useFullscreenSync()
   const showLabels = isFullscreen && lightsOn
   const setMapHoveredId = useSimpleStore((s) => s.setMapHoveredId)
-  const cityFilter = useSimpleStore((s) => s.cityFilter)
-  const periodFilter = useSimpleStore((s) => s.periodFilter)
   const viewMode = useSimpleStore((s) => s.viewMode)
   const setViewMode = useSimpleStore((s) => s.setViewMode)
   const view = useSimpleStore((s) => s.view)
@@ -126,9 +120,9 @@ export function SimpleLayout() {
             {SITE.title}
           </a>
           <section className="info-message">
-            <p>{formatInfoMessage(siteConfig, years.length, totalKm, yearRange, cityFilter, periodFilter)}</p>
+            <p>{formatInfoMessage(siteConfig, years.length, totalKm, yearRange)}</p>
           </section>
-          <LocationStats activities={activities} loading={loading} />
+          <StatsPanel activities={activities} loading={loading} />
           <hr className="section-divider" />
           {/* Selected year first, then other years descending, then Total */}
           {selectedYear !== null && (
@@ -179,6 +173,7 @@ export function SimpleLayout() {
               showLabels={showLabels}
               animate={!!selectedActivity}
               initialScrollDisabled={true}
+              attributionPosition="bottomleft"
               onActivityHover={setMapHoveredId}
               onActivityClick={openDetail}
             />

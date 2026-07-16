@@ -70,7 +70,7 @@ async function expectOverlayVisible(overlay: Locator) {
       top === el ||
       el.contains(top) ||
       (top as HTMLElement)?.closest?.(el.className ? `.${el.className.split(' ')[0]}` : el.tagName) !== null
-    return { occluded: !isSelf, topEl: top?.tagName || '', topCls: (top as HTMLElement)?.className?.slice(0, 40) || '' }
+    return { occluded: !isSelf, topEl: top?.tagName || '', topCls: String((top as HTMLElement)?.className ?? '').slice(0, 40) || '' }
   })
   expect(occluded.occluded, `overlay must be at top of visual stack (found: ${occluded.topEl}.${occluded.topCls})`).toBe(false)
 }

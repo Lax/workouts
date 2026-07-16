@@ -1,5 +1,6 @@
+import { detectLocation } from '@workouts/plugin-data-source'
 import type { Activity } from '@workouts/shared'
-import { classifyPeriod, extractCity } from '@workouts/shared'
+import { classifyPeriod3 } from '@workouts/shared'
 import { create } from 'zustand'
 import { computeStreak } from './compute'
 import { clearRunHash, setRunHash } from './utils'
@@ -24,8 +25,9 @@ export interface SimpleStore {
   streaks: Record<number, number>
   totalStreak: number
   filteredActivities: Activity[]
-  cityFilter: string | null
-  periodFilter: string | null
+  regionFilter: string | null
+  period3Filter: string | null
+  typeFilter: string | null
   lightsOn: boolean
   viewMode: ViewMode
   showYearModal: number | null
@@ -45,8 +47,9 @@ export interface SimpleStore {
   openDetail: (act: Activity) => void
   selectByHash: (act: Activity) => void
   closeDetail: () => void
-  setCityFilter: (city: string | null) => void
-  setPeriodFilter: (period: string | null) => void
+  setRegionFilter: (region: string | null) => void
+  setPeriod3Filter: (period: string | null) => void
+  setTypeFilter: (type: string | null) => void
   setViewMode: (mode: ViewMode) => void
   setShowYearModal: (year: number | null) => void
   setLightsOn: (v: boolean) => void
@@ -70,8 +73,9 @@ function filterActivities(
   selectedMonth: number | null,
   sortField: SortField,
   sortDesc: boolean,
-  cityFilter: string | null,
-  periodFilter: string | null,
+  regionFilter: string | null,
+  period3Filter: string | null,
+  typeFilter: string | null,
 ): Activity[] {
   let r = [...acts]
   if (selectedYear !== null) {
@@ -80,17 +84,23 @@ function filterActivities(
   if (selectedMonth !== null && selectedYear !== null) {
     r = r.filter((a) => a.start_date && new Date(a.start_date).getMonth() + 1 === selectedMonth)
   }
-  if (cityFilter !== null) {
-    r = r.filter((a) => extractCity(a.location_country)?.name === cityFilter)
+  if (regionFilter !== null) {
+    r = r.filter((a) => {
+      const loc = detectLocation(a)
+      return loc.type !== 'unknown' && loc.name === regionFilter
+    })
   }
-  if (periodFilter !== null) {
+  if (period3Filter !== null) {
     r = r.filter((a) => {
       if (!a.start_date_local) return false
       const d = new Date(a.start_date_local)
       const hour = d.getHours()
       if (Number.isNaN(hour)) return false
-      return classifyPeriod(hour) === periodFilter
+      return classifyPeriod3(hour) === period3Filter
     })
+  }
+  if (typeFilter !== null) {
+    r = r.filter((a) => a.sport_category === typeFilter)
   }
   r.sort((a, b) => {
     const d = sortDesc ? -1 : 1
@@ -124,8 +134,9 @@ export const useSimpleStore = create<SimpleStore>()((set) => ({
   streaks: {},
   totalStreak: 0,
   filteredActivities: [],
-  cityFilter: null,
-  periodFilter: null,
+  regionFilter: null,
+  period3Filter: null,
+  typeFilter: null,
   lightsOn: false,
   viewMode: typeof window !== 'undefined' && window.innerWidth < 768 ? 'grid' : 'table',
   showYearModal: null,
@@ -150,7 +161,16 @@ export const useSimpleStore = create<SimpleStore>()((set) => ({
         years: ys,
         streaks,
         totalStreak: computeStreak(acts),
-        filteredActivities: filterActivities(acts, initialYear, s.selectedMonth, s.sortField, s.sortDesc, s.cityFilter, s.periodFilter),
+        filteredActivities: filterActivities(
+          acts,
+          initialYear,
+          s.selectedMonth,
+          s.sortField,
+          s.sortDesc,
+          s.regionFilter,
+          s.period3Filter,
+          s.typeFilter,
+        ),
       }
     }),
 
@@ -158,15 +178,25 @@ export const useSimpleStore = create<SimpleStore>()((set) => ({
     set((s) => ({
       selectedYear: y,
       selectedMonth: null,
-      cityFilter: null,
-      periodFilter: null,
-      filteredActivities: filterActivities(s.activities, y, null, s.sortField, s.sortDesc, null, null),
+      regionFilter: null,
+      period3Filter: null,
+      typeFilter: null,
+      filteredActivities: filterActivities(s.activities, y, null, s.sortField, s.sortDesc, null, null, null),
     })),
 
   setSelectedMonth: (m) =>
     set((s) => ({
       selectedMonth: m,
-      filteredActivities: filterActivities(s.activities, s.selectedYear, m, s.sortField, s.sortDesc, s.cityFilter, s.periodFilter),
+      filteredActivities: filterActivities(
+        s.activities,
+        s.selectedYear,
+        m,
+        s.sortField,
+        s.sortDesc,
+        s.regionFilter,
+        s.period3Filter,
+        s.typeFilter,
+      ),
     })),
 
   setColorMode: (m) => set({ colorMode: m }),
@@ -187,7 +217,16 @@ export const useSimpleStore = create<SimpleStore>()((set) => ({
       return {
         sortField: field,
         sortDesc: desc,
-        filteredActivities: filterActivities(s.activities, s.selectedYear, s.selectedMonth, field, desc, s.cityFilter, s.periodFilter),
+        filteredActivities: filterActivities(
+          s.activities,
+          s.selectedYear,
+          s.selectedMonth,
+          field,
+          desc,
+          s.regionFilter,
+          s.period3Filter,
+          s.typeFilter,
+        ),
       }
     }),
 
@@ -210,21 +249,57 @@ export const useSimpleStore = create<SimpleStore>()((set) => ({
     set({ selectedActivity: null, mapHoveredId: null })
   },
 
-  setCityFilter: (city) =>
+  setRegionFilter: (region) =>
     set((s) => {
-      const next = s.cityFilter === city ? null : city
+      const next = s.regionFilter === region ? null : region
       return {
-        cityFilter: next,
-        filteredActivities: filterActivities(s.activities, s.selectedYear, s.selectedMonth, s.sortField, s.sortDesc, next, s.periodFilter),
+        regionFilter: next,
+        filteredActivities: filterActivities(
+          s.activities,
+          s.selectedYear,
+          s.selectedMonth,
+          s.sortField,
+          s.sortDesc,
+          next,
+          s.period3Filter,
+          s.typeFilter,
+        ),
       }
     }),
 
-  setPeriodFilter: (period) =>
+  setPeriod3Filter: (period) =>
     set((s) => {
-      const next = s.periodFilter === period ? null : period
+      const next = s.period3Filter === period ? null : period
       return {
-        periodFilter: next,
-        filteredActivities: filterActivities(s.activities, s.selectedYear, s.selectedMonth, s.sortField, s.sortDesc, s.cityFilter, next),
+        period3Filter: next,
+        filteredActivities: filterActivities(
+          s.activities,
+          s.selectedYear,
+          s.selectedMonth,
+          s.sortField,
+          s.sortDesc,
+          s.regionFilter,
+          next,
+          s.typeFilter,
+        ),
+      }
+    }),
+
+  setTypeFilter: (type) =>
+    set((s) => {
+      const next = s.typeFilter === type ? null : type
+      return {
+        typeFilter: next,
+        filteredActivities: filterActivities(
+          s.activities,
+          s.selectedYear,
+          s.selectedMonth,
+          s.sortField,
+          s.sortDesc,
+          s.regionFilter,
+          s.period3Filter,
+          next,
+        ),
       }
     }),
 

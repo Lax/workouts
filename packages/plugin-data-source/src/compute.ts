@@ -1,6 +1,19 @@
-import type { Activity } from '@workouts/shared'
-import { classifyPeriod, extractCity, type PeriodLabel, sortPeriods } from '@workouts/shared'
-import type { CityStat, LocationSummary, PeriodStat } from './types'
+import type { Activity, GeoLocation } from '@workouts/shared'
+import {
+  CATEGORY_LABELS,
+  CONTINENT_BOUNDARIES,
+  classifyPeriod,
+  classifyPeriod3,
+  extractCity,
+  getStartCoords,
+  matchPolygons,
+  OCEAN_BOUNDARIES,
+  PERIOD3_LABELS,
+  type PeriodLabel,
+  PROVINCE_BOUNDARIES,
+  sortPeriods,
+} from '@workouts/shared'
+import type { CityStat, LocationSummary, PeriodStat, ProvinceStat, TypeStat } from './types'
 
 export function computeYears(activities: Activity[]): number[] {
   const years = new Set<number>()
@@ -87,15 +100,40 @@ export function computeFilteredActivities(
   return [...result].sort((a, b) => (sortDesc ? cmp(b, a) : cmp(a, b)))
 }
 
-export function computeCities(activities: Activity[]): CityStat[] {
-  const cityDist = new Map<string, number>()
-  for (const a of activities) {
-    const info = extractCity(a.location_country)
-    if (!info) continue
-    const d = a.distance ?? 0
-    cityDist.set(info.name, (cityDist.get(info.name) ?? 0) + d)
+export function detectLocation(activity: { summary_polyline?: string | null; location_country?: string | null }): GeoLocation {
+  const coords = getStartCoords(activity.summary_polyline)
+
+  if (coords) {
+    const [lat, lng] = coords
+
+    const provinceName = matchPolygons(lat, lng, PROVINCE_BOUNDARIES)
+    if (provinceName) {
+      return { type: 'province', name: provinceName }
+    }
+
+    const continentName = matchPolygons(lat, lng, CONTINENT_BOUNDARIES)
+    if (continentName) {
+      return { type: 'continent', name: continentName }
+    }
+
+    const oceanName = matchPolygons(lat, lng, OCEAN_BOUNDARIES)
+    if (oceanName) {
+      return { type: 'ocean', name: oceanName }
+    }
   }
-  return [...cityDist.entries()].map(([city, distance]) => ({ city, distance })).sort((a, b) => b.distance - a.distance)
+
+  const text = activity.location_country
+  if (text) {
+    const info = extractCity(text)
+    if (info) {
+      return { type: 'text_fallback', name: info.province || info.name }
+    }
+    if (text.length < 20 && text !== text.toLowerCase()) {
+      return { type: 'text_fallback', name: text }
+    }
+  }
+
+  return { type: 'unknown', name: '' }
 }
 
 export function computePeriods(activities: Activity[]): PeriodStat[] {
@@ -133,15 +171,18 @@ export function computeLocationSummary(activities: Activity[]): LocationSummary 
   const provinces = new Set<string>()
   const cities = new Set<string>()
   for (const a of activities) {
-    const loc = a.location_country
-    if (!loc) continue
-    const info = extractCity(loc)
-    if (info) {
-      cities.add(info.name)
-      provinces.add(info.province)
-      countries.add(info.country)
-    } else if (loc.length < 20 && loc !== loc.toLowerCase()) {
-      countries.add(loc)
+    const loc = detectLocation(a)
+    if (loc.type === 'unknown') continue
+    if (loc.type === 'province') {
+      provinces.add(loc.name)
+      countries.add('China')
+    } else if (loc.type === 'text_fallback') {
+      provinces.add(loc.name)
+      countries.add('China')
+    } else if (loc.type === 'continent') {
+      countries.add(loc.name)
+    } else if (loc.type === 'ocean') {
+      countries.add(loc.name)
     }
   }
   return {
@@ -149,4 +190,75 @@ export function computeLocationSummary(activities: Activity[]): LocationSummary 
     provinces: [...provinces].sort(),
     cities: [...cities].sort(),
   }
+}
+
+export function computePeriods3(activities: Activity[]): PeriodStat[] {
+  const counts = new Map<string, number>()
+  let total = 0
+  for (const a of activities) {
+    if (!a.start_date_local) continue
+    const d = new Date(a.start_date_local)
+    const hour = d.getHours()
+    if (Number.isNaN(hour)) continue
+    const period = classifyPeriod3(hour)
+    if (!period) continue
+    counts.set(period, (counts.get(period) ?? 0) + 1)
+    total++
+  }
+  if (total === 0) return []
+  const order = ['morning', 'afternoon', 'evening']
+  return order
+    .map((period) => ({
+      period,
+      label: PERIOD3_LABELS[period] ?? period,
+      count: counts.get(period) ?? 0,
+      pct: total > 0 ? Math.round(((counts.get(period) ?? 0) / total) * 100) : 0,
+    }))
+    .filter((p) => p.count > 0)
+}
+
+export function computeTypeBreakdown(activities: Activity[]): TypeStat[] {
+  const catDist = new Map<string, { count: number; distance: number }>()
+  for (const a of activities) {
+    const cat = a.sport_category || 'other'
+    const existing = catDist.get(cat) ?? { count: 0, distance: 0 }
+    existing.count++
+    existing.distance += a.distance ?? 0
+    catDist.set(cat, existing)
+  }
+  const total = catDist.size
+  if (total === 0) return []
+  const grandTotal = [...catDist.values()].reduce((s, v) => s + v.distance, 0)
+  return [...catDist.entries()]
+    .map(([type, v]) => ({
+      type,
+      label: (CATEGORY_LABELS as Record<string, string>)[type] ?? type,
+      count: v.count,
+      distance: v.distance,
+      pct: grandTotal > 0 ? Math.round((v.distance / grandTotal) * 100) : 0,
+    }))
+    .sort((a, b) => b.distance - a.distance)
+}
+
+export function computeProvinceStats(activities: Activity[]): ProvinceStat[] {
+  const regionDist = new Map<string, number>()
+  const regionCount = new Map<string, number>()
+  const regionCities = new Map<string, CityStat[]>()
+  for (const a of activities) {
+    const loc = detectLocation(a)
+    if (loc.type === 'unknown') continue
+    const name = loc.name
+    const d = a.distance ?? 0
+    regionDist.set(name, (regionDist.get(name) ?? 0) + d)
+    regionCount.set(name, (regionCount.get(name) ?? 0) + 1)
+    if (!regionCities.has(name)) regionCities.set(name, [])
+  }
+  return [...regionDist.entries()]
+    .map(([name, distance]) => ({
+      province: name,
+      distance,
+      count: regionCount.get(name) ?? 0,
+      cities: [],
+    }))
+    .sort((a, b) => b.distance - a.distance)
 }

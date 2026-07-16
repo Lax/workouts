@@ -13,6 +13,7 @@ export interface LeafletMapOptions {
   zoomControl?: boolean
   zoomPosition?: ZoomPosition
   attributionControl?: boolean
+  attributionPosition?: ZoomPosition
   initialScrollDisabled?: boolean
 }
 
@@ -46,6 +47,9 @@ export function useLeafletMap(elRef: React.RefObject<HTMLDivElement | null>, opt
       scrollWheelZoom: !options.initialScrollDisabled,
     }).setView([30, 110], 4)
     if (zoomCtrl) L.control.zoom({ position: options.zoomPosition ?? 'topright' }).addTo(m)
+    if (options.attributionPosition && m.attributionControl) {
+      m.attributionControl.setPosition(options.attributionPosition)
+    }
     mapRef.current = m
 
     if (options.initialScrollDisabled) {

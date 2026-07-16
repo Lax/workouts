@@ -11,6 +11,7 @@ interface SimpleMapProps {
   showLabels?: boolean
   animate?: boolean
   initialScrollDisabled?: boolean
+  attributionPosition?: 'topleft' | 'topright' | 'bottomleft' | 'bottomright'
   onActivityClick?: (activity: Activity) => void
   onActivityHover?: (activityId: string | null) => void
 }
@@ -36,6 +37,7 @@ export function SimpleMap({
   showLabels,
   animate,
   initialScrollDisabled,
+  attributionPosition,
   onActivityClick,
   onActivityHover,
 }: SimpleMapProps) {
@@ -52,6 +54,7 @@ export function SimpleMap({
       showLabels={showLabels}
       animate={animate}
       initialScrollDisabled={initialScrollDisabled}
+      attributionPosition={attributionPosition}
       onActivityClick={onActivityClick}
       onActivityHover={onActivityHover}
     />

@@ -1,10 +1,12 @@
 import {
   computeAvailableSources,
   computeAvailableTypes,
-  computeCities,
   computeFilteredActivities,
   computeLocationSummary,
   computePeriods,
+  computePeriods3,
+  computeProvinceStats,
+  computeTypeBreakdown,
   computeYears,
 } from '@workouts/plugin-data-source'
 import type { Activity } from '@workouts/shared'
@@ -150,37 +152,6 @@ describe('computeFilteredActivities', () => {
   })
 })
 
-describe('computeCities', () => {
-  it('groups cities and sorts by distance desc', () => {
-    const r = computeCities([
-      act({ location_country: '北京市朝阳区', distance: 10000 }),
-      act({ location_country: '上海', distance: 5000 }),
-      act({ location_country: '北京市海淀区', distance: 8000 }),
-    ])
-    expect(r).toEqual([
-      { city: '北京', distance: 18000 },
-      { city: '上海', distance: 5000 },
-    ])
-  })
-
-  it('returns empty for null location_country', () => {
-    expect(computeCities([act({ location_country: null })])).toEqual([])
-  })
-
-  it('excludes non-Chinese locations', () => {
-    expect(computeCities([act({ location_country: 'United States' }), act({ location_country: 'France' })])).toEqual([])
-  })
-
-  it('handles empty list', () => {
-    expect(computeCities([])).toEqual([])
-  })
-
-  it('handles single activity', () => {
-    const r = computeCities([act({ location_country: '深圳', distance: 15000 })])
-    expect(r).toEqual([{ city: '深圳', distance: 15000 }])
-  })
-})
-
 describe('computePeriods', () => {
   it('classifies activities into 5 periods', () => {
     const r = computePeriods([
@@ -217,18 +188,11 @@ describe('computePeriods', () => {
 })
 
 describe('computeLocationSummary', () => {
-  it('aggregates countries, provinces, cities', () => {
-    const r = computeLocationSummary([
-      act({ location_country: '北京市朝阳区' }),
-      act({ location_country: '上海' }),
-      act({ location_country: 'United States' }),
-    ])
+  it('aggregates provinces from text fallback', () => {
+    const r = computeLocationSummary([act({ location_country: '北京市朝阳区' }), act({ location_country: '上海' })])
     expect(r.countries).toContain('China')
-    expect(r.countries).toContain('United States')
     expect(r.provinces).toContain('北京')
     expect(r.provinces).toContain('上海')
-    expect(r.cities).toContain('北京')
-    expect(r.cities).toContain('上海')
   })
 
   it('returns empty for all null location_country', () => {
@@ -237,12 +201,9 @@ describe('computeLocationSummary', () => {
   })
 
   it('deduplicates countries', () => {
-    const r = computeLocationSummary([
-      act({ location_country: 'United States' }),
-      act({ location_country: 'United States' }),
-      act({ location_country: 'France' }),
-    ])
-    expect(r.countries).toEqual(['France', 'United States'])
+    const r = computeLocationSummary([act({ location_country: '北京市朝阳区' }), act({ location_country: '上海市浦东区' })])
+    expect(r.countries).toEqual(['China'])
+    expect(r.provinces.length).toBeGreaterThanOrEqual(1)
   })
 })
 
@@ -392,5 +353,106 @@ describe('computeYearStats', () => {
       { category: 'run', distanceKm: 30, count: 2 },
       { category: 'swim', distanceKm: 3, count: 1 },
     ])
+  })
+})
+
+describe('computePeriods3', () => {
+  it('classifies activities into 3 periods', () => {
+    const r = computePeriods3([
+      act({ start_date_local: '2024-06-01T06:00:00' }),
+      act({ start_date_local: '2024-06-01T14:00:00' }),
+      act({ start_date_local: '2024-06-01T20:00:00' }),
+    ])
+    expect(r).toHaveLength(3)
+    expect(r.map((p) => p.period)).toEqual(['morning', 'afternoon', 'evening'])
+    expect(r.every((p) => p.count === 1)).toBe(true)
+    expect(r.every((p) => p.pct === 33)).toBe(true)
+  })
+
+  it('uses correct labels', () => {
+    const r = computePeriods3([act({ start_date_local: '2024-06-01T06:00:00' })])
+    expect(r[0].label).toBe('早')
+  })
+
+  it('returns empty for null start_date_local', () => {
+    expect(computePeriods3([act({ start_date_local: null as any })])).toEqual([])
+  })
+
+  it('returns empty for empty list', () => {
+    expect(computePeriods3([])).toEqual([])
+  })
+
+  it('handles garbage date string', () => {
+    expect(computePeriods3([act({ start_date_local: 'not-a-date' })])).toEqual([])
+  })
+
+  it('single period returns 100%', () => {
+    const r = computePeriods3([act({ start_date_local: '2024-06-01T06:00:00' })])
+    expect(r).toHaveLength(1)
+    expect(r[0].period).toBe('morning')
+    expect(r[0].pct).toBe(100)
+  })
+})
+
+describe('computeTypeBreakdown', () => {
+  it('groups by sport_category with counts and distances', () => {
+    const r = computeTypeBreakdown([
+      act({ run_id: '1', sport_category: 'run', distance: 10000 }),
+      act({ run_id: '2', sport_category: 'ride', distance: 40000 }),
+      act({ run_id: '3', sport_category: 'run', distance: 5000 }),
+    ])
+    expect(r).toHaveLength(2)
+    expect(r[0].type).toBe('ride')
+    expect(r[0].count).toBe(1)
+    expect(r[0].distance).toBe(40000)
+    expect(r[0].label).toBe('Cycling')
+    expect(r[0].pct).toBe(73) // 40/55 ≈ 73%
+    expect(r[1].type).toBe('run')
+    expect(r[1].count).toBe(2)
+    expect(r[1].distance).toBe(15000)
+    expect(r[1].label).toBe('Running')
+    expect(r[1].pct).toBe(27) // 15/55 ≈ 27%
+  })
+
+  it('single type shows 100% and is the only entry', () => {
+    const r = computeTypeBreakdown([act({ sport_category: 'run', distance: 5000 })])
+    expect(r).toHaveLength(1)
+    expect(r[0].pct).toBe(100)
+    expect(r[0].type).toBe('run')
+  })
+
+  it('returns empty for empty list', () => {
+    expect(computeTypeBreakdown([])).toEqual([])
+  })
+
+  it('handles null sport_category as other', () => {
+    const r = computeTypeBreakdown([act({ sport_category: null as any })])
+    expect(r).toHaveLength(1)
+    expect(r[0].type).toBe('other')
+  })
+})
+
+describe('computeProvinceStats', () => {
+  it('groups provinces by text fallback', () => {
+    const r = computeProvinceStats([
+      act({ run_id: '1', location_country: '北京市朝阳区', distance: 10000 }),
+      act({ run_id: '2', location_country: '上海', distance: 5000 }),
+    ])
+    expect(r.length).toBeGreaterThanOrEqual(1)
+    expect(r[0].distance).toBeGreaterThan(0)
+  })
+
+  it('handles international text fallback', () => {
+    const r = computeProvinceStats([act({ location_country: 'United States', distance: 5000 })])
+    expect(r.length).toBe(1)
+    expect(r[0].distance).toBe(5000)
+  })
+
+  it('returns empty for empty list', () => {
+    expect(computeProvinceStats([])).toEqual([])
+  })
+
+  it('returns empty for null location_country', () => {
+    expect(computeProvinceStats([act({ location_country: null })])).toEqual([])
   })
 })

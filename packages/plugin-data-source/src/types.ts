@@ -26,6 +26,21 @@ export interface LocationSummary {
   cities: string[]
 }
 
+export interface ProvinceStat {
+  province: string
+  distance: number
+  count: number
+  cities: CityStat[]
+}
+
+export interface TypeStat {
+  type: string
+  label: string
+  count: number
+  distance: number
+  pct: number
+}
+
 export interface DerivedData {
   years: number[]
   availableTypes: [string, number][]

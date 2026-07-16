@@ -570,8 +570,9 @@ describe('D10 — regression: YearStats renders correct values for known fixture
       activities: [],
       filteredActivities: [],
       years: [],
-      cityFilter: null,
-      periodFilter: null,
+      regionFilter: null,
+      period3Filter: null,
+      typeFilter: null,
       selectedYear: null,
       selectedMonth: null,
     })

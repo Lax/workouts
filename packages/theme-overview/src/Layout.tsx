@@ -95,7 +95,40 @@ export function OverviewLayout() {
             <span className="sl-red"></span>
           </div>
           <button type="button" className="icon-btn" onClick={toggleTheme} aria-label="Toggle theme">
-            {colorScheme === 'dark' ? '☀️' : '🌙'}
+            {colorScheme === 'dark' ? (
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth={1.5}
+                stroke="currentColor"
+                width={16}
+                height={16}
+                aria-hidden="true"
+              >
+                <path strokeLinecap="round" d="M12 2a6 6 0 0 0-3 11.2A4 4 0 0 0 11 17h2a4 4 0 0 0 2-3.8A6 6 0 0 0 12 2Z" />
+                <path strokeLinecap="round" d="M9 19h6" />
+              </svg>
+            ) : (
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth={1.5}
+                stroke="currentColor"
+                width={16}
+                height={16}
+                aria-hidden="true"
+              >
+                <path strokeLinecap="round" d="M12 2a6 6 0 0 0-3 11.2A4 4 0 0 0 11 17h2a4 4 0 0 0 2-3.8A6 6 0 0 0 12 2Z" />
+                <path strokeLinecap="round" d="M9 19h6" />
+                <path strokeLinecap="round" d="M12 1.5v-1" />
+                <path strokeLinecap="round" d="M16.5 4l1.5-1.5" />
+                <path strokeLinecap="round" d="M20 8.5h1.5" />
+                <path strokeLinecap="round" d="M4 8.5H2.5" />
+                <path strokeLinecap="round" d="M7.5 4l-1.5-1.5" />
+              </svg>
+            )}
           </button>
         </div>
       </div>
