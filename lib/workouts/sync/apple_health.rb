@@ -271,6 +271,7 @@ module Workouts
         stats = extract_statistics(workout)
         meta = extract_metadata(workout)
         route_paths = extract_route_paths(workout)
+        source_version = workout["sourceVersion"]
 
         results << {
           id: run_id,
@@ -278,6 +279,7 @@ module Workouts
           raw_xml: raw_xml,
           run_id: run_id,
           source_name: source_name,
+          source_version: source_version,
           workout_type: workout_type,
           duration: duration,
           duration_unit: duration_unit,
@@ -435,10 +437,8 @@ module Workouts
         SportMapper.canonicalize(key)
       end
 
-      def display_name(workout_type, start_date)
-        label = map_sport_type(workout_type).capitalize
-        date = start_date ? start_date[0..9] : nil
-        date ? "#{date} · #{label}" : label
+      def display_name(workout_type, _start_date)
+        workout_type.sub(/\AHKWorkoutActivityType/, "")
       end
 
       def elevation_gain_from_points(points)
