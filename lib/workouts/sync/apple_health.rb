@@ -204,25 +204,43 @@ module Workouts
         end_t = Time.parse(end_date_str) rescue nil
         return [nil, nil] unless start_t && end_t
 
-        bucket = if @heart_rate_by_date
-                   @heart_rate_by_date[start_t.strftime("%Y-%m-%d")]
-                 else
-                   @heart_rate_index
-                 end
-        return [nil, nil] unless bucket&.any?
+        records = collect_hr_in_window(start_t, end_t)
+        return [nil, nil] if records.empty?
 
-        lo = bucket.bsearch_index { |hr| hr.time >= start_t }
-        hi = bucket.bsearch_index { |hr| hr.time > end_t }
-
-        return [nil, nil] unless lo
-
-        slice = hi ? bucket[lo...hi] : bucket[lo..]
-        return [nil, nil] if slice.empty?
-
-        vals = slice.map(&:value)
+        vals = records.map(&:value)
         avg = (vals.sum.to_f / vals.size).round(1)
         max = vals.max
         [avg, max]
+      end
+
+      def collect_hr_in_window(start_t, end_t)
+        unless @heart_rate_by_date
+          return [] unless @heart_rate_index&.any?
+          lo = @heart_rate_index.bsearch_index { |hr| hr.time >= start_t }
+          hi = @heart_rate_index.bsearch_index { |hr| hr.time > end_t }
+          return [] unless lo
+          slice = hi ? @heart_rate_index[lo...hi] : @heart_rate_index[lo..]
+          return slice || []
+        end
+
+        cur = start_t
+        results = []
+
+        while cur <= end_t
+          date_key = cur.strftime("%Y-%m-%d")
+          bucket = @heart_rate_by_date[date_key]
+          if bucket&.any?
+            lo = bucket.bsearch_index { |hr| hr.time >= start_t }
+            hi = bucket.bsearch_index { |hr| hr.time > end_t }
+            if lo
+              slice = hi ? bucket[lo...hi] : bucket[lo..]
+              results.concat(slice) if slice&.any?
+            end
+          end
+          cur += 86400
+        end
+
+        results
       end
 
       def process_workout_chunk(raw_xml, existing_ids, results)
