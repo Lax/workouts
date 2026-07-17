@@ -97,10 +97,11 @@ jobs:
         run: |
           mkdir -p data/import/apple_health
           git lfs install
-          if ! git fetch origin data/import/apple_health 2>/dev/null; then
+          git ls-remote --exit-code origin refs/heads/data/import/apple_health >/dev/null 2>&1 || {
             echo "No data/import/apple_health branch yet — skipping" >&2
             exit 0
-          fi
+          }
+          git fetch origin refs/heads/data/import/apple_health:refs/remotes/origin/data/import/apple_health
           git checkout data/import/apple_health -- data/import/apple_health/export.zip
           if [ ! -f data/import/apple_health/export.zip ]; then
             echo "No export.zip in branch — skipping" >&2
