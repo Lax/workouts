@@ -37,7 +37,6 @@ sync → workouts geo detect → DB[divisions] → export json → activities.js
 
 ```
 data/cache/
-├── geo-activities.json       # run_id → activity-level summary
 └── geo-point.jsonl           # JSONL: coord → geocode result (per-point API cache)
 ```
 

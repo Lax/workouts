@@ -8,7 +8,6 @@ module Workouts
       KEEP_PLACEHOLDER = Workouts::Source::Keep::PLACEHOLDER_POLYLINE
       SAMPLE_INTERVAL_DEG = 0.01
       CACHE_DIR = "data/cache"
-      ACTIVITY_CACHE_FILE = File.join(CACHE_DIR, "geo-activities.json")
       POINT_CACHE_FILE = File.join(CACHE_DIR, "geo-point.jsonl")
 
       def initialize(db:, amap_key: nil, batch: 20, limit: nil, strategy: "proportional", time_budget: nil, dry_run: false)
@@ -78,7 +77,6 @@ module Workouts
         return if divisions.empty?
 
         summary = build_summary(divisions, samples.size)
-        cache_activity(run_id, summary)
         update_db(run_id, summary) unless @dry_run
         @processed += 1
       rescue => e
@@ -185,13 +183,6 @@ module Workouts
         entry[:dist] = result[:district] if result[:district]
         entry[:town] = result[:township] if result[:township]
         File.open(POINT_CACHE_FILE, "a") { |f| f.puts(JSON.generate(entry)) }
-      end
-
-      def cache_activity(run_id, summary)
-        cache = {}
-        cache = JSON.parse(File.read(ACTIVITY_CACHE_FILE)) if File.exist?(ACTIVITY_CACHE_FILE)
-        cache[run_id] = summary
-        File.write(ACTIVITY_CACHE_FILE, JSON.pretty_generate(cache))
       end
 
       def update_db(run_id, summary)

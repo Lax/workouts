@@ -1,3 +1,4 @@
+require_relative "coord_transform"
 require_relative "amap_client"
 require_relative "nominatim_client"
 
@@ -27,7 +28,8 @@ module Workouts
 
       def lookup_china(lat, lng)
         raise "AMap API key not configured" unless @amap
-        @amap.reverse_geocode(lat, lng)
+        gcj_lat, gcj_lng = CoordTransform.wgs84_to_gcj02(lat, lng)
+        @amap.reverse_geocode(gcj_lat, gcj_lng)
       rescue => e
         { province: nil, city: nil, district: nil, township: nil, source: "error", error: e.message }
       end
