@@ -428,4 +428,28 @@ RSpec.describe Workouts::Sync::AppleHealth do
       expect(result).to eq(3.5)
     end
   end
+
+  describe "speed filtering" do
+    it "keeps speeds >= 0.1 m/s" do
+      expect(Workouts::Sync::AppleHealth::MIN_GPX_SPEED).to eq(0.1)
+    end
+
+    it "filters zero speed from GPX" do
+      gpx = <<~GPX
+        <?xml version="1.0"?>
+        <gpx xmlns="http://www.topografix.com/GPX/1/1">
+        <trk><trkseg>
+        <trkpt lat="31.23" lon="121.47"><ele>5</ele><time>2023-06-15T09:00:00Z</time><extensions><speed>0.0</speed></extensions></trkpt>
+        <trkpt lat="31.24" lon="121.48"><ele>6</ele><time>2023-06-15T09:05:00Z</time><extensions><speed>3.5</speed></extensions></trkpt>
+        <trkpt lat="31.25" lon="121.49"><ele>7</ele><time>2023-06-15T09:10:00Z</time><extensions><speed>0.05</speed></extensions></trkpt>
+        </trkseg></trk>
+        </gpx>
+      GPX
+      gpx_file = File.join(tmpdir, "test.gpx")
+      File.write(gpx_file, gpx)
+      pts = adapter.send(:parse_gpx_file, gpx_file)
+      speeds = pts.map { |p| p[:speed] }
+      expect(speeds).to eq([nil, 3.5, nil])
+    end
+  end
 end

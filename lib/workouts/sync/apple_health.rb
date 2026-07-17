@@ -18,10 +18,13 @@ module Workouts
 
       HeartRateRecord = Struct.new(:time, :value, keyword_init: true)
 
+      MIN_GPX_SPEED = 0.1
+
       def initialize(config:, db:, activity_filter: nil, privacy: nil, time_budget: nil)
         super
         @zip_path = @config["zip_path"] || DEFAULT_ZIP_PATH
         @heart_rate_index = nil
+        @heart_rate_by_date = nil
       end
 
       def before_call
@@ -67,6 +70,14 @@ module Workouts
         end
 
         @heart_rate_index = hr_records.sort_by(&:time)
+
+        @heart_rate_by_date = {}
+        @heart_rate_index.each do |hr|
+          date_key = hr.time.strftime("%Y-%m-%d")
+          @heart_rate_by_date[date_key] ||= []
+          @heart_rate_by_date[date_key] << hr
+        end
+
         results
       ensure
         zip&.close
@@ -193,13 +204,19 @@ module Workouts
         end_t = Time.parse(end_date_str) rescue nil
         return [nil, nil] unless start_t && end_t
 
-        idx = @heart_rate_index
-        lo = idx.bsearch_index { |hr| hr.time >= start_t }
-        hi = idx.bsearch_index { |hr| hr.time > end_t }
+        bucket = if @heart_rate_by_date
+                   @heart_rate_by_date[start_t.strftime("%Y-%m-%d")]
+                 else
+                   @heart_rate_index
+                 end
+        return [nil, nil] unless bucket&.any?
+
+        lo = bucket.bsearch_index { |hr| hr.time >= start_t }
+        hi = bucket.bsearch_index { |hr| hr.time > end_t }
 
         return [nil, nil] unless lo
 
-        slice = hi ? idx[lo...hi] : idx[lo..]
+        slice = hi ? bucket[lo...hi] : bucket[lo..]
         return [nil, nil] if slice.empty?
 
         vals = slice.map(&:value)
@@ -293,6 +310,7 @@ module Workouts
           time_str = pt.at_xpath("time")&.text
           ext = pt.at_xpath("extensions")
           speed = ext&.at_xpath("speed")&.text&.to_f
+          speed = nil if speed && speed < MIN_GPX_SPEED
           { lat: lat, lng: lng, ele: ele, time: time_str, speed: speed }
         end
       rescue => e
