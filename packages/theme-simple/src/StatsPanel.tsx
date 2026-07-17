@@ -20,17 +20,7 @@ export function computeRegionStats(activities: Activity[]): RegionStat[] {
   const regionCount = new Map<string, number>()
   for (const a of activities) {
     const regions = a.divisions
-    if (!regions || regions.length === 0) {
-      // Fallback: try text-based province from location_country
-      if (a.location_country) {
-        const province = extractProvince(a.location_country)
-        if (province) {
-          regionDist.set(province, (regionDist.get(province) ?? 0) + (a.distance ?? 0))
-          regionCount.set(province, (regionCount.get(province) ?? 0) + 1)
-        }
-      }
-      continue
-    }
+    if (!regions || regions.length === 0) continue
     const dist = a.distance ?? 0
     for (const r of regions) {
       const province = r.p
@@ -42,18 +32,6 @@ export function computeRegionStats(activities: Activity[]): RegionStat[] {
   return [...regionDist.entries()]
     .map(([name, distance]) => ({ name, distance, count: regionCount.get(name) ?? 0 }))
     .sort((a, b) => b.distance - a.distance)
-}
-
-export function extractProvince(loc: string): string | null {
-  if (!loc) return null
-  const known = ['北京', '天津', '上海', '重庆'] as const
-  for (const k of known) {
-    if (loc.includes(k)) return k
-  }
-  const m = loc.match(/(.{2,4}?(?:省|自治区|特别行政区))/)
-  if (m?.[1]) return m[1]
-  if (loc.length < 20 && loc !== loc.toLowerCase()) return loc
-  return null
 }
 
 export function StatsPanel({ activities, loading }: StatsPanelProps) {

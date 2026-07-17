@@ -65,16 +65,16 @@ describe('StatsPanel', () => {
     expect(container.textContent).toContain('暂无位置数据')
   })
 
-  it('renders province stats when activities have Chinese location data', () => {
+  it('renders province stats when activities have divisions data', () => {
     const acts = [
-      baseAct({ run_id: '1', location_country: '北京市朝阳区', distance: 10000 }),
-      baseAct({ run_id: '2', location_country: '上海', distance: 5000 }),
+      baseAct({ run_id: '1', divisions: [{ p: '河北省', w: 1.0 }], distance: 10000 }),
+      baseAct({ run_id: '2', divisions: [{ p: '上海市', w: 1.0 }], distance: 5000 }),
     ]
     act(() => {
       root.render(<StatsPanel activities={acts} loading={false} />)
     })
-    expect(container.textContent).toContain('北京')
-    expect(container.textContent).toContain('上海')
+    expect(container.textContent).toContain('河北省')
+    expect(container.textContent).toContain('上海市')
     expect(container.textContent).toContain('10 km')
     expect(container.textContent).toContain('5 km')
   })
@@ -105,7 +105,7 @@ describe('StatsPanel', () => {
   })
 
   it('click province row sets regionFilter in store', () => {
-    const acts = [baseAct({ run_id: '1', location_country: '北京', distance: 10000 })]
+    const acts = [baseAct({ run_id: '1', divisions: [{ p: '河北省', w: 1.0 }], distance: 10000 })]
     act(() => {
       root.render(<StatsPanel activities={acts} loading={false} />)
     })
@@ -115,7 +115,7 @@ describe('StatsPanel', () => {
     act(() => {
       ;(provinceRow as HTMLElement).click()
     })
-    expect(useSimpleStore.getState().regionFilter).toBe('北京')
+    expect(useSimpleStore.getState().regionFilter).toBe('河北省')
   })
 
   it('click type row sets typeFilter in store', () => {
@@ -176,24 +176,6 @@ describe('computeRegionStats', () => {
 
   it('uses country as province from Nominatim-style divisions', () => {
     const acts = [baseAct({ run_id: '1', divisions: [{ p: 'United States', c: 'California', w: 1.0 }], distance: 8000 })]
-    const result = computeRegionStats(acts)
-    expect(result).toHaveLength(1)
-    expect(result[0].name).toBe('United States')
-  })
-
-  it('falls back to Chinese location_country text', () => {
-    const acts = [
-      baseAct({ run_id: '1', location_country: '北京市朝阳区', distance: 10000 }),
-      baseAct({ run_id: '2', location_country: '上海市浦东新区', distance: 5000 }),
-    ]
-    const result = computeRegionStats(acts)
-    expect(result).toHaveLength(2)
-    expect(result.find((r) => r.name === '北京')!.distance).toBe(10000)
-    expect(result.find((r) => r.name === '上海')!.distance).toBe(5000)
-  })
-
-  it('falls back to international text location_country', () => {
-    const acts = [baseAct({ run_id: '1', location_country: 'United States', distance: 12000 })]
     const result = computeRegionStats(acts)
     expect(result).toHaveLength(1)
     expect(result[0].name).toBe('United States')
