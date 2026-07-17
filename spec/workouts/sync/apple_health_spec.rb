@@ -155,6 +155,52 @@ RSpec.describe Workouts::Sync::AppleHealth do
     end
   end
 
+  describe "#parse_hr_line" do
+    it "parses Apple Watch HR line" do
+      line = '<Record type="HKQuantityTypeIdentifierHeartRate" sourceName="Lax\'s Apple Watch" unit="count/min" startDate="2023-06-15 09:00:00 +0800" value="140"/>'
+      hr = adapter.send(:parse_hr_line, line)
+      expect(hr.time).to be_a(Time)
+      expect(hr.value).to eq(140)
+    end
+
+    it "returns nil for non-matching line" do
+      line = '<Record type="HKQuantityTypeIdentifierStepCount" value="100"/>'
+      expect(adapter.send(:parse_hr_line, line)).to be_nil
+    end
+  end
+
+  describe "#correlate_heart_rate" do
+    before do
+      adapter.instance_variable_set(:@heart_rate_index, [
+        Workouts::Sync::AppleHealth::HeartRateRecord.new(time: Time.parse("2023-06-15 09:00:00 +0800"), value: 140),
+        Workouts::Sync::AppleHealth::HeartRateRecord.new(time: Time.parse("2023-06-15 09:10:00 +0800"), value: 155),
+        Workouts::Sync::AppleHealth::HeartRateRecord.new(time: Time.parse("2023-06-15 09:20:00 +0800"), value: 165),
+        Workouts::Sync::AppleHealth::HeartRateRecord.new(time: Time.parse("2023-06-15 09:30:00 +0800"), value: 158),
+        Workouts::Sync::AppleHealth::HeartRateRecord.new(time: Time.parse("2023-06-15 09:40:00 +0800"), value: 148),
+        Workouts::Sync::AppleHealth::HeartRateRecord.new(time: Time.parse("2023-06-15 10:00:00 +0800"), value: 100),
+      ])
+    end
+
+    it "returns avg and max within time window" do
+      avg, max = adapter.send(:correlate_heart_rate, "2023-06-15 09:00:00 +0800", "2023-06-15 09:45:00 +0800")
+      expect(avg).to be_within(0.1).of(153.2)
+      expect(max).to eq(165)
+    end
+
+    it "returns nil pair when no overlap" do
+      avg, max = adapter.send(:correlate_heart_rate, "2023-06-15 12:00:00 +0800", "2023-06-15 13:00:00 +0800")
+      expect(avg).to be_nil
+      expect(max).to be_nil
+    end
+
+    it "handles empty index" do
+      adapter.instance_variable_set(:@heart_rate_index, [])
+      avg, max = adapter.send(:correlate_heart_rate, "2023-06-15 09:00:00 +0800", "2023-06-15 09:45:00 +0800")
+      expect(avg).to be_nil
+      expect(max).to be_nil
+    end
+  end
+
   describe "#call" do
     context "when export.zip does not exist" do
       before do
@@ -220,6 +266,14 @@ RSpec.describe Workouts::Sync::AppleHealth do
         expect(std_files.size).to eq(1)
       end
 
+      it "includes speed in L2 JSON for GPS points" do
+        adapter.call
+        std_file = Dir.glob(File.join(adapter.send(:std_dir), "*.json")).first
+        pts = JSON.parse(File.read(std_file))
+        expect(pts.first["speed"]).to be_a(Float)
+        expect(pts.first["speed"]).to eq(3.5)
+      end
+
       it "writes summary_polyline for GPS-enabled activity" do
         adapter.call
         run = db[:activities].where(sport_category: "run").first
@@ -238,10 +292,23 @@ RSpec.describe Workouts::Sync::AppleHealth do
         expect(run[:average_temperature]).to be_within(0.1).of(20.0)
       end
 
-      it "sets calories for running" do
+      it "sets heart rate from correlated records" do
         adapter.call
         run = db[:activities].where(sport_category: "run").first
-        expect(run[:calories]).to eq(521)
+        expect(run[:average_heartrate]).to be_within(0.1).of(153.2)
+        expect(run[:max_heartrate]).to eq(165)
+      end
+
+      it "sets calories including active + basal" do
+        adapter.call
+        run = db[:activities].where(sport_category: "run").first
+        expect(run[:calories]).to eq(606)
+      end
+
+      it "sets average_speed from distance and moving_time" do
+        adapter.call
+        run = db[:activities].where(sport_category: "run").first
+        expect(run[:average_speed]).to be_within(0.01).of(3.85)
       end
 
       it "sets distance for running" do
@@ -254,6 +321,28 @@ RSpec.describe Workouts::Sync::AppleHealth do
         adapter.call
         st = db[:activities].where(sport_category: "workout").first
         expect(st[:distance]).to be_nil
+      end
+
+      it "sets heart rate to nil for strength training (no HR records overlap)" do
+        adapter.call
+        st = db[:activities].where(sport_category: "workout").first
+        expect(st[:average_heartrate]).to be_nil
+        expect(st[:max_heartrate]).to be_nil
+      end
+
+      it "sets calories for strength training including active + basal" do
+        adapter.call
+        st = db[:activities].where(sport_category: "workout").first
+        expect(st[:calories]).to eq(215)
+      end
+
+      it "builds heart rate index during pending_ids" do
+        adapter.pending_ids
+        idx = adapter.instance_variable_get(:@heart_rate_index)
+        expect(idx).not_to be_nil
+        expect(idx.size).to eq(5)
+        expect(idx.first.value).to eq(140)
+        expect(idx.last.value).to eq(148)
       end
 
       it "is idempotent on second run" do

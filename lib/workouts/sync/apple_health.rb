@@ -12,11 +12,16 @@ module Workouts
         /\bXOSS\b/i, /\bXingZhe\b/i, /\bConnect\b/i
       ].freeze
 
+      APPLE_WATCH_PATTERN = /Apple Watch/
+
       DEFAULT_ZIP_PATH = "data/raw/apple_health/export.zip"
+
+      HeartRateRecord = Struct.new(:time, :value, keyword_init: true)
 
       def initialize(config:, db:, activity_filter: nil, privacy: nil, time_budget: nil)
         super
         @zip_path = @config["zip_path"] || DEFAULT_ZIP_PATH
+        @heart_rate_index = nil
       end
 
       def before_call
@@ -31,6 +36,7 @@ module Workouts
       def pending_ids
         existing = existing_run_ids_set
         results = []
+        hr_records = []
         zip = Zip::File.new(@zip_path)
         xml_entry = zip.find_entry("apple_health_export/export.xml")
         return results unless xml_entry
@@ -40,6 +46,11 @@ module Workouts
         in_workout = false
 
         io.each_line do |line|
+          if line.include?("HKQuantityTypeIdentifierHeartRate") && APPLE_WATCH_PATTERN.match?(line)
+            hr = parse_hr_line(line)
+            hr_records << hr if hr
+          end
+
           if !in_workout
             if line.include?("<Workout ")
               in_workout = true
@@ -55,6 +66,7 @@ module Workouts
           end
         end
 
+        @heart_rate_index = hr_records.sort_by(&:time)
         results
       ensure
         zip&.close
@@ -69,6 +81,7 @@ module Workouts
         meta = pending[:meta]
         route_paths = pending[:route_paths]
         start_date = pending[:start_date]
+        end_date = pending[:end_date]
         duration = pending[:duration]
         duration_unit = pending[:duration_unit]
         workout_type = pending[:workout_type]
@@ -78,6 +91,12 @@ module Workouts
         final = File.join(raw_dir, "#{run_id}.xml")
         File.write(tmp, raw_xml)
         File.rename(tmp, final)
+
+        hr_avg = nil
+        hr_max = nil
+        if @heart_rate_index&.any?
+          hr_avg, hr_max = correlate_heart_rate(start_date, end_date)
+        end
 
         l2_points = nil
         polyline = nil
@@ -106,6 +125,7 @@ module Workouts
               h = { latitude: pt[:lat], longitude: pt[:lng] }
               h[:altitude] = pt[:ele] if pt[:ele]
               h[:timestamp] = pt[:time] if pt[:time]
+              h[:speed] = pt[:speed] if pt[:speed]
               h
             }
             tmp2 = File.join(std_dir, ".#{run_id}.json.tmp")
@@ -119,7 +139,9 @@ module Workouts
           end
         end
 
-        attrs = build_attrs(source_name, run_id, stats, meta, polyline, elevation_gain, workout_type, start_date, duration, duration_unit)
+        attrs = build_attrs(source_name, run_id, stats, meta, polyline, elevation_gain,
+                            workout_type, start_date, duration, duration_unit,
+                            hr_avg, hr_max)
         upsert_activity(attrs)
         attrs
       end
@@ -149,6 +171,34 @@ module Workouts
 
       def existing_run_ids_set
         @db[:activities].where(source: "apple_health").select_map(:run_id).map(&:to_s).to_set
+      end
+
+      def parse_hr_line(line)
+        m = line.match(/startDate="([^"]+)".*?value="(\d+)"/)
+        return nil unless m
+        time = Time.parse(m[1]) rescue nil
+        return nil unless time
+        HeartRateRecord.new(time: time, value: m[2].to_i)
+      end
+
+      def correlate_heart_rate(start_date_str, end_date_str)
+        start_t = Time.parse(start_date_str) rescue nil
+        end_t = Time.parse(end_date_str) rescue nil
+        return [nil, nil] unless start_t && end_t
+
+        idx = @heart_rate_index
+        lo = idx.bsearch_index { |hr| hr.time >= start_t }
+        hi = idx.bsearch_index { |hr| hr.time > end_t }
+
+        return [nil, nil] unless lo
+
+        slice = hi ? idx[lo...hi] : idx[lo..]
+        return [nil, nil] if slice.empty?
+
+        vals = slice.map(&:value)
+        avg = (vals.sum.to_f / vals.size).round(1)
+        max = vals.max
+        [avg, max]
       end
 
       def process_workout_chunk(raw_xml, existing_ids, results)
@@ -237,23 +287,32 @@ module Workouts
           next unless lat && lng
           ele = pt.at_xpath("ele")&.text&.to_f
           time_str = pt.at_xpath("time")&.text
-          { lat: lat, lng: lng, ele: ele, time: time_str }
+          ext = pt.at_xpath("extensions")
+          speed = ext&.at_xpath("speed")&.text&.to_f
+          { lat: lat, lng: lng, ele: ele, time: time_str, speed: speed }
         end
       end
 
-      def build_attrs(source_name, run_id, stats, meta, polyline, elevation_gain, workout_type, start_date, duration, duration_unit)
+      def build_attrs(source_name, run_id, stats, meta, polyline, elevation_gain,
+                      workout_type, start_date, duration, duration_unit,
+                      hr_avg = nil, hr_max = nil)
         distance = nil
         calories = nil
 
+        cals_sum = 0.0
         stats.each do |type_str, data|
           if type_str.include?("Distance")
             distance = parse_distance(data["sum"], data["unit"])
-          elsif type_str.include?("ActiveEnergyBurned")
-            calories = data["sum"].to_f.round
+          elsif type_str.include?("ActiveEnergyBurned") || type_str.include?("BasalEnergyBurned")
+            cals_sum += data["sum"].to_f
           end
         end
+        calories = cals_sum > 0 ? cals_sum.round : nil
 
         moving_time = parse_duration(duration, duration_unit)
+        avg_speed = if distance && moving_time&.positive?
+                      (distance.to_f / moving_time).round(2)
+                    end
 
         attrs = {
           run_id: "apple_health_#{run_id}",
@@ -266,8 +325,9 @@ module Workouts
           start_date: format_datetime(start_date),
           start_date_local: meta["HKTimeZone"] ? format_datetime(start_date) : nil,
           summary_polyline: polyline,
-          average_heartrate: nil,
-          max_heartrate: nil,
+          average_heartrate: hr_avg,
+          max_heartrate: hr_max,
+          average_speed: avg_speed,
           calories: calories,
           elevation_gain: elevation_gain&.round(1),
           average_temperature: parse_temperature(meta["HKWeatherTemperature"]),
@@ -318,8 +378,7 @@ module Workouts
 
       def parse_humidity(value)
         return nil unless value && !value.empty?
-        v = value.to_f
-        v / 100.0
+        value.to_f / 100.0
       end
 
       def generate_run_id(source_name, start_date, end_date)
