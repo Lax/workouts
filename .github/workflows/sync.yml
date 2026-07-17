@@ -96,6 +96,7 @@ jobs:
         if: steps.apple-health-cache.outputs.cache-hit != 'true'
         run: |
           mkdir -p data/import/apple_health
+          git lfs install
           if ! git fetch origin data/import/apple_health 2>/dev/null; then
             echo "No data/import/apple_health branch yet — skipping" >&2
             exit 0
