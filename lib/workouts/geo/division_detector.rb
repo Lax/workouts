@@ -22,13 +22,16 @@ module Workouts
         @processed = 0
         @skipped = 0
         @errors = 0
+        @attempted = 0
+        @total = 0
         FileUtils.mkdir_p(CACHE_DIR)
         load_caches
       end
 
       def run
         activities = pending_activities
-        $stdout.puts "Activities to process: #{activities.size}"
+        @total = activities.size
+        $stdout.puts "Geo detection: #{@total} activities to process"
         activities.each_slice(@batch) do |batch|
           break if budget_exhausted?
           process_batch(batch)
@@ -61,27 +64,47 @@ module Workouts
       def process_one(activity)
         run_id = activity[:run_id]
         polyline = activity[:summary_polyline]
+        @attempted += 1
+        prefix = "[#{@attempted}/#{@total}]"
 
         if polyline.nil? || polyline.empty? || polyline == KEEP_PLACEHOLDER
+          $stdout.puts "  #{prefix} #{run_id} → skipped (placeholder polyline)"
           @skipped += 1
           return
         end
 
         points = decode_points(polyline)
-        return unless points && points.size >= 2
+        unless points && points.size >= 2
+          $stdout.puts "  #{prefix} #{run_id} → skipped (no GPS points)"
+          @skipped += 1
+          return
+        end
 
         samples = sample_points(points)
-        return if samples.empty?
+        if samples.empty?
+          $stdout.puts "  #{prefix} #{run_id} → skipped (no samples)"
+          @skipped += 1
+          return
+        end
 
         divisions = resolve_divisions(samples)
-        return if divisions.empty?
+        if divisions.empty?
+          $stdout.puts "  #{prefix} #{run_id} → skipped (no divisions resolved)"
+          @skipped += 1
+          return
+        end
 
         summary = build_summary(divisions, samples.size)
         update_db(run_id, summary) unless @dry_run
+        $stdout.puts "  #{prefix} #{run_id} → #{format_divisions(divisions)} (#{samples.size} samples)"
         @processed += 1
       rescue => e
-        $stderr.puts "Error processing #{run_id}: #{e.message}"
+        $stdout.puts "  #{prefix} #{run_id} → error: #{e.message}"
         @errors += 1
+      end
+
+      def format_divisions(divisions)
+        divisions.map { |d| [d[:province], d[:city], d[:district], d[:township]].compact.reject(&:empty?).join(" ") }.join(" / ")
       end
 
       def decode_points(polyline)
@@ -161,6 +184,7 @@ module Workouts
           h[:d] = r[:district] if r[:district]
           h[:t] = r[:township] if r[:township]
           h[:w] = (r[:count] / total).round(4)
+          h[:n] = r[:count]
           h
         end
         { divisions: division_list, total_sampled: total_points, source: "amap", processed_at: Time.now.utc.iso8601 }
