@@ -326,7 +326,15 @@ RSpec.describe Workouts::Sync::AppleHealth do
       it "sets average_speed from distance and moving_time" do
         adapter.call
         run = db[:activities].where(sport_category: "run").first
-        expect(run[:average_speed]).to be_within(0.01).of(3.85)
+        expect(run[:average_speed]).to be_within(0.01).of(3.89)
+      end
+
+      it "computes elapsed_time from startDate-endDate" do
+        adapter.call
+        run = db[:activities].where(sport_category: "run").first
+        expect(run[:elapsed_time]).to eq(2700)
+        expect(run[:moving_time]).to eq(2700)
+        expect(run[:elapsed_time]).to eq(run[:moving_time])
       end
 
       it "sets distance for running" do

@@ -159,7 +159,7 @@ module Workouts
 
         title = build_title(workout_type, start_date)
         attrs = build_attrs(source_name, run_id, stats, meta, polyline, elevation_gain,
-                            workout_type, start_date, duration, duration_unit,
+                            workout_type, start_date, end_date, duration, duration_unit,
                             hr_avg, hr_max)
         attrs[:title] = title
         upsert_activity(attrs)
@@ -339,7 +339,7 @@ module Workouts
       end
 
       def build_attrs(_source_name, run_id, stats, meta, polyline, elevation_gain,
-                      workout_type, start_date, duration, duration_unit,
+                      workout_type, start_date, end_date, duration, duration_unit,
                       hr_avg = nil, hr_max = nil)
         distance = nil
         calories = nil
@@ -355,6 +355,7 @@ module Workouts
         calories = cals_sum > 0 ? cals_sum.round : nil
 
         moving_time = parse_duration(duration, duration_unit)
+        elapsed_time = compute_elapsed(start_date, end_date) || moving_time
         avg_speed = if distance && moving_time&.positive?
                       (distance.to_f / moving_time).round(2)
                     end
@@ -364,7 +365,7 @@ module Workouts
           name: display_name(workout_type, start_date),
           distance: distance,
           moving_time: moving_time,
-          elapsed_time: moving_time,
+          elapsed_time: elapsed_time,
           sport_category: map_sport_type(workout_type),
           sport_type: workout_type,
           start_date: format_datetime(start_date),
@@ -385,6 +386,14 @@ module Workouts
       def format_datetime(str)
         return nil unless str
         Time.parse(str).strftime("%Y-%m-%d %H:%M:%S") rescue str
+      end
+
+      def compute_elapsed(start_str, end_str)
+        return nil unless start_str && end_str
+        s = Time.parse(start_str) rescue nil
+        e = Time.parse(end_str) rescue nil
+        return nil unless s && e
+        (e - s).round
       end
 
       def parse_duration(value, unit)

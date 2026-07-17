@@ -8,7 +8,7 @@
 <Record type="HKQuantityTypeIdentifierHeartRate" sourceName="Lax's Apple Watch" unit="count/min" creationDate="2023-06-15 10:00:00 +0800" startDate="2023-06-15 09:30:00 +0800" endDate="2023-06-15 09:30:00 +0800" value="158"/>
 <Record type="HKQuantityTypeIdentifierHeartRate" sourceName="Lax's Apple Watch" unit="count/min" creationDate="2023-06-15 10:00:00 +0800" startDate="2023-06-15 09:40:00 +0800" endDate="2023-06-15 09:40:00 +0800" value="148"/>
 <Record type="HKQuantityTypeIdentifierHeartRate" sourceName="Connect" unit="count/min" creationDate="2023-06-15 10:00:00 +0800" startDate="2023-06-15 08:00:00 +0800" endDate="2023-06-15 08:00:00 +0800" value="200"/>
-<Workout workoutActivityType="HKWorkoutActivityTypeRunning" duration="45.5" durationUnit="min" sourceName="Lax's Apple Watch" sourceVersion="10.0" creationDate="2023-06-15 10:00:00 +0800" startDate="2023-06-15 09:00:00 +0800" endDate="2023-06-15 09:45:00 +0800">
+<Workout workoutActivityType="HKWorkoutActivityTypeRunning" duration="45.0" durationUnit="min" sourceName="Lax's Apple Watch" sourceVersion="10.0" creationDate="2023-06-15 10:00:00 +0800" startDate="2023-06-15 09:00:00 +0800" endDate="2023-06-15 09:45:00 +0800">
   <MetadataEntry key="HKTimeZone" value="Asia/Shanghai"/>
   <MetadataEntry key="HKWeatherTemperature" value="68 degF"/>
   <MetadataEntry key="HKWeatherHumidity" value="6500 %"/>
