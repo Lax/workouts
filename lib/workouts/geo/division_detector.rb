@@ -29,6 +29,7 @@ module Workouts
       end
 
       def run
+        $stdout.sync = true
         activities = pending_activities
         @total = activities.size
         $stdout.puts "Geo detection: #{@total} activities to process"
@@ -66,18 +67,21 @@ module Workouts
         polyline = activity[:summary_polyline]
 
         if polyline.nil? || polyline.empty? || polyline == KEEP_PLACEHOLDER
+          mark_empty_divisions(run_id) unless @dry_run
           @skipped += 1
           return
         end
 
         points = decode_points(polyline)
         unless points && points.size >= 2
+          mark_empty_divisions(run_id) unless @dry_run
           @skipped += 1
           return
         end
 
         samples = sample_points(points)
         if samples.empty?
+          mark_empty_divisions(run_id) unless @dry_run
           @skipped += 1
           return
         end
@@ -209,6 +213,10 @@ module Workouts
 
       def update_db(run_id, summary)
         @db[:activities].where(run_id: run_id).update(divisions: JSON.generate(summary[:divisions]))
+      end
+
+      def mark_empty_divisions(run_id)
+        @db[:activities].where(run_id: run_id).update(divisions: "[]")
       end
 
       def load_caches
