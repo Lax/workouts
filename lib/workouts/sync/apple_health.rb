@@ -157,9 +157,11 @@ module Workouts
           end
         end
 
+        title = build_title(workout_type, start_date)
         attrs = build_attrs(source_name, run_id, stats, meta, polyline, elevation_gain,
                             workout_type, start_date, duration, duration_unit,
                             hr_avg, hr_max)
+        attrs[:title] = title
         upsert_activity(attrs)
         attrs
       end
@@ -223,11 +225,10 @@ module Workouts
           return slice || []
         end
 
-        cur = start_t
         results = []
 
-        while cur <= end_t
-          date_key = cur.strftime("%Y-%m-%d")
+        (start_t.to_date..end_t.to_date).each do |date|
+          date_key = date.strftime("%Y-%m-%d")
           bucket = @heart_rate_by_date[date_key]
           if bucket&.any?
             lo = bucket.bsearch_index { |hr| hr.time >= start_t }
@@ -237,7 +238,6 @@ module Workouts
               results.concat(slice) if slice&.any?
             end
           end
-          cur += 86400
         end
 
         results
@@ -439,6 +439,12 @@ module Workouts
 
       def display_name(workout_type, _start_date)
         workout_type.sub(/\AHKWorkoutActivityType/, "")
+      end
+
+      def build_title(workout_type, start_date)
+        label = workout_type.sub(/\AHKWorkoutActivityType/, "")
+        date = start_date ? start_date[0..9] : nil
+        date ? "#{date} · #{label}" : label
       end
 
       def elevation_gain_from_points(points)

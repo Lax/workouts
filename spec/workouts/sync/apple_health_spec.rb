@@ -25,6 +25,7 @@ RSpec.describe Workouts::Sync::AppleHealth do
       Integer :calories; Float :average_temperature
       Float :average_speed; Float :elevation_gain
       String :duplicate_info, text: true
+      String :title, text: true
       String :source
       DateTime :created_at, default: Sequel::CURRENT_TIMESTAMP
       DateTime :updated_at, default: Sequel::CURRENT_TIMESTAMP
@@ -338,6 +339,12 @@ RSpec.describe Workouts::Sync::AppleHealth do
         adapter.call
         st = db[:activities].where(sport_category: "workout").first
         expect(st[:distance]).to be_nil
+      end
+
+      it "sets title with date and type label" do
+        adapter.call
+        run = db[:activities].where(sport_category: "run").first
+        expect(run[:title]).to eq("2023-06-15 · Running")
       end
 
       it "sets heart rate to nil for strength training (no HR records overlap)" do
