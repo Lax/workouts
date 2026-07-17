@@ -336,7 +336,7 @@ module Workouts
         nil
       end
 
-      def build_attrs(source_name, run_id, stats, meta, polyline, elevation_gain,
+      def build_attrs(_source_name, run_id, stats, meta, polyline, elevation_gain,
                       workout_type, start_date, duration, duration_unit,
                       hr_avg = nil, hr_max = nil)
         distance = nil
@@ -359,7 +359,7 @@ module Workouts
 
         attrs = {
           run_id: "apple_health_#{run_id}",
-          name: display_name(source_name, workout_type),
+          name: display_name(workout_type, start_date),
           distance: distance,
           moving_time: moving_time,
           elapsed_time: moving_time,
@@ -435,9 +435,10 @@ module Workouts
         SportMapper.canonicalize(key)
       end
 
-      def display_name(source_name, workout_type)
-        type_label = workout_type.sub(/\AHKWorkoutActivityType/, "")
-        "#{type_label} from #{source_name}"
+      def display_name(workout_type, start_date)
+        label = map_sport_type(workout_type).capitalize
+        date = start_date ? start_date[0..9] : nil
+        date ? "#{date} · #{label}" : label
       end
 
       def elevation_gain_from_points(points)
