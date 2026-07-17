@@ -449,15 +449,20 @@ IMPORTANT: This phase overrides the "NEVER commit" general rule.
    - `git fetch` — check remote state before any write
    - `git status` — only intended files staged, no merge conflict markers
    - If `git status` shows diverged branches or merge in progress → STOP, escalate
-   - npx biome check --write . && git add -u  ← ensure no lint CI failure
-   - Check .gitignore contains '/.opencode/meoworks/' (report if missing)
-   - Commit (WHY not WHAT), `git push`
-   - If push rejected → STOP, report divergence, escalate. Never force-push.
+    - npx biome check --write . && git add -u  ← ensure no lint CI failure
+    - Check .gitignore contains '/.opencode/meoworks/' (report if missing)
+    - Classify staged files for CI skip:
+      - `git diff --name-only --cached` → file list
+      - SAFE_PATTERNS="^(docs/|CONTEXT\.md|[^/]+\.md|\.opencode/)"
+      - If ALL staged files match SAFE_PATTERNS → SKIP_CI=true
+      - Else → SKIP_CI=false
+    - Commit (WHY not WHAT), `git push` (append "[skip ci]" if SKIP_CI)
+    - If push rejected → STOP, report divergence, escalate. Never force-push.
 
-3. Monitor CI:
-   - gh run-watch --compact --exit-status   ← requires gh-run-watch installed
-   - If failure → log error, recommend rollback
-   - If success → confirm deliver
+3. Monitor CI (skip if SKIP_CI):
+    - gh run-watch --compact --exit-status   ← requires gh-run-watch installed
+    - If failure → log error, recommend rollback
+    - If success → confirm deliver
 
 4. Write handoff, update status.json to completed.
 5. Present final report.
