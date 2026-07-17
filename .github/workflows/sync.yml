@@ -85,13 +85,12 @@ jobs:
 
       - uses: ./.github/actions/sources-cache/restore
 
-      - name: Restore Apple Health export
+      - name: Restore Apple Health import marker
         id: apple-health-cache
         uses: actions/cache@v5.1.0
         with:
-          path: data/import/apple_health/export.zip
-          key: import-apple-health-v1-export-zip
-          restore-keys: import-apple-health-v1-
+          path: data/import/apple_health/.imported
+          key: import-apple-health-v1-processed
 
       - name: Import Apple Health
         if: steps.apple-health-cache.outputs.cache-hit != 'true'
@@ -107,7 +106,7 @@ jobs:
             exit 0
           fi
           bundle exec exe/workouts sync --source apple_health
-          : > data/import/apple_health/export.zip
+          touch data/import/apple_health/.imported
 
       - name: Sync
         env:
