@@ -18,6 +18,18 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Configure git
+        env:
+          WORKOUTS_SYNC_PAT: ${{ secrets.WORKOUTS_SYNC_PAT }}
+        run: |
+          git config user.name "workouts-bot"
+          git config user.email "bot@workouts"
+          # persist-credentials: false → no extraheader written.
+          # Write bare PAT extraheader (no x-access-token: prefix)
+          # so server routes as PAT, not GitHub App.
+          git config --add http.https://github.com/.extraheader \
+            "AUTHORIZATION: basic $(printf '%s:' "$WORKOUTS_SYNC_PAT" | base64 -w0)"
+
       - uses: ruby/setup-ruby@v1
         if: vars.RUNNER_LABEL != 'self-hosted'
         with:
@@ -146,17 +158,9 @@ jobs:
         if: github.event_name == 'schedule'
         env:
           NEW_N: ${{ steps.decide.outputs.new_n }}
-          WORKOUTS_SYNC_PAT: ${{ secrets.WORKOUTS_SYNC_PAT }}
         run: |
           sed -i "s|/\\([0-9]\\) \\* \\*|/${NEW_N} * *|" .github/workflows/sync.yml
-          git config user.name "workouts-bot"
-          git config user.email "bot@workouts"
           # sed matches /{N} * * on both cron lines (same N, updates both)
-          # persist-credentials: false → no extraheader written.
-          # Write bare PAT extraheader (no x-access-token: prefix)
-          # so server routes as PAT, not GitHub App.
-          git config --add http.https://github.com/.extraheader \
-            "AUTHORIZATION: basic $(printf '%s:' "$WORKOUTS_SYNC_PAT" | base64 -w0)"
           git add .github/workflows/sync.yml
           git diff --cached --quiet || \
             git commit -m "chore: sync interval N=$NEW_N"
