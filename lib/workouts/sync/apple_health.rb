@@ -14,7 +14,7 @@ module Workouts
 
       APPLE_WATCH_PATTERN = /Apple Watch/
 
-      DEFAULT_ZIP_PATH = "data/raw/apple_health/export.zip"
+      DEFAULT_ZIP_PATH = "data/import/apple_health/export.zip"
 
       HeartRateRecord = Struct.new(:time, :value, keyword_init: true)
 
@@ -34,6 +34,24 @@ module Workouts
 
       def authenticate
         true
+      end
+
+      def call
+        return 0 unless before_call
+        return 0 unless authenticate
+        ids = pending_ids
+        return 0 if ids.nil? || ids.empty?
+
+        total = ids.size
+        processed = 0
+        ids.each do |p|
+          break if time_expired? && processed.positive?
+          r = process_one(p)
+          processed += 1 if r
+          report_progress(processed, total, build_progress_info(r)) if r
+        end
+
+        processed
       end
 
       def pending_ids

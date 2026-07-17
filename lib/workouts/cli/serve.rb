@@ -10,7 +10,7 @@ module Workouts
              desc: "Port number (env: UPLOAD_PORT)"
       def start
         port = options[:port] || ENV.fetch("UPLOAD_PORT", 8080).to_i
-        upload_dir = "data/raw/apple_health"
+        upload_dir = "data/import/apple_health"
         target = File.join(upload_dir, "export.zip")
         FileUtils.mkdir_p(upload_dir)
 

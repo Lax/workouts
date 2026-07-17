@@ -121,7 +121,7 @@ module Workouts
         when "xingzhe"
           config["email"].to_s != "" && config["password"].to_s != ""
         when "apple_health"
-          File.exist?("data/raw/apple_health/export.zip")
+          File.exist?("data/import/apple_health/export.zip")
         else
           config.values.any? { |v| v.to_s != "" }
         end
