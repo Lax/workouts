@@ -1,5 +1,5 @@
 import type { Activity } from '@workouts/shared'
-import { StatsPanel, useSimpleStore } from '@workouts/theme-simple'
+import { computeRegionStats, StatsPanel, useSimpleStore } from '@workouts/theme-simple'
 import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
@@ -109,7 +109,7 @@ describe('StatsPanel', () => {
     act(() => {
       root.render(<StatsPanel activities={acts} loading={false} />)
     })
-    const provinceRow = container.querySelector('.sp-region-row')
+    const provinceRow = container.querySelector('.sp-province-row')
     expect(provinceRow).not.toBeNull()
 
     act(() => {
@@ -134,5 +134,78 @@ describe('StatsPanel', () => {
     })
     // First row is ride (highest distance)
     expect(useSimpleStore.getState().typeFilter).toBe('ride')
+  })
+})
+
+describe('computeRegionStats', () => {
+  it('returns empty array for no activities', () => {
+    expect(computeRegionStats([])).toEqual([])
+  })
+
+  it('returns empty array when no activities have location data', () => {
+    const acts = [baseAct({}), baseAct({})]
+    expect(computeRegionStats(acts)).toEqual([])
+  })
+
+  it('groups by province from divisions', () => {
+    const acts = [
+      baseAct({ run_id: '1', divisions: [{ p: '河北省', w: 1.0 }], distance: 10000 }),
+      baseAct({ run_id: '2', divisions: [{ p: '河北省', w: 1.0 }], distance: 5000 }),
+    ]
+    const result = computeRegionStats(acts)
+    expect(result).toHaveLength(1)
+    expect(result[0]).toMatchObject({ name: '河北省', distance: 15000, count: 2 })
+  })
+
+  it('handles weighted divisions crossing multiple provinces', () => {
+    const acts = [
+      baseAct({
+        run_id: '1',
+        divisions: [
+          { p: '河北省', w: 0.6 },
+          { p: '北京市', w: 0.4 },
+        ],
+        distance: 10000,
+      }),
+    ]
+    const result = computeRegionStats(acts)
+    expect(result).toHaveLength(2)
+    expect(result.find((r) => r.name === '河北省')!.distance).toBe(6000)
+    expect(result.find((r) => r.name === '北京市')!.distance).toBe(4000)
+  })
+
+  it('uses country as province from Nominatim-style divisions', () => {
+    const acts = [baseAct({ run_id: '1', divisions: [{ p: 'United States', c: 'California', w: 1.0 }], distance: 8000 })]
+    const result = computeRegionStats(acts)
+    expect(result).toHaveLength(1)
+    expect(result[0].name).toBe('United States')
+  })
+
+  it('falls back to Chinese location_country text', () => {
+    const acts = [
+      baseAct({ run_id: '1', location_country: '北京市朝阳区', distance: 10000 }),
+      baseAct({ run_id: '2', location_country: '上海市浦东新区', distance: 5000 }),
+    ]
+    const result = computeRegionStats(acts)
+    expect(result).toHaveLength(2)
+    expect(result.find((r) => r.name === '北京')!.distance).toBe(10000)
+    expect(result.find((r) => r.name === '上海')!.distance).toBe(5000)
+  })
+
+  it('falls back to international text location_country', () => {
+    const acts = [baseAct({ run_id: '1', location_country: 'United States', distance: 12000 })]
+    const result = computeRegionStats(acts)
+    expect(result).toHaveLength(1)
+    expect(result[0].name).toBe('United States')
+  })
+
+  it('sorts by distance descending', () => {
+    const acts = [
+      baseAct({ run_id: '1', divisions: [{ p: '北京市', w: 1.0 }], distance: 5000 }),
+      baseAct({ run_id: '2', divisions: [{ p: '河北省', w: 1.0 }], distance: 15000 }),
+      baseAct({ run_id: '3', divisions: [{ p: '上海市', w: 1.0 }], distance: 10000 }),
+    ]
+    const result = computeRegionStats(acts).map((r) => r.name)
+    expect(result).toEqual(['河北省', '上海市', '北京市'])
   })
 })

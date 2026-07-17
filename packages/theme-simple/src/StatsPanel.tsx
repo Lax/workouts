@@ -15,7 +15,7 @@ interface RegionStat {
   count: number
 }
 
-function computeRegionStats(activities: Activity[]): RegionStat[] {
+export function computeRegionStats(activities: Activity[]): RegionStat[] {
   const regionDist = new Map<string, number>()
   const regionCount = new Map<string, number>()
   for (const a of activities) {
@@ -44,13 +44,16 @@ function computeRegionStats(activities: Activity[]): RegionStat[] {
     .sort((a, b) => b.distance - a.distance)
 }
 
-function extractProvince(loc: string): string | null {
+export function extractProvince(loc: string): string | null {
+  if (!loc) return null
   const known = ['北京', '天津', '上海', '重庆'] as const
   for (const k of known) {
     if (loc.includes(k)) return k
   }
   const m = loc.match(/(.{2,4}?(?:省|自治区|特别行政区))/)
-  return m?.[1] ?? null
+  if (m?.[1]) return m[1]
+  if (loc.length < 20 && loc !== loc.toLowerCase()) return loc
+  return null
 }
 
 export function StatsPanel({ activities, loading }: StatsPanelProps) {
@@ -82,23 +85,23 @@ export function StatsPanel({ activities, loading }: StatsPanelProps) {
             <span className="sp-summary-text">{regionStats.length} 个地区</span>
           </div>
           <hr className="section-divider" />
-          <div className="sp-regions">
+          <div className="sp-provinces">
             {regionStats.map((r) => (
               <div
                 key={r.name}
-                className={`sp-region-row${regionFilter === r.name ? ' active' : ''}`}
+                className={`sp-province-row${regionFilter === r.name ? ' active' : ''}`}
                 onClick={() => setRegionFilter(r.name)}
               >
-                <span className="sp-region-name">{r.name}</span>
-                <span className="sp-region-bar">
+                <span className="sp-province-name">{r.name}</span>
+                <span className="sp-province-bar">
                   <span
-                    className="sp-region-fill"
+                    className="sp-province-fill"
                     style={{
                       width: `${regionStats.length > 1 ? Math.round((r.distance / regionStats[0].distance) * 100) : 100}%`,
                     }}
                   />
                 </span>
-                <span className="sp-region-dist">{(r.distance / 1000).toFixed(0)} km</span>
+                <span className="sp-province-dist">{(r.distance / 1000).toFixed(0)} km</span>
               </div>
             ))}
           </div>
