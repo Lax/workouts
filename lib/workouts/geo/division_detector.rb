@@ -64,28 +64,26 @@ module Workouts
       def process_one(activity)
         run_id = activity[:run_id]
         polyline = activity[:summary_polyline]
-        @attempted += 1
-        prefix = "[#{@attempted}/#{@total}]"
 
         if polyline.nil? || polyline.empty? || polyline == KEEP_PLACEHOLDER
-          $stdout.puts "  #{prefix} #{run_id} → skipped (placeholder polyline)"
           @skipped += 1
           return
         end
 
         points = decode_points(polyline)
         unless points && points.size >= 2
-          $stdout.puts "  #{prefix} #{run_id} → skipped (no GPS points)"
           @skipped += 1
           return
         end
 
         samples = sample_points(points)
         if samples.empty?
-          $stdout.puts "  #{prefix} #{run_id} → skipped (no samples)"
           @skipped += 1
           return
         end
+
+        @attempted += 1
+        prefix = "[#{@attempted}/#{@total}]"
 
         divisions = resolve_divisions(samples)
         if divisions.empty?
