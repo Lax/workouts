@@ -18,6 +18,7 @@ module Workouts
 end
 
 require_relative "workouts/version"
+require_relative "workouts/source/keep"
 require_relative "workouts/config"
 require_relative "workouts/config_template"
 require_relative "workouts/db/connection"

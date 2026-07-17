@@ -66,7 +66,7 @@ data/cache/
 
 ## Keep Activities
 
-- `summary_polyline == "AAAA"` (PLACEHOLDER_POLYLINE) → skipped
+- `summary_polyline == "gqqrFurkeU??"` matches Keep's `PLACEHOLDER_POLYLINE` → skipped
 - `location_country == "0"` → no GPS data → skipped
 
 ## CLI

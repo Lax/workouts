@@ -31,7 +31,7 @@ module Workouts
           start_date: a[:start_date],
           start_date_local: a[:start_date_local],
           location_country: a[:location_country],
-          summary_polyline: a[:source] == "keep" && a[:summary_polyline] == Workouts::Sync::Keep::PLACEHOLDER_POLYLINE ?
+          summary_polyline: a[:source] == "keep" && a[:summary_polyline] == Workouts::Source::Keep::PLACEHOLDER_POLYLINE ?
             nil : a[:summary_polyline],
           average_heartrate: a[:average_heartrate] && a[:average_heartrate] != 0 ? a[:average_heartrate] : nil,
           max_heartrate: a[:max_heartrate],

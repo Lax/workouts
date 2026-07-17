@@ -49,7 +49,7 @@ module Workouts
         end
 
         def polylines
-          return [] if @polyline == Workouts::Sync::Keep::PLACEHOLDER_POLYLINE
+          return [] if @polyline == Workouts::Source::Keep::PLACEHOLDER_POLYLINE
           return [] unless @polyline
           points = Geo::Polyline.decode(@polyline)
           return [] if points.nil? || points.empty?

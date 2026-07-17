@@ -16,7 +16,7 @@ module Workouts
       AES_IV = Base64.decode64("MjM0Njg5MjQzMjkyMDMwMA==")
 
       # Keep returns 2 identical default GCJ-02 coords when no GPS track
-      PLACEHOLDER_POLYLINE = "gqqrFurkeU??".freeze
+      PLACEHOLDER_POLYLINE = Workouts::Source::Keep::PLACEHOLDER_POLYLINE
 
       KEEP_TYPES = %w[running hiking cycling].freeze
       KEEP_RAW_EXT = "json".freeze

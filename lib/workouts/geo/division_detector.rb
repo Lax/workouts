@@ -5,7 +5,7 @@ require_relative "reverse_geocode"
 module Workouts
   module Geo
     class DivisionDetector
-      KEEP_PLACEHOLDER = "AAAA".freeze
+      KEEP_PLACEHOLDER = Workouts::Source::Keep::PLACEHOLDER_POLYLINE
       SAMPLE_INTERVAL_DEG = 0.01
       CACHE_DIR = "data/cache"
       ACTIVITY_CACHE_FILE = File.join(CACHE_DIR, "geo-activities.json")
