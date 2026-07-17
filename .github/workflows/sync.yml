@@ -107,6 +107,10 @@ jobs:
             echo "No export.zip in branch — skipping" >&2
             exit 0
           fi
+          file data/import/apple_health/export.zip | grep -qi "Zip archive" || {
+            echo "export.zip is not a valid zip — possible LFS smudge failure" >&2
+            exit 1
+          }
           bundle exec exe/workouts sync --source apple_health
           touch data/import/apple_health/.imported
 
