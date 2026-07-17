@@ -103,21 +103,28 @@ module Workouts
         elevation_gain = nil
 
         if route_paths&.any?
-          begin
-            zip = Zip::File.new(@zip_path)
-            route_paths.each do |gpx_path|
-              normalized = gpx_path.sub(%r{^/?}, "apple_health_export/")
-              points = parse_gpx_route(zip, normalized)
-              if points&.any?
-                l2_points = points
+          gpx_l1_path = File.join(raw_dir, "#{run_id}.gpx")
+          unless File.exist?(gpx_l1_path)
+            begin
+              zip = Zip::File.new(@zip_path)
+              route_paths.each do |gpx_path|
+                normalized = gpx_path.sub(%r{^/?}, "apple_health_export/")
+                entry = zip.find_entry(normalized)
+                next unless entry
+                data = entry.get_input_stream.read
+                tmpp = File.join(raw_dir, ".#{run_id}.gpx.tmp")
+                File.write(tmpp, data)
+                File.rename(tmpp, gpx_l1_path)
                 break
               end
+            rescue => e
+              $stderr.puts "AppleHealth: GPX extract error for #{run_id}: #{e.message}"
+            ensure
+              zip&.close
             end
-          rescue => e
-            $stderr.puts "AppleHealth: GPX parse error for #{run_id}: #{e.message}"
-          ensure
-            zip&.close
           end
+
+          l2_points = File.exist?(gpx_l1_path) ? parse_gpx_file(gpx_l1_path) : nil
 
           if l2_points&.any?
             FileUtils.mkdir_p(std_dir)
@@ -275,11 +282,8 @@ module Workouts
         end
       end
 
-      def parse_gpx_route(zip, gpx_path)
-        entry = zip.find_entry(gpx_path)
-        return nil unless entry
-
-        doc = Nokogiri::XML(entry.get_input_stream.read)
+      def parse_gpx_file(file_path)
+        doc = Nokogiri::XML(File.read(file_path))
         doc.remove_namespaces!
         doc.xpath("//trkpt").filter_map do |pt|
           lat = pt["lat"]&.to_f
@@ -291,6 +295,9 @@ module Workouts
           speed = ext&.at_xpath("speed")&.text&.to_f
           { lat: lat, lng: lng, ele: ele, time: time_str, speed: speed }
         end
+      rescue => e
+        $stderr.puts "AppleHealth: GPX parse error for #{file_path}: #{e.message}"
+        nil
       end
 
       def build_attrs(source_name, run_id, stats, meta, polyline, elevation_gain,

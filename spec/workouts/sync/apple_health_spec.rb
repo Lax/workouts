@@ -256,8 +256,25 @@ RSpec.describe Workouts::Sync::AppleHealth do
 
       it "writes L1 raw files" do
         adapter.call
-        raw_files = Dir.glob(File.join(adapter.send(:raw_dir), "*.xml"))
-        expect(raw_files.size).to eq(2)
+        xml_files = Dir.glob(File.join(adapter.send(:raw_dir), "*.xml"))
+        expect(xml_files.size).to eq(2)
+      end
+
+      it "writes GPX alongside L1 XML for GPS-enabled activity" do
+        adapter.call
+        gpx_files = Dir.glob(File.join(adapter.send(:raw_dir), "*.gpx"))
+        expect(gpx_files.size).to eq(1)
+        gpx = File.read(gpx_files.first)
+        expect(gpx).to include("<gpx")
+        expect(gpx).to include("trkpt")
+      end
+
+      it "GPX in L1 matches original fixture" do
+        adapter.call
+        gpx_file = Dir.glob(File.join(adapter.send(:raw_dir), "*.gpx")).first
+        gpx = File.read(gpx_file)
+        original = File.read("spec/fixtures/apple_health/route.gpx")
+        expect(gpx.strip).to eq(original.strip)
       end
 
       it "writes L2 std files for GPS-enabled activity" do
