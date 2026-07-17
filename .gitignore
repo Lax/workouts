@@ -32,3 +32,4 @@ test-results/
 # Meow workflow artifacts
 /.opencode/meoworks/
 data/avatars/
+data/import/

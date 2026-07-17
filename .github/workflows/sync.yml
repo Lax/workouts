@@ -85,6 +85,30 @@ jobs:
 
       - uses: ./.github/actions/sources-cache/restore
 
+      - name: Restore Apple Health export
+        id: apple-health-cache
+        uses: actions/cache@v5.1.0
+        with:
+          path: data/import/apple_health/export.zip
+          key: import-apple-health-v1-export-zip
+          restore-keys: import-apple-health-v1-
+
+      - name: Import Apple Health
+        if: steps.apple-health-cache.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p data/import/apple_health
+          if ! git fetch origin data/import/apple_health 2>/dev/null; then
+            echo "No data/import/apple_health branch yet — skipping" >&2
+            exit 0
+          fi
+          git checkout data/import/apple_health -- data/import/apple_health/export.zip
+          if [ ! -f data/import/apple_health/export.zip ]; then
+            echo "No export.zip in branch — skipping" >&2
+            exit 0
+          fi
+          bundle exec exe/workouts sync --source apple_health
+          : > data/import/apple_health/export.zip
+
       - name: Sync
         env:
           SYNC__KEEP__PHONE: ${{ secrets.SYNC_KEEP_PHONE }}
