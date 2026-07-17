@@ -3,6 +3,7 @@ module Workouts
   require_relative "cli/db"
   require_relative "cli/geo"
   require_relative "cli/migrate"
+  require_relative "cli/serve"
   require_relative "cli/sync"
 
   class CLI < Thor
@@ -62,6 +63,9 @@ module Workouts
 
     desc "geo SUBCOMMAND", "Detect geographical administrative regions"
     subcommand "geo", GeoCLI
+
+    desc "serve SUBCOMMAND", "Start HTTP upload server for Apple Health export"
+    subcommand "serve", ServeCLI
 
     desc "init", "Generate default config.yml"
     def init
