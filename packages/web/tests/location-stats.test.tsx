@@ -68,15 +68,29 @@ describe('StatsPanel', () => {
   it('renders province stats when activities have divisions data', () => {
     const acts = [
       baseAct({ run_id: '1', divisions: [{ p: '河北省', w: 1.0 }], distance: 10000 }),
-      baseAct({ run_id: '2', divisions: [{ p: '上海市', w: 1.0 }], distance: 5000 }),
+      baseAct({ run_id: '2', divisions: [{ p: '台湾省', w: 1.0 }], distance: 5000 }),
     ]
     act(() => {
       root.render(<StatsPanel activities={acts} loading={false} />)
     })
     expect(container.textContent).toContain('河北省')
-    expect(container.textContent).toContain('上海市')
+    expect(container.textContent).toContain('台湾省')
     expect(container.textContent).toContain('10 km')
     expect(container.textContent).toContain('5 km')
+  })
+
+  it('renders SAR province rows with correct names', () => {
+    const acts = [
+      baseAct({ run_id: 'hk', divisions: [{ p: '香港特别行政区', w: 1.0 }], distance: 8000 }),
+      baseAct({ run_id: 'mo', divisions: [{ p: '澳门特别行政区', w: 1.0 }], distance: 3000 }),
+    ]
+    act(() => {
+      root.render(<StatsPanel activities={acts} loading={false} />)
+    })
+    expect(container.textContent).toContain('香港特别行政区')
+    expect(container.textContent).toContain('澳门特别行政区')
+    expect(container.textContent).toContain('8 km')
+    expect(container.textContent).toContain('3 km')
   })
 
   it('renders type section when multiple sport categories exist', () => {
@@ -189,5 +203,42 @@ describe('computeRegionStats', () => {
     ]
     const result = computeRegionStats(acts).map((r) => r.name)
     expect(result).toEqual(['河北省', '上海市', '北京市'])
+  })
+
+  it('handles Hong Kong SAR province', () => {
+    const acts = [baseAct({ divisions: [{ p: '香港特别行政区', w: 1.0 }], distance: 12000 })]
+    const result = computeRegionStats(acts)
+    expect(result).toHaveLength(1)
+    expect(result[0]).toMatchObject({ name: '香港特别行政区', distance: 12000, count: 1 })
+  })
+
+  it('handles Macau SAR province', () => {
+    const acts = [baseAct({ divisions: [{ p: '澳门特别行政区', w: 1.0 }], distance: 6000 })]
+    const result = computeRegionStats(acts)
+    expect(result).toHaveLength(1)
+    expect(result[0]).toMatchObject({ name: '澳门特别行政区', distance: 6000, count: 1 })
+  })
+
+  it('handles Taiwan province', () => {
+    const acts = [baseAct({ divisions: [{ p: '台湾省', w: 1.0 }], distance: 20000 })]
+    const result = computeRegionStats(acts)
+    expect(result).toHaveLength(1)
+    expect(result[0]).toMatchObject({ name: '台湾省', distance: 20000, count: 1 })
+  })
+
+  it('handles mix of SAR and regular provinces sorted by distance', () => {
+    const acts = [
+      baseAct({ divisions: [{ p: '香港特别行政区', w: 1.0 }], distance: 5000 }),
+      baseAct({ divisions: [{ p: '河北省', w: 1.0 }], distance: 15000 }),
+      baseAct({ divisions: [{ p: '台湾省', w: 1.0 }], distance: 10000 }),
+      baseAct({ divisions: [{ p: '澳门特别行政区', w: 1.0 }], distance: 3000 }),
+    ]
+    const result = computeRegionStats(acts).map((r) => ({ name: r.name, distance: r.distance }))
+    expect(result).toEqual([
+      { name: '河北省', distance: 15000 },
+      { name: '台湾省', distance: 10000 },
+      { name: '香港特别行政区', distance: 5000 },
+      { name: '澳门特别行政区', distance: 3000 },
+    ])
   })
 })
