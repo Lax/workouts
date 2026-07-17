@@ -29,6 +29,7 @@ export function normalize(raw: unknown): Activity {
     elevation_gain: (r.elevation_gain as number) ?? null,
     source: (r.source as string) ?? null,
     duplicate_info: (r.duplicate_info as string) ?? null,
+    divisions: (r.divisions as Activity['divisions']) ?? undefined,
   }
 }
 
@@ -57,6 +58,7 @@ function emptyActivity(): Activity {
     elevation_gain: null,
     source: null,
     duplicate_info: null,
+    divisions: undefined,
   }
 }
 

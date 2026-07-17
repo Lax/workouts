@@ -44,6 +44,17 @@ describe('normalize', () => {
     expect(a.average_speed).toBeNull()
     expect(a.calories).toBeNull()
   })
+
+  it('passes through divisions from JSON', () => {
+    const divs = [{ p: '河北省', w: 1.0 }]
+    const a = normalize({ divisions: divs })
+    expect(a.divisions).toEqual(divs)
+  })
+
+  it('returns undefined for missing divisions', () => {
+    const a = normalize({ run_id: 'test' })
+    expect(a.divisions).toBeUndefined()
+  })
 })
 
 describe('normalizeAll', () => {
