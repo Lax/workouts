@@ -19,7 +19,7 @@
 | `auth <garmin\|garmin_cn>` | 交互式 Garmin SSO 登录 |
 | `export json [--output]` | 导出 JSON |
 | `export csv [--output]` | 导出 CSV |
-| `export svg --style <style>` | 生成 SVG 海报（5 种风格） |
+| `export svg --style <style>` | 生成 SVG 海报（5 种风格）。参考：[flopp/GpxTrackPoster](https://github.com/flopp/GpxTrackPoster) |
 | `export stats [--output]` | 导出统计摘要 |
 | `export gpx [--output]` | 从 L2 文件重新导出 GPX |
 | `export all` | 执行所有导出 |
