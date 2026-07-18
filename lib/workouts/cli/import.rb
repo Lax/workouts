@@ -1,8 +1,8 @@
 module Workouts
   module Cli
     module Import
-      def import(source = nil)
-        source ||= options[:source]
+      def import
+        source = options[:source]
 
         unless source == "apple_health"
           say_status :error, "Unknown import source: #{source || '(none)'}. Supported: apple_health", :red

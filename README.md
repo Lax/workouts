@@ -290,7 +290,7 @@ git commit -m "Add Apple Health export"
 
 ```bash
 # 本地：
-exe/workouts import apple_health         # 或 import --source apple_health
+exe/workouts import --source apple_health
 
 # CI 自动拉取并导入（检查 .imported marker 防止重复导入）
 # 强制重新导入：删除 Actions Cache 中 imported-v1-apple-health
@@ -384,8 +384,7 @@ exe/workouts parse activity.fit --save  # 待实现
   | `sync` | 同步所有已配置的来源 |
   | `sync --source strava` | 只同步特定来源 |
   | `sync --act run` | 只同步某种运动类型 |
-  | `import apple_health` | 导入 Apple Health（export.zip）|
-  | `import --source apple_health` | 同上，--source 形式 |
+  | `import --source apple_health` | 导入 Apple Health（export.zip）|
   | `auth garmin_cn` | 交互式登录 |
 | `export json` | 导出 JSON |
 | `export csv` | 导出 CSV |

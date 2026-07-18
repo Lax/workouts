@@ -76,11 +76,11 @@ module Workouts
       say_status :created, path, :green
     end
 
-    desc "import [SOURCE]", "Import workout data from local files (apple_health)"
+    desc "import", "Import workout data from local files (apple_health)"
     option :source, type: :string, aliases: "-s",
-           desc: "Import source (alternative to positional arg)"
+           desc: "Import source (apple_health)"
     option :activity, type: :array, desc: "Filter by sport type", aliases: "--act"
-    def import(source = nil)
+    def import
       super
     end
 
