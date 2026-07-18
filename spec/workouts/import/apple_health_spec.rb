@@ -144,9 +144,9 @@ RSpec.describe Workouts::Import::AppleHealth do
   end
 
   describe "#generate_run_id" do
-    it "produces a 9-char hex string" do
+    it "produces an 11-char hex string" do
       id = adapter.send(:generate_run_id, "Lax's Apple Watch", "2023-06-15 09:00:00 +0800", "2023-06-15 09:45:00 +0800")
-      expect(id).to match(/\A[0-9a-f]{9}\z/)
+      expect(id).to match(/\A[0-9a-f]{11}\z/)
     end
 
     it "is deterministic" do
@@ -293,7 +293,7 @@ RSpec.describe Workouts::Import::AppleHealth do
       it "generates valid run_id format" do
         adapter.call
         db[:activities].each do |row|
-          expect(row[:run_id]).to match(/\Aapple_health_[0-9a-f]{9}\z/)
+          expect(row[:run_id]).to match(/\Aapple_health_[0-9a-f]{11}\z/)
         end
       end
 
@@ -457,7 +457,7 @@ RSpec.describe Workouts::Import::AppleHealth do
     it "includes run_id in each pending item" do
       ids = adapter.pending_ids
       ids.each do |p|
-        expect(p[:run_id]).to match(/\A[0-9a-f]{9}\z/)
+        expect(p[:run_id]).to match(/\A[0-9a-f]{11}\z/)
       end
     end
 

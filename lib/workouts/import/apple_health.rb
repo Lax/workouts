@@ -520,7 +520,7 @@ module Workouts
       def generate_run_id(source_name, start_date, end_date)
         s = normalize_date(start_date)
         e = normalize_date(end_date)
-        Digest::MD5.hexdigest("#{source_name}|#{s}|#{e}")[0, 9]
+        Digest::MD5.hexdigest("#{source_name}|#{s}|#{e}")[0, 11]
       end
 
       def normalize_date(date_str)
