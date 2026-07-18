@@ -1,13 +1,14 @@
 import { useTheme } from '@workouts/core'
 import { useActivities } from '@workouts/plugin-data-source'
-import { presetToTileConfig, TILE_PRESETS, TileSwitcher, vendorTokenEnvName } from '@workouts/plugin-map'
-import { useEffect, useMemo } from 'react'
-import { ChartOverlay } from './components/ChartOverlay'
+import { presetToTileConfig, TILE_PRESETS, vendorTokenEnvName } from '@workouts/plugin-map'
+import { lazy, Suspense, useEffect, useMemo } from 'react'
 import { DetailPanel } from './components/DetailPanel'
 import { Drawer } from './components/Drawer'
 import { OverviewMap } from './components/OverviewMap'
 import { useOverviewStore } from './store'
 import './overview.css'
+
+const ChartOverlay = lazy(() => import('./components/ChartOverlay'))
 
 export function OverviewLayout() {
   const { activities, loading: _loading, error: _error } = useActivities()
@@ -28,7 +29,7 @@ export function OverviewLayout() {
   const openDetail = useOverviewStore((s) => s.openDetail)
   const years = useOverviewStore((s) => s.years)
   const tilePresetId = useOverviewStore((s) => s.tilePresetId)
-  const setTilePreset = useOverviewStore((s) => s.setTilePreset)
+  const _setTilePreset = useOverviewStore((s) => s.setTilePreset)
 
   const tileConfig = useMemo(() => {
     const preset = TILE_PRESETS.find((p) => p.id === tilePresetId) ?? TILE_PRESETS[0]
@@ -36,7 +37,7 @@ export function OverviewLayout() {
     return presetToTileConfig(preset, token)
   }, [tilePresetId])
 
-  const disabledTilePresets = useMemo(() => {
+  const _disabledTilePresets = useMemo(() => {
     const tokensOk = TILE_PRESETS.filter((p) => p.requiresToken).every((p) => import.meta.env[vendorTokenEnvName(p.vendor)])
     if (tokensOk) return []
     return TILE_PRESETS.filter((p) => p.requiresToken).map((p) => p.id)
@@ -146,13 +147,14 @@ export function OverviewLayout() {
               </svg>
             )}
           </button>
-          <TileSwitcher presets={TILE_PRESETS} activeId={tilePresetId} onSelect={setTilePreset} disabledIds={disabledTilePresets} />
         </div>
       </div>
 
       <Drawer />
       <DetailPanel />
-      <ChartOverlay />
+      <Suspense fallback={null}>
+        <ChartOverlay />
+      </Suspense>
     </>
   )
 }

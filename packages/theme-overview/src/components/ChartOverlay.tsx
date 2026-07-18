@@ -4,7 +4,7 @@ import { useEffect } from 'react'
 import { useOverviewStore } from '../store'
 import '../overview.css'
 
-export function ChartOverlay() {
+function ChartOverlay() {
   const showCharts = useOverviewStore((s) => s.showCharts)
   const closeCharts = useOverviewStore((s) => s.closeCharts)
   const filteredActivities = useOverviewStore((s) => s.filteredActivities)
@@ -56,3 +56,5 @@ export function ChartOverlay() {
     </div>
   )
 }
+
+export default ChartOverlay

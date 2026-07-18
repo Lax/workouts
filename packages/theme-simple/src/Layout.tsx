@@ -1,6 +1,6 @@
 import { useTheme } from '@workouts/core'
 import { useActivities } from '@workouts/plugin-data-source'
-import { presetToTileConfig, TILE_PRESETS, TileSwitcher, vendorTokenEnvName } from '@workouts/plugin-map'
+import { presetToTileConfig, TILE_PRESETS, vendorTokenEnvName } from '@workouts/plugin-map'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { ActivityCardGrid } from './components/ActivityCardGrid'
 import { CircularDrawer } from './components/CircularDrawer'
@@ -68,7 +68,7 @@ export function SimpleLayout() {
   const years = useSimpleStore((s) => s.years)
   const lightsOn = useSimpleStore((s) => s.lightsOn)
   const tilePresetId = useSimpleStore((s) => s.tilePresetId)
-  const setTilePreset = useSimpleStore((s) => s.setTilePreset)
+  const _setTilePreset = useSimpleStore((s) => s.setTilePreset)
   const isFullscreen = useFullscreenSync()
   const showLabels = isFullscreen && lightsOn
   const setMapHoveredId = useSimpleStore((s) => s.setMapHoveredId)
@@ -91,7 +91,7 @@ export function SimpleLayout() {
     return presetToTileConfig(preset, token)
   }, [tilePresetId])
 
-  const disabledTilePresets = useMemo(() => {
+  const _disabledTilePresets = useMemo(() => {
     const tokensOk = TILE_PRESETS.filter((p) => p.requiresToken).every((p) => import.meta.env[vendorTokenEnvName(p.vendor)])
     if (tokensOk) return []
     return TILE_PRESETS.filter((p) => p.requiresToken).map((p) => p.id)
@@ -196,9 +196,6 @@ export function SimpleLayout() {
             />
             <YearSelector />
             <MapOverlays />
-            <div className="map-tile-switcher">
-              <TileSwitcher presets={TILE_PRESETS} activeId={tilePresetId} onSelect={setTilePreset} disabledIds={disabledTilePresets} />
-            </div>
             <div className="map-run-title">
               {selectedActivity
                 ? `${selectedActivity.start_date?.slice(0, 10)} ${((selectedActivity.distance ?? 0) / 1000).toFixed(2)}km ${selectedActivity.name || selectedActivity.sport_category}`

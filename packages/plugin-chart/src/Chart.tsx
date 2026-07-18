@@ -1,6 +1,12 @@
 import type { EChartsOption } from 'echarts'
-import * as echarts from 'echarts'
+import { BarChart, PieChart } from 'echarts/charts'
+import { GridComponent, TooltipComponent } from 'echarts/components'
+import type { ECharts } from 'echarts/core'
+import { init, use } from 'echarts/core'
+import { CanvasRenderer } from 'echarts/renderers'
 import { useEffect, useRef } from 'react'
+
+use([BarChart, PieChart, TooltipComponent, GridComponent, CanvasRenderer])
 
 export interface ChartProps {
   option: EChartsOption
@@ -10,17 +16,16 @@ export interface ChartProps {
 
 export function Chart({ option, style, onClick }: ChartProps) {
   const elRef = useRef<HTMLDivElement>(null)
-  const chartRef = useRef<echarts.ECharts | null>(null)
+  const chartRef = useRef<ECharts | null>(null)
 
   useEffect(() => {
     const el = elRef.current
     if (!el) return
-    const instance = echarts.init(el)
+    const instance = init(el)
     chartRef.current = instance
     return () => {
       instance.dispose()
       chartRef.current = null
-      return
     }
   }, [])
 
@@ -34,7 +39,6 @@ export function Chart({ option, style, onClick }: ChartProps) {
     instance.on('click', onClick)
     return () => {
       instance.off('click', onClick)
-      return
     }
   }, [onClick])
 
