@@ -9,7 +9,7 @@
 
 ## 分支命名
 
-`data/_/<source>` — 如 `data/_/xoss`、`data/_/igpsport`
+`_/_/<source>` — 如 `_/_/xoss`、`_/_/igpsport`
 
 命名含 `/`，git/GitHub 均支持，UI 显示为 `data/ → _/ → xoss` 文件夹层级。
 
@@ -18,7 +18,7 @@
 ```
 Step 0: checkout main + 配置 PAT extraheader（用于后续 git push）
 Step 1: ls-remote → 分支不存在则 plumbing 创建空 commit + push
-Step 2: git fetch + checkout data/_/$SRC
+Step 2: git fetch + checkout _/_/$SRC
         （此后 index 只含 archive 文件，与 main 隔离）
 Step 3: cache restore → 覆盖 disk（写入新文件、覆盖已有、不删旧文件）
 Step 4: git add -f -A（含所有变动，包括删除）
@@ -49,7 +49,7 @@ git push origin "$COMMIT:refs/heads/$BRANCH"
 
 ### Step 2 — checkout 的 index 隔离
 
-`git checkout data/_/xoss` 后，index 和 worktree 只含 archive branch 的跟踪文件（`data/raw/xoss/`、`data/std/xoss/`）。main 的文件完全不被纳入。
+`git checkout _/_/xoss` 后，index 和 worktree 只含 archive branch 的跟踪文件（`data/raw/xoss/`、`data/std/xoss/`）。main 的文件完全不被纳入。
 
 ### Step 4 — rename 保护 + 删除排除
 

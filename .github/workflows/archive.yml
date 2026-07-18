@@ -30,7 +30,7 @@ jobs:
 
       - name: Ensure branch exists
         env:
-          BRANCH: data/_/${{ matrix.source }}
+          BRANCH: _/_/${{ matrix.source }}
         run: |
           if git ls-remote --exit-code --heads origin "refs/heads/$BRANCH" 2>/dev/null; then
             echo "branch exists"
@@ -43,7 +43,7 @@ jobs:
 
       - name: Checkout archive branch
         env:
-          BRANCH: data/_/${{ matrix.source }}
+          BRANCH: _/_/${{ matrix.source }}
         run: |
           git fetch origin "$BRANCH"
           git checkout "$BRANCH"
@@ -60,7 +60,7 @@ jobs:
       - name: Commit & push
         env:
           SRC: ${{ matrix.source }}
-          BRANCH: data/_/${{ matrix.source }}
+          BRANCH: _/_/${{ matrix.source }}
         run: |
           set -euo pipefail
 
