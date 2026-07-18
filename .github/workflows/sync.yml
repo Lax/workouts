@@ -111,7 +111,7 @@ jobs:
             echo "export.zip is not a valid zip — possible LFS smudge failure" >&2
             exit 1
           }
-          bundle exec exe/workouts import apple_health
+          bundle exec exe/workouts import --source apple_health
           touch data/import/apple_health/.imported
 
       - name: Sync

@@ -6,6 +6,7 @@ module Workouts
   require_relative "cli/serve"
   require_relative "cli/sync"
   require_relative "cli/import"
+  require_relative "cli/import_cli"
 
   class CLI < Thor
     package_name "Workouts"
@@ -18,7 +19,6 @@ module Workouts
     end
 
     include Cli::Sync
-    include Cli::Import
 
     desc "sync", "Sync workout data from configured sources"
     option :source, type: :string, desc: "Sync only specific source (strava/garmin/keep/igpsport/xoss)"
@@ -69,20 +69,14 @@ module Workouts
     desc "serve SUBCOMMAND", "Start HTTP upload server for Apple Health export"
     subcommand "serve", ServeCLI
 
+    desc "import SUBCOMMAND", "Import workout data from local files"
+    subcommand "import", ImportCLI
+
     desc "init", "Generate default config.yml"
     def init
       path = options[:output] || "config/config.yml"
       File.write(path, ConfigTemplate.generate)
       say_status :created, path, :green
-    end
-
-    desc "import", "Import workout data from local files (apple_health, gpx, fit, tcx)"
-    option :source, type: :string, aliases: "-s",
-           desc: "Import source(s) (apple_health, gpx, fit, tcx) — comma-separated"
-    option :activity, type: :array, desc: "Filter by sport type", aliases: "--act"
-    option :sport, type: :string, desc: "Override sport_category for GPX files"
-    def import
-      super
     end
 
     desc "parse FILE", "Parse a GPX or TCX file and optionally save to DB"
