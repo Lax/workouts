@@ -59,30 +59,6 @@ jobs:
         id: db-before
         run: echo "digest=$(md5sum data/workouts.db 2>/dev/null | cut -d' ' -f1 || echo 'none')" >> $GITHUB_OUTPUT
 
-      - name: Restore Garmin CN tokens
-        uses: actions/cache/restore@v4
-        id: garmin-cn-tokens-cache
-        with:
-          path: data/cache/garmin_garmin_cn_tokens.json
-          key: garmin-tokens-v1-garmin_cn-${{ github.run_id }}
-          restore-keys: garmin-tokens-v1-garmin_cn-
-
-      - name: Restore Garmin Intl tokens
-        uses: actions/cache/restore@v4
-        id: garmin-tokens-cache
-        with:
-          path: data/cache/garmin_garmin_com_tokens.json
-          key: garmin-tokens-v1-garmin-${{ github.run_id }}
-          restore-keys: garmin-tokens-v1-garmin-
-
-      - name: Restore XOSS tokens
-        uses: actions/cache/restore@v4
-        id: xoss-tokens-cache
-        with:
-          path: data/cache/xoss_tokens.json
-          key: xoss-tokens-v1-${{ github.run_id }}
-          restore-keys: xoss-tokens-v1-
-
       - uses: ./.github/actions/sources-cache/restore
 
       - name: Restore import marker
@@ -114,6 +90,9 @@ jobs:
           bundle exec exe/workouts import --source apple_health
           touch data/import/apple_health/.imported
 
+      - id: load-tokens-cache
+        uses: ./.github/actions/tokens-cache/restore
+
       - name: Sync
         env:
           SYNC__KEEP__PHONE: ${{ secrets.SYNC_KEEP_PHONE }}
@@ -138,6 +117,9 @@ jobs:
           MIGRATE__IGPSPORT_TO_GARMIN__LIMIT: ${{ vars.MIGRATE_IGPSPORT_TO_GARMIN_LIMIT || 10 }}
           MIGRATE__IGPSPORT_TO_GARMIN_CN__LIMIT: ${{ vars.MIGRATE_IGPSPORT_TO_GARMIN_CN_LIMIT || 10 }}
         run: bundle exec exe/workouts sync
+
+      - uses: ./.github/actions/tokens-cache/save
+        if: always() && steps.load-tokens-cache.outputs.restored == 'true'
 
       - name: Restore geo cache
         uses: actions/cache/restore@v4
@@ -202,27 +184,6 @@ jobs:
           new=$(md5sum data/workouts.db 2>/dev/null | cut -d' ' -f1 || echo 'none')
           [ "${{ steps.db-before.outputs.digest }}" != "$new" ] && echo "changed=true" || echo "changed=false"
           echo "changed=$([ "${{ steps.db-before.outputs.digest }}" != "$new" ] && echo true || echo false)" >> $GITHUB_OUTPUT
-
-      - name: Save Garmin CN tokens
-        uses: actions/cache/save@v4
-        if: always()
-        with:
-          path: data/cache/garmin_garmin_cn_tokens.json
-          key: ${{ steps.garmin-cn-tokens-cache.outputs.cache-primary-key }}
-
-      - name: Save Garmin Intl tokens
-        uses: actions/cache/save@v4
-        if: always()
-        with:
-          path: data/cache/garmin_garmin_com_tokens.json
-          key: ${{ steps.garmin-tokens-cache.outputs.cache-primary-key }}
-
-      - name: Save XOSS tokens
-        uses: actions/cache/save@v4
-        if: always()
-        with:
-          path: data/cache/xoss_tokens.json
-          key: ${{ steps.xoss-tokens-cache.outputs.cache-primary-key }}
 
       - name: Save DB cache
         uses: actions/cache/save@v4

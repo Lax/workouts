@@ -1,0 +1,26 @@
+name: Tokens Cache Restore
+description: Restore Garmin/Garmin CN/XOSS token caches
+outputs:
+  restored:
+    description: Always "true" when restore executed
+    value: "true"
+runs:
+  using: composite
+  steps:
+    - uses: actions/cache/restore@v6.1.0
+      with:
+        path: data/cache/garmin_garmin_cn_tokens.json
+        key: garmin-tokens-v1-garmin_cn-${{ github.run_id }}
+        restore-keys: garmin-tokens-v1-garmin_cn-
+
+    - uses: actions/cache/restore@v6.1.0
+      with:
+        path: data/cache/garmin_garmin_com_tokens.json
+        key: garmin-tokens-v1-garmin-${{ github.run_id }}
+        restore-keys: garmin-tokens-v1-garmin-
+
+    - uses: actions/cache/restore@v6.1.0
+      with:
+        path: data/cache/xoss_tokens.json
+        key: xoss-tokens-v1-${{ github.run_id }}
+        restore-keys: xoss-tokens-v1-
