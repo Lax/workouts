@@ -26,6 +26,11 @@ module Workouts
         JSON.parse(json)
       end
 
+      def self.sport(path)
+        bytes = File.read(path, mode: "rb").bytes
+        CTX.eval("FitDecoder.fitSport(#{bytes.inspect})")
+      end
+
       def self.first_timestamp(path)
         bytes = File.read(path, mode: "rb").bytes
         json = CTX.eval("FitDecoder.debugRecords(#{bytes.inspect})")

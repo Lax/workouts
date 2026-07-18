@@ -76,10 +76,11 @@ module Workouts
       say_status :created, path, :green
     end
 
-    desc "import", "Import workout data from local files (apple_health)"
+    desc "import", "Import workout data from local files (apple_health, gpx, fit, tcx)"
     option :source, type: :string, aliases: "-s",
-           desc: "Import source (apple_health)"
+           desc: "Import source(s) (apple_health, gpx, fit, tcx) — comma-separated"
     option :activity, type: :array, desc: "Filter by sport type", aliases: "--act"
+    option :sport, type: :string, desc: "Override sport_category for GPX files"
     def import
       super
     end

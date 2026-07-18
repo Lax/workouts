@@ -59,4 +59,13 @@ RSpec.describe Workouts::FIT::Decoder do
       expect(info["recordMesgs"]).to be > 0
     end
   end
+
+  describe ".sport" do
+    subject(:sport) { described_class.sport(fit_path) }
+
+    it "returns a sport string" do
+      expect(sport).to be_a(String)
+      expect(sport).not_to be_empty
+    end
+  end
 end
