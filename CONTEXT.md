@@ -27,6 +27,8 @@
 | `migrate igpsport_to_garmin_cn [--limit]` | 上传 iGPSPORT 数据至 Garmin CN |
 | `db migrate` | 运行数据库迁移 |
 | `parse <file.gpx\|file.tcx> [--save]` | 解析本地 GPX/TCX 文件，可选写入 DB |
+| `import --source gpx,fit,tcx [--sport S]` | 从本地目录批量导入 GPX/FIT/TCX 文件（`data/import/{source}/`）。`--sport` 覆盖 GPX sport_category |
+| `import --source apple_health` | 从 Apple Health export.xml 导入运动数据 |
 | `init` | 生成默认 config.yml |
 | `version` | 版本号 |
 
@@ -38,7 +40,20 @@
 lib/workouts/cli.rb              # 主 CLI（Workouts::CLI），加载子模块
 lib/workouts/cli/export.rb       # 导出子命令（ExportCLI: json, csv, svg, all）
 lib/workouts/cli/sync.rb         # 同步子模块（sync, auth, dedup）
+lib/workouts/cli/import.rb       # 导入子命令（import: apple_health, gpx, fit, tcx）
+lib/workouts/cli/db.rb           # 数据库子命令
+lib/workouts/cli/migrate.rb      # 迁移子命令
+lib/workouts/cli/geo.rb          # 地理子命令
+lib/workouts/cli/serve.rb        # 上传服务子命令
+lib/workouts/import/
+  apple_health.rb                # Apple Health XML 导入适配器
+  local_file.rb                  # 本地 GPX/FIT/TCX 文件导入适配器
 lib/workouts/sync/runner.rb      # Sync::Runner — 队列调度 + Worker 池
+lib/workouts/parser/
+  base.rb                        # 解析器基类（haversine、polyline、sport 归一化）
+  gpx.rb                         # GPX 解析器（Nokogiri）
+  tcx.rb                         # TCX 解析器（Nokogiri）
+  fit.rb                         # FIT 解析器（mini_racer + @garmin/fitsdk）
 lib/workouts/dedup/
   matcher.rb                     # Dedup::Matcher — 置信度计算
   trajectory.rb                  # Dedup::Trajectory — GPS 轨迹重叠判定
@@ -69,8 +84,18 @@ lib/workouts/dedup/
                      │  Dedup::Service  │
                      │   Matcher        │
                      │   Trajectory     │
-                     └──────────────────┘
+                      └──────────────────┘
 ```
+
+### 本地导入架构
+
+```
+data/import/{gpx,fit,tcx}/ → Import::LocalFile → data/raw/{source}/ (L1)
+                                               → data/std/{source}/ (L2)
+                                               → SQLite DB (L3)
+```
+
+无网络，纯文件系统操作。不经过 Sync::Runner。
 
 ---
 
@@ -94,6 +119,7 @@ lib/workouts/dedup/
 | Per-source 独立 GH Cache | 每源独立 cache key (`workouts-raw-v1-{source}-{run_id}`)，通过 `scripts/source-digest.sh` 计算内容 md5 检测变化，仅变动的源写 cache。通过 `.github/actions/sources-cache/restore` + `sources-cache/save` 封装。数据目录示例: `data/raw/{garmin,garmin_cn,igpsport,...}/`, `data/std/{...}/` |
 | 导出默认路径 `data/` → `site/` | 源数据与生成制品分离，gitignored |
 | `mini_racer` + `@garmin/fitsdk` 解析 FIT | V8 引擎在 Ruby 进程中执行 JS SDK，纯 gem 依赖，无需外部运行时 |
+| local_file 适配器单类处理三种格式 | GPX/FIT/TCX 共享相同的文件扫描、L1/L2写入、DB upsert 逻辑，仅解析器不同。单类避免三份重复代码 |
 
 ---
 
@@ -124,10 +150,13 @@ lib/workouts/dedup/
 | Garmin Intl | `garmin` | `data/raw/garmin/` | `data/std/garmin/` |
 | Garmin CN | `garmin_cn` | `data/raw/garmin_cn/` | `data/std/garmin_cn/` |
 | Strava | `strava` | `data/raw/strava/` | `data/std/strava/` |
+| GPX (导入) | `gpx` | `data/raw/gpx/` | `data/std/gpx/` |
+| FIT (导入) | `fit` | `data/raw/fit/` | `data/std/fit/` |
+| TCX (导入) | `tcx` | `data/raw/tcx/` | `data/std/tcx/` |
 
 每源通过 `scripts/source-digest.sh` 计算内容 md5 作为 digest，用于 CI cache 的变更检测。restore 阶段写入 `data/.source-digests`（统一快照文件），sync 后比对，仅 digest 变化时写回 cache。
 
-### Adapter 接口
+### Sync Adapter 接口
 
 每个 adapter 实现三个公共方法，供 Runner 或单源 CLI 调用：
 
@@ -138,6 +167,10 @@ lib/workouts/dedup/
 | `process_one(pending)` | `attrs hash / nil` | 单活动完整流程：fetch detail → write raw → write std → upsert DB |
 
 `call` 方法委拖为 `authenticate + pending_ids.filter_map { \|p\| process_one(p) }.size`，保持单源 CL I 兼容。
+
+### Import Adapter 接口
+
+导入适配器（`Import::LocalFile`、`Import::AppleHealth`）也继承 `Sync::Base`，但覆盖 `call` 方法实现自定义流程，不再依赖 `pending_ids` + `process_one` 的默认循环。`authenticate` 直接返回 `true`（无网络调用）。
 
 ### 数据流程
 
@@ -218,6 +251,52 @@ lib/workouts/dedup/
 ```
 
 SVG 导出时，标注上区分 derived（高置信度合并）、duplicate（轨迹重叠）和 similar（低置信度重叠），鼠标悬停显示匹配来源和评分。
+
+---
+
+## 导入适配器
+
+### 数据源
+
+| 适配器 | 源格式 | 认证 | 特点 |
+|---|---|---|---|
+| **Apple Health** | export.zip (XML + GPX) | 无 | 从 iOS 健康导出 zip 解析，心率从 HKQuantityTypeIdentifierHeartRate 关联，自动跳过 Strava/Keep/Garmin 等已知源 |
+| **LocalFile (GPX)** | .gpx 文件 | 无 | 扫描 `data/import/gpx/`，sport_category 默认 "other"，`--sport` 覆盖。多 track → 多活动 |
+| **LocalFile (FIT)** | .fit 文件 | 无 | 扫描 `data/import/fit/`，sport 从 FIT session mesg 提取（通过 decoder.js fitSport）。FIT 纪元时间戳 |
+| **LocalFile (TCX)** | .tcx 文件 | 无 | 扫描 `data/import/tcx/`，sport 从 XML Sport 属性提取。多 Activity → 多活动 |
+
+### 数据流
+
+```
+数据准备:
+  将文件放入 data/import/{gpx,fit,tcx}/
+  目录不存在时跳过，不报错
+
+导入过程:
+  1. 读取文件 → SHA256 内容哈希 → 检查 DB 中是否已存在（去重）
+  2. 写入 L1 raw: data/raw/{source}/{run_id}.{ext}（temp→rename 原子写）
+  3. 解析文件（Parser::GPX / Parser::TCX / Parser::FIT）
+  4. 提取 GPS 点阵 → 写入 L2 std: data/std/{source}/{run_id}.json
+  5. upsert_activity → SQLite DB
+
+run_id:
+  {source}_{SHA256(file_content)[0..12]}（如 gpx_a1b2c3d4e5f6）
+  内容不变 → run_id 不变 → upsert 自动跳过
+
+错误处理:
+  单文件失败 → 打印错误，继续处理下一文件
+  目录不存在 → 跳过，进入下一格式
+```
+
+### 与同步适配器的区别
+
+| 维度 | 同步 | 导入 |
+|------|------|------|
+| 网络 | 需要 API 调用 | 无 |
+| 认证 | OAuth / 密码 | 无 |
+| 调度 | Runner Worker 池（3 线程） | 单线程顺序 |
+| 去重 | run_id 一级 + Dedup::Service 二级 | run_id 一级（内容哈希） |
+| CI cache | per-source GH Cache | 无（一次操作） |
 
 ---
 

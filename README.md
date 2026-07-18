@@ -20,11 +20,11 @@
 | Garmin CN | 同步 | SSO + OAuth1→OAuth2 (secret) | **FIT**，GPX，TCX，CSV |
 | Garmin 国际版 | 同步 | DI OAuth2 (auth_seed) | **FIT**，GPX，TCX，CSV |
 | Apple Health | 导入 | — | ✅ **export.zip**（XML + GPX） |
-| GPX | 导入 | — | △ |
-| FIT | 导入 | — | ○ |
-| TCX | 导入 | — | △ |
+| GPX | 导入 | — | ✅ **GPX** |
+| FIT | 导入 | — | ✅ **FIT** |
+| TCX | 导入 | — | ✅ **TCX** |
 
-> ✅ 已实现  △ 部分可用（parse CLI）  ○ 待实现
+> ✅ 已实现
 
 ---
 
@@ -375,17 +375,27 @@ gh actions-cache delete imported-v1-apple-health
 
 ### 本地文件导入
 
-纯本地操作。
+纯本地操作，无网络要求。
 
 ```bash
-# 单条：解析 GPX/TCX 文件写入数据库
+# 批量导入：文件放入 data/import/{gpx,fit,tcx}/ 后执行
+exe/workouts import --source gpx          # 所有 GPX 文件
+exe/workouts import --source fit          # 所有 FIT 文件
+exe/workouts import --source tcx          # 所有 TCX 文件
+exe/workouts import --source gpx,fit,tcx  # 三种格式一次导入
+
+# GPX 无内嵌运动类型，用 --sport 指定
+exe/workouts import --source gpx --sport run
+
+# 单文件解析（调试用，支持 GPX/TCX/FIT）
 exe/workouts parse activity.gpx --save
 exe/workouts parse activity.tcx --save
-exe/workouts parse activity.fit --save  # 待实现
-
-# 批量：导入 Apple Health 全量数据（export.zip）
-exe/workouts import --source apple_health
+exe/workouts parse activity.fit --save
 ```
+
+默认读取目录：`data/import/gpx/` · `data/import/fit/` · `data/import/tcx/`
+
+`run_id` = `{source}_` + SHA256 文件内容前缀，内容不变则重复导入自动跳过。
 
 ---
 
@@ -437,6 +447,8 @@ exe/workouts import --source apple_health
 | `sync --source strava` | 只同步特定来源 |
 | `sync --act run` | 只同步某种运动类型 |
 | `import --source apple_health` | 导入 Apple Health（export.zip）|
+| `import --source gpx,fit,tcx` | 批量导入本地 GPX/FIT/TCX 文件 |
+| `import --source gpx --sport run` | 导入 GPX 并指定 sport_category 为 run |
 | `auth garmin_cn` | 交互式登录 |
 | `export json` | 导出 JSON |
 | `export csv` | 导出 CSV |
@@ -445,7 +457,7 @@ exe/workouts import --source apple_health
 | `export gpx` | 从 L2 重新导出 GPX |
 | `export all` | 执行所有导出 |
 | `init` | 生成默认配置 |
-| `parse activity.gpx --save` | 解析本地 GPX/TCX 并写入 DB |
+| `parse activity.gpx --save` | 解析本地 GPX/TCX/FIT 并写入 DB |
 | `version` | 查看版本 |
 
 SVG 5 种风格：`github` / `grid` / `circular` / `month-of-life` / `year-summary`。
