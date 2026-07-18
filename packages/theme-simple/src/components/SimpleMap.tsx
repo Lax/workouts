@@ -1,4 +1,4 @@
-import { PanelMap, type TileConfig, type Vendor } from '@workouts/plugin-map'
+import { PanelMap, type TileConfig } from '@workouts/plugin-map'
 import type { Activity } from '@workouts/shared'
 
 interface SimpleMapProps {
@@ -6,6 +6,7 @@ interface SimpleMapProps {
   colorScheme: 'light' | 'dark'
   colorMode: 'type' | 'speed'
   hoveredActivityId: string | null
+  tileConfig?: TileConfig
   privacyMode?: boolean
   lightsOn?: boolean
   showLabels?: boolean
@@ -14,17 +15,6 @@ interface SimpleMapProps {
   attributionPosition?: 'topleft' | 'topright' | 'bottomleft' | 'bottomright'
   onActivityClick?: (activity: Activity) => void
   onActivityHover?: (activityId: string | null) => void
-}
-
-function getTileConfig(): TileConfig {
-  const envVendor = import.meta.env.VITE__MAP_TILE_VENDOR
-  const envStyle = import.meta.env.VITE__MAP_TILE_STYLE
-  const envToken = import.meta.env.VITE__MAP_TILE_TOKEN || import.meta.env.VITE__MAPBOX__TOKEN
-  return {
-    vendor: (envVendor || 'carto') as Vendor,
-    style: envStyle || undefined,
-    token: envToken || undefined,
-  }
 }
 
 export function SimpleMap({
@@ -37,6 +27,7 @@ export function SimpleMap({
   showLabels,
   animate,
   initialScrollDisabled,
+  tileConfig,
   attributionPosition,
   onActivityClick,
   onActivityHover,
@@ -47,7 +38,7 @@ export function SimpleMap({
       colorScheme={colorScheme}
       colorMode={colorMode}
       hoveredActivityId={hoveredActivityId}
-      tileConfig={getTileConfig()}
+      tileConfig={tileConfig}
       dashLines={true}
       privacyMode={privacyMode}
       lightsOn={lightsOn}

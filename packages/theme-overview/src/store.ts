@@ -25,6 +25,7 @@ export interface OverviewStore {
   sortField: SortField
   sortDesc: boolean
   filters: Filters
+  tilePresetId: string
   mapHoveredId: string | null
   years: number[]
   availableTypes: [string, number][]
@@ -41,6 +42,7 @@ export interface OverviewStore {
   setSelectedYear: (y: number | null) => void
   setSelectedMonth: (m: number | null) => void
   setColorMode: (m: 'type' | 'speed') => void
+  setTilePreset: (id: string) => void
   toggleTheme: () => void
   setMapHoveredId: (id: string | null) => void
   toggleDrawer: () => void
@@ -149,6 +151,7 @@ export const useOverviewStore = create<OverviewStore>()((set) => ({
   sortField: 'date',
   sortDesc: true,
   filters: defaultFilters,
+  tilePresetId: 'dark',
   mapHoveredId: null,
   years: [],
   availableTypes: [],
@@ -203,6 +206,7 @@ export const useOverviewStore = create<OverviewStore>()((set) => ({
       filteredActivities: filterActivities(s.activities, s.filters, s.sortField, s.sortDesc, s.selectedYear, m),
     })),
   setColorMode: (m) => set({ colorMode: m }),
+  setTilePreset: (id: string) => set({ tilePresetId: id }),
   toggleTheme: () =>
     set((s) => {
       const next = s.colorScheme === 'light' ? 'dark' : 'light'

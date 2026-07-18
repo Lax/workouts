@@ -116,3 +116,23 @@ export function maptiler(token: string, style?: string): TileUrlBuilder {
 export function stadiamaps(token: string, style?: string): TileUrlBuilder {
   return (scheme: Scheme) => resolveTileUrl({ vendor: 'stadiamaps', style, token }, scheme)
 }
+
+export interface TilePreset {
+  id: string
+  name: string
+  vendor: Vendor
+  style?: string
+  requiresToken?: boolean
+}
+
+export const TILE_PRESETS: TilePreset[] = [
+  { id: 'dark', name: 'Dark', vendor: 'carto' },
+  { id: 'light', name: 'Light', vendor: 'carto', style: 'light-all' },
+  { id: 'satellite', name: 'Satellite', vendor: 'mapbox', style: 'satellite-streets-v12', requiresToken: true },
+  { id: 'outdoor', name: 'Outdoor', vendor: 'maptiler', style: 'outdoor-v2', requiresToken: true },
+  { id: 'dark-minimal', name: 'Dark Minimal', vendor: 'openfreemap', style: 'dark' },
+]
+
+export function presetToTileConfig(preset: TilePreset, token?: string): TileConfig {
+  return { vendor: preset.vendor, style: preset.style, token }
+}

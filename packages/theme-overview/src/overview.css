@@ -47,6 +47,30 @@ body {
 .sl-yellow { background: #FFD700; }
 .sl-red { background: #FF4500; }
 
+/* Tile switcher */
+.tile-switcher {
+  display: flex;
+  gap: 3px;
+  background: rgba(var(--color-surface-rgb), 0.85);
+  border-radius: 8px;
+  border: 1px solid var(--color-border);
+  overflow: hidden;
+  backdrop-filter: blur(4px);
+}
+.tile-btn {
+  padding: 3px 7px;
+  font-size: 0.65rem;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  transition: all 0.15s;
+}
+.tile-btn:hover { color: var(--color-text); }
+.tile-btn.active { background: var(--color-accent); color: var(--color-bg); font-weight: 600; }
+.tile-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+.tile-btn:not(:last-child) { border-right: 1px solid var(--color-border); }
+
 /* Icon/theme button */
 .icon-btn { background: transparent; border: 1px solid var(--color-border); color: var(--color-text-secondary); border-radius: 6px; padding: 4px 8px; font-size: 0.85rem; cursor: pointer; transition: all 0.15s; line-height: 1; }
 .icon-btn:hover { border-color: var(--color-accent); color: var(--color-accent); }

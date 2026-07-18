@@ -1,6 +1,7 @@
 import { useTheme } from '@workouts/core'
 import { useActivities } from '@workouts/plugin-data-source'
-import { useEffect } from 'react'
+import { presetToTileConfig, TILE_PRESETS, TileSwitcher } from '@workouts/plugin-map'
+import { useEffect, useMemo } from 'react'
 import { ChartOverlay } from './components/ChartOverlay'
 import { DetailPanel } from './components/DetailPanel'
 import { Drawer } from './components/Drawer'
@@ -26,6 +27,20 @@ export function OverviewLayout() {
   const setMapHoveredId = useOverviewStore((s) => s.setMapHoveredId)
   const openDetail = useOverviewStore((s) => s.openDetail)
   const years = useOverviewStore((s) => s.years)
+  const tilePresetId = useOverviewStore((s) => s.tilePresetId)
+  const setTilePreset = useOverviewStore((s) => s.setTilePreset)
+
+  const tileConfig = useMemo(() => {
+    const preset = TILE_PRESETS.find((p) => p.id === tilePresetId) ?? TILE_PRESETS[0]
+    const token = import.meta.env.VITE__MAP_TILE_TOKEN || import.meta.env.VITE__MAPBOX__TOKEN
+    return presetToTileConfig(preset, token)
+  }, [tilePresetId])
+
+  const disabledTilePresets = useMemo(() => {
+    const token = import.meta.env.VITE__MAP_TILE_TOKEN || import.meta.env.VITE__MAPBOX__TOKEN
+    if (token) return []
+    return TILE_PRESETS.filter((p) => p.requiresToken).map((p) => p.id)
+  }, [])
 
   useEffect(() => {
     setActivities(activities)
@@ -38,6 +53,7 @@ export function OverviewLayout() {
         colorScheme={colorScheme}
         colorMode={colorMode}
         hoveredActivityId={mapHoveredId}
+        tileConfig={tileConfig}
         dashLines={siteConfig?.dashLines as boolean | undefined}
         privacyMode={siteConfig?.privacyMode as boolean | undefined}
         lightsOn={true}
@@ -130,6 +146,7 @@ export function OverviewLayout() {
               </svg>
             )}
           </button>
+          <TileSwitcher presets={TILE_PRESETS} activeId={tilePresetId} onSelect={setTilePreset} disabledIds={disabledTilePresets} />
         </div>
       </div>
 

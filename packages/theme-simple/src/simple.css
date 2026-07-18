@@ -350,6 +350,30 @@
 .map-lights { position: absolute; right: 10px; top: 62px; z-index: 1001; opacity: 0.3; }
 .map-fullscreen { position: absolute; right: 10px; top: 10px; z-index: 1001; }
 
+.tile-switcher {
+  display: flex;
+  gap: 3px;
+  background: rgba(var(--color-surface-rgb), 0.85);
+  border-radius: 8px;
+  border: 1px solid var(--color-border);
+  overflow: hidden;
+  backdrop-filter: blur(4px);
+}
+.tile-btn {
+  padding: 3px 7px;
+  font-size: 0.65rem;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  transition: all 0.15s;
+}
+.tile-btn:hover { color: var(--color-text); }
+.tile-btn.active { background: var(--color-accent); color: var(--color-bg); font-weight: 600; }
+.tile-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+.tile-btn:not(:last-child) { border-right: 1px solid var(--color-border); }
+.map-tile-switcher { position: absolute; bottom: 10px; left: 10px; z-index: 1001; }
+
 .map-wrapper .leaflet-container {
   background: var(--color-bg);
 }

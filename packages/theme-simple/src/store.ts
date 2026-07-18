@@ -27,6 +27,7 @@ export interface SimpleStore {
   mapCompact: boolean
   typeFilter: string | null
   lightsOn: boolean
+  tilePresetId: string
   viewMode: ViewMode
   showYearModal: number | null
 
@@ -50,6 +51,7 @@ export interface SimpleStore {
   setViewMode: (mode: ViewMode) => void
   setShowYearModal: (year: number | null) => void
   setLightsOn: (v: boolean) => void
+  setTilePreset: (id: string) => void
   setView: (v: 'main' | 'summary') => void
   setSummaryInterval: (i: SummaryInterval) => void
   setSummarySportType: (t: string) => void
@@ -133,6 +135,7 @@ export const useSimpleStore = create<SimpleStore>()((set) => ({
   mapCompact: false,
   typeFilter: null,
   lightsOn: false,
+  tilePresetId: 'dark',
   viewMode: typeof window !== 'undefined' && window.innerWidth < 768 ? 'grid' : 'table',
   showYearModal: null,
 
@@ -179,6 +182,7 @@ export const useSimpleStore = create<SimpleStore>()((set) => ({
   setColorMode: (m) => set({ colorMode: m }),
 
   setLightsOn: (v: boolean) => set({ lightsOn: v }),
+  setTilePreset: (id: string) => set({ tilePresetId: id }),
 
   toggleTheme: () =>
     set((s) => {
