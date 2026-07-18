@@ -38,8 +38,8 @@ Fork 后按以下步骤，5 分钟上线运动看板。
 □ 1. 右上角 Fork 本仓库
 □ 2. 仓库 → Settings → Pages → Source 选 "GitHub Actions"
 □ 3. 创建 Personal Access Token
-      GitHub 右上角头像 → Settings → Developer settings →
-      Personal access tokens → Tokens (classic) → Generate new token
+      打开 https://github.com/settings/tokens →
+      Tokens (classic) → Generate new token
       勾选 repo（全部），生成后复制 token 值
 □ 4. 添加到 GitHub Secrets
       仓库 → Settings → Secrets and variables → Actions → Secrets
@@ -87,18 +87,19 @@ gh secret set WORKOUTS_SYNC_PAT --body "你的_token"
 无需本地认证，填入账号密码即可。
 
 ```bash
-gh secret set SYNC_KEEP_PHONE --body "138xxxx"
+# Keep
+gh secret set SYNC_KEEP_PHONE --body "13800138000"
 gh secret set SYNC_KEEP_PASSWORD --body "xxx"
+# iGPSPORT
+gh secret set SYNC_IGPSPORT_PHONE --body "..."
+gh secret set SYNC_IGPSPORT_PASSWORD --body "..."
+# XOSS
+gh secret set SYNC_XOSS_EMAIL --body "..."
+gh secret set SYNC_XOSS_PASSWORD --body "..."
+# XingZhe
+gh secret set SYNC_XINGZHE_EMAIL --body "..."
+gh secret set SYNC_XINGZHE_PASSWORD --body "..."
 ```
-
-其他源同理：
-
-| 源 | 命令 |
-|---|---|
-| Keep | `gh secret set SYNC_KEEP_PHONE --body "..."` + `gh secret set SYNC_KEEP_PASSWORD --body "..."` |
-| iGPSPORT | `gh secret set SYNC_IGPSPORT_PHONE --body "..."` + `gh secret set SYNC_IGPSPORT_PASSWORD --body "..."` |
-| XOSS | `gh secret set SYNC_XOSS_EMAIL --body "..."` + `gh secret set SYNC_XOSS_PASSWORD --body "..."` |
-| XingZhe | `gh secret set SYNC_XINGZHE_EMAIL --body "..."` + `gh secret set SYNC_XINGZHE_PASSWORD --body "..."` |
 
 <details>
 <summary>网页方式添加</summary>
@@ -131,10 +132,18 @@ exe/workouts sync --source keep
 
 首次需要本地 OAuth 授权获取 refresh_token。
 
+需要本地克隆代码完成首次授权。
+
+```bash
+git clone https://github.com/你的用户名/workouts.git
+cd workouts
+bundle install
+```
+
 #### 首次准备
 
 ```bash
-# 1. strava.com → Settings → API → Create App
+# 1. https://www.strava.com/settings/api → Create App
 #    Authorization Callback Domain 填 "localhost"
 
 # 2. 浏览器授权
@@ -142,14 +151,6 @@ exe/workouts auth strava
 # → 打开终端输出的链接
 # → 点击 "Connect with Strava" → 授权
 # → refresh_token 自动写入 config.yml
-```
-
-如果本地尚未安装：
-
-```bash
-git clone https://github.com/你的用户名/workouts.git
-cd workouts
-bundle install
 ```
 
 #### GitHub Secrets
@@ -185,7 +186,13 @@ exe/workouts sync --source strava
 
 ### Garmin CN
 
-首次需要交互式登录（Ruby 内 SSO，不需浏览器）。
+需要本地克隆代码完成首次认证。
+
+```bash
+git clone https://github.com/你的用户名/workouts.git
+cd workouts
+bundle install
+```
 
 #### 首次准备
 
@@ -193,7 +200,7 @@ exe/workouts sync --source strava
 # 编辑 config.yml：
 sync:
   garmin_cn:
-    email: "138xxxx"
+    email: "13800138000"
     password: "xxx"
 
 # 交互式认证
@@ -213,7 +220,7 @@ gh secret set SYNC_GARMIN_CN_SECRET \
 <summary>备选：email + password（不推荐，遇到 MFA 会卡住）</summary>
 
 ```bash
-gh secret set SYNC_GARMIN_CN_EMAIL --body "138xxxx"
+gh secret set SYNC_GARMIN_CN_EMAIL --body "13800138000"
 gh secret set SYNC_GARMIN_CN_PASSWORD --body "xxx"
 ```
 </details>
@@ -244,13 +251,19 @@ exe/workouts sync --source garmin_cn
 
 garmin.com 受 Cloudflare 防护，认证需要额外 Python 工具。这是最复杂的源。
 
+需要本地克隆代码并安装依赖完成首次认证。
+
+```bash
+git clone https://github.com/你的用户名/workouts.git
+cd workouts
+bundle install
+pip install -r scripts/requirements.txt
+playwright install chromium
+```
+
 #### 首次准备
 
 ```bash
-# 前置依赖
-pip install -r scripts/requirements.txt
-playwright install chromium
-
 # 编辑 config.yml：
 sync:
   garmin:
@@ -280,7 +293,8 @@ gh secret set SYNC_GARMIN_AUTH_SEED \
 如果本地和 GitHub Actions 同时使用同一账号，每次本地 sync 后必须紧接：
 
 ```bash
-exe/workouts sync --source garmin && ./scripts/garmin_auth_local.sh --sync
+exe/workouts sync --source garmin
+./scripts/garmin_auth_local.sh --sync
 ```
 
 <details>
@@ -357,30 +371,21 @@ gh actions-cache delete imported-v1-apple-health
 ```
 </details>
 
-<details>
-<summary>本地 serve（拖拽上传）</summary>
-
-```bash
-exe/workouts serve start
-# → 打开 http://localhost:8080，拖拽上传 export.zip
-```
-</details>
-
 ---
 
 ### 本地文件导入
 
-<details>
-<summary>GPX / TCX / FIT 文件解析</summary>
+纯本地操作。
 
 ```bash
+# 单条：解析 GPX/TCX 文件写入数据库
 exe/workouts parse activity.gpx --save
 exe/workouts parse activity.tcx --save
 exe/workouts parse activity.fit --save  # 待实现
-```
 
-纯本地操作。
-</details>
+# 批量：导入 Apple Health 全量数据（export.zip）
+exe/workouts import --source apple_health
+```
 
 ---
 
