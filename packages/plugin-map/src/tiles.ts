@@ -133,6 +133,20 @@ export const TILE_PRESETS: TilePreset[] = [
   { id: 'dark-minimal', name: 'Dark Minimal', vendor: 'openfreemap', style: 'dark' },
 ]
 
+export const TILE_PRESET_STORAGE_KEY = 'workouts-tile-preset'
+
+const VENDOR_TOKEN_ENV: Record<Vendor, string> = {
+  carto: 'VITE__MAP_TILE_TOKEN',
+  mapbox: 'VITE__MAPBOX__TOKEN',
+  openfreemap: 'VITE__MAP_TILE_TOKEN',
+  maptiler: 'VITE__MAPTILER__TOKEN',
+  stadiamaps: 'VITE__MAP_TILE_TOKEN',
+}
+
+export function vendorTokenEnvName(vendor: Vendor): string {
+  return VENDOR_TOKEN_ENV[vendor]
+}
+
 export function presetToTileConfig(preset: TilePreset, token?: string): TileConfig {
   return { vendor: preset.vendor, style: preset.style, token }
 }

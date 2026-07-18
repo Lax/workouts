@@ -20,8 +20,10 @@ export {
   resolveTileUrl,
   stadiamaps,
   styleHasLabels,
+  TILE_PRESET_STORAGE_KEY,
   TILE_PRESETS,
   VENDORS,
+  vendorTokenEnvName,
 } from './tiles'
 export type { LeafletMapOptions, MapInstance } from './useLeafletMap'
 export { useLeafletMap } from './useLeafletMap'

@@ -1,3 +1,4 @@
+import { TILE_PRESET_STORAGE_KEY } from '@workouts/plugin-map'
 import type { Activity } from '@workouts/shared'
 import { create } from 'zustand'
 
@@ -151,7 +152,7 @@ export const useOverviewStore = create<OverviewStore>()((set) => ({
   sortField: 'date',
   sortDesc: true,
   filters: defaultFilters,
-  tilePresetId: 'dark',
+  tilePresetId: (typeof localStorage !== 'undefined' ? localStorage.getItem(TILE_PRESET_STORAGE_KEY) : null) || 'dark',
   mapHoveredId: null,
   years: [],
   availableTypes: [],
@@ -206,7 +207,10 @@ export const useOverviewStore = create<OverviewStore>()((set) => ({
       filteredActivities: filterActivities(s.activities, s.filters, s.sortField, s.sortDesc, s.selectedYear, m),
     })),
   setColorMode: (m) => set({ colorMode: m }),
-  setTilePreset: (id: string) => set({ tilePresetId: id }),
+  setTilePreset: (id: string) => {
+    localStorage.setItem(TILE_PRESET_STORAGE_KEY, id)
+    set({ tilePresetId: id })
+  },
   toggleTheme: () =>
     set((s) => {
       const next = s.colorScheme === 'light' ? 'dark' : 'light'

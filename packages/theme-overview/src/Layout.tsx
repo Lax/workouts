@@ -1,6 +1,6 @@
 import { useTheme } from '@workouts/core'
 import { useActivities } from '@workouts/plugin-data-source'
-import { presetToTileConfig, TILE_PRESETS, TileSwitcher } from '@workouts/plugin-map'
+import { presetToTileConfig, TILE_PRESETS, TileSwitcher, vendorTokenEnvName } from '@workouts/plugin-map'
 import { useEffect, useMemo } from 'react'
 import { ChartOverlay } from './components/ChartOverlay'
 import { DetailPanel } from './components/DetailPanel'
@@ -32,13 +32,13 @@ export function OverviewLayout() {
 
   const tileConfig = useMemo(() => {
     const preset = TILE_PRESETS.find((p) => p.id === tilePresetId) ?? TILE_PRESETS[0]
-    const token = import.meta.env.VITE__MAP_TILE_TOKEN || import.meta.env.VITE__MAPBOX__TOKEN
+    const token = preset.requiresToken ? import.meta.env[vendorTokenEnvName(preset.vendor)] : undefined
     return presetToTileConfig(preset, token)
   }, [tilePresetId])
 
   const disabledTilePresets = useMemo(() => {
-    const token = import.meta.env.VITE__MAP_TILE_TOKEN || import.meta.env.VITE__MAPBOX__TOKEN
-    if (token) return []
+    const tokensOk = TILE_PRESETS.filter((p) => p.requiresToken).every((p) => import.meta.env[vendorTokenEnvName(p.vendor)])
+    if (tokensOk) return []
     return TILE_PRESETS.filter((p) => p.requiresToken).map((p) => p.id)
   }, [])
 

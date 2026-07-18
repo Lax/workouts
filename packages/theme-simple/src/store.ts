@@ -1,3 +1,4 @@
+import { TILE_PRESET_STORAGE_KEY } from '@workouts/plugin-map'
 import type { Activity } from '@workouts/shared'
 import { create } from 'zustand'
 import { computeStreak } from './compute'
@@ -135,7 +136,7 @@ export const useSimpleStore = create<SimpleStore>()((set) => ({
   mapCompact: false,
   typeFilter: null,
   lightsOn: false,
-  tilePresetId: 'dark',
+  tilePresetId: (typeof localStorage !== 'undefined' ? localStorage.getItem(TILE_PRESET_STORAGE_KEY) : null) || 'dark',
   viewMode: typeof window !== 'undefined' && window.innerWidth < 768 ? 'grid' : 'table',
   showYearModal: null,
 
@@ -182,7 +183,10 @@ export const useSimpleStore = create<SimpleStore>()((set) => ({
   setColorMode: (m) => set({ colorMode: m }),
 
   setLightsOn: (v: boolean) => set({ lightsOn: v }),
-  setTilePreset: (id: string) => set({ tilePresetId: id }),
+  setTilePreset: (id: string) => {
+    localStorage.setItem(TILE_PRESET_STORAGE_KEY, id)
+    set({ tilePresetId: id })
+  },
 
   toggleTheme: () =>
     set((s) => {
