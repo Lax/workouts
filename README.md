@@ -1,6 +1,6 @@
 # Workouts CLI
 
-运动数据聚合工具。从 Strava、Keep、iGPSPORT、XOSS、XingZhe、Garmin 同步运动记录，统一存入 SQLite，然后导出为 JSON、CSV 或 SVG 海报。
+运动数据聚合工具。从 Strava、Keep、iGPSPORT、XOSS、XingZhe、Garmin CN、Garmin 国际版 同步，以及 Apple Health、GPX、FIT、TCX 本地导入，统一存入 SQLite，然后导出为 JSON、CSV 或 SVG 海报。
 
 数据流：`多渠道同步 → SQLite → 导出`，全部在 CLI 里搞定，适合 CI 定时跑。
 
@@ -33,15 +33,21 @@ docker compose run --rm workouts export svg --style github
 
 ## 支持的源
 
-| 源 | 认证方式 | 同步 | 原始 GPS |
+| 源 | 方式 | 认证方式 | 源数据格式L1 ( → L2 JSON → L3 DB) |
 |---|---|---|---|
-| Strava | OAuth2 refresh_token | ✅ | ✅ |
-| Keep | 手机号 + 密码 | ✅ | ✅（AES 解密 + GCJ-02→WGS84） |
-| iGPSPORT | 手机号 + 密码 | ✅ | ✅（FIT 原始格式） |
-| XOSS | 邮箱 + JWT | ✅ | 摘要 |
-| XingZhe | 邮箱 + RSA 加密密码 | ✅ | 摘要 |
-| Garmin CN | SSO + OAuth | ✅ | 摘要 |
-| Garmin 国际版 | DI OAuth2 (auth_seed) | ✅ | ✅ (FIT 下载+解码) |
+| Strava | 同步 | OAuth2 refresh_token | **JSON**，GPX，FIT，TCX |
+| Keep | 同步 | 手机号 + 密码 | **JSON**（AES解密+GCJ-02→WGS84） |
+| iGPSPORT | 同步 | 手机号 + 密码 | **FIT**，GPX，TCX |
+| XOSS | 同步 | 邮箱 + JWT | **FIT** |
+| XingZhe | 同步 | 邮箱 + RSA 加密密码 | **JSON** |
+| Garmin CN | 同步 | SSO + OAuth1→OAuth2 (secret) | **FIT**，GPX，TCX，CSV |
+| Garmin 国际版 | 同步 | DI OAuth2 (auth_seed) | **FIT**，GPX，TCX，CSV |
+| Apple Health | 导入 | — | ✅ **export.zip**（XML + GPX） |
+| GPX | 导入 | — | △ |
+| FIT | 导入 | — | ○ |
+| TCX | 导入 | — | △ |
+
+> ✅ 已实现  △ 部分可用（parse CLI）  ○ 待实现
 
 ## 常用命令
 
@@ -59,7 +65,6 @@ docker compose run --rm workouts export svg --style github
 | `export all` | 执行所有导出 |
 | `parse activity.gpx --save` | 解析本地 GPX/TCX 并写入 DB |
 | `init` | 生成默认配置 |
-| `migrate` | 运行数据库迁移 |
 | `version` | 查看版本 |
 
 SVG 支持 5 种风格：`github`、`grid`、`circular`、`month-of-life`、`year-summary`。
@@ -78,22 +83,8 @@ SVG 支持 5 种风格：`github`、`grid`、`circular`、`month-of-life`、`yea
 
 配置示例见 `.env.example`。
 
-## 去重
-
-两级机制：`run_id` 精确去重 + 跨源置信度打分（时间/距离/时长三维度），匹配结果在 SVG 上以标注显示。
-
-## CI 等待
-
-```bash
-cp scripts/gh-run-watch ~/.local/share/gh/extensions/gh-run-watch/gh-run-watch
-chmod +x ~/.local/share/gh/extensions/gh-run-watch/gh-run-watch
-git push && gh run-watch --compact --exit-status
-```
-
-预测 CI 耗时 + 自动等待 + 实时日志。详见 [docs/gh-run-watch.md](docs/gh-run-watch.md)。
-
 ## 项目状态
 
-已同步 1100+ 条活动记录，覆盖 5 个运动平台，每日 CI 自动同步 + 发布 GitHub Pages。
+覆盖 9 个数据源（Strava / Keep / iGPSPORT / XOSS / XingZhe / Garmin CN / Garmin 国际版 / Apple Health / 本地文件），支持 JSON / CSV / SVG 导出，通过 GitHub Actions 自动同步、去重、发布 GitHub Pages。
 
 详见 [CONTEXT.md](CONTEXT.md)。
