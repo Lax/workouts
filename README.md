@@ -249,48 +249,63 @@ SYNC_GARMIN_AUTH_SEED  →  config.yml 里 sync.garmin.auth_seed 的值
 
 ### Apple Health 导入
 
-从 iOS 健康 App 导出数据后本地或 CI 导入。
+#### 1. 从 iPhone 导出数据
+健康 App → 右上角头像 → 导出所有健康数据 → export.zip
 
-#### 本地
+⚠️ export.zip 包含 Apple Health 全量数据（心率、睡眠、血氧等），
+   远不止运动记录。仓库私有则分支也私有。
+   如需对外分享仓库，导入后建议删除该分支。
+
+#### 2. 放入项目
+
+本地（二选一）：
 
 ```bash
-# iPhone 健康 App → 右上角头像 → 导出所有健康数据 → export.zip
 mkdir -p data/import/apple_health
 cp ~/Downloads/export.zip data/import/apple_health/
-
-exe/workouts sync --source apple_health
-# 自动忽略 Strava / Keep / Garmin Connect 等 App 录入的活动
-# （按 Apple Health 导出中的 sourceName 字段判断）
+# 或
+exe/workouts serve start        # 打开 http://localhost:8080，拖拽上传
 ```
 
-无需凭据。`serve` 子命令可启动 HTTP 上传界面：
-
-```bash
-exe/workouts serve start
-# 打开 http://localhost:8080，拖拽上传 export.zip
-```
-
-#### CI
-
-<details>
-<summary>需将 export.zip 推送到 Git LFS 分支 →</summary>
-
-需要有仓库写入权限的 PAT。如用 gh CLI：先 `gh auth login`。
+CI（推送到专用分支）：
 
 ```bash
 git checkout --orphan data/import/apple_health
-git lfs track "data/import/apple_health/export.zip"
 mkdir -p data/import/apple_health
 # 放入 export.zip
-git add .gitattributes data/import/apple_health/export.zip
+
+# 大文件（≥ 100MB）需先启用 LFS 跟踪：
+git lfs track "data/import/apple_health/export.zip"   # ← 大文件时需要
+git add .gitattributes                                 # ← 大文件时需要
+
+git add data/import/apple_health/export.zip
 git commit -m "Add Apple Health export"
 git push origin data/import/apple_health
+git checkout main   # 切回主分支，避免误操作
 ```
 
-之后 CI 自动拉取导入。分支不存在时静默跳过。
-</details>
+分支不存在时 CI 静默跳过。
 
-无需 CI Secrets。
+#### 3. 同步
+
+```bash
+# 本地：
+exe/workouts sync --source apple_health
+
+# CI 自动拉取并导入（检查 .imported marker，已存在则跳过）
+# 强制重新导入：删除 Actions Cache 中 import-apple-health-v1-processed
+#   页面：仓库 → Actions → Caches → 删除该条目
+#   CLI： gh actions-cache delete import-apple-health-v1-processed
+#   → 重新运行 workflow
+
+# 确认数据已同步后，可安全删除该分支：
+#   git push origin --delete data/import/apple_health
+```
+
+Apple Health 按 XML 的 sourceName 字段自动忽略
+Strava / Keep / Garmin Connect 等 App 的活动，避免重复。
+
+无需额外 Secrets。
 
 ---
 
