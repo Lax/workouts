@@ -73,7 +73,7 @@ export function SimpleLayout() {
   const setViewMode = useSimpleStore((s) => s.setViewMode)
   const view = useSimpleStore((s) => s.view)
   const selectedActivity = useSimpleStore((s) => s.selectedActivity)
-  const hideMap = useSimpleStore((s) => s.hideMap)
+  const mapCompact = useSimpleStore((s) => s.mapCompact)
   const openDetail = useSimpleStore((s) => s.openDetail)
   const selectByHash = useSimpleStore((s) => s.selectByHash)
 
@@ -163,33 +163,31 @@ export function SimpleLayout() {
           </div>
         </aside>
         <main className="right-panel">
-          {!hideMap && (
-            <div className="map-wrapper">
-              <SimpleMap
-                activities={mapActivities}
-                colorScheme={colorScheme}
-                colorMode={colorMode}
-                hoveredActivityId={useSimpleStore.getState().mapHoveredId}
-                privacyMode={siteConfig?.privacyMode as boolean | undefined}
-                lightsOn={lightsOn}
-                showLabels={showLabels}
-                animate={!!selectedActivity}
-                initialScrollDisabled={true}
-                attributionPosition="bottomleft"
-                onActivityHover={setMapHoveredId}
-                onActivityClick={openDetail}
-              />
-              <YearSelector />
-              <MapOverlays />
-              <div className="map-run-title">
-                {selectedActivity
-                  ? `${selectedActivity.start_date?.slice(0, 10)} ${((selectedActivity.distance ?? 0) / 1000).toFixed(2)}km ${selectedActivity.name || selectedActivity.sport_category}`
-                  : selectedYear !== null
-                    ? `${selectedYear} Running Heatmap`
-                    : 'Total Running Heatmap'}
-              </div>
+          <div className={`map-wrapper${mapCompact ? ' map-wrapper--compact' : ''}`}>
+            <SimpleMap
+              activities={mapActivities}
+              colorScheme={colorScheme}
+              colorMode={colorMode}
+              hoveredActivityId={useSimpleStore.getState().mapHoveredId}
+              privacyMode={siteConfig?.privacyMode as boolean | undefined}
+              lightsOn={lightsOn}
+              showLabels={showLabels}
+              animate={!!selectedActivity}
+              initialScrollDisabled={true}
+              attributionPosition="bottomleft"
+              onActivityHover={setMapHoveredId}
+              onActivityClick={openDetail}
+            />
+            <YearSelector />
+            <MapOverlays />
+            <div className="map-run-title">
+              {selectedActivity
+                ? `${selectedActivity.start_date?.slice(0, 10)} ${((selectedActivity.distance ?? 0) / 1000).toFixed(2)}km ${selectedActivity.name || selectedActivity.sport_category}`
+                : selectedYear !== null
+                  ? `${selectedYear} Running Heatmap`
+                  : 'Total Running Heatmap'}
             </div>
-          )}
+          </div>
           {selectedYear !== null && (
             <div
               className="svg-stat-container"
