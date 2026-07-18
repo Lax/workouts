@@ -1,6 +1,7 @@
 require "digest"
 require "fileutils"
 require "nokogiri"
+require "time"
 require "zip"
 require_relative "../sync/base"
 
@@ -25,6 +26,7 @@ module Workouts
         @zip_path = @config["zip_path"] || DEFAULT_ZIP_PATH
         @heart_rate_index = nil
         @heart_rate_by_date = nil
+        @skip_patterns = load_skip_sources
       end
 
       def before_call
@@ -58,6 +60,7 @@ module Workouts
         existing = existing_run_ids_set
         results = []
         hr_records = []
+        @route_index = []
         zip = Zip::File.new(@zip_path)
         xml_entry = zip.find_entry("apple_health_export/export.xml")
         return results unless xml_entry
@@ -65,11 +68,22 @@ module Workouts
         io = xml_entry.get_input_stream
         buffer = ""
         in_workout = false
+        route_buf = nil
 
         io.each_line do |line|
           if line.include?("HKQuantityTypeIdentifierHeartRate") && APPLE_WATCH_PATTERN.match?(line)
             hr = parse_hr_line(line)
             hr_records << hr if hr
+          end
+
+          if line.include?("<WorkoutRoute ")
+            route_buf = line
+          elsif route_buf
+            route_buf << line
+            if line.include?("</WorkoutRoute>")
+              process_route_entry(route_buf)
+              route_buf = nil
+            end
           end
 
           if !in_workout
@@ -204,7 +218,21 @@ module Workouts
 
       def known_source?(source_name)
         return false unless source_name
-        SKIPPED_SOURCE_PATTERNS.any? { |pattern| pattern.match?(source_name) }
+        @skip_patterns.any? { |pattern| pattern.match?(source_name) }
+      end
+
+      def load_skip_sources
+        configured = @config["skip_sources"]
+        return [] unless configured
+
+        list = configured.is_a?(String) ? configured.split(",").map(&:strip) : configured
+        validated = list.select do |name|
+          SKIPPED_SOURCE_PATTERNS.any? { |p| p.match?(name) }
+        end
+
+        SKIPPED_SOURCE_PATTERNS.select { |p|
+          validated.any? { |v| p.match?(v) }
+        }
       end
 
       def existing_run_ids_set
@@ -224,7 +252,8 @@ module Workouts
         end_t = Time.parse(end_date_str) rescue nil
         return [nil, nil] unless start_t && end_t
 
-        records = collect_hr_in_window(start_t, end_t)
+        padding = 30
+        records = collect_hr_in_window(start_t - padding, end_t + padding)
         return [nil, nil] if records.empty?
 
         vals = records.map(&:value)
@@ -289,6 +318,7 @@ module Workouts
         stats = extract_statistics(workout)
         meta = extract_metadata(workout)
         route_paths = extract_route_paths(workout)
+        route_paths = match_routes_by_time(start_date, end_date) if route_paths.empty?
         source_version = workout["sourceVersion"]
 
         results << {
@@ -307,6 +337,40 @@ module Workouts
           meta: meta,
           route_paths: route_paths
         }
+      end
+
+      def process_route_entry(xml)
+        doc = Nokogiri::XML("<root>#{xml}</root>")
+        route = doc.at_xpath("//WorkoutRoute")
+        return unless route
+
+        start_date = route["startDate"]
+        end_date = route["endDate"]
+        return unless start_date && end_date
+
+        paths = route.xpath("FileReference").filter_map { |ref| ref["path"] }
+        return if paths.empty?
+
+        @route_index << {
+          route_start: (Time.parse(start_date) rescue nil),
+          route_end: (Time.parse(end_date) rescue nil),
+          route_paths: paths
+        }
+      end
+
+      def match_routes_by_time(workout_start, workout_end)
+        return [] unless @route_index&.any? && workout_start && workout_end
+        ws = Time.parse(workout_start) rescue nil
+        we = Time.parse(workout_end) rescue nil
+        return [] unless ws && we
+
+        window_start = ws - 300
+        window_end = we + 300
+
+        @route_index.select { |r|
+          r[:route_start] && r[:route_end] &&
+            r[:route_start] < window_end && r[:route_end] > window_start
+        }.flat_map { |r| r[:route_paths] }.uniq
       end
 
       def extract_statistics(workout)
@@ -454,7 +518,15 @@ module Workouts
       end
 
       def generate_run_id(source_name, start_date, end_date)
-        Digest::MD5.hexdigest("#{source_name}|#{start_date}|#{end_date}")[0, 8]
+        s = normalize_date(start_date)
+        e = normalize_date(end_date)
+        Digest::MD5.hexdigest("#{source_name}|#{s}|#{e}")[0, 9]
+      end
+
+      def normalize_date(date_str)
+        t = Time.parse(date_str) rescue nil
+        return date_str unless t
+        t.utc.strftime("%Y-%m-%dT%H:%M:%SZ")
       end
 
       def map_sport_type(workout_type)

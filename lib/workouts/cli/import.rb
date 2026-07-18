@@ -44,7 +44,7 @@ module Workouts
 
         say_status :import, "apple_health", :green
         adapter = Workouts::Import::AppleHealth.new(
-          config: {}, db:, activity_filter: filter,
+          config: workouts_config.dig("import", "apple_health") || {}, db:, activity_filter: filter,
           time_budget: time_budget
         )
 

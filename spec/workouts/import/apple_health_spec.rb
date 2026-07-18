@@ -44,37 +44,43 @@ RSpec.describe Workouts::Import::AppleHealth do
     end
   end
 
+  describe "#load_skip_sources" do
+    it "returns empty array when config has no skip_sources" do
+      result = adapter.send(:load_skip_sources)
+      expect(result).to eq([])
+    end
+
+    it "returns whitelisted patterns for configured source names" do
+      a = described_class.new(config: { "skip_sources" => ["Strava", "Keep"] }, db:)
+      patterns = a.send(:load_skip_sources)
+      expect(patterns.size).to eq(2)
+      expect(patterns.first).to match("Strava")
+      expect(patterns.last).to match("Keep")
+    end
+
+    it "filters out non-whitelisted source names" do
+      a = described_class.new(config: { "skip_sources" => ["NonExistent"] }, db:)
+      expect(a.send(:load_skip_sources)).to eq([])
+    end
+
+    it "handles string input (env var fallback)" do
+      a = described_class.new(config: { "skip_sources" => "Strava,Keep" }, db:)
+      patterns = a.send(:load_skip_sources)
+      expect(patterns.size).to eq(2)
+    end
+  end
+
   describe "#known_source?" do
-    it "matches Strava" do
-      expect(adapter.send(:known_source?, "Strava")).to be true
+    it "returns false for all sources when skip_sources is empty" do
+      expect(adapter.send(:known_source?, "Strava")).to be false
+      expect(adapter.send(:known_source?, "Keep")).to be false
+      expect(adapter.send(:known_source?, "Connect")).to be false
     end
 
-    it "matches Keep" do
-      expect(adapter.send(:known_source?, "Keep for iOS")).to be true
-    end
-
-    it "matches iGPSPORT" do
-      expect(adapter.send(:known_source?, "iGPSPORT")).to be true
-    end
-
-    it "matches XOSS" do
-      expect(adapter.send(:known_source?, "XOSS Running")).to be true
-    end
-
-    it "matches XingZhe" do
-      expect(adapter.send(:known_source?, "XingZhe")).to be true
-    end
-
-    it "matches Connect (Garmin)" do
-      expect(adapter.send(:known_source?, "Connect")).to be true
-    end
-
-    it "allows Apple Watch" do
-      expect(adapter.send(:known_source?, "Lax's Apple Watch")).to be false
-    end
-
-    it "allows iPhone" do
-      expect(adapter.send(:known_source?, "iPhone")).to be false
+    it "matches configured sources from whitelist" do
+      a = described_class.new(config: { "skip_sources" => ["Strava"] }, db:)
+      expect(a.send(:known_source?, "Strava")).to be true
+      expect(a.send(:known_source?, "Keep")).to be false
     end
 
     it "handles nil" do
@@ -115,10 +121,32 @@ RSpec.describe Workouts::Import::AppleHealth do
     end
   end
 
+  describe "#normalize_date" do
+    it "converts +0800 to UTC" do
+      result = adapter.send(:normalize_date, "2023-06-15 09:00:00 +0800")
+      expect(result).to eq("2023-06-15T01:00:00Z")
+    end
+
+    it "converts +0000 to UTC unchanged" do
+      result = adapter.send(:normalize_date, "2023-06-15 09:00:00 +0000")
+      expect(result).to eq("2023-06-15T09:00:00Z")
+    end
+
+    it "converts -0500 to UTC" do
+      result = adapter.send(:normalize_date, "2023-06-15 09:00:00 -0500")
+      expect(result).to eq("2023-06-15T14:00:00Z")
+    end
+
+    it "returns original string if parsing fails" do
+      result = adapter.send(:normalize_date, "")
+      expect(result).to eq("")
+    end
+  end
+
   describe "#generate_run_id" do
-    it "produces an 8-char hex string" do
+    it "produces a 9-char hex string" do
       id = adapter.send(:generate_run_id, "Lax's Apple Watch", "2023-06-15 09:00:00 +0800", "2023-06-15 09:45:00 +0800")
-      expect(id).to match(/\A[0-9a-f]{8}\z/)
+      expect(id).to match(/\A[0-9a-f]{9}\z/)
     end
 
     it "is deterministic" do
@@ -131,6 +159,12 @@ RSpec.describe Workouts::Import::AppleHealth do
       a = adapter.send(:generate_run_id, "Watch", "d1", "d2")
       b = adapter.send(:generate_run_id, "Watch", "d1", "d3")
       expect(a).not_to eq(b)
+    end
+
+    it "is timezone-agnostic — same activity different TZ produces same hash" do
+      a = adapter.send(:generate_run_id, "Watch", "2023-06-15 09:00:00 +0800", "2023-06-15 09:45:00 +0800")
+      b = adapter.send(:generate_run_id, "Watch", "2023-06-15 01:00:00 +0000", "2023-06-15 01:45:00 +0000")
+      expect(a).to eq(b)
     end
   end
 
@@ -173,12 +207,14 @@ RSpec.describe Workouts::Import::AppleHealth do
   describe "#correlate_heart_rate" do
     before do
       adapter.instance_variable_set(:@heart_rate_index, [
+        Workouts::Import::AppleHealth::HeartRateRecord.new(time: Time.parse("2023-06-14 23:59:45 +0800"), value: 72),
         Workouts::Import::AppleHealth::HeartRateRecord.new(time: Time.parse("2023-06-15 09:00:00 +0800"), value: 140),
         Workouts::Import::AppleHealth::HeartRateRecord.new(time: Time.parse("2023-06-15 09:10:00 +0800"), value: 155),
         Workouts::Import::AppleHealth::HeartRateRecord.new(time: Time.parse("2023-06-15 09:20:00 +0800"), value: 165),
         Workouts::Import::AppleHealth::HeartRateRecord.new(time: Time.parse("2023-06-15 09:30:00 +0800"), value: 158),
         Workouts::Import::AppleHealth::HeartRateRecord.new(time: Time.parse("2023-06-15 09:40:00 +0800"), value: 148),
         Workouts::Import::AppleHealth::HeartRateRecord.new(time: Time.parse("2023-06-15 10:00:00 +0800"), value: 100),
+        Workouts::Import::AppleHealth::HeartRateRecord.new(time: Time.parse("2023-06-15 10:05:00 +0800"), value: 90),
       ])
     end
 
@@ -186,6 +222,12 @@ RSpec.describe Workouts::Import::AppleHealth do
       avg, max = adapter.send(:correlate_heart_rate, "2023-06-15 09:00:00 +0800", "2023-06-15 09:45:00 +0800")
       expect(avg).to be_within(0.1).of(153.2)
       expect(max).to eq(165)
+    end
+
+    it "captures HR records within 30s padding of boundary" do
+      avg, max = adapter.send(:correlate_heart_rate, "2023-06-14 23:59:50 +0800", "2023-06-15 00:00:00 +0800")
+      expect(avg).to eq(72.0)
+      expect(max).to eq(72)
     end
 
     it "returns nil pair when no overlap" do
@@ -227,12 +269,12 @@ RSpec.describe Workouts::Import::AppleHealth do
 
       it "returns the number of imported activities" do
         result = adapter.call
-        expect(result).to eq(2)
+        expect(result).to eq(3)
       end
 
       it "inserts activities into DB" do
         adapter.call
-        expect(db[:activities].count).to eq(2)
+        expect(db[:activities].count).to eq(3)
       end
 
       it "creates DB records with correct source" do
@@ -245,20 +287,20 @@ RSpec.describe Workouts::Import::AppleHealth do
       it "assigns correct sport_category" do
         adapter.call
         cats = db[:activities].order(:start_date).map { |r| r[:sport_category] }
-        expect(cats).to contain_exactly("run", "workout")
+        expect(cats).to contain_exactly("run", "workout", "run")
       end
 
       it "generates valid run_id format" do
         adapter.call
         db[:activities].each do |row|
-          expect(row[:run_id]).to match(/\Aapple_health_[0-9a-f]{8}\z/)
+          expect(row[:run_id]).to match(/\Aapple_health_[0-9a-f]{9}\z/)
         end
       end
 
       it "writes L1 raw files" do
         adapter.call
         xml_files = Dir.glob(File.join(adapter.send(:raw_dir), "*.xml"))
-        expect(xml_files.size).to eq(2)
+        expect(xml_files.size).to eq(3)
       end
 
       it "writes GPX alongside L1 XML for GPS-enabled activity" do
@@ -396,27 +438,32 @@ RSpec.describe Workouts::Import::AppleHealth do
       adapter.instance_variable_set(:@zip_path, zip_path)
     end
 
-    it "returns only non-filtered activities" do
+    it "returns all activities when skip_sources is empty" do
       ids = adapter.pending_ids
-      expect(ids.size).to eq(2)
+      expect(ids.size).to eq(3)
     end
 
-    it "excludes Strava-sourced activities" do
-      ids = adapter.pending_ids
+    it "filters Strava when configured" do
+      a = described_class.new(config: { "skip_sources" => ["Strava"] }, db:)
+      allow(a).to receive(:raw_dir).and_return(File.join(tmpdir, "raw"))
+      allow(a).to receive(:std_dir).and_return(File.join(tmpdir, "std"))
+      a.instance_variable_set(:@zip_path, zip_path)
+      ids = a.pending_ids
       strava_ids = ids.select { |p| p[:source_name].to_s.match?(/Strava/i) }
       expect(strava_ids).to be_empty
+      expect(ids.size).to eq(2)
     end
 
     it "includes run_id in each pending item" do
       ids = adapter.pending_ids
       ids.each do |p|
-        expect(p[:run_id]).to match(/\A[0-9a-f]{8}\z/)
+        expect(p[:run_id]).to match(/\A[0-9a-f]{9}\z/)
       end
     end
 
     it "includes route_paths when available" do
       ids = adapter.pending_ids
-      run = ids.find { |p| p[:type] == "run" }
+      run = ids.find { |p| p[:type] == "run" && p[:source_name] == "Lax's Apple Watch" }
       expect(run[:route_paths]).not_to be_empty
     end
 
