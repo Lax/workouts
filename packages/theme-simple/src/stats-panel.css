@@ -12,10 +12,6 @@
   line-height: 1.5;
 }
 
-.sp-empty {
-  font-style: italic;
-}
-
 .sp-loading {
   color: var(--color-text-secondary, #888);
   animation: pulse 1.5s infinite;

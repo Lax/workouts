@@ -4,7 +4,6 @@
 
 import type { Activity } from '@workouts/shared'
 import { useMemo } from 'react'
-import { useSimpleStore } from '../store'
 import { GithubDrawer } from './GithubDrawer'
 import { GridDrawer } from './GridDrawer'
 

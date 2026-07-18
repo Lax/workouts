@@ -18,10 +18,16 @@ interface RegionStat {
 export function computeRegionStats(activities: Activity[]): RegionStat[] {
   const regionDist = new Map<string, number>()
   const regionCount = new Map<string, number>()
+  let otherDist = 0
+  let otherCount = 0
   for (const a of activities) {
     const regions = a.divisions
-    if (!regions || regions.length === 0) continue
     const dist = a.distance ?? 0
+    if (!regions || regions.length === 0) {
+      otherDist += dist
+      otherCount++
+      continue
+    }
     for (const r of regions) {
       const province = r.p
       const weight = r.w ?? 1 / regions.length
@@ -29,9 +35,13 @@ export function computeRegionStats(activities: Activity[]): RegionStat[] {
     }
     regionCount.set(regions[0].p, (regionCount.get(regions[0].p) ?? 0) + 1)
   }
-  return [...regionDist.entries()]
+  const result = [...regionDist.entries()]
     .map(([name, distance]) => ({ name, distance, count: regionCount.get(name) ?? 0 }))
     .sort((a, b) => b.distance - a.distance)
+  if (otherCount > 0) {
+    result.push({ name: '其它', distance: otherDist, count: otherCount })
+  }
+  return result
 }
 
 export function StatsPanel({ activities, loading }: StatsPanelProps) {
@@ -84,12 +94,6 @@ export function StatsPanel({ activities, loading }: StatsPanelProps) {
             ))}
           </div>
         </>
-      )}
-
-      {regionStats.length === 0 && (
-        <div className="sp-summary">
-          <span className="sp-summary-text sp-empty">暂无位置数据</span>
-        </div>
       )}
 
       {showTypeSection && (

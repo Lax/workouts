@@ -24,6 +24,7 @@ export interface SimpleStore {
   totalStreak: number
   filteredActivities: Activity[]
   regionFilter: string | null
+  hideMap: boolean
   typeFilter: string | null
   lightsOn: boolean
   viewMode: ViewMode
@@ -80,11 +81,18 @@ function filterActivities(
     r = r.filter((a) => a.start_date && new Date(a.start_date).getMonth() + 1 === selectedMonth)
   }
   if (regionFilter !== null) {
-    r = r.filter((a) => {
-      const regions = a.divisions
-      if (!regions || regions.length === 0) return false
-      return regions.some((reg) => reg.p === regionFilter || reg.c === regionFilter)
-    })
+    if (regionFilter === '其它') {
+      r = r.filter((a) => {
+        const regions = a.divisions
+        return !regions || regions.length === 0
+      })
+    } else {
+      r = r.filter((a) => {
+        const regions = a.divisions
+        if (!regions || regions.length === 0) return false
+        return regions.some((reg) => reg.p === regionFilter || reg.c === regionFilter)
+      })
+    }
   }
   if (typeFilter !== null) {
     r = r.filter((a) => a.sport_category === typeFilter)
@@ -122,6 +130,7 @@ export const useSimpleStore = create<SimpleStore>()((set) => ({
   totalStreak: 0,
   filteredActivities: [],
   regionFilter: null,
+  hideMap: false,
   typeFilter: null,
   lightsOn: false,
   viewMode: typeof window !== 'undefined' && window.innerWidth < 768 ? 'grid' : 'table',
@@ -156,6 +165,7 @@ export const useSimpleStore = create<SimpleStore>()((set) => ({
       selectedYear: y,
       selectedMonth: null,
       regionFilter: null,
+      hideMap: false,
       typeFilter: null,
       filteredActivities: filterActivities(s.activities, y, null, s.sortField, s.sortDesc, null, null),
     })),
@@ -212,6 +222,7 @@ export const useSimpleStore = create<SimpleStore>()((set) => ({
       const next = s.regionFilter === region ? null : region
       return {
         regionFilter: next,
+        hideMap: next === '其它',
         filteredActivities: filterActivities(s.activities, s.selectedYear, s.selectedMonth, s.sortField, s.sortDesc, next, s.typeFilter),
       }
     }),

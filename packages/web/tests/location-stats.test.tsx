@@ -58,11 +58,11 @@ describe('StatsPanel', () => {
     expect(container.textContent).toContain('Loading')
   })
 
-  it('renders empty state when no activities', () => {
+  it('renders empty section when no activities', () => {
     act(() => {
       root.render(<StatsPanel activities={[]} loading={false} />)
     })
-    expect(container.textContent).toContain('暂无位置数据')
+    expect(container.textContent).toBe('')
   })
 
   it('renders province stats when activities have divisions data', () => {
@@ -132,6 +132,29 @@ describe('StatsPanel', () => {
     expect(useSimpleStore.getState().regionFilter).toBe('河北省')
   })
 
+  it('renders 其它 row when activities have no divisions', () => {
+    const acts = [baseAct({ run_id: '1', distance: 10000 }), baseAct({ run_id: '2', distance: 5000 })]
+    act(() => {
+      root.render(<StatsPanel activities={acts} loading={false} />)
+    })
+    expect(container.textContent).toContain('其它')
+    expect(container.textContent).toContain('15 km')
+  })
+
+  it('click 其它 row sets regionFilter to 其它', () => {
+    const acts = [baseAct({ run_id: '1', distance: 10000 })]
+    act(() => {
+      root.render(<StatsPanel activities={acts} loading={false} />)
+    })
+    const otherRow = container.querySelector('.sp-province-row')
+    expect(otherRow).not.toBeNull()
+
+    act(() => {
+      ;(otherRow as HTMLElement).click()
+    })
+    expect(useSimpleStore.getState().regionFilter).toBe('其它')
+  })
+
   it('click type row sets typeFilter in store', () => {
     const acts = [
       baseAct({ run_id: '1', sport_category: 'run', distance: 10000 }),
@@ -156,9 +179,27 @@ describe('computeRegionStats', () => {
     expect(computeRegionStats([])).toEqual([])
   })
 
-  it('returns empty array when no activities have location data', () => {
-    const acts = [baseAct({}), baseAct({})]
-    expect(computeRegionStats(acts)).toEqual([])
+  it('returns all activities under 其它 when no activities have divisions', () => {
+    const acts = [baseAct({}), baseAct({ distance: 8000 })]
+    const result = computeRegionStats(acts)
+    expect(result).toHaveLength(1)
+    expect(result[0]).toMatchObject({ name: '其它', distance: 13000, count: 2 })
+  })
+
+  it('places 其它 at end after sorted named regions', () => {
+    const acts = [
+      baseAct({ run_id: '1', divisions: [{ p: '河北省', w: 1.0 }], distance: 10000 }),
+      baseAct({ run_id: '2', distance: 5000 }),
+      baseAct({ run_id: '3', divisions: [{ p: '北京市', w: 1.0 }], distance: 2000 }),
+    ]
+    const result = computeRegionStats(acts).map((r) => r.name)
+    expect(result).toEqual(['河北省', '北京市', '其它'])
+  })
+
+  it('no 其它 when all activities have divisions', () => {
+    const acts = [baseAct({ divisions: [{ p: '河北省', w: 1.0 }] }), baseAct({ divisions: [{ p: '北京市', w: 1.0 }] })]
+    const names = computeRegionStats(acts).map((r) => r.name)
+    expect(names).not.toContain('其它')
   })
 
   it('groups by province from divisions', () => {
