@@ -28,50 +28,82 @@
 
 ---
 
-## 前置准备
+## GitHub Pages 自动部署（推荐）
 
-根据你的使用方式选择入口。
+Fork 后按以下步骤，5 分钟上线运动看板。
 
-### 方案 A：纯 CI 部署（零本地命令）
+### 快速开始
 
-1. 拥有仓库的写入权限（用于 workflow 更新 cron、归档数据）
-2. 根据下方场景添加 GitHub Secrets
-3. Actions → Run workflow → 等 5 分钟上线
-
-### 方案 B：本地开发 / 首次认证
-
-```bash
-git clone https://github.com/Lax/workouts.git
-cd workouts
-bundle install
-
-exe/workouts init          # 可选，生成 config.yml 方便本地编辑
-exe/workouts db migrate    # 可选，手动建表（sync 自动跑）
+```
+□ 1. 右上角 Fork 本仓库
+□ 2. 仓库 → Settings → Pages → Source 选 "GitHub Actions"
+□ 3. 创建 Personal Access Token
+      GitHub 右上角头像 → Settings → Developer settings →
+      Personal access tokens → Tokens (classic) → Generate new token
+      勾选 repo（全部），生成后复制 token 值
+□ 4. 添加到 GitHub Secrets
+      仓库 → Settings → Secrets and variables → Actions → Secrets
+      → New repository secret
+      Name: WORKOUTS_SYNC_PAT   Value: 刚才复制的 token
+□ 5. 按下方指引添加你的运动平台所需的 GitHub Secrets
+□ 6. 仓库 → Actions → Sync Workouts → Run workflow
+□ 7. 等待 5 分钟 → https://<你的用户名>.github.io/workouts/
 ```
 
-## 选择你的源
+> 所有值存入 **GitHub Secrets**（Settings → Secrets and variables → Actions → **Secrets** 标签页），不是 Variables。每条 secret 设好后 workflow 自动读取。
 
-根据你最常用的运动平台，找到下方入口。每个入口包含完整的"本地同步 + CI 部署"流程。
+`gh` 命令行版本：
+
+```bash
+# 安装 GitHub CLI 并登录后：
+gh secret set WORKOUTS_SYNC_PAT --body "你的_token"
+```
+
+---
+
+## GitHub Secrets 一览
+
+以下 secrets 按源分类。选哪个源就设对应的行。
+
+| 源 | GitHub Secrets |
+|---|---|
+| 所有源共用 | `WORKOUTS_SYNC_PAT` |
+| Keep | `SYNC_KEEP_PHONE`、`SYNC_KEEP_PASSWORD` |
+| iGPSPORT | `SYNC_IGPSPORT_PHONE`、`SYNC_IGPSPORT_PASSWORD` |
+| XOSS | `SYNC_XOSS_EMAIL`、`SYNC_XOSS_PASSWORD` |
+| XingZhe | `SYNC_XINGZHE_EMAIL`、`SYNC_XINGZHE_PASSWORD` |
+| Strava | `SYNC_STRAVA_CLIENT_ID`、`SYNC_STRAVA_CLIENT_SECRET`、`SYNC_STRAVA_REFRESH_TOKEN` |
+| Garmin CN | `SYNC_GARMIN_CN_SECRET`（推荐）或 `SYNC_GARMIN_CN_EMAIL` + `SYNC_GARMIN_CN_PASSWORD` |
+| Garmin 国际版 | `SYNC_GARMIN_AUTH_SEED` |
+| Apple Health | 无（无需 Secrets） |
+| 可选（地图瓦片） | `MAPBOX_TOKEN`（缺省用 Carto 暗色底图） |
+
+---
+
+## 各平台配置
 
 ### 密码直连型：Keep / iGPSPORT / XOSS / XingZhe
 
-最简的方式——填入账号密码即可同步，无额外认证步骤。
+无需本地认证，填入账号密码即可。
 
 ```bash
-# 编辑 config.yml：
-sync:
-  keep:
-    phone: "138xxxx"
-    password: "xxx"
+gh secret set SYNC_KEEP_PHONE --body "138xxxx"
+gh secret set SYNC_KEEP_PASSWORD --body "xxx"
 ```
 
-同步：
+其他源同理：
 
-```bash
-exe/workouts sync --source keep
-```
+| 源 | 命令 |
+|---|---|
+| Keep | `gh secret set SYNC_KEEP_PHONE --body "..."` + `gh secret set SYNC_KEEP_PASSWORD --body "..."` |
+| iGPSPORT | `gh secret set SYNC_IGPSPORT_PHONE --body "..."` + `gh secret set SYNC_IGPSPORT_PASSWORD --body "..."` |
+| XOSS | `gh secret set SYNC_XOSS_EMAIL --body "..."` + `gh secret set SYNC_XOSS_PASSWORD --body "..."` |
+| XingZhe | `gh secret set SYNC_XINGZHE_EMAIL --body "..."` + `gh secret set SYNC_XINGZHE_PASSWORD --body "..."` |
 
-CI Secrets（每个源全要设）：
+<details>
+<summary>网页方式添加</summary>
+
+仓库 → Settings → Secrets and variables → Actions → Secrets → New repository secret
 
 | 源 | Secret 1 | Secret 2 |
 |---|---|---|
@@ -79,54 +111,83 @@ CI Secrets（每个源全要设）：
 | iGPSPORT | `SYNC_IGPSPORT_PHONE` | `SYNC_IGPSPORT_PASSWORD` |
 | XOSS | `SYNC_XOSS_EMAIL` | `SYNC_XOSS_PASSWORD` |
 | XingZhe | `SYNC_XINGZHE_EMAIL` | `SYNC_XINGZHE_PASSWORD` |
+</details>
+
+<details>
+<summary>本地同步可选</summary>
 
 ```bash
-# 页面：https://github.com/<user>/<repo>/settings/secrets/actions
-# CLI：
-gh secret set SYNC_KEEP_PHONE --body "138xxxx"
-gh secret set SYNC_KEEP_PASSWORD --body "xxx"
+git clone https://github.com/你的用户名/workouts.git
+cd workouts
+bundle install
+
+exe/workouts sync --source keep
 ```
+</details>
 
 ---
 
 ### Strava
 
-需要创建 Strava API 应用后走 OAuth 授权。
+首次需要本地 OAuth 授权获取 refresh_token。
+
+#### 首次准备
 
 ```bash
 # 1. strava.com → Settings → API → Create App
 #    Authorization Callback Domain 填 "localhost"
 
-# 2. 编辑 config.yml：
-sync:
-  strava:
-    client_id: "xxx"
-    client_secret: "xxx"
-
-# 3. 浏览器授权
+# 2. 浏览器授权
 exe/workouts auth strava
 # → 打开终端输出的链接
 # → 点击 "Connect with Strava" → 授权
 # → refresh_token 自动写入 config.yml
+```
 
+如果本地尚未安装：
+
+```bash
+git clone https://github.com/你的用户名/workouts.git
+cd workouts
+bundle install
+```
+
+#### GitHub Secrets
+
+```bash
+gh secret set SYNC_STRAVA_CLIENT_ID --body "xxx"
+gh secret set SYNC_STRAVA_CLIENT_SECRET --body "xxx"
+gh secret set SYNC_STRAVA_REFRESH_TOKEN \
+  --body "$(ruby -ryaml -e 'puts YAML.load_file("config/config.yml").dig("sync","strava","refresh_token")')"
+```
+
+三个缺一不可。`client_id` 和 `client_secret` 从 Strava API 控制台获取。
+
+<details>
+<summary>网页方式添加</summary>
+
+| Secret | 值来源 |
+|---|---|
+| `SYNC_STRAVA_CLIENT_ID` | config.yml 里 sync.strava.client_id |
+| `SYNC_STRAVA_CLIENT_SECRET` | config.yml 里 sync.strava.client_secret |
+| `SYNC_STRAVA_REFRESH_TOKEN` | config.yml 里 sync.strava.refresh_token |
+</details>
+
+<details>
+<summary>本地同步可选</summary>
+
+```bash
 exe/workouts sync --source strava
 ```
-
-CI Secrets：
-
-```
-SYNC_STRAVA_CLIENT_ID       →  config.yml 里 sync.strava.client_id
-SYNC_STRAVA_CLIENT_SECRET   →  config.yml 里 sync.strava.client_secret
-SYNC_STRAVA_REFRESH_TOKEN   →  config.yml 里 sync.strava.refresh_token
-```
-
-三个缺一不可。`auth strava` 命令会自动写入 refresh_token，其余两个从 Strava API 控制台获取。
+</details>
 
 ---
 
 ### Garmin CN
 
-交互式登录一次即可长期使用。
+首次需要交互式登录（Ruby 内 SSO，不需浏览器）。
+
+#### 首次准备
 
 ```bash
 # 编辑 config.yml：
@@ -135,15 +196,30 @@ sync:
     email: "138xxxx"
     password: "xxx"
 
-# 交互式认证（Ruby 内 SSO，不需浏览器）
+# 交互式认证
 exe/workouts auth garmin_cn
 # → 根据提示输入短信/邮箱验证码
 # → secret 自动写入 config.yml（sync.garmin_cn.secret）
-
-exe/workouts sync --source garmin_cn
 ```
 
-#### Token 生命周期
+#### GitHub Secrets
+
+```bash
+gh secret set SYNC_GARMIN_CN_SECRET \
+  --body "$(ruby -ryaml -e 'puts YAML.load_file("config/config.yml").dig("sync","garmin_cn","secret")')"
+```
+
+<details>
+<summary>备选：email + password（不推荐，遇到 MFA 会卡住）</summary>
+
+```bash
+gh secret set SYNC_GARMIN_CN_EMAIL --body "138xxxx"
+gh secret set SYNC_GARMIN_CN_PASSWORD --body "xxx"
+```
+</details>
+
+<details>
+<summary>Token 生命周期</summary>
 
 | Token | 有效期 | 说明 |
 |---|---|---|
@@ -152,28 +228,15 @@ exe/workouts sync --source garmin_cn
 | OAuth2 refresh_token | ~90d | OAuth1 重新签名 |
 
 OAuth1 是链条的根，一次 auth 后自动续期，维护成本极低。
-
-#### CI Secrets
-
-推荐（1 个）：
-
-```
-SYNC_GARMIN_CN_SECRET  →  config.yml 里 sync.garmin_cn.secret 的值
-```
-
-<details>
-<summary>备选：email + password（不推荐，遇到交互式 MFA 会卡住）</summary>
-
-```
-SYNC_GARMIN_CN_EMAIL     →  sync.garmin_cn.email
-SYNC_GARMIN_CN_PASSWORD  →  sync.garmin_cn.password
-```
 </details>
 
+<details>
+<summary>本地同步可选</summary>
+
 ```bash
-gh secret set SYNC_GARMIN_CN_SECRET \
-  --body "$(ruby -ryaml -e 'puts YAML.load_file("config/config.yml").dig("sync","garmin_cn","secret")')"
+exe/workouts sync --source garmin_cn
 ```
+</details>
 
 ---
 
@@ -181,16 +244,13 @@ gh secret set SYNC_GARMIN_CN_SECRET \
 
 garmin.com 受 Cloudflare 防护，认证需要额外 Python 工具。这是最复杂的源。
 
-#### 前置依赖
+#### 首次准备
 
 ```bash
+# 前置依赖
 pip install -r scripts/requirements.txt
 playwright install chromium
-```
 
-#### 首次设置
-
-```bash
 # 编辑 config.yml：
 sync:
   garmin:
@@ -202,114 +262,116 @@ sync:
 # → 自动登录 garmin.com
 # → 如有 MFA，终端输入验证码
 # → auth_seed 自动写入 config.yml
-# → 如已登录 gh CLI，自动设 GH Secret
+```
 
-exe/workouts sync --source garmin
+#### GitHub Secrets
+
+```bash
+gh secret set SYNC_GARMIN_AUTH_SEED \
+  --body "$(ruby -ryaml -e 'puts YAML.load_file("config/config.yml").dig("sync","garmin","auth_seed")')"
 ```
 
 #### ⚠️ 本地与远程票据冲突
 
-```
-本地 sync 后 refresh_token 被旋转（OAuth2 设计如此），
-旧 auth_seed 里的 refresh_token 作废。
-下次 CI 冷启动会 400 错误。
-```
+本地 sync 会旋转 refresh_token 导致 GitHub Actions 的 token 失效。
 
-**必须跟着跑：**
+**自动部署用户不受影响**——只要不在本地跑 `sync --source garmin`，GitHub Actions 每天自动 sync 自行续期 token。
+
+如果本地和 GitHub Actions 同时使用同一账号，每次本地 sync 后必须紧接：
 
 ```bash
-exe/workouts sync --source garmin
-./scripts/garmin_auth_local.sh --sync   # 把最新 token 推成新 auth_seed
+exe/workouts sync --source garmin && ./scripts/garmin_auth_local.sh --sync
 ```
 
-#### Token 生命周期
+<details>
+<summary>Token 生命周期</summary>
 
 | Token | 有效期 | 说明 |
 |---|---|---|
 | DI access_token | ~18h | refresh_token 续 |
 | DI refresh_token | **30 天滑动窗口** | 每次 refresh 旋转，连续 30 天不刷则死 |
 
-CI 每天跑 = 自动续期。CI 停了 30+ 天或本地 sync 后忘跑 `--sync` → auth_seed 失效，需重新完整认证。
+GitHub Actions 每天跑 = 自动续期。停了 30+ 天需重新完整认证。
+</details>
 
-**最佳习惯：** 本地 sync 后紧接 `--sync`，一行搞定：
+<details>
+<summary>本地同步可选</summary>
 
 ```bash
-exe/workouts sync --source garmin && ./scripts/garmin_auth_local.sh --sync
+exe/workouts sync --source garmin
 ```
 
-#### CI Secrets
-
-```
-SYNC_GARMIN_AUTH_SEED  →  config.yml 里 sync.garmin.auth_seed 的值
-```
-
-注意：email + password 只用于本地脚本，不进 CI。
+注意：email + password 只用于本地首次认证，不进 GitHub Secrets。
+</details>
 
 ---
 
 ### Apple Health 导入
 
 #### 1. 从 iPhone 导出数据
+
 健康 App → 右上角头像 → 导出所有健康数据 → export.zip
 
-⚠️ export.zip 包含 Apple Health 全量数据（心率、睡眠、血氧等），
+⚠️ export.zip 包含全量健康数据（心率、睡眠、血氧等），
    远不止运动记录。仓库私有则分支也私有。
    如需对外分享仓库，导入后建议删除该分支。
 
-#### 2. 放入项目
-
-本地（二选一）：
+#### 2. 存入专用分支
 
 ```bash
-mkdir -p data/import/apple_health
-cp ~/Downloads/export.zip data/import/apple_health/
-# 或
-exe/workouts serve start        # 打开 http://localhost:8080，拖拽上传
-```
-
-CI（推送到专用分支）：
-
-```bash
-  git checkout --orphan _/import/apple_health
+git checkout --orphan _/import/apple_health
 mkdir -p data/import/apple_health
 # 放入 export.zip
 
-# 大文件（≥ 100MB）需先启用 LFS 跟踪：
-git lfs track "data/import/apple_health/export.zip"   # ← 大文件时需要
-git add .gitattributes                                 # ← 大文件时需要
+# ≥ 100MB 需先启用 LFS：
+#   git lfs track "data/import/apple_health/export.zip"
+#   git add .gitattributes
 
 git add data/import/apple_health/export.zip
 git commit -m "Add Apple Health export"
-  git push origin _/import/apple_health
-  git checkout main   # 切回主分支，避免误操作
+git push origin _/import/apple_health
+git checkout main   # 切回主分支
 ```
 
-分支不存在时 CI 静默跳过。
+分支不存在时 GitHub Actions 静默跳过。无需额外 Secrets。
 
-#### 3. 导入
+#### 3. 导入后清理
+
+确认数据已导入后，可安全删除该分支：
 
 ```bash
-# 本地：
-exe/workouts import --source apple_health
-
-# CI 自动拉取并导入（检查 .imported marker 防止重复导入）
-# 强制重新导入：删除 Actions Cache 中 imported-v1-apple-health
-#   页面：仓库 → Actions → Caches → 删除该条目
-#   CLI： gh actions-cache delete imported-v1-apple-health
-#   → 重新运行 workflow
-
-# 确认数据已导入后，可安全删除该分支：
-#   git push origin --delete _/import/apple_health
+git push origin --delete _/import/apple_health
 ```
 
-Apple Health 按 XML 的 sourceName 字段自动忽略
-Strava / Keep / Garmin Connect 等 App 的活动，避免重复。
+Apple Health 按 XML 的 sourceName 字段自动忽略 Strava / Keep / Garmin Connect 等 App 的活动，避免重复。
 
-无需额外 Secrets。
+<details>
+<summary>本地导入详解 + 强制重新导入</summary>
+
+```bash
+# 本地导入
+exe/workouts import --source apple_health
+
+# 强制重新导入（删除 cache 后重跑 workflow）
+gh actions-cache delete imported-v1-apple-health
+```
+</details>
+
+<details>
+<summary>本地 serve（拖拽上传）</summary>
+
+```bash
+exe/workouts serve start
+# → 打开 http://localhost:8080，拖拽上传 export.zip
+```
+</details>
 
 ---
 
 ### 本地文件导入
+
+<details>
+<summary>GPX / TCX / FIT 文件解析</summary>
 
 ```bash
 exe/workouts parse activity.gpx --save
@@ -318,34 +380,19 @@ exe/workouts parse activity.fit --save  # 待实现
 ```
 
 纯本地操作。
+</details>
 
 ---
 
 ## 部署 GitHub Pages
 
-```bash
-# 1. 仓库 → Settings → Pages → Source: GitHub Actions
+已在快速开始中配置完成。确认以下三点即可：
 
-# 2. 公共 Secrets（所有场景都需要）
-#    WORKOUTS_SYNC_PAT
-#      GitHub Settings → Developer settings → Personal access tokens
-#      → Tokens (classic) → Generate new token，勾选 repo（全选）
-#      添加为仓库 Secret。workflow 更新 cron、归档数据都要用它推代码。
-#
-#    MAPBOX_TOKEN（可选）
-#      地图瓦片 token，缺省用 Carto 暗色底图。不设不影响功能。
+- Settings → Pages → Source = "GitHub Actions"
+- Actions → Sync Workflows 最后一次运行绿色通过
+- 访问 `https://<你的用户名>.github.io/workouts/`
 
-# 3. 根据所选源添加对应的 Source Secrets
-#    （每个场景的 CI Secrets 部分有具体说明）
-
-# 4. 触发同步
-#    Actions → Sync Workouts → Run workflow
-#    等待 ~5 分钟
-
-# 5. https://<user>.github.io/workouts/  ← 你的运动看板
-```
-
-以后每天自动同步、构建、部署，零维护。
+之后每天自动同步、构建、部署，零维护。
 
 ---
 
@@ -381,11 +428,11 @@ exe/workouts parse activity.fit --save  # 待实现
 
 | 命令 | 说明 |
 |---|---|
-  | `sync` | 同步所有已配置的来源 |
-  | `sync --source strava` | 只同步特定来源 |
-  | `sync --act run` | 只同步某种运动类型 |
-  | `import --source apple_health` | 导入 Apple Health（export.zip）|
-  | `auth garmin_cn` | 交互式登录 |
+| `sync` | 同步所有已配置的来源 |
+| `sync --source strava` | 只同步特定来源 |
+| `sync --act run` | 只同步某种运动类型 |
+| `import --source apple_health` | 导入 Apple Health（export.zip）|
+| `auth garmin_cn` | 交互式登录 |
 | `export json` | 导出 JSON |
 | `export csv` | 导出 CSV |
 | `export svg --style github` | 生成 SVG 海报（5 种风格） |
@@ -422,17 +469,26 @@ docker compose run --rm workouts export json
 <details>
 <summary>展开 →</summary>
 
+**第一次运行 workflow 失败**
+  最常见原因是 GitHub Secrets 没设全。检查 Settings → Secrets and variables → Actions → Secrets，确保你选的源对应的所有 secret 都存在。然后重新运行 workflow。
+
+**GitHub Secrets 设置后需要多久生效**
+  立即生效。下次 workflow 运行时自动读取。
+
 **sync 报错 "no credential for source"**
-  配置未找到。检查 config.yml 或环境变量是否已设置。
+  配置未找到。检查 GitHub Secrets 是否存在，或者 env 变量名是否正确。
 
 **Garmin Intl 报 400/401**
-  auth_seed 过期。重新运行 `./scripts/garmin_auth_local.sh` 完整认证。
+  auth_seed 过期。重新运行 `./scripts/garmin_auth_local.sh` 完整认证后重新推送 secret。
 
 **Apple Health 找不到 export.zip**
-  检查 `data/import/apple_health/export.zip` 是否存在。CI 下检查 `_/import/apple_health` 分支。
+  检查 `_/import/apple_health` 分支是否存在，且包含 `data/import/apple_health/export.zip`。
 
 **部署后页面 404**
-  确认 Settings → Pages → Source = "GitHub Actions"，workflow 已成功执行。
+  确认 Settings → Pages → Source 选了 "GitHub Actions"（不是 "Deploy from a branch"），且 workflow 的 build 和 deploy job 都已成功。
+
+**WORKOUTS_SYNC_PAT 需要什么权限**
+  勾选 `repo`（全部）。workflow 用它来更新自动同步频率和归档数据。
 
 **SQLite gem 编译失败**
   `apt install libsqlite3-dev`（Ubuntu/Debian）或 `brew install sqlite3`（macOS）。
