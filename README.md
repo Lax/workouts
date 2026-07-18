@@ -270,7 +270,7 @@ exe/workouts serve start        # 打开 http://localhost:8080，拖拽上传
 CI（推送到专用分支）：
 
 ```bash
-git checkout --orphan data/import/apple_health
+  git checkout --orphan _/import/apple_health
 mkdir -p data/import/apple_health
 # 放入 export.zip
 
@@ -280,26 +280,26 @@ git add .gitattributes                                 # ← 大文件时需要
 
 git add data/import/apple_health/export.zip
 git commit -m "Add Apple Health export"
-git push origin data/import/apple_health
-git checkout main   # 切回主分支，避免误操作
+  git push origin _/import/apple_health
+  git checkout main   # 切回主分支，避免误操作
 ```
 
 分支不存在时 CI 静默跳过。
 
-#### 3. 同步
+#### 3. 导入
 
 ```bash
 # 本地：
-exe/workouts sync --source apple_health
+exe/workouts import apple_health         # 或 import --source apple_health
 
-# CI 自动拉取并导入（检查 .imported marker，已存在则跳过）
-# 强制重新导入：删除 Actions Cache 中 import-apple-health-v1-processed
+# CI 自动拉取并导入（检查 .imported marker 防止重复导入）
+# 强制重新导入：删除 Actions Cache 中 imported-v1-apple-health
 #   页面：仓库 → Actions → Caches → 删除该条目
-#   CLI： gh actions-cache delete import-apple-health-v1-processed
+#   CLI： gh actions-cache delete imported-v1-apple-health
 #   → 重新运行 workflow
 
-# 确认数据已同步后，可安全删除该分支：
-#   git push origin --delete data/import/apple_health
+# 确认数据已导入后，可安全删除该分支：
+#   git push origin --delete _/import/apple_health
 ```
 
 Apple Health 按 XML 的 sourceName 字段自动忽略
@@ -381,10 +381,12 @@ exe/workouts parse activity.fit --save  # 待实现
 
 | 命令 | 说明 |
 |---|---|
-| `sync` | 同步所有已配置的来源 |
-| `sync --source strava` | 只同步特定来源 |
-| `sync --act run` | 只同步某种运动类型 |
-| `auth garmin_cn` | 交互式登录 |
+  | `sync` | 同步所有已配置的来源 |
+  | `sync --source strava` | 只同步特定来源 |
+  | `sync --act run` | 只同步某种运动类型 |
+  | `import apple_health` | 导入 Apple Health（export.zip）|
+  | `import --source apple_health` | 同上，--source 形式 |
+  | `auth garmin_cn` | 交互式登录 |
 | `export json` | 导出 JSON |
 | `export csv` | 导出 CSV |
 | `export svg --style github` | 生成 SVG 海报（5 种风格） |
@@ -428,7 +430,7 @@ docker compose run --rm workouts export json
   auth_seed 过期。重新运行 `./scripts/garmin_auth_local.sh` 完整认证。
 
 **Apple Health 找不到 export.zip**
-  检查 `data/import/apple_health/export.zip` 是否存在。CI 下检查对应 LFS 分支。
+  检查 `data/import/apple_health/export.zip` 是否存在。CI 下检查 `_/import/apple_health` 分支。
 
 **部署后页面 404**
   确认 Settings → Pages → Source = "GitHub Actions"，workflow 已成功执行。

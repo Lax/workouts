@@ -120,8 +120,6 @@ module Workouts
           config["email"].to_s != "" && config["password"].to_s != ""
         when "xingzhe"
           config["email"].to_s != "" && config["password"].to_s != ""
-        when "apple_health"
-          File.exist?("data/import/apple_health/export.zip")
         else
           config.values.any? { |v| v.to_s != "" }
         end
@@ -129,13 +127,6 @@ module Workouts
 
       def build_sync_adapter(source, db, filter)
         config = workouts_config.sync_config(source)
-
-        if source == "apple_health"
-          return Workouts::Sync::AppleHealth.new(
-            config: {}, db:, activity_filter: filter,
-            time_budget: workouts_config.dig("sync", "time_budget")
-          )
-        end
 
         return nil if config.empty?
 

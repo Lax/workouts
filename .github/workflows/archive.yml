@@ -13,7 +13,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        source: [keep, igpsport, xoss, xingzhe, garmin, garmin_cn, strava, apple_health]
+        source: [keep, igpsport, xoss, xingzhe, garmin, garmin_cn, strava]
     runs-on: ${{ vars.RUNNER_LABEL || 'ubuntu-latest' }}
     permissions:
       contents: write

@@ -5,6 +5,7 @@ module Workouts
   require_relative "cli/migrate"
   require_relative "cli/serve"
   require_relative "cli/sync"
+  require_relative "cli/import"
 
   class CLI < Thor
     package_name "Workouts"
@@ -17,6 +18,7 @@ module Workouts
     end
 
     include Cli::Sync
+    include Cli::Import
 
     desc "sync", "Sync workout data from configured sources"
     option :source, type: :string, desc: "Sync only specific source (strava/garmin/keep/igpsport/xoss)"
@@ -72,6 +74,14 @@ module Workouts
       path = options[:output] || "config/config.yml"
       File.write(path, ConfigTemplate.generate)
       say_status :created, path, :green
+    end
+
+    desc "import [SOURCE]", "Import workout data from local files (apple_health)"
+    option :source, type: :string, aliases: "-s",
+           desc: "Import source (alternative to positional arg)"
+    option :activity, type: :array, desc: "Filter by sport type", aliases: "--act"
+    def import(source = nil)
+      super
     end
 
     desc "parse FILE", "Parse a GPX or TCX file and optionally save to DB"

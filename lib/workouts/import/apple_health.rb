@@ -2,11 +2,11 @@ require "digest"
 require "fileutils"
 require "nokogiri"
 require "zip"
-require_relative "base"
+require_relative "../sync/base"
 
 module Workouts
-  module Sync
-    class AppleHealth < Base
+  module Import
+    class AppleHealth < Sync::Base
       SKIPPED_SOURCE_PATTERNS = [
         /\bStrava\b/i, /\bKeep\b/i, /\biGPSPORT\b/i,
         /\bXOSS\b/i, /\bXingZhe\b/i, /\bConnect\b/i

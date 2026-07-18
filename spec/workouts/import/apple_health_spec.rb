@@ -1,4 +1,4 @@
-RSpec.describe Workouts::Sync::AppleHealth do
+RSpec.describe Workouts::Import::AppleHealth do
   let(:tmpdir) { Dir.mktmpdir }
   let(:db) { create_test_db }
   let(:config) { {} }
@@ -173,12 +173,12 @@ RSpec.describe Workouts::Sync::AppleHealth do
   describe "#correlate_heart_rate" do
     before do
       adapter.instance_variable_set(:@heart_rate_index, [
-        Workouts::Sync::AppleHealth::HeartRateRecord.new(time: Time.parse("2023-06-15 09:00:00 +0800"), value: 140),
-        Workouts::Sync::AppleHealth::HeartRateRecord.new(time: Time.parse("2023-06-15 09:10:00 +0800"), value: 155),
-        Workouts::Sync::AppleHealth::HeartRateRecord.new(time: Time.parse("2023-06-15 09:20:00 +0800"), value: 165),
-        Workouts::Sync::AppleHealth::HeartRateRecord.new(time: Time.parse("2023-06-15 09:30:00 +0800"), value: 158),
-        Workouts::Sync::AppleHealth::HeartRateRecord.new(time: Time.parse("2023-06-15 09:40:00 +0800"), value: 148),
-        Workouts::Sync::AppleHealth::HeartRateRecord.new(time: Time.parse("2023-06-15 10:00:00 +0800"), value: 100),
+        Workouts::Import::AppleHealth::HeartRateRecord.new(time: Time.parse("2023-06-15 09:00:00 +0800"), value: 140),
+        Workouts::Import::AppleHealth::HeartRateRecord.new(time: Time.parse("2023-06-15 09:10:00 +0800"), value: 155),
+        Workouts::Import::AppleHealth::HeartRateRecord.new(time: Time.parse("2023-06-15 09:20:00 +0800"), value: 165),
+        Workouts::Import::AppleHealth::HeartRateRecord.new(time: Time.parse("2023-06-15 09:30:00 +0800"), value: 158),
+        Workouts::Import::AppleHealth::HeartRateRecord.new(time: Time.parse("2023-06-15 09:40:00 +0800"), value: 148),
+        Workouts::Import::AppleHealth::HeartRateRecord.new(time: Time.parse("2023-06-15 10:00:00 +0800"), value: 100),
       ])
     end
 
@@ -221,11 +221,11 @@ RSpec.describe Workouts::Sync::AppleHealth do
           "spec/fixtures/apple_health/export.xml",
           "spec/fixtures/apple_health/route.gpx")
         allow(adapter).to receive(:before_call).and_call_original
-        stub_const("Workouts::Sync::AppleHealth::DEFAULT_ZIP_PATH", zip_path)
+        stub_const("Workouts::Import::AppleHealth::DEFAULT_ZIP_PATH", zip_path)
         adapter.instance_variable_set(:@zip_path, zip_path)
       end
 
-      it "returns the number of synced activities" do
+      it "returns the number of imported activities" do
         result = adapter.call
         expect(result).to eq(2)
       end
@@ -446,7 +446,7 @@ RSpec.describe Workouts::Sync::AppleHealth do
 
   describe "speed filtering" do
     it "keeps speeds >= 0.1 m/s" do
-      expect(Workouts::Sync::AppleHealth::MIN_GPX_SPEED).to eq(0.1)
+      expect(Workouts::Import::AppleHealth::MIN_GPX_SPEED).to eq(0.1)
     end
 
     it "filters zero speed from GPX" do

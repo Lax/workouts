@@ -59,20 +59,12 @@ runs:
         key: workouts-raw-v1-strava-${{ github.run_id }}
         restore-keys: workouts-raw-v1-strava-
 
-    - uses: actions/cache/restore@v4
-      with:
-        path: |
-          data/raw/apple_health/
-          data/std/apple_health/
-        key: workouts-raw-v1-apple_health-${{ github.run_id }}
-        restore-keys: workouts-raw-v1-apple_health-
-
     - name: Record source digests
       shell: bash
       run: |
         mkdir -p data
         echo "Recording source digests..." >&2
-        for src in keep igpsport xoss xingzhe garmin garmin_cn strava apple_health; do
+        for src in keep igpsport xoss xingzhe garmin garmin_cn strava; do
           echo "$src $(scripts/source-digest.sh "$src")"
           echo "  done: $src" >&2
         done > data/.source-digests

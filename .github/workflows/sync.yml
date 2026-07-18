@@ -85,24 +85,24 @@ jobs:
 
       - uses: ./.github/actions/sources-cache/restore
 
-      - name: Restore Apple Health import marker
-        id: apple-health-cache
+      - name: Restore import marker
+        id: import-cache-apple-health
         uses: actions/cache@v5.1.0
         with:
           path: data/import/apple_health/.imported
-          key: import-apple-health-v1-processed
+          key: imported-v1-apple-health
 
       - name: Import Apple Health
-        if: steps.apple-health-cache.outputs.cache-hit != 'true'
+        if: steps.import-cache-apple-health.outputs.cache-hit != 'true'
         run: |
           mkdir -p data/import/apple_health
           git lfs install
-          git ls-remote --exit-code origin refs/heads/data/import/apple_health >/dev/null 2>&1 || {
-            echo "No data/import/apple_health branch yet — skipping" >&2
+          git ls-remote --exit-code origin refs/heads/_/import/apple_health >/dev/null 2>&1 || {
+            echo "No _/import/apple_health branch yet — skipping" >&2
             exit 0
           }
-          git fetch origin refs/heads/data/import/apple_health:refs/remotes/origin/data/import/apple_health
-          git show origin/data/import/apple_health:data/import/apple_health/export.zip | git lfs smudge > data/import/apple_health/export.zip
+          git fetch origin refs/heads/_/import/apple_health:refs/remotes/origin/_/import/apple_health
+          git show origin/_/import/apple_health:data/import/apple_health/export.zip | git lfs smudge > data/import/apple_health/export.zip
           if [ ! -f data/import/apple_health/export.zip ]; then
             echo "No export.zip in branch — skipping" >&2
             exit 0
@@ -111,7 +111,7 @@ jobs:
             echo "export.zip is not a valid zip — possible LFS smudge failure" >&2
             exit 1
           }
-          bundle exec exe/workouts sync --source apple_health
+          bundle exec exe/workouts import apple_health
           touch data/import/apple_health/.imported
 
       - name: Sync

@@ -9,7 +9,7 @@ runs:
       run: |
         if [ ! -f data/.source-digests ]; then
           echo "No digest snapshot — marking all sources as changed" >&2
-          for src in keep igpsport xoss xingzhe garmin garmin_cn strava apple_health; do
+          for src in keep igpsport xoss xingzhe garmin garmin_cn strava; do
             echo "changed_${src}=true"
           done >> "$GITHUB_OUTPUT"
           exit 0
@@ -88,20 +88,11 @@ runs:
           data/std/strava/
         key: workouts-raw-v1-strava-${{ github.run_id }}
 
-    - name: Save — apple_health
-      uses: actions/cache/save@v4
-      if: steps.detect.outputs.changed_apple_health == 'true'
-      with:
-        path: |
-          data/raw/apple_health/
-          data/std/apple_health/
-        key: workouts-raw-v1-apple_health-${{ github.run_id }}
-
     - name: Source cache summary
       if: always()
       shell: bash
       run: |
         echo "=== Source digests after sync ==="
-        for src in keep igpsport xoss xingzhe garmin garmin_cn strava apple_health; do
+        for src in keep igpsport xoss xingzhe garmin garmin_cn strava; do
           echo "  $src: $(scripts/source-digest.sh "$src")"
         done
