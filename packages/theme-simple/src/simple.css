@@ -580,6 +580,7 @@
 
   .left-panel {
     width: 100%;
+    padding: 1rem;
   }
 
   .right-panel {
@@ -587,11 +588,26 @@
   }
 
   .map-wrapper {
-    height: 250px;
+    height: min(350px, 40vh);
+  }
+
+  .map-wrapper--compact {
+    height: auto;
   }
 
   .left-panel .site-title {
     font-size: 2.5rem;
+  }
+
+  .table-container {
+    overflow-x: auto;
+  }
+
+  .year-block:hover,
+  .year-block-selected:hover {
+    margin: 0 -1rem;
+    padding-left: 1rem;
+    padding-right: 1rem;
   }
 }
 
