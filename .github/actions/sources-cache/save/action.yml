@@ -7,6 +7,7 @@ runs:
       id: detect
       shell: bash {0}
       run: |
+        rm -f data/.source-digests
         if [ ! -f data/.source-digests ]; then
           echo "No digest snapshot — marking all sources as changed" >&2
           for src in keep igpsport xoss xingzhe garmin garmin_cn strava; do
@@ -32,7 +33,7 @@ runs:
         path: |
           data/raw/keep/
           data/std/keep/
-        key: workouts-raw-v1-keep-${{ github.run_id }}
+        key: raw-std-v1-keep-${{ github.run_id }}
 
     - name: Save — igpsport
       uses: actions/cache/save@v4
@@ -41,7 +42,7 @@ runs:
         path: |
           data/raw/igpsport/
           data/std/igpsport/
-        key: workouts-raw-v1-igpsport-${{ github.run_id }}
+        key: raw-std-v1-igpsport-${{ github.run_id }}
 
     - name: Save — xoss
       uses: actions/cache/save@v4
@@ -50,7 +51,7 @@ runs:
         path: |
           data/raw/xoss/
           data/std/xoss/
-        key: workouts-raw-v1-xoss-${{ github.run_id }}
+        key: raw-std-v1-xoss-${{ github.run_id }}
 
     - name: Save — xingzhe
       uses: actions/cache/save@v4
@@ -59,7 +60,7 @@ runs:
         path: |
           data/raw/xingzhe/
           data/std/xingzhe/
-        key: workouts-raw-v1-xingzhe-${{ github.run_id }}
+        key: raw-std-v1-xingzhe-${{ github.run_id }}
 
     - name: Save — garmin
       uses: actions/cache/save@v4
@@ -68,7 +69,7 @@ runs:
         path: |
           data/raw/garmin/
           data/std/garmin/
-        key: workouts-raw-v1-garmin-${{ github.run_id }}
+        key: raw-std-v1-garmin-${{ github.run_id }}
 
     - name: Save — garmin_cn
       uses: actions/cache/save@v4
@@ -77,7 +78,7 @@ runs:
         path: |
           data/raw/garmin_cn/
           data/std/garmin_cn/
-        key: workouts-raw-v1-garmin_cn-${{ github.run_id }}
+        key: raw-std-v1-garmin_cn-${{ github.run_id }}
 
     - name: Save — strava
       uses: actions/cache/save@v4
@@ -86,7 +87,7 @@ runs:
         path: |
           data/raw/strava/
           data/std/strava/
-        key: workouts-raw-v1-strava-${{ github.run_id }}
+        key: raw-std-v1-strava-${{ github.run_id }}
 
     - name: Source cache summary
       if: always()
