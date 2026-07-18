@@ -54,8 +54,8 @@ jobs:
           path: |
             data/raw/${{ matrix.source }}/
             data/std/${{ matrix.source }}/
-          key: workouts-raw-v1-${{ matrix.source }}-${{ github.run_id }}
-          restore-keys: workouts-raw-v1-${{ matrix.source }}-
+          key: raw-std-v1-${{ matrix.source }}-${{ github.run_id }}
+          restore-keys: raw-std-v1-${{ matrix.source }}-
 
       - name: Commit & push
         env:
