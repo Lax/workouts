@@ -75,4 +75,60 @@ RSpec.describe Workouts::Export::JSON do
     expect(a["calories"]).to eq(680)
     expect(a["average_temperature"]).to eq(28)
   end
+
+  describe "dedup group composite" do
+    before do
+      now = Time.now.utc
+      db[:dedup_groups].insert(group_id: "group_a", created_at: now, updated_at: now)
+      db[:dedup_group_members].multi_insert([
+        { group_id: "group_a", run_id: "member_1", source: "garmin", flag: "derived", confidence: 0.95 },
+        { group_id: "group_a", run_id: "member_2", source: "strava", flag: "derived", confidence: 0.92 },
+        { group_id: "group_a", run_id: "member_3", source: "igpsport", flag: "duplicate", confidence: 0.88 },
+      ])
+      db[:activities].multi_insert([
+        { run_id: "member_1", name: "Morning Run", distance: 10000, moving_time: 3000,
+          sport_category: "run", start_date: "2024-03-01T08:00:00Z",
+          start_date_local: "2024-03-01T08:00:00Z", source: "garmin", created_at: now, updated_at: now },
+        { run_id: "member_2", name: "AM Run", distance: 10100, moving_time: 3100,
+          sport_category: "run", start_date: "2024-03-01T08:00:02Z",
+          start_date_local: "2024-03-01T08:00:02Z", source: "strava", created_at: now, updated_at: now },
+        { run_id: "member_3", name: "Garmin Sync", distance: 9900, moving_time: 3050,
+          sport_category: "run", start_date: "2024-03-01T08:00:01Z",
+          start_date_local: "2024-03-01T08:00:01Z", source: "igpsport", created_at: now, updated_at: now },
+      ])
+    end
+
+    it "produces dedup_group field for grouped activities" do
+      described_class.new(db: db, output: output).call
+      data = JSON.parse(File.read(output))
+      garmin = data.find { |x| x["run_id"] == "member_1" }
+      strava = data.find { |x| x["run_id"] == "member_2" }
+      expect(garmin["dedup_group"]).to eq("group_a")
+      expect(strava["dedup_group"]).to eq("group_a")
+    end
+
+    it "includes member_sources array with metadata" do
+      described_class.new(db: db, output: output).call
+      data = JSON.parse(File.read(output))
+      garmin = data.find { |x| x["run_id"] == "member_1" }
+      expect(garmin["member_sources"]).to be_an(Array)
+      expect(garmin["member_sources"].length).to eq(3)
+      expect(garmin["member_sources"].first).to include("source", "run_id", "flag", "confidence")
+    end
+
+    it "applies field election (distance is median of 9900, 10000, 10100 = 10000)" do
+      described_class.new(db: db, output: output).call
+      data = JSON.parse(File.read(output))
+      garmin = data.find { |x| x["run_id"] == "member_1" }
+      expect(garmin["distance"]).to eq(10000)
+    end
+
+    it "non-grouped activity has no dedup fields" do
+      described_class.new(db: db, output: output).call
+      data = JSON.parse(File.read(output))
+      solo = data.find { |x| x["run_id"] == "test_1" }
+      expect(solo).not_to have_key("dedup_group")
+      expect(solo).not_to have_key("member_sources")
+    end
+  end
 end

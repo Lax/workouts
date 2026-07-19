@@ -9,7 +9,7 @@ module Workouts
         location_country summary_polyline
         average_heartrate max_heartrate average_cadence max_cadence
         average_power max_power calories average_temperature
-        average_speed elevation_gain source
+        average_speed elevation_gain source dedup_group_id
       ].freeze
 
       def initialize(db:, output:, activity_filter: nil)
@@ -24,7 +24,12 @@ module Workouts
 
         ::CSV.open(@output, "w") do |csv|
           csv << HEADERS
-          dataset.each { |a| csv << HEADERS.map { |h| a[h.to_sym] } }
+          dataset.each do |a|
+            row = HEADERS[0...-1].map { |h| a[h.to_sym] }
+            member = @db[:dedup_group_members].where(run_id: a[:run_id]).first
+            row << (member ? member[:group_id] : nil)
+            csv << row
+          end
         end
       end
     end

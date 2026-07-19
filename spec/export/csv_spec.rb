@@ -45,4 +45,29 @@ RSpec.describe Workouts::Export::CSV do
     lines = File.readlines(output)
     expect(lines.length).to eq(2)
   end
+
+  it "includes dedup_group_id header" do
+    described_class.new(db: db, output: output).call
+    headers = CSV.parse(File.read(output), headers: true).headers
+    expect(headers).to include("dedup_group_id")
+  end
+
+  it "populates dedup_group_id for grouped activity" do
+    now = Time.now.utc
+    db[:dedup_groups].insert(group_id: "csv_group_1", created_at: now, updated_at: now)
+    db[:dedup_group_members].insert(
+      group_id: "csv_group_1", run_id: "csv_1", source: "test", flag: "derived", confidence: 0.9
+    )
+    described_class.new(db: db, output: output).call
+    rows = CSV.parse(File.read(output), headers: true)
+    row = rows.find { |r| r["run_id"] == "csv_1" }
+    expect(row["dedup_group_id"]).to eq("csv_group_1")
+  end
+
+  it "dedup_group_id is nil for non-grouped activity" do
+    described_class.new(db: db, output: output).call
+    rows = CSV.parse(File.read(output), headers: true)
+    row = rows.find { |r| r["run_id"] == "csv_1" }
+    expect(row["dedup_group_id"]).to be_nil
+  end
 end
