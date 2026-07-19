@@ -9,7 +9,24 @@ module Workouts
         [act[:moving_time].to_f, act[:elapsed_time].to_f].max
       end
 
+      def self.external_id_match(a, b)
+        a_eid = a[:external_id]
+        b_eid = b[:external_id]
+        return nil if a_eid.nil? || b_eid.nil?
+        return nil if a_eid.empty? || b_eid.empty?
+
+        a_normalized = a_eid.sub(%r{^strava://activities/}, "")
+        b_normalized = b_eid.sub(%r{^strava://activities/}, "")
+
+        if a_normalized == b_normalized
+          { confidence: 1.0, flag: "derived", source: "external_id" }
+        end
+      end
+
       def self.match(a, b)
+        exact = external_id_match(a, b)
+        return exact[:confidence] if exact
+
         t_diff = time_diff_abs(a[:start_date], b[:start_date])
         max_diff = [300, (a[:elapsed_time] || 0).to_i, (b[:elapsed_time] || 0).to_i].max
         return 0.0 if t_diff > max_diff

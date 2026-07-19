@@ -461,7 +461,8 @@ module Workouts
           calories: calories,
           elevation_gain: elevation_gain&.round(1),
           average_temperature: parse_temperature(meta["HKWeatherTemperature"]),
-          source: "apple_health"
+          source: "apple_health",
+          external_id: meta["HKExternalUUID"]
         }
 
         attrs

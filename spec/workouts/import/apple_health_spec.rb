@@ -27,6 +27,7 @@ RSpec.describe Workouts::Import::AppleHealth do
       String :duplicate_info, text: true
       String :title, text: true
       String :source
+      String :external_id
       DateTime :created_at, default: Sequel::CURRENT_TIMESTAMP
       DateTime :updated_at, default: Sequel::CURRENT_TIMESTAMP
     end
@@ -488,6 +489,29 @@ RSpec.describe Workouts::Import::AppleHealth do
       ]
       result = adapter.send(:elevation_gain_from_points, points)
       expect(result).to eq(3.5)
+    end
+  end
+
+  describe "#build_attrs" do
+    let(:stats) do
+      { "HKQuantityTypeIdentifierDistanceWalkingRunning" => { "sum" => "10500", "unit" => "m" },
+        "HKQuantityTypeIdentifierActiveEnergyBurned" => { "sum" => "500", "unit" => "Cal" },
+        "HKQuantityTypeIdentifierBasalEnergyBurned" => { "sum" => "106", "unit" => "Cal" } }
+    end
+
+    it "includes external_id from meta" do
+      meta = { "HKExternalUUID" => "544EA64D-4645-4BBC-9147-638B642FCFE1" }
+      attrs = adapter.send(:build_attrs, "Apple Watch", "a1b2c3", stats, meta, nil, nil,
+                           "HKWorkoutActivityTypeRunning", "2023-06-15 09:00:00 +0800",
+                           "2023-06-15 09:45:00 +0800", "45", "min")
+      expect(attrs[:external_id]).to eq("544EA64D-4645-4BBC-9147-638B642FCFE1")
+    end
+
+    it "leaves external_id nil when meta has no HKExternalUUID" do
+      attrs = adapter.send(:build_attrs, "Apple Watch", "a1b2c3", stats, {}, nil, nil,
+                           "HKWorkoutActivityTypeRunning", "2023-06-15 09:00:00 +0800",
+                           "2023-06-15 09:45:00 +0800", "45", "min")
+      expect(attrs[:external_id]).to be_nil
     end
   end
 

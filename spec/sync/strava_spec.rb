@@ -26,6 +26,7 @@ RSpec.describe Workouts::Sync::Strava do
       Float :average_speed; Float :elevation_gain
       String :duplicate_info, text: true
       String :source
+      String :external_id
       DateTime :created_at, default: Sequel::CURRENT_TIMESTAMP
       DateTime :updated_at, default: Sequel::CURRENT_TIMESTAMP
     end
@@ -106,6 +107,15 @@ RSpec.describe Workouts::Sync::Strava do
 
   describe "#build_attrs" do
     subject(:attrs) { strava.send(:build_attrs, act, "ride", "poly_abc") }
+
+    it "includes external_id when provided" do
+      result = strava.send(:build_attrs, act, "ride", "poly_abc", external_id: "544EA64D-4645-4BBC-9147-638B642FCFE1")
+      expect(result[:external_id]).to eq("544EA64D-4645-4BBC-9147-638B642FCFE1")
+    end
+
+    it "leaves external_id nil when not provided" do
+      expect(attrs[:external_id]).to be_nil
+    end
     let(:act) do
       { "id" => 2002, "name" => "Afternoon Ride", "distance" => 20000.0,
         "moving_time" => 3600, "elapsed_time" => 4000,

@@ -62,6 +62,8 @@ module Workouts
         detail = fetch_detail(act_id, token)
         return false unless detail
 
+        external_id = detail["external_id"]
+
         streams = fetch_streams(act_id, token)
 
         write_source_archive(detail, streams, act_id)
@@ -71,7 +73,7 @@ module Workouts
 
         polyline = l2 ? Geo::Polyline.encode(l2.map { |pt| [pt[:positionLat], pt[:positionLong]] }) : act.dig("map", "summary_polyline")
 
-        attrs = build_attrs(act, type, polyline)
+        attrs = build_attrs(act, type, polyline, external_id: external_id)
         upsert_activity(attrs)
         attrs
       end
@@ -151,7 +153,7 @@ module Workouts
         File.rename(tmp, final)
       end
 
-      def build_attrs(act, category, polyline = nil)
+      def build_attrs(act, category, polyline = nil, external_id: nil)
         start_t = Time.parse(act["start_date"]) rescue nil
         local_t = Time.parse(act["start_date_local"]) rescue nil
 
@@ -177,7 +179,8 @@ module Workouts
           average_temperature: act["average_temp"],
           average_speed: act["average_speed"],
           elevation_gain: act["total_elevation_gain"],
-          source: "strava"
+          source: "strava",
+          external_id: external_id
         }
       end
 
