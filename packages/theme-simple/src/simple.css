@@ -564,6 +564,17 @@
   border-radius: 4px;
 }
 
+.svg-stat-year-block {
+  margin-bottom: 0.75rem;
+}
+
+.svg-stat-year-heading {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-text-dim);
+  margin-bottom: 0.25rem;
+}
+
 /* Empty state */
 .empty-state {
   padding: 2rem;

@@ -1,5 +1,5 @@
 /** SVGStat — combined Total view with summary header, per-year
- *  calendar heatmaps, and all-year route grid.
+ *  calendar heatmaps (with year labels + stats), and all-year route grid.
  *  Maps to upstream SVGStat (github.svg + grid.svg). */
 
 import type { Activity } from '@workouts/shared'
@@ -56,7 +56,10 @@ export function SVGStat({ activities }: SVGStatProps) {
         </div>
       </div>
       {years.map((y) => (
-        <GithubDrawer key={y} year={y} activities={activities} />
+        <div key={y} className="svg-stat-year-block">
+          <div className="svg-stat-year-heading">{y}</div>
+          <GithubDrawer year={y} activities={activities} />
+        </div>
       ))}
       <GridDrawer year={null} activities={activities} />
     </div>
