@@ -48,11 +48,12 @@ DedupService.run()
 │   ├── CLI entry point
 │   ├── Detailed logging
 │   ├── Runner auto-trigger
-│   └── Memoized dedup (dedup_group_id)
+│   └── Dedup tables (dedup_groups + dedup_group_members)
 │
 ├── Classification (flag selection)
-├── Field-level election
-└── N>2 group management
+├── Field-level election (export-time computed, no persistence)
+├── N>2 group management (union-find)
+└── Quantified dedup analysis (scripts/dedup-quantify.rb)
 ```
 
 ---
@@ -586,26 +587,74 @@ sync:
   dedup_auto: true
 ```
 
-### Memoized Dedup (dedup_group_id)
+### Dedup Group Tables
+
+**Not stored in `activities` table.** Group membership is in dedicated tables, keeping `activities` schema clean:
 
 ```sql
-ALTER TABLE activities ADD COLUMN dedup_group_id TEXT;
+CREATE TABLE dedup_groups (
+  id         INTEGER PRIMARY KEY,
+  group_id   TEXT NOT NULL UNIQUE,       -- SHA256(sorted_run_ids)[0,16]
+  created_at DATETIME,
+  updated_at DATETIME
+);
+
+CREATE TABLE dedup_group_members (
+  id           INTEGER PRIMARY KEY,
+  group_id     TEXT NOT NULL REFERENCES dedup_groups(group_id),
+  run_id       TEXT NOT NULL REFERENCES activities(run_id),
+  source       TEXT NOT NULL,
+  flag         TEXT,                     -- derived/duplicate/similar/contained/partial/cross
+  confidence   REAL,                    -- max confidence for this member in this group
+  UNIQUE(group_id, run_id)
+);
+
+-- Fast lookup: find group for a given run_id
+CREATE INDEX idx_dedup_member_run_id ON dedup_group_members(run_id);
 ```
 
-After first match confirms two (or more) activities are the same:
+**Group assignment (after first match):**
 
 ```ruby
-def assign_dedup_group(group_records, group_id = nil)
-  group_id ||= Digest::SHA256.hexdigest(
-    group_records.map { |r| "#{r[:source]}:#{r[:run_id]}" }.sort.join("|")
-  )[0, 16]
-  group_records.each do |r|
-    @db[:activities].where(run_id: r[:run_id]).update(dedup_group_id: group_id)
+def assign_dedup_group(matched_pairs)
+  # Union-Find over all matched run_ids
+  groups = consolidate(matched_pairs)
+
+  groups.each do |group_id, run_ids|
+    members = @db[:activities].where(run_id: run_ids).all
+    write_group(group_id, members)
+  end
+end
+
+def write_group(group_id, members)
+  @db[:dedup_groups].insert_conflict(
+    constraint: :dedup_groups_group_id_key,
+    insert: { group_id: group_id, created_at: Time.now.utc, updated_at: Time.now.utc }
+  )
+
+  members.each do |m|
+    @db[:dedup_group_members].insert_conflict(
+      constraint: :dedup_group_members_group_id_run_id_key,
+      insert: {
+        group_id: group_id,
+        run_id: m[:run_id],
+        source: m[:source],
+        flag: m[:_dedup_flag],
+        confidence: m[:_dedup_confidence]
+      }
+    )
   end
 end
 ```
 
-Subsequent DedupService runs: `WHERE dedup_group_id IS NULL` only.
+**Incremental dedup:** Subsequent runs only compare records NOT in `dedup_group_members`:
+
+```sql
+SELECT a.* FROM activities a
+WHERE a.run_id NOT IN (
+  SELECT run_id FROM dedup_group_members
+)
+```
 
 ---
 
@@ -715,7 +764,12 @@ end
 
 ### Composite Record Persistence
 
-Option A (recommended): **View-only**. Composite record computed at export time, not stored in DB.
+**Decision: computed at export time, not persisted anywhere (no DB table, no file cache).**
+
+Rationale:
+- **Not in DB**: DB has its own GH Cache backup mechanism (per-source cache digests). Storing composites would frequently invalidate the cache when election logic changes, triggering unnecessary cache rebuilds. `dedup_groups` + `dedup_group_members` (the "primary" data) change only when DedupService re-runs, which is infrequent.
+- **No file cache**: Election is a pure function (deterministic algorithm + same input = same output). Re-computation is negligible: ~0.1ms per group × ~500 groups = **~50ms total**.
+- **Export-time only**: JSON/SVG/Stats exporters compute composites on-the-fly when assembling their output.
 
 ```ruby
 # Export::JSON
@@ -732,7 +786,20 @@ def build_composite_activity(group)
 end
 ```
 
-Option B (future): **Store composite**. New `composite_activities` table, rebuilt incrementally. Useful for SVG export performance.
+Export flow:
+
+```
+Export JSON/SVG/Stats:
+  activities ← dedup_groups LEFT JOIN dedup_group_members (via .run_id)
+  group_id non-null?
+    → read dedup_group_members for that group
+    → FieldElector.elect(field, values) for each field
+    → composite[:dedup_group] = group_id
+    → composite[:member_sources] = [{ source, run_id, flag, confidence }, ...]
+    → use composite activities row in output
+  group_id null?
+    → use original activities row directly
+```
 
 ---
 
@@ -778,10 +845,10 @@ This finds all 5-source groups, 4-source groups, etc. without requiring explicit
 
 ### Group-level actions
 
-- **dedup_group_id write**: assign same group ID to all members
-- **Field-level election**: run across all group members
-- **Canonical selection** (for visualizations): pick highest-score source or composite
-- **Duplicate_info enrichment** (optional): backfill missing cross-refs
+- **dedup_groups + dedup_group_members write**: assign same group ID to all members (see table schema above)
+- **Field-level election**: run across all group members at export time
+- **Canonical selection** (for visualizations): pick highest-score source or composite at export time
+- **Duplicate_info enrichment** (optional): backfill missing cross-refs into `activities.duplicate_info` (kept in activities table for backward compatibility with SVG hover labels)
 
 ### Edge cases
 
@@ -816,12 +883,14 @@ This finds all 5-source groups, 4-source groups, etc. without requiring explicit
 7. Update flag classification
 
 ### Phase 4: P3 (production)
-1. Add `workouts dedup` CLI
-2. Add detailed logging + JSON output
+1. Add `workouts dedup` CLI (support `--incremental`, `--export-composites`, `--status`)
+2. Add detailed logging + JSON output (`data/dedup/YYYY-MM-DDTHHMMSSZ.json`)
 3. Integrate Runner auto-trigger
-4. Add `dedup_group_id` column + memoized dedup
-5. Implement field-level election
-6. Implement union-find group consolidation
+4. Create `dedup_groups` + `dedup_group_members` tables via migration
+5. Implement incremental dedup: skip records already in `dedup_group_members`
+6. Implement field-level election (view-only, computed at export time)
+7. Implement union-find group consolidation
+8. Export JSON/SVG/Stats: integrate composite election into output pipeline
 
 ---
 
@@ -834,14 +903,76 @@ This finds all 5-source groups, 4-source groups, etc. without requiring explicit
 | P0 regression | Same results on existing data | Run DedupService before/after, compare match counts |
 | P1 precision | external_id matches always correct | Verify 27 pairs match exactly with confidence=1.0 |
 | P2 sensitivity | Trajectory matching catches edge cases | Known 5-source group on 2026-06-18 must be detected |
-| P3 memoized | dedup_group_id skips matched records | Run twice, second run should compare only new data |
-| Field election | Composite record is always complete | Each field should have a value from the best source |
+| P3 incremental | `dedup_group_members` filters matched records | Run twice, second run should compare only new records |
+| Field election | Composite record computed at export time | Each field should have a value from the best source, verified via `workouts dedup --export-composites` |
 | N>2 consolidation | Union-find groups correctly | Manual verification on known day with multiple duplicates |
+| Cache independence | dedup_composites not persisted | Verify GH Cache digest unchanged after DedupService re-run with no new data |
 
 ### Acceptance criteria
 
 1. All 19 previously lost AH records are now imported and matched
 2. 27 AH↔Strava pairs detected with confidence=1.0
 3. 5-source group on 2026-06-18 consolidated into one dedup_group
-4. Field-level composite contains temperature (from AH) + power (from Strava) + polyline (from AH)
-5. Second DedupService run processes only new records
+4. Field-level composite (computed at export) contains temperature (from AH) + power (from Strava) + polyline (from AH)
+5. Second DedupService run processes only records NOT in `dedup_group_members`
+6. Export JSON includes composite records; deduped groups have `dedup_group` + `member_sources` fields
+
+---
+
+## Quantified Dedup Analysis (scripts/dedup-quantify.rb)
+
+### Purpose
+
+A standalone script (not part of DedupService) that quantifies cross-source duplicate ratios across ALL sources, producing a detailed report. Useful for:
+- Understanding which source pairs have the most overlap
+- Identifying data quality issues per source (missing fields, timezone errors)
+- Validating DedupService results against ground truth
+
+### Analysis dimensions
+
+| Dimension | Method | Output |
+|---|---|---|
+| **AH/Strava/Keep precision duplicates** (receiving sources) | time<5s + dist<1% + duration<5% → precision match | Match count, ratio per source pair |
+| **Garmin multi-device** (Edge+Fenix) | GPS trajectory containment/partial/cross vs Keep + AH | Dual-device activity count, flag distribution |
+| **Keep auto-generated** (workout type) | dist≤1km + duration<10min + zero GPS | Auto-gen count, sport type breakdown |
+| **Cross-platform GPX/FIT/TCX uploads** | Same distance + duration + device + trail similarity | Count of matching uploads by source pair |
+| **Data loss by source** | Compare field completeness across duplicates | For each field (HR/power/cadence/temp), which source provides it most often |
+| **DedupService validation** | Compare heuristic match results to known ground truth | False positive rate, false negative rate |
+
+### Output report
+
+```
+scripts/dedup-quantify.rb --db data/workouts.archive.db
+══════════════════════════════════════════════════════
+CROSS-SOURCE DUPLICATE QUANTIFICATION REPORT
+Generated: 2026-07-19T10:00:00Z
+══════════════════════════════════════════════════════
+
+1. OVERLAP MATRIX (precision duplicates, time<5s + dist<1%)
+                 AH   Strava  Garmin  Keep   iGPS  XOSS  XZhe
+  AH             908*    27      46    496    55    40     9
+  Strava          27    241      0      0      0     0     0
+  Garmin          46      0     470     0      0     0     0
+  Keep           496      0      0    439     0     0     0
+  ...            ...
+
+2. GARMIN DUAL-DEVICE
+  Total Garmin activities:  470
+  Edge+Fenix same-day:      12  (2.6%)
+  GPS containment detected:  8  (edge contains fenix)
+
+3. FIELD COMPLETENESS BY SOURCE
+  Field          Best source   Coverage
+  temperature    AH            100% of 908
+  avg_power      Garmin        85% of 470
+  cadence        Garmin        78% of 470
+  heartrate      Garmin+Strava ~95%
+
+4. DEDUPSERVICE VALIDATION
+  Known pairs (manual ground truth):  12
+  Detected by DedupService:           12  (recall=100%)
+  False positives:                     0  (precision=100%)
+
+5. RECOMMENDATIONS
+  ...
+```

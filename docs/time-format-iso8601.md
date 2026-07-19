@@ -74,6 +74,18 @@ No format change needed, but the Time.parse → `.utc` ensures correct arithmeti
 
 **Root cause:** 16 collision groups, 19 records lost. Cause is identical `sourceName + normalized_start + normalized_end` — Apple HealthKit duplicates the same workout entry when iCloud re-syncs. Need `creationDate` to disambiguate.
 
+**Design rationale (7+4 split):**
+
+```
+base = MD5(sourceName|start|end)[0, 7]     ← 28 bits, identifies "same activity base"
+disc = MD5(sourceName|creation|start|end)[0, 4]  ← 16 bits, disambiguates duplicates
+run_id = base + disc                        ← 11 chars total, same length as before
+```
+
+- **base 7 hex chars** (28 bits): collision probability ~0.15% across 908 records. Collisions here are benign — they mean different activities that happen to share 28 bits from source+start+end. These are still distinguished by the 4-char disc suffix.
+- **disc 4 hex chars** (16 bits, 4096 space): each collision group has at most 4 records with different creationDates. Probability of disc collision within a group: C(4,2)/4096 ≈ 0.15%.
+- **Total:** effectively zero collisions across 908 records.
+
 **Change:**
 
 ```ruby
@@ -89,7 +101,9 @@ def generate_run_id(source_name, creation_date, start_date, end_date)
   s = normalize_date(start_date)
   e = normalize_date(end_date)
   c = normalize_date(creation_date)
-  Digest::MD5.hexdigest("#{source_name}|#{c}|#{s}|#{e}")[0, 11]
+  base = Digest::MD5.hexdigest("#{source_name}|#{s}|#{e}")[0, 7]
+  disc = Digest::MD5.hexdigest("#{source_name}|#{c}|#{s}|#{e}")[0, 4]
+  "#{base}#{disc}"
 end
 ```
 
@@ -101,6 +115,8 @@ run_id = generate_run_id(source_name, creation_date, start_date, end_date)
 ```
 
 This ensures all 927 records get unique run_ids. The 19 duplicates are correctly imported as separate records, each with distinct creation dates. DedupService will match them later.
+
+**Note on base grouping:** The first 7 characters of different records from the same activity share the same `base` prefix. This property is purely informational (human eyeball can quickly see "these records are the same activity") and is never used programmatically for grouping. DedupService uses `dedup_groups` table for group membership.
 
 ## Data Migration
 

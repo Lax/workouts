@@ -15,6 +15,8 @@ Workouts 系统目前聚合 8 个源的 2,103 条活动。同一条真实运动�
 
 本文档基于 `workouts import --source apple_health` 导入 927/908 条的数据分析，分类描述了 9 种去重场景及其缺口。
 
+> **设计文档:** 去重重构方案详见 [`docs/dedup-redesign.md`](dedup-redesign.md)（P0-P3 四阶段、字段级选举、dedup_groups 独立表）。时间格式统一方案详见 [`docs/time-format-iso8601.md`](time-format-iso8601.md)。外部标识符方案详见 [`docs/external-id.md`](external-id.md)。
+
 ---
 
 ## 2. 数据源概览（线上，liulantao.com/workouts）
