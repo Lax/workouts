@@ -7,12 +7,11 @@ RSpec.describe Workouts::Export::SVG::GithubDrawer do
   let(:poster) { Workouts::Export::SVG::Poster.new("Test", "Test", colors, sd) }
   let(:drawer) { described_class.new(poster) }
 
-  def build_track(start_date, distance: 5000, run_id: "t1", category: "run")
-    Workouts::Export::SVG::Track.new(
-      { run_id: run_id, distance: distance, start_date: start_date,
-        sport_category: category, moving_time: 600 },
-      colors, sd
-    )
+  def build_track(start_date, distance: 5000, run_id: "t1", category: "run", duplicate_info: nil)
+    attrs = { run_id: run_id, distance: distance, start_date: start_date,
+              sport_category: category, moving_time: 600 }
+    attrs[:duplicate_info] = duplicate_info if duplicate_info
+    Workouts::Export::SVG::Track.new(attrs, colors, sd)
   end
 
   describe "#group_by_date_and_category" do
@@ -130,6 +129,55 @@ RSpec.describe Workouts::Export::SVG::GithubDrawer do
 
     it "returns hours and minutes format" do
       expect(drawer.send(:format_time, 5400)).to eq("1h 30min")
+    end
+  end
+end
+
+RSpec.describe Workouts::Export::SVG::Track do
+  let(:colors) do
+    { background: "#222", track: "#4DD2FF", text: "#FFF", special: "#FF0",
+      font: "Arial", empty_cell: "#444", dim_past: "#555" }
+  end
+  let(:sd) { { special_distance: 10, special_distance2: 20 } }
+
+  def build_track(start_date, distance: 5000, run_id: "t1", category: "run", duplicate_info: nil)
+    attrs = { run_id: run_id, distance: distance, start_date: start_date,
+              sport_category: category, moving_time: 600 }
+    attrs[:duplicate_info] = duplicate_info if duplicate_info
+    Workouts::Export::SVG::Track.new(attrs, colors, sd)
+  end
+
+  describe "#skip?" do
+    it "returns false for no duplicate_info" do
+      track = build_track("2024-01-01")
+      expect(track.skip?).to be false
+    end
+
+    it "recognizes derived flag" do
+      track = build_track("2024-01-01", duplicate_info: [{"flag" => "derived"}].to_json)
+      expect(track.skip?).to be true
+    end
+
+    it "recognizes duplicate flag" do
+      track = build_track("2024-01-01", duplicate_info: [{"flag" => "duplicate"}].to_json)
+      expect(track.skip?).to be true
+    end
+  end
+
+  describe "#conflict?" do
+    it "returns false for no duplicate_info" do
+      track = build_track("2024-01-01")
+      expect(track.conflict?).to be false
+    end
+
+    it "recognizes overlap flag" do
+      track = build_track("2024-01-01", duplicate_info: [{"flag" => "overlap"}].to_json)
+      expect(track.conflict?).to be true
+    end
+
+    it "recognizes contained flag as conflict" do
+      track = build_track("2024-01-01", duplicate_info: [{"flag" => "contained"}].to_json)
+      expect(track.conflict?).to be true
     end
   end
 end

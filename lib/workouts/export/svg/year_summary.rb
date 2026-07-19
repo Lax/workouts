@@ -13,7 +13,7 @@ module Workouts
           track_c = poster.colors[:track]
           special_c = poster.colors[:special]
 
-          year_tracks = poster.tracks.select { |t| t.year == (@year || Time.now.year) }
+          year_tracks = poster.tracks.select { |t| t.year == (@year || Time.now.year) }.reject(&:skip?)
           stats = calculate_stats(year_tracks)
 
           left_margin = offset[0] + 6
@@ -156,15 +156,15 @@ module Workouts
           longest = 0.0
 
           tracks.each do |t|
-            dist_km = poster.m2u(t.length)
-            total_dist += poster.m2u(t.length)
+            dist_km = poster.m2u(t.effective_length)
+            total_dist += poster.m2u(t.effective_length)
 
             stats[:marathon_count] += 1 if dist_km >= 42.0
             stats[:half_marathon_count] += 1 if dist_km >= 21.0 && dist_km < 42.0
             stats[:"10k_count"] += 1 if dist_km >= 10.0 && dist_km < 21.0
 
             total_time_s += t.moving_time if t.moving_time
-            longest = [longest, poster.m2u(t.length)].max
+            longest = [longest, poster.m2u(t.effective_length)].max
           end
 
           stats[:total_distance] = total_dist

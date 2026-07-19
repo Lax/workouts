@@ -25,6 +25,57 @@ RSpec.describe Workouts::Export::Stats do
   after { FileUtils.rm_rf(File.dirname(output)) }
 
   describe "#call" do
+    context "with dedup groups" do
+      before do
+        now = Time.now.utc
+        db.create_table(:dedup_groups) do
+          primary_key :id
+          String :group_id, null: false, unique: true
+          DateTime :created_at, default: Sequel::CURRENT_TIMESTAMP
+          DateTime :updated_at, default: Sequel::CURRENT_TIMESTAMP
+        end
+        db.create_table(:dedup_group_members) do
+          primary_key :id
+          foreign_key :group_id, :dedup_groups, type: String, key: :group_id, null: false
+          String :run_id, null: false
+          String :source
+          String :flag
+          Float :confidence
+          unique [:group_id, :run_id]
+          index :run_id
+        end
+
+        # t1 and t2 are derived from same activity (group_a)
+        db[:activities].insert(
+          run_id: "dedup_t1", name: "Garmin Run", distance: 10000, moving_time: 3000,
+          sport_category: "run", start_date: "2024-06-15T01:00:00Z",
+          source: "garmin", created_at: now, updated_at: now
+        )
+        db[:activities].insert(
+          run_id: "dedup_t2", name: "Strava Run", distance: 10000, moving_time: 3000,
+          sport_category: "run", start_date: "2024-06-15T01:00:00Z",
+          source: "strava", created_at: now, updated_at: now
+        )
+        # t3 is standalone
+        db[:activities].insert(
+          run_id: "dedup_t3", name: "Solo Ride", distance: 30000, moving_time: 5400,
+          sport_category: "ride", start_date: "2024-07-01T01:00:00Z",
+          source: "garmin", created_at: now, updated_at: now
+        )
+        db[:dedup_groups].insert(group_id: "group_a", created_at: now, updated_at: now)
+        db[:dedup_group_members].multi_insert([
+          { group_id: "group_a", run_id: "dedup_t1", source: "garmin", flag: "derived", confidence: 0.95 },
+          { group_id: "group_a", run_id: "dedup_t2", source: "strava", flag: "derived", confidence: 0.95 },
+        ])
+      end
+
+      it "reports unique_activities in summary" do
+        stats_exporter.call
+        data = JSON.parse(File.read(output))
+        expect(data["summary"]["unique_activities"]).to eq(2)
+      end
+    end
+
     context "with mixed activities" do
       before do
         now = Time.now.utc

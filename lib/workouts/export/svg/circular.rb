@@ -6,11 +6,12 @@ module Workouts
           return "" unless poster.tracks&.any?
 
           lines = []
-          track_by_date = group_by_date
+          tracks = poster.tracks.reject(&:skip?)
+          track_by_date = group_by_date(tracks)
           length_range_by_date = compute_length_range(track_by_date)
           return "" if length_range_by_date.zero?
 
-          years_list = poster.tracks.map(&:year).uniq.sort
+          years_list = tracks.map(&:year).uniq.sort
           counts = compute_grid(years_list.size, size)
           return "" unless counts
 
@@ -117,9 +118,9 @@ module Workouts
           lines.join("\n")
         end
 
-        def group_by_date
+        def group_by_date(tracks = nil)
           h = {}
-          poster.tracks.each { |t| (h[t.date.to_s] ||= []) << t }
+          (tracks || poster.tracks).each { |t| (h[t.date.to_s] ||= []) << t }
           h
         end
 

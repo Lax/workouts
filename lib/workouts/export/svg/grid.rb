@@ -6,7 +6,7 @@ module Workouts
           return "" unless poster.tracks&.any?
 
           lines = []
-          tracks = poster.tracks.reverse
+          tracks = poster.tracks.reverse.reject(&:skip?)
           n = tracks.size
 
           sizes, counts = compute_grid(n, size)

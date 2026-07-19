@@ -18,7 +18,8 @@ module Workouts
           return "" unless poster.tracks&.any?
 
           lines = []
-          distance_by_month = compute_monthly_distances
+          tracks = poster.tracks.reject(&:skip?)
+          distance_by_month = compute_monthly_distances(tracks)
 
           cols = [1, (size[0] / size[1] * Math.sqrt(TOTAL_MONTHS)).ceil].max
           rows = (TOTAL_MONTHS.to_f / cols).ceil
@@ -70,9 +71,9 @@ module Workouts
 
         private
 
-        def compute_monthly_distances
+        def compute_monthly_distances(tracks = nil)
           h = Hash.new(0.0)
-          poster.tracks.each do |t|
+          (tracks || poster.tracks).each do |t|
             key = "#{t.year}-#{t.date.month}"
             h[key] += t.length
           end

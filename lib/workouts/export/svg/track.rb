@@ -25,11 +25,11 @@ module Workouts
         end
 
         def skip?
-          @duplicate_info.any? { |d| d["flag"] == "derived" }
+          @duplicate_info.any? { |d| d["flag"] == "derived" || d["flag"] == "duplicate" }
         end
 
         def conflict?
-          @duplicate_info.any? { |d| d["flag"] == "overlap" }
+          @duplicate_info.any? { |d| %w[overlap contained partial cross].include?(d["flag"]) }
         end
 
         def duplicate_source

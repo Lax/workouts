@@ -52,8 +52,17 @@ module Workouts
         cadences = rows.map { |r| r[:average_cadence] }.compact
         powers   = rows.map { |r| r[:average_power] }.compact
 
+        grouped_run_ids = if @db.table_exists?(:dedup_group_members)
+                            @db[:dedup_group_members].select_map(:run_id)
+                          else
+                            []
+                          end
+        unique = rows.reject { |a| grouped_run_ids.include?(a[:run_id]) }
+        unique_count = unique.size + (@db.table_exists?(:dedup_groups) ? @db[:dedup_groups].count : 0)
+
         {
           total_activities: rows.size,
+          unique_activities: unique_count,
           total_distance_km: total_dist / 1000.0,
           total_moving_time_h: total_time / 3600.0,
           total_elevation_gain_m: total_elev,
