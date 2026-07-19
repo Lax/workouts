@@ -73,12 +73,22 @@ module Workouts
       def classify_flag(a, b, score)
         if score >= 0.85
           "derived"
-        elsif @trajectory.duplicate?(a[:run_id], b[:run_id])
-          "duplicate"
         elsif score >= 0.15
-          "similar"
-        else
-          nil
+          traj_a = @trajectory.points(a[:run_id])
+          traj_b = @trajectory.points(b[:run_id])
+
+          if traj_a.nil? || traj_b.nil? || traj_a.size < 2 || traj_b.size < 2
+            "similar"
+          else
+            containment = @trajectory.containment_relation(traj_a, traj_b)
+            case containment
+            when :equivalent then "duplicate"
+            when :contained_a, :contained_b then "contained"
+            when :partial then "partial"
+            when :cross then "cross"
+            else "similar"
+            end
+          end
         end
       end
 

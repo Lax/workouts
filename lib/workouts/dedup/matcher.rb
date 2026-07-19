@@ -4,6 +4,12 @@ module Workouts
   module Dedup
     class Matcher
       WEIGHTS = { time: 0.35, distance: 0.35, duration: 0.15, category: 0.15 }.freeze
+      TRAJECTORY_WEIGHTS = {
+        dtw_similarity: 0.30,
+        overlap_score:  0.25,
+        hausdorff_score: 0.25,
+        distance_match: 0.20
+      }.freeze
 
       def self.effective_duration(act)
         [act[:moving_time].to_f, act[:elapsed_time].to_f].max
@@ -68,6 +74,16 @@ module Workouts
         diff = (d1 - d2).abs
         return 0.0 if diff > max * 0.15
         1.0 - diff / (max * 0.15)
+      end
+
+      def self.trajectory_score(scores)
+        return 0.0 if scores.nil? || scores.empty?
+        weighted = TRAJECTORY_WEIGHTS.sum do |metric, weight|
+          score = scores[metric]
+          next 0.0 unless score.is_a?(Numeric) && score >= 0.0 && score <= 1.0
+          score * weight
+        end
+        weighted.round(4)
       end
     end
   end

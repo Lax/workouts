@@ -53,4 +53,33 @@ RSpec.describe Workouts::Dedup::Matcher do
       expect(described_class.match(a, b)).to eq(0.0)
     end
   end
+
+  describe ".trajectory_score" do
+    it "returns weighted sum of provided scores" do
+      scores = { dtw_similarity: 1.0, overlap_score: 1.0, hausdorff_score: 1.0, distance_match: 1.0 }
+      expect(described_class.trajectory_score(scores)).to eq(1.0)
+    end
+
+    it "returns 0.0 for empty scores hash" do
+      expect(described_class.trajectory_score({})).to eq(0.0)
+    end
+
+    it "returns 0.0 for nil" do
+      expect(described_class.trajectory_score(nil)).to eq(0.0)
+    end
+
+    it "ignores invalid scores (non-numeric)" do
+      scores = { dtw_similarity: "bad", overlap_score: 1.0, hausdorff_score: 1.0, distance_match: 1.0 }
+      result = described_class.trajectory_score(scores)
+      expected = 0.0 * 0.30 + 1.0 * 0.25 + 1.0 * 0.25 + 1.0 * 0.20
+      expect(result).to eq(expected.round(4))
+    end
+
+    it "clamps out-of-range scores to 0.0 contribution" do
+      scores = { dtw_similarity: 2.0, overlap_score: 1.0, hausdorff_score: 1.0, distance_match: 1.0 }
+      result = described_class.trajectory_score(scores)
+      expected = 0.0 * 0.30 + 1.0 * 0.25 + 1.0 * 0.25 + 1.0 * 0.20
+      expect(result).to eq(expected.round(4))
+    end
+  end
 end
