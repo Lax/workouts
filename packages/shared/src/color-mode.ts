@@ -32,3 +32,25 @@ export function typeColor(type: string | null): string {
 export function activityColor(act: { average_speed?: number | null; type?: string | null }, mode: string): string {
   return mode === 'speed' ? speedColor(act.average_speed ?? null) : typeColor(act.type ?? null)
 }
+
+function hexToRgb(hex: string): [number, number, number] {
+  const h = hex.replace('#', '')
+  return [Number.parseInt(h.slice(0, 2), 16), Number.parseInt(h.slice(2, 4), 16), Number.parseInt(h.slice(4, 6), 16)]
+}
+
+function rgbToHex(r: number, g: number, b: number): string {
+  const clamp = (n: number) => Math.max(0, Math.min(255, Math.round(n)))
+  return `#${[r, g, b].map((c) => clamp(c).toString(16).padStart(2, '0')).join('')}`
+}
+
+export function tintColor(hex: string, amount: number, bgHex: string): string {
+  const [r, g, b] = hexToRgb(hex)
+  const [br, bg, bb] = hexToRgb(bgHex)
+  const targetR = 255 - br
+  const targetG = 255 - bg
+  const targetB = 255 - bb
+  const tr = r + (targetR - r) * amount
+  const tg = g + (targetG - g) * amount
+  const tb = b + (targetB - b) * amount
+  return rgbToHex(tr, tg, tb)
+}

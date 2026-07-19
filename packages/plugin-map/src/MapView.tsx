@@ -58,6 +58,7 @@ export function MapView({
 
   const polylineOptions: PolylineOptions = {
     colorMode,
+    colorScheme,
     hoveredActivityId,
     maxLines,
     fitOnChange: true,

@@ -1,5 +1,5 @@
 import type { Activity } from '@workouts/shared'
-import { activityColor } from '@workouts/shared'
+import { activityColor, tintColor } from '@workouts/shared'
 import L from 'leaflet'
 import { useEffect, useRef } from 'react'
 import { decodePolyline } from './polyline'
@@ -7,6 +7,7 @@ import type { MapInstance } from './useLeafletMap'
 
 export interface PolylineOptions {
   colorMode: 'type' | 'speed'
+  colorScheme?: 'light' | 'dark'
   hoveredActivityId?: string | null
   maxLines?: number
   fitOnChange?: boolean
@@ -57,6 +58,7 @@ export function useMapPolylines(mapRef: MapInstance, activities: Activity[], opt
 
   const {
     colorMode,
+    colorScheme = 'dark',
     hoveredActivityId = null,
     maxLines = 500,
     fitOnChange = true,
@@ -207,20 +209,21 @@ export function useMapPolylines(mapRef: MapInstance, activities: Activity[], opt
             s.tail = []
 
             if (traversed >= 12) {
+              const bgHex = colorScheme === 'light' ? '#FFFFFF' : '#000000'
               const trailLen = Math.floor(traversed * 0.25)
               const trailStart = traversed - trailLen
-              const segments = [
-                { start: 0, end: 0.4, op: 0.7, w: 5 },
-                { start: 0.4, end: 0.7, op: 0.5, w: 4 },
-                { start: 0.7, end: 0.9, op: 0.3, w: 3 },
-                { start: 0.9, end: 1.0, op: 0.15, w: 2 },
+              const segments: { start: number; end: number; tint: number; op: number; w: number }[] = [
+                { start: 0, end: 0.4, tint: 0.15, op: 0.85, w: 5 },
+                { start: 0.4, end: 0.7, tint: 0.35, op: 0.75, w: 4 },
+                { start: 0.7, end: 0.9, tint: 0.55, op: 0.55, w: 3 },
+                { start: 0.9, end: 1.0, tint: 0.75, op: 0.35, w: 2 },
               ]
               for (const seg of segments) {
                 const segStartIdx = trailStart + Math.floor(trailLen * seg.start)
                 const segEndIdx = trailStart + Math.floor(trailLen * seg.end)
                 if (segStartIdx < segEndIdx) {
                   const tline = L.polyline(points.slice(segStartIdx, segEndIdx), {
-                    color,
+                    color: tintColor(color, seg.tint, bgHex),
                     weight: seg.w,
                     opacity: seg.op,
                     smoothFactor: 1,
@@ -417,6 +420,7 @@ export function useMapPolylines(mapRef: MapInstance, activities: Activity[], opt
     mapRef.current,
     activities,
     colorMode,
+    colorScheme,
     maxLines,
     dashLines,
     showMarkers,
