@@ -189,6 +189,7 @@ export function SimpleLayout() {
               lightsOn={lightsOn}
               showLabels={showLabels}
               animate={!!selectedActivity}
+              selectedActivityId={selectedActivity?.run_id ?? null}
               initialScrollDisabled={true}
               attributionPosition="bottomleft"
               onActivityHover={setMapHoveredId}

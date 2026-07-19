@@ -11,6 +11,8 @@ interface OverviewMapProps {
   privacyMode?: boolean
   lightsOn?: boolean
   showLabels?: boolean
+  animate?: boolean
+  selectedActivityId?: string | null
   onActivityClick?: (activity: Activity) => void
   onActivityHover?: (activityId: string | null) => void
 }
@@ -25,6 +27,8 @@ export function OverviewMap({
   privacyMode,
   lightsOn,
   showLabels,
+  animate,
+  selectedActivityId,
   onActivityClick,
   onActivityHover,
 }: OverviewMapProps) {
@@ -39,6 +43,8 @@ export function OverviewMap({
       privacyMode={privacyMode}
       lightsOn={lightsOn}
       showLabels={showLabels}
+      animate={animate}
+      selectedActivityId={selectedActivityId}
       onActivityClick={onActivityClick}
       onActivityHover={onActivityHover}
     />
