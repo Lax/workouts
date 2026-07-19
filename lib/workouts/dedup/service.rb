@@ -21,7 +21,7 @@ module Workouts
       end
 
       def run
-        activities = activities_scope
+        activities = activities_scope.all
         return 0 if activities.size < 2
         puts "DedupService: scanning #{activities.size} activities" if @verbose
 

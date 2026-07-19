@@ -69,7 +69,7 @@ RSpec.describe Workouts::Dedup::Service do
         allow(db).to receive(:[]).with(:activities).and_return(acts)
         allow(acts).to receive(:where).and_return(acts)
         allow(acts).to receive(:order).with(:start_date).and_return(acts)
-        allow(acts).to receive(:size).and_return(0)
+        allow(acts).to receive(:all).and_return([])
 
         svc = described_class.new(db, incremental: true)
         expect(svc.run).to eq(0)
@@ -99,10 +99,10 @@ RSpec.describe Workouts::Dedup::Service do
         acts = double("activities_dataset")
         allow(db).to receive(:[]).with(:activities).and_return(acts)
         allow(acts).to receive(:where).and_return(acts)
-        allow(acts).to receive(:order).with(:start_date).and_return(activities)
+        allow(acts).to receive(:order).with(:start_date).and_return(acts)
+        allow(acts).to receive(:all).and_return(activities)
         allow(acts).to receive(:get).and_return(nil)
         allow(acts).to receive(:update).and_return(1)
-        allow(acts).to receive(:all).and_return(activities)
 
         dedup_groups = double("dedup_groups_dataset")
         allow(db).to receive(:[]).with(:dedup_groups).and_return(dedup_groups)
