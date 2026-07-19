@@ -75,7 +75,7 @@ RSpec.describe Workouts::Sync::XOSS do
         expect(rows.size).to eq(2)
         expect(rows.first[:run_id]).to eq("xoss_3001")
         expect(rows.first[:sport_category]).to eq("ride")
-        expect(rows.first[:start_date]).to eq("2025-10-31 06:29:33")
+        expect(rows.first[:start_date]).to eq("2025-10-31T06:29:33Z")
         expect(rows.first[:distance]).to eq(606.43)
         expect(rows.first[:elevation_gain]).to be_nil
       end

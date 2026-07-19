@@ -124,9 +124,9 @@ RSpec.describe Workouts::Sync::IGPSPORT do
       expect(attrs[:summary_polyline]).to eq("poly_abc")
     end
 
-    it "has start_date as formatted string" do
+    it "has start_date as iso8601 string" do
       expect(attrs[:start_date]).to be_a(String)
-      expect(attrs[:start_date]).to match(/\A\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\z/)
+      expect(attrs[:start_date]).to match(/\A\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(Z|\+)/)
     end
 
     it "reads HR from API when avgHrm present" do

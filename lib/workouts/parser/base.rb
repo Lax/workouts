@@ -129,7 +129,7 @@ module Workouts
 
       def format_time(t)
         return nil unless t
-        t.respond_to?(:iso8601) ? t.iso8601 : t.to_s
+        t.respond_to?(:iso8601) ? t.utc.iso8601 : t.to_s
       end
     end
   end

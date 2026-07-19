@@ -139,8 +139,8 @@ module Workouts
           elapsed_time: t > 0 ? t : nil,
           sport_category: type,
           sport_type: act["sport"].to_s,
-          start_date: start_t.strftime("%Y-%m-%d %H:%M:%S"),
-          start_date_local: start_t.strftime("%Y-%m-%d %H:%M:%S"),
+          start_date: start_t.iso8601,
+          start_date_local: start_t.iso8601,
           average_speed: (act["avg_speed"].to_f / 3.6).round(2).nonzero?,
           elevation_gain: act["elevation_gain"].to_f.nonzero?,
           source: "xingzhe"

@@ -5,6 +5,10 @@ module Workouts
     class Matcher
       WEIGHTS = { time: 0.35, distance: 0.35, duration: 0.15, category: 0.15 }.freeze
 
+      def self.effective_duration(act)
+        [act[:moving_time].to_f, act[:elapsed_time].to_f].max
+      end
+
       def self.match(a, b)
         t_diff = time_diff_abs(a[:start_date], b[:start_date])
         max_diff = [300, (a[:elapsed_time] || 0).to_i, (b[:elapsed_time] || 0).to_i].max
@@ -14,7 +18,7 @@ module Workouts
         d_score = distance_score(a[:distance].to_f, b[:distance].to_f)
         return 0.0 unless d_score
 
-        dur_score = duration_score(a[:moving_time].to_f, b[:moving_time].to_f)
+        dur_score = duration_score(effective_duration(a), effective_duration(b))
         cat_score = a[:sport_category] == b[:sport_category] ? 1.0 : -0.67
 
         result = t_score * WEIGHTS[:time] +

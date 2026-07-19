@@ -436,8 +436,8 @@ module Workouts
           elapsed_time: elapsed_time,
           sport_category: type,
           sport_type: type_str(detail["activityTypeDTO"]),
-          start_date: start_t&.strftime("%Y-%m-%d %H:%M:%S"),
-          start_date_local: start_t&.strftime("%Y-%m-%d %H:%M:%S"),
+          start_date: start_t&.utc&.iso8601,
+          start_date_local: start_t&.iso8601,
           location_country: detail["locationName"],
           summary_polyline: polyline,
           average_heartrate: summary["averageHR"]&.to_f,
@@ -456,7 +456,8 @@ module Workouts
 
       def parse_garmin_time(time_str)
         return nil unless time_str
-        Time.parse(time_str)
+        t = Time.parse(time_str)
+        t.utc? ? t : t.utc
       rescue
         nil
       end

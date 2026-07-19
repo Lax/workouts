@@ -145,25 +145,25 @@ RSpec.describe Workouts::Import::AppleHealth do
 
   describe "#generate_run_id" do
     it "produces an 11-char hex string" do
-      id = adapter.send(:generate_run_id, "Lax's Apple Watch", "2023-06-15 09:00:00 +0800", "2023-06-15 09:45:00 +0800")
+      id = adapter.send(:generate_run_id, "Lax's Apple Watch", "2023-06-15 09:00:00 +0800", "2023-06-15 09:00:00 +0800", "2023-06-15 09:45:00 +0800")
       expect(id).to match(/\A[0-9a-f]{11}\z/)
     end
 
     it "is deterministic" do
-      a = adapter.send(:generate_run_id, "Watch", "d1", "d2")
-      b = adapter.send(:generate_run_id, "Watch", "d1", "d2")
+      a = adapter.send(:generate_run_id, "Watch", "c1", "d1", "d2")
+      b = adapter.send(:generate_run_id, "Watch", "c1", "d1", "d2")
       expect(a).to eq(b)
     end
 
-    it "changes with different input" do
-      a = adapter.send(:generate_run_id, "Watch", "d1", "d2")
-      b = adapter.send(:generate_run_id, "Watch", "d1", "d3")
+    it "changes with different creation date" do
+      a = adapter.send(:generate_run_id, "Watch", "c1", "d1", "d2")
+      b = adapter.send(:generate_run_id, "Watch", "c2", "d1", "d2")
       expect(a).not_to eq(b)
     end
 
-    it "is timezone-agnostic — same activity different TZ produces same hash" do
-      a = adapter.send(:generate_run_id, "Watch", "2023-06-15 09:00:00 +0800", "2023-06-15 09:45:00 +0800")
-      b = adapter.send(:generate_run_id, "Watch", "2023-06-15 01:00:00 +0000", "2023-06-15 01:45:00 +0000")
+    it "is timezone-agnostic — same activity different TZ produces same base" do
+      a = adapter.send(:generate_run_id, "Watch", "2023-06-15 09:00:00 +0800", "2023-06-15 09:00:00 +0800", "2023-06-15 09:45:00 +0800")
+      b = adapter.send(:generate_run_id, "Watch", "2023-06-15 01:00:00 +0000", "2023-06-15 01:00:00 +0000", "2023-06-15 01:45:00 +0000")
       expect(a).to eq(b)
     end
   end

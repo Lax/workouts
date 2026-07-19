@@ -309,7 +309,8 @@ module Workouts
         duration_unit = workout["durationUnit"] || "min"
         return if duration.nil?
 
-        run_id = generate_run_id(source_name, start_date, end_date)
+        creation_date = workout["creationDate"] || start_date
+        run_id = generate_run_id(source_name, creation_date, start_date, end_date)
         return if existing_ids.include?("apple_health_#{run_id}")
 
         category = map_sport_type(workout_type)
@@ -335,7 +336,8 @@ module Workouts
           end_date: end_date,
           stats: stats,
           meta: meta,
-          route_paths: route_paths
+          route_paths: route_paths,
+          creation_date: creation_date
         }
       end
 
@@ -451,7 +453,7 @@ module Workouts
           sport_category: map_sport_type(workout_type),
           sport_type: workout_type,
           start_date: format_datetime(start_date),
-          start_date_local: meta["HKTimeZone"] ? format_datetime(start_date) : nil,
+          start_date_local: meta["HKTimeZone"] ? format_datetime(start_date, utc: false) : nil,
           summary_polyline: polyline,
           average_heartrate: hr_avg,
           max_heartrate: hr_max,
@@ -465,15 +467,17 @@ module Workouts
         attrs
       end
 
-      def format_datetime(str)
+      def format_datetime(str, utc: true)
         return nil unless str
-        Time.parse(str).strftime("%Y-%m-%d %H:%M:%S") rescue str
+        t = Time.parse(str) rescue nil
+        return str unless t
+        utc ? t.utc.iso8601 : t.iso8601
       end
 
       def compute_elapsed(start_str, end_str)
         return nil unless start_str && end_str
-        s = Time.parse(start_str) rescue nil
-        e = Time.parse(end_str) rescue nil
+        s = Time.parse(start_str).utc rescue nil
+        e = Time.parse(end_str).utc rescue nil
         return nil unless s && e
         (e - s).round
       end
@@ -517,10 +521,13 @@ module Workouts
         value.to_f / 100.0
       end
 
-      def generate_run_id(source_name, start_date, end_date)
+      def generate_run_id(source_name, creation_date, start_date, end_date)
         s = normalize_date(start_date)
         e = normalize_date(end_date)
-        Digest::MD5.hexdigest("#{source_name}|#{s}|#{e}")[0, 11]
+        c = normalize_date(creation_date)
+        base = Digest::MD5.hexdigest("#{source_name}|#{s}|#{e}")[0, 7]
+        disc = Digest::MD5.hexdigest("#{source_name}|#{c}|#{s}|#{e}")[0, 4]
+        "#{base}#{disc}"
       end
 
       def normalize_date(date_str)
