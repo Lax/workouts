@@ -1,73 +1,110 @@
+# frozen_string_literal: true
+
 require "time"
+require "json"
 require_relative "matcher"
 require_relative "trajectory"
+require_relative "group_consolidator"
+require_relative "log_writer"
 
 module Workouts
   module Dedup
     class Service
-      def initialize(db)
+      def initialize(db, incremental: false, log_path: nil, verbose: false)
         @db = db
         @trajectory = Trajectory.new(db)
+        @incremental = incremental
+        @log_path = log_path
+        @verbose = verbose
+        @updates = {}
+        @matched_pairs = []
       end
 
       def run
-        activities = @db[:activities]
-          .where(Sequel.lit("distance > 100"))
-          .order(:start_date)
-          .all
+        activities = activities_scope
         return 0 if activities.size < 2
+        puts "DedupService: scanning #{activities.size} activities" if @verbose
 
-        @updates = {}
+        start_time = Time.now.utc
         matched = 0
 
-        by_date = activities.group_by { |a|
-          t = parse_time(a[:start_date])
-          t ? t.to_date : nil
-        }
-        by_date.delete(nil)
+        activities.each_with_index do |a, i|
+          a_start = parse_time(a[:start_date])
+          next unless a_start
+          a_range = activity_range(a)
 
-        by_date.each_value do |group|
-          next if group.size < 2
+          (i + 1...activities.size).each do |j|
+            b = activities[j]
+            b_start = parse_time(b[:start_date])
+            next unless b_start
+            break if b_start > (a_range[:end] + 86400)
 
-          group.each_with_index do |a, i|
-            a_range = activity_range(a)
-            next unless a_range
+            score = Matcher.match(a, b)
+            next unless score && score >= 0.15
 
-            (i + 1...group.size).each do |j|
-              b = group[j]
-              b_start = parse_time(b[:start_date])
-              break unless b_start
-              break if b_start > a_range[:end]
+            flag = classify_flag(a, b, score)
+            next unless flag
 
-              score = Matcher.match(a, b)
-              next unless score >= 0.15
-
-              flag = classify_flag(a, b, score)
-              append_info(a[:run_id], b[:source], b[:run_id], score, flag)
-              append_info(b[:run_id], a[:source], a[:run_id], score, flag)
-              matched += 1
-            end
+            append_info(a[:run_id], b[:source], b[:run_id], score, flag)
+            append_info(b[:run_id], a[:source], a[:run_id], score, flag)
+            @matched_pairs << { a: a, b: b, score: score, flag: flag }
+            matched += 1
           end
         end
 
         flush_updates
+
+        consolidate_groups if matched > 0
+
+        elapsed = Time.now.utc - start_time
+
+        if @log_path
+          log_stats = {
+            scanned: activities.size,
+            compared: @matched_pairs.size,
+            matched: matched,
+            by_flag: @matched_pairs.group_by { |mp| mp[:flag] }.transform_values(&:size)
+          }
+          LogWriter.new(@log_path).write(
+            stats: log_stats,
+            matches: @matched_pairs.map.with_index do |mp, idx|
+              {
+                id: idx + 1,
+                a: { run_id: mp[:a][:run_id], source: mp[:a][:source] },
+                b: { run_id: mp[:b][:run_id], source: mp[:b][:source] },
+                confidence: mp[:score],
+                flag: mp[:flag]
+              }
+            end,
+            elapsed: elapsed
+          )
+        end
+
+        puts "DedupService: #{matched} matches in #{elapsed.round(1)}s" if @verbose
         matched
       end
 
       private
 
+      def activities_scope
+        base = @db[:activities].where(Sequel.lit("distance > 100")).order(:start_date)
+        return base unless @incremental
+        base.where(Sequel.lit("run_id NOT IN (SELECT run_id FROM dedup_group_members)"))
+      end
+
       def parse_time(val)
         return nil unless val
-        Time.parse(val.to_s)
+        t = Time.parse(val.to_s)
+        t.utc? ? t : t.utc
       rescue
         nil
       end
 
       def activity_range(activity)
-        t = parse_time(activity[:start_date])
-        return nil unless t
-        elapsed = activity[:elapsed_time] || activity[:moving_time] || 0
-        { start: t, end: t + elapsed.to_i }
+        duration = [activity[:elapsed_time].to_i, activity[:moving_time].to_i].max
+        duration = 3600 if duration <= 0
+        start_t = parse_time(activity[:start_date])
+        { start: start_t, end: start_t + duration }
       end
 
       def classify_flag(a, b, score)
@@ -125,6 +162,45 @@ module Workouts
         existing.each { |e| by_run_id[e["run_id"]] = e }
         new_entries.each { |e| by_run_id[e["run_id"]] = e }
         by_run_id.values
+      end
+
+      def consolidate_groups
+        return if @matched_pairs.empty?
+
+        consolidator = GroupConsolidator.new
+        groups = consolidator.consolidate(@matched_pairs)
+
+        groups.each do |group_id, run_ids|
+          members = @db[:activities].where(run_id: run_ids).all
+          write_dedup_group(group_id, members)
+        end
+      end
+
+      def write_dedup_group(group_id, members)
+        now = Time.now.utc
+        @db[:dedup_groups].insert_conflict(target: :group_id).insert(
+          group_id: group_id, created_at: now, updated_at: now
+        )
+
+        best = Hash.new { |h, k| h[k] = { confidence: 0.0, flag: nil } }
+        @matched_pairs.each do |mp|
+          [mp[:a], mp[:b]].each do |act|
+            if mp[:score] > best[act[:run_id]][:confidence]
+              best[act[:run_id]] = { confidence: mp[:score], flag: mp[:flag] }
+            end
+          end
+        end
+
+        members.each do |m|
+          entry = best[m[:run_id]]
+          @db[:dedup_group_members].insert_conflict(target: [:group_id, :run_id]).insert(
+            group_id: group_id,
+            run_id: m[:run_id],
+            source: m[:source],
+            flag: entry[:flag],
+            confidence: entry[:confidence]
+          )
+        end
       end
     end
   end

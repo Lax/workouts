@@ -61,4 +61,63 @@ RSpec.describe Workouts::Dedup::Service do
       expect(service.send(:classify_flag, a, b, 0.14)).to be_nil
     end
   end
+
+  describe "#run" do
+    context "incremental mode" do
+      it "skips already-grouped records" do
+        acts = double("activities_dataset")
+        allow(db).to receive(:[]).with(:activities).and_return(acts)
+        allow(acts).to receive(:where).and_return(acts)
+        allow(acts).to receive(:order).with(:start_date).and_return(acts)
+        allow(acts).to receive(:size).and_return(0)
+
+        svc = described_class.new(db, incremental: true)
+        expect(svc.run).to eq(0)
+      end
+    end
+
+    context "group writing" do
+      let(:activities) do
+        base = Time.now.utc
+        [
+          { run_id: "garmin_1", source: "garmin", start_date: base.iso8601,
+            distance: 5000, elapsed_time: 1800, moving_time: 1700,
+            sport_category: "run", sport_type: "road_running" },
+          { run_id: "strava_2", source: "strava", start_date: (base + 60).iso8601,
+            distance: 5100, elapsed_time: 1750, moving_time: 1680,
+            sport_category: "run", sport_type: "run" }
+        ]
+      end
+
+      it "writes dedup_groups when matches found" do
+        allow(trajectory).to receive(:points).and_return(
+          [{ "latitude" => 39.0, "longitude" => 116.0 }] * 5,
+          [{ "latitude" => 39.0, "longitude" => 116.0 }] * 5
+        )
+        allow(trajectory).to receive(:containment_relation).and_return(:equivalent)
+
+        acts = double("activities_dataset")
+        allow(db).to receive(:[]).with(:activities).and_return(acts)
+        allow(acts).to receive(:where).and_return(acts)
+        allow(acts).to receive(:order).with(:start_date).and_return(activities)
+        allow(acts).to receive(:get).and_return(nil)
+        allow(acts).to receive(:update).and_return(1)
+        allow(acts).to receive(:all).and_return(activities)
+
+        dedup_groups = double("dedup_groups_dataset")
+        allow(db).to receive(:[]).with(:dedup_groups).and_return(dedup_groups)
+        allow(dedup_groups).to receive(:insert_conflict).and_return(dedup_groups)
+        allow(dedup_groups).to receive(:insert).and_return(1)
+
+        dedup_members = double("dedup_members_dataset")
+        allow(db).to receive(:[]).with(:dedup_group_members).and_return(dedup_members)
+        allow(dedup_members).to receive(:insert_conflict).and_return(dedup_members)
+        allow(dedup_members).to receive(:insert).and_return(1)
+
+        svc = described_class.new(db)
+        count = svc.run
+        expect(count).to be > 0
+      end
+    end
+  end
 end
