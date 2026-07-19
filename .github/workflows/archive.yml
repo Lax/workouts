@@ -1,4 +1,4 @@
-name: Archive Raw Data
+name: Archive Data & Cache
 
 on:
   schedule:
@@ -82,4 +82,60 @@ jobs:
 
           git -c user.name=workouts-bot -c user.email=bot@workouts \
             commit -m "archive($SRC): $(date +%Y-%m-%d)"
+          git push origin "HEAD:$BRANCH"
+
+  archive-db:
+    runs-on: ${{ vars.RUNNER_LABEL || 'ubuntu-latest' }}
+    permissions:
+      contents: write
+    concurrency:
+      group: archive-db
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Configure git auth
+        run: |
+          git config --add http.https://github.com/.extraheader \
+            "AUTHORIZATION: basic $(printf '%s:' \
+              "${{ secrets.WORKOUTS_SYNC_PAT }}" | base64 -w0)"
+
+      - name: Ensure branch exists
+        env:
+          BRANCH: _/workouts-db
+        run: |
+          if git ls-remote --exit-code --heads origin "refs/heads/$BRANCH" 2>/dev/null; then
+            echo "branch exists"
+          else
+            EMPTY_TREE=$(git hash-object -t tree --stdin -w < /dev/null)
+            COMMIT=$(git -c user.name=workouts-bot -c user.email=bot@workouts \
+              commit-tree -m "chore: init archive branch $BRANCH" "$EMPTY_TREE")
+            git push origin "$COMMIT:refs/heads/$BRANCH"
+          fi
+
+      - name: Checkout archive branch
+        env:
+          BRANCH: _/workouts-db
+        run: |
+          git fetch origin "$BRANCH"
+          git checkout "$BRANCH"
+
+      - name: Restore DB cache
+        uses: actions/cache/restore@v4
+        with:
+          path: data/workouts.db
+          key: workouts-db-v1-${{ hashFiles('db/migrations/*.rb') }}-${{ github.run_id }}
+          restore-keys: workouts-db-v1-
+
+      - name: Commit & push
+        env:
+          BRANCH: _/workouts-db
+        run: |
+          set -euo pipefail
+          git add -f -A "data/workouts.db" 2>/dev/null || true
+          git diff --cached --quiet && echo "no changes" && exit 0
+          git -c user.name=workouts-bot -c user.email=bot@workouts \
+            commit -m "archive(db): $(date +%Y-%m-%d)"
           git push origin "HEAD:$BRANCH"
