@@ -2,6 +2,7 @@ require "base64"
 require "zlib"
 require "openssl"
 require "time"
+require "tzinfo"
 
 module Workouts
   module Sync
@@ -252,6 +253,24 @@ module Workouts
         end
       end
 
+      def tz_resolver
+        @tz_resolver ||= Workouts::Timezone::Resolver.new({})
+      end
+
+      # Resolve local time from first WGS84 GPS point. Falls back to UTC
+      # when no GPS data is available or resolution fails.
+      def local_time_from_gps(start_utc, wgs_points)
+        return start_utc.iso8601 unless wgs_points&.any?
+
+        lat, lng = wgs_points.first[0..1]
+        tz_string = tz_resolver.resolve(lat, lng)
+        tz = TZInfo::Timezone.get(tz_string)
+        tz.utc_to_local(start_utc).iso8601
+      rescue => e
+        warn "Keep: timezone resolution failed: #{e.message}"
+        start_utc.iso8601
+      end
+
       def build_activity_from_wgs(run_data, wgs_points)
         keep_id = extract_id(run_data["id"])
         return nil unless keep_id
@@ -293,7 +312,7 @@ module Workouts
           sport_category: TYPE_MAP[data_type] || "other",
           sport_type: data_type,
           start_date: start_date.iso8601,
-          start_date_local: start_date.iso8601,
+          start_date_local: local_time_from_gps(start_date, wgs_points),
           location_country: run_data["region"],
           summary_polyline: polyline_str,
           average_heartrate: avg_hr&.round(1),

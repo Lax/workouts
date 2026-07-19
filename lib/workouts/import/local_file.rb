@@ -3,6 +3,7 @@ require "fileutils"
 require "json"
 require "nokogiri"
 require "securerandom"
+require "tzinfo"
 
 module Workouts
   module Import
@@ -22,6 +23,7 @@ module Workouts
         super(config:, db:, activity_filter:, privacy:, time_budget:)
         @sources = sources
         @sport_override = sport_override
+        @timezone_resolver = Workouts::Timezone::Resolver.new(config)
       end
 
       def call
@@ -128,6 +130,13 @@ module Workouts
 
             coords = l2_points.map { |p| [p[0], p[1]] }
             activity[:summary_polyline] = Geo::Polyline.encode(coords)
+
+            # Resolve timezone from first GPS point and patch start_date_local
+            first_pt = l2_points.first
+            tz = @timezone_resolver.resolve(first_pt[0], first_pt[1])
+            if tz && activity[:start_date]
+              activity[:start_date_local] = utc_to_local(activity[:start_date], tz)
+            end
           end
 
           upsert_activity(activity)
@@ -227,6 +236,17 @@ module Workouts
 
       def existing_run_id?(platform_id)
         !@db[:activities].where(run_id: platform_id).empty?
+      end
+
+      def utc_to_local(utc_iso8601, tz_name)
+        return utc_iso8601 unless utc_iso8601 && tz_name
+        t = Time.parse(utc_iso8601)
+        return utc_iso8601 unless t.utc?
+        tz = TZInfo::Timezone.get(tz_name)
+        local = tz.utc_to_local(t)
+        local.iso8601
+      rescue TZInfo::InvalidTimezoneIdentifier, ArgumentError
+        utc_iso8601
       end
     end
   end

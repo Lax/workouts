@@ -133,6 +133,36 @@ RSpec.describe Workouts::Sync::XOSS do
     end
   end
 
+  describe "#resolve_local_time" do
+    before do
+      xoss.instance_variable_set(:@auth_headers, { "Authorization" => "Bearer test" })
+    end
+
+    it "returns local time with offset when GPS points available" do
+      stub_finder = double("TimezoneFinder")
+      allow(stub_finder).to receive(:timezone_at).with(lat: 36.76, lng: 117.0).and_return("Asia/Shanghai")
+      xoss.instance_variable_set(:@tz_resolver,
+        Workouts::Timezone::Resolver.new({}, finder: stub_finder))
+
+      start_utc = Time.parse("2025-10-31T06:29:33Z")
+      wgs = [{ "positionLat" => 36.76, "positionLong" => 117.0 }]
+      result = xoss.send(:resolve_local_time, start_utc, wgs)
+      expect(result).to eq("2025-10-31T14:29:33+08:00")
+    end
+
+    it "returns UTC when no GPS points" do
+      start_utc = Time.parse("2025-10-31T06:29:33Z")
+      result = xoss.send(:resolve_local_time, start_utc, [])
+      expect(result).to eq("2025-10-31T06:29:33Z")
+    end
+
+    it "returns UTC when no FIT data (no wgs_points)" do
+      start_utc = Time.parse("2025-10-31T06:29:33Z")
+      result = xoss.send(:resolve_local_time, start_utc, nil)
+      expect(result).to eq("2025-10-31T06:29:33Z")
+    end
+  end
+
   describe "#process_activity" do
     let(:activity) { activity_list_response.dig("data", "results", 0) }
 
@@ -169,6 +199,28 @@ RSpec.describe Workouts::Sync::XOSS do
       bare = activity.merge("fit_file_hash" => "")
       expect(xoss).not_to receive(:download_fit)
       xoss.send(:process_activity, bare)
+    end
+
+    it "produces start_date_local with timezone offset when FIT has GPS" do
+      stub_finder = double("TimezoneFinder")
+      allow(stub_finder).to receive(:timezone_at).and_return("Asia/Shanghai")
+      xoss.instance_variable_set(:@tz_resolver,
+        Workouts::Timezone::Resolver.new({}, finder: stub_finder))
+
+      expect(xoss).to receive(:download_fit).with("3001").and_return(fit_bytes)
+      expect(xoss).to receive(:write_raw).with(fit_bytes, "3001")
+      allow(Workouts::FIT::Decoder).to receive(:decode).and_return(wgs_points)
+      result = xoss.send(:process_activity, activity)
+
+      expect(result[:start_date]).to eq("2025-10-31T06:29:33Z")  # UTC
+      expect(result[:start_date_local]).to eq("2025-10-31T14:29:33+08:00")  # UTC+8
+    end
+
+    it "keeps start_date_local as UTC when no FIT data" do
+      bare = activity.reject { |k| k == "fit_file_hash" }
+      result = xoss.send(:process_activity, bare)
+      expect(result[:start_date]).to eq("2025-10-31T06:29:33Z")
+      expect(result[:start_date_local]).to eq("2025-10-31T06:29:33Z")
     end
   end
 

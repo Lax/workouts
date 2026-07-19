@@ -32,7 +32,8 @@ export function DetailPanel() {
             </button>
           </div>
           <div className="detail-meta">
-            {(act.start_date || act.source) && `${act.start_date?.slice(0, 10) ?? ''}${act.source ? ` · ${act.source}` : ''}`}
+            {(act.start_date_local || act.start_date || act.source) &&
+              `${(act.start_date_local ?? act.start_date)?.slice(0, 10) ?? ''}${act.source ? ` · ${act.source}` : ''}`}
           </div>
           <div className="detail-grid">
             <Stat label="Distance" value={act.distance ? `${(act.distance / 1000).toFixed(2)} km` : '—'} />

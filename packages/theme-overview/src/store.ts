@@ -54,7 +54,8 @@ const defaultFilters: Filters = { type: '', source: '', distanceMin: null, dista
 function computeYears(acts: Activity[]): number[] {
   const s = new Set<number>()
   for (const a of acts) {
-    if (a.start_date) s.add(new Date(a.start_date).getFullYear())
+    const dt = a.start_date_local ?? a.start_date
+    if (dt) s.add(new Date(dt).getFullYear())
   }
   return Array.from(s).sort((a, b) => b - a)
 }
@@ -86,12 +87,16 @@ function filterActivities(
   selectedMonth: number | null,
 ): Activity[] {
   let r = [...acts]
-  if (selectedYear !== null) r = r.filter((a) => a.start_date && new Date(a.start_date).getFullYear() === selectedYear)
+  if (selectedYear !== null)
+    r = r.filter((a) => {
+      const dt = a.start_date_local ?? a.start_date
+      return dt && new Date(dt).getFullYear() === selectedYear
+    })
   if (selectedMonth !== null && selectedYear !== null)
-    r = r.filter(
-      (a) =>
-        a.start_date && new Date(a.start_date).getFullYear() === selectedYear && new Date(a.start_date).getMonth() + 1 === selectedMonth,
-    )
+    r = r.filter((a) => {
+      const dt = a.start_date_local ?? a.start_date
+      return dt && new Date(dt).getFullYear() === selectedYear && new Date(dt).getMonth() + 1 === selectedMonth
+    })
   if (filters.type) r = r.filter((a) => (a.sport_category || a.type || 'other') === filters.type)
   if (filters.source) r = r.filter((a) => a.source === filters.source)
   if (filters.distanceMin !== null) {

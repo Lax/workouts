@@ -2,6 +2,7 @@ require "digest"
 require "fileutils"
 require "nokogiri"
 require "time"
+require "tzinfo"
 require "zip"
 require_relative "../sync/base"
 
@@ -27,6 +28,7 @@ module Workouts
         @heart_rate_index = nil
         @heart_rate_by_date = nil
         @skip_patterns = load_skip_sources
+        @timezone_resolver = Workouts::Timezone::Resolver.new(config)
       end
 
       def before_call
@@ -194,6 +196,16 @@ module Workouts
                             workout_type, start_date, end_date, duration, duration_unit,
                             hr_avg, hr_max)
         attrs[:title] = title
+
+        # Resolve timezone from GPS when HKTimeZone metadata is missing
+        if attrs[:start_date_local].nil? && l2_points&.any?
+          first_pt = l2_points.first
+          tz = @timezone_resolver.resolve(first_pt[:lat], first_pt[:lng])
+          if tz && attrs[:start_date]
+            attrs[:start_date_local] = apple_utc_to_local(attrs[:start_date], tz)
+          end
+        end
+
         upsert_activity(attrs)
         attrs
       end
@@ -563,6 +575,17 @@ module Workouts
           total += gain if gain > 0
         end
         total
+      end
+
+      def apple_utc_to_local(utc_iso8601, tz_name)
+        return utc_iso8601 unless utc_iso8601 && tz_name
+        t = Time.parse(utc_iso8601)
+        return utc_iso8601 unless t.utc?
+        tz = TZInfo::Timezone.get(tz_name)
+        local = tz.utc_to_local(t)
+        local.iso8601
+      rescue TZInfo::InvalidTimezoneIdentifier, ArgumentError
+        utc_iso8601
       end
     end
   end

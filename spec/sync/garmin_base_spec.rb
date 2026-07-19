@@ -223,6 +223,59 @@ RSpec.describe Workouts::Sync::GarminBase do
     end
   end
 
+  describe "#resolve_local_time" do
+    subject(:adapter) { stub_adapter }
+    let(:tmpdir) { Dir.mktmpdir }
+    let(:std_dir) { File.join(tmpdir, "std") }
+    let(:activity_id) { "9999" }
+
+    before do
+      allow(adapter).to receive(:std_dir).and_return(std_dir)
+      FileUtils.mkdir_p(std_dir)
+
+      stub_finder = double("TimezoneFinder")
+      allow(stub_finder).to receive(:timezone_at).with(lat: 31.23, lng: 121.47).and_return("Asia/Shanghai")
+      allow(stub_finder).to receive(:timezone_at).with(lat: 40.7128, lng: -74.006).and_return("America/New_York")
+      adapter.instance_variable_set(:@tz_resolver,
+        Workouts::Timezone::Resolver.new({}, finder: stub_finder))
+    end
+
+    after { FileUtils.rm_rf(tmpdir) }
+
+    it "resolves local time from L2 file coordinates" do
+      l2 = [{ "positionLat" => 31.23, "positionLong" => 121.47, "timestamp" => "2025-06-01T01:00:00Z" }]
+      File.write(File.join(std_dir, "#{activity_id}.json"), JSON.generate(l2))
+
+      start_utc = Time.parse("2025-06-01T01:00:00Z")
+      result = adapter.send(:resolve_local_time, start_utc, activity_id, nil)
+      expect(result.iso8601).to eq("2025-06-01T09:00:00+08:00")
+    end
+
+    it "falls back to polyline when no L2 file" do
+      polyline = Workouts::Geo::Polyline.encode([[40.7128, -74.006]])
+      start_utc = Time.parse("2025-06-01T12:00:00Z")
+      result = adapter.send(:resolve_local_time, start_utc, activity_id, polyline)
+      expect(result.iso8601).to eq("2025-06-01T08:00:00-04:00")
+    end
+
+    it "falls back to default timezone when no GPS data" do
+      start_utc = Time.parse("2025-06-01T12:00:00Z")
+      result = adapter.send(:resolve_local_time, start_utc, activity_id, nil)
+      # Default is Asia/Shanghai (+08:00) since no GPS data
+      expect(result.iso8601).to eq("2025-06-01T20:00:00+08:00")
+    end
+
+    it "does not modify start_date (remains UTC with Z)" do
+      l2 = [{ "positionLat" => 31.23, "positionLong" => 121.47 }]
+      File.write(File.join(std_dir, "#{activity_id}.json"), JSON.generate(l2))
+
+      start_utc = Time.parse("2025-06-01T01:00:00Z")
+      adapter.send(:resolve_local_time, start_utc, activity_id, nil)
+      expect(start_utc.utc?).to be true
+      expect(start_utc.iso8601).to eq("2025-06-01T01:00:00Z")
+    end
+  end
+
   describe "#access_token_valid?" do
     subject(:adapter) { stub_adapter }
 

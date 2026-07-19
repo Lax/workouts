@@ -5,8 +5,9 @@ import type { EChartsOption } from 'echarts'
 export function buildMonthlyBarOption(activities: Activity[]): EChartsOption {
   const monthMap = new Map<string, number>()
   for (const a of activities) {
-    if (!a.start_date || !a.distance) continue
-    const key = a.start_date.slice(0, 7)
+    const dt = a.start_date_local ?? a.start_date
+    if (!dt || !a.distance) continue
+    const key = dt.slice(0, 7)
     monthMap.set(key, (monthMap.get(key) || 0) + a.distance / 1000)
   }
   const sorted = Array.from(monthMap.entries()).sort(([a], [b]) => a.localeCompare(b))

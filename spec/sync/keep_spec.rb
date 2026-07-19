@@ -138,4 +138,70 @@ RSpec.describe Workouts::Sync::Keep do
       expect(keep.send(:find_nearest_hr, bad_hr, 100, start_time)).to be_nil
     end
   end
+
+  describe "#local_time_from_gps" do
+    it "returns local time with offset when GPS points available" do
+      stub_finder = double("TimezoneFinder")
+      allow(stub_finder).to receive(:timezone_at).with(lat: 31.23, lng: 121.47).and_return("Asia/Shanghai")
+      keep.instance_variable_set(:@tz_resolver,
+        Workouts::Timezone::Resolver.new({}, finder: stub_finder))
+
+      start_utc = Time.parse("2025-06-01T01:00:00Z")
+      wgs = [[31.23, 121.47, 10.0, nil, nil]]
+      result = keep.send(:local_time_from_gps, start_utc, wgs)
+      expect(result).to eq("2025-06-01T09:00:00+08:00")
+    end
+
+    it "returns UTC time when no GPS points" do
+      start_utc = Time.parse("2025-06-01T01:00:00Z")
+      result = keep.send(:local_time_from_gps, start_utc, [])
+      expect(result).to eq("2025-06-01T01:00:00Z")
+    end
+
+    it "returns UTC time when wgs_points is nil" do
+      start_utc = Time.parse("2025-06-01T01:00:00Z")
+      result = keep.send(:local_time_from_gps, start_utc, nil)
+      expect(result).to eq("2025-06-01T01:00:00Z")
+    end
+  end
+
+  describe "#build_activity_from_wgs" do
+    let(:run_data) do
+      { "id" => "test_123_rn", "startTime" => 1_718_208_000_000,
+        "endTime" => 1_718_208_000_000 + 3600_000,
+        "duration" => 3540, "dataType" => "outdoorRunning",
+        "distance" => 5000, "elevation" => 50,
+        "region" => "Shanghai" }
+    end
+
+    it "produces start_date_local with timezone offset when GPS available" do
+      stub_finder = double("TimezoneFinder")
+      allow(stub_finder).to receive(:timezone_at).with(lat: 31.23, lng: 121.47).and_return("Asia/Shanghai")
+      keep.instance_variable_set(:@tz_resolver,
+        Workouts::Timezone::Resolver.new({}, finder: stub_finder))
+
+      wgs = [[31.23, 121.47, 10.0, nil, nil]]
+      result = keep.send(:build_activity_from_wgs, run_data, wgs)
+      expect(result[:start_date]).to eq("2024-06-12T16:00:00Z")       # UTC
+      expect(result[:start_date_local]).to eq("2024-06-13T00:00:00+08:00")  # UTC+8
+    end
+
+    it "keeps start_date as UTC even when GPS available" do
+      stub_finder = double("TimezoneFinder")
+      allow(stub_finder).to receive(:timezone_at).and_return("Asia/Shanghai")
+      keep.instance_variable_set(:@tz_resolver,
+        Workouts::Timezone::Resolver.new({}, finder: stub_finder))
+
+      wgs = [[31.23, 121.47, 10.0, nil, nil]]
+      result = keep.send(:build_activity_from_wgs, run_data, wgs)
+      expect(result[:start_date]).to match(/Z\z/)  # Ends with Z (UTC)
+      expect(result[:start_date]).not_to match(/[+-]\d{2}:\d{2}\z/)  # No offset
+    end
+
+    it "falls back to UTC when no GPS points" do
+      result = keep.send(:build_activity_from_wgs, run_data, [])
+      expect(result[:start_date]).to eq("2024-06-12T16:00:00Z")
+      expect(result[:start_date_local]).to eq("2024-06-12T16:00:00Z")
+    end
+  end
 end

@@ -73,7 +73,7 @@ module Workouts
         end
 
         def collect_years(activities)
-          years = activities.map { |a| a[:start_date] && a[:start_date][0..3].to_i }.compact.uniq.sort
+          years = activities.map { |a| a[:start_date_local] && a[:start_date_local][0..3].to_i }.compact.uniq.sort
           years = [@year.to_i] if @year && @year != "all"
           years
         end
@@ -82,7 +82,7 @@ module Workouts
           min_dist_m = @min_distance * 1000
 
           activities.filter_map do |a|
-            start_date = a[:start_date]
+            start_date = a[:start_date_local] || a[:start_date]
             next unless start_date
 
             year = start_date[0..3].to_i

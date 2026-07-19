@@ -3,6 +3,7 @@
 require_relative "base"
 require "fileutils"
 require "openssl"
+require "tzinfo"
 
 module Workouts
   module Sync
@@ -126,6 +127,24 @@ module Workouts
         JSON.parse(resp.body).dig("data", "data")
       end
 
+      def tz_resolver
+        @tz_resolver ||= Workouts::Timezone::Resolver.new({})
+      end
+
+      def resolve_local_time(start_utc, pts)
+        return start_utc.iso8601 unless pts&.any?
+
+        lat, lng = pts.first
+        return start_utc.iso8601 unless lat && lng
+
+        tz_string = tz_resolver.resolve(lat, lng)
+        tz = TZInfo::Timezone.get(tz_string)
+        tz.utc_to_local(start_utc).iso8601
+      rescue => e
+        warn "XingZhe: timezone resolution failed: #{e.message}"
+        start_utc.iso8601
+      end
+
       def process_activity(act, type)
         aid = act["id"].to_s
         start_t = Time.at(act["start_time"] / 1000.0).utc rescue nil
@@ -146,6 +165,7 @@ module Workouts
           source: "xingzhe"
         }
 
+        pts = nil
         stream = fetch_stream(aid)
         if stream
           write_raw(stream, aid)
@@ -160,6 +180,8 @@ module Workouts
           pts = segments.map { |s| [s["latitude"], s["longitude"]] }
           attrs[:summary_polyline] = Geo::Polyline.encode(pts) if pts.size >= 2
         end
+
+        attrs[:start_date_local] = resolve_local_time(start_t, pts)
 
         upsert_activity(attrs)
         attrs

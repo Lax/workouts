@@ -117,7 +117,7 @@ module Workouts
           sport_category: data[:sport_category] || default_sport,
           sport_type: data[:sport_type],
           start_date: format_time(data[:start_date]),
-          start_date_local: format_time(data[:start_date_local]),
+          start_date_local: format_time_local(data[:start_date_local]),
           location_country: data[:location_country],
           summary_polyline: data[:summary_polyline],
           average_heartrate: data[:average_heartrate]&.round(1),
@@ -129,7 +129,12 @@ module Workouts
 
       def format_time(t)
         return nil unless t
-        t.respond_to?(:iso8601) ? t.utc.iso8601 : t.to_s
+        t.respond_to?(:iso8601) ? t.getutc.iso8601 : t.to_s
+      end
+
+      def format_time_local(t)
+        return nil unless t
+        t.respond_to?(:iso8601) ? t.iso8601 : t.to_s
       end
     end
   end

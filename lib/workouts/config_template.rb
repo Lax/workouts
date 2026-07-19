@@ -64,7 +64,7 @@ module Workouts
         system:
           units: metric
           log_level: info
-          timezone: UTC
+          timezone: Asia/Shanghai
       YAML
     end
   end

@@ -153,7 +153,7 @@ export function ActivityList() {
                     {act.name || 'Untitled'}
                     <span className="badge">{srcBadge(act.source)}</span>
                   </span>
-                  <span className="date">{formatDate(act.start_date)}</span>
+                  <span className="date">{formatDate(act.start_date_local ?? act.start_date)}</span>
                 </div>
                 <div className="metrics">
                   <span className="dist">{formatDistance(act.distance)}</span>

@@ -387,6 +387,68 @@ RSpec.describe Workouts::Sync::XingZhe do
     end
   end
 
+  describe "#resolve_local_time" do
+    it "returns local time with offset when GPS points available" do
+      stub_finder = double("TimezoneFinder")
+      allow(stub_finder).to receive(:timezone_at).with(lat: 40.0, lng: 116.0).and_return("Asia/Shanghai")
+      xz.instance_variable_set(:@tz_resolver,
+        Workouts::Timezone::Resolver.new({}, finder: stub_finder))
+
+      start_utc = Time.parse("2025-06-01T01:00:00Z")
+      pts = [[40.0, 116.0]]
+      result = xz.send(:resolve_local_time, start_utc, pts)
+      expect(result).to eq("2025-06-01T09:00:00+08:00")
+    end
+
+    it "returns UTC when no GPS points" do
+      start_utc = Time.parse("2025-06-01T01:00:00Z")
+      result = xz.send(:resolve_local_time, start_utc, [])
+      expect(result).to eq("2025-06-01T01:00:00Z")
+    end
+
+    it "returns UTC when pts is nil" do
+      start_utc = Time.parse("2025-06-01T01:00:00Z")
+      result = xz.send(:resolve_local_time, start_utc, nil)
+      expect(result).to eq("2025-06-01T01:00:00Z")
+    end
+  end
+
+  describe "#process_activity" do
+    let(:activity) do
+      { "id" => 5001, "title" => "XZ Run", "sport" => 1,
+        "distance" => 5000.0, "duration" => 3600,
+        "start_time" => 1_718_208_000_000, "avg_speed" => 5.0,
+        "elevation_gain" => 50.0 }
+    end
+
+    before do
+      allow(xz).to receive(:fetch_stream).and_return(nil)
+      allow(xz).to receive(:fetch_activity_detail).and_return(nil)
+    end
+
+    it "produces start_date_local with timezone offset when stream provides GPS" do
+      stub_finder = double("TimezoneFinder")
+      allow(stub_finder).to receive(:timezone_at).with(lat: 40.0, lng: 116.0).and_return("Asia/Shanghai")
+      xz.instance_variable_set(:@tz_resolver,
+        Workouts::Timezone::Resolver.new({}, finder: stub_finder))
+
+      stream = { "location" => [[116.0, 40.0], [116.002, 40.001]] }
+      allow(xz).to receive(:fetch_stream).with("5001").and_return(stream)
+      allow(xz).to receive(:write_raw)
+      allow(xz).to receive(:write_std)
+
+      result = xz.send(:process_activity, activity, "run")
+      expect(result[:start_date]).to eq("2024-06-12T16:00:00Z")       # UTC
+      expect(result[:start_date_local]).to eq("2024-06-13T00:00:00+08:00")  # UTC+8
+    end
+
+    it "keeps start_date_local as UTC when no stream data" do
+      result = xz.send(:process_activity, activity, "run")
+      expect(result[:start_date]).to eq("2024-06-12T16:00:00Z")
+      expect(result[:start_date_local]).to eq("2024-06-12T16:00:00Z")
+    end
+  end
+
   describe "#write_std" do
     let(:pts) { [[40.0, 116.0], [40.001, 116.002]] }
     let(:stream) do

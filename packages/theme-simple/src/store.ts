@@ -62,7 +62,8 @@ export interface SimpleStore {
 function computeYears(acts: Activity[]): number[] {
   const s = new Set<number>()
   for (const a of acts) {
-    if (a.start_date) s.add(new Date(a.start_date).getFullYear())
+    const dt = a.start_date_local ?? a.start_date
+    if (dt) s.add(new Date(dt).getFullYear())
   }
   return Array.from(s).sort((a, b) => b - a)
 }
@@ -78,10 +79,16 @@ function filterActivities(
 ): Activity[] {
   let r = [...acts]
   if (selectedYear !== null) {
-    r = r.filter((a) => a.start_date && new Date(a.start_date).getFullYear() === selectedYear)
+    r = r.filter((a) => {
+      const dt = a.start_date_local ?? a.start_date
+      return dt && new Date(dt).getFullYear() === selectedYear
+    })
   }
   if (selectedMonth !== null && selectedYear !== null) {
-    r = r.filter((a) => a.start_date && new Date(a.start_date).getMonth() + 1 === selectedMonth)
+    r = r.filter((a) => {
+      const dt = a.start_date_local ?? a.start_date
+      return dt && new Date(dt).getMonth() + 1 === selectedMonth
+    })
   }
   if (regionFilter !== null) {
     if (regionFilter === '其它') {
@@ -151,7 +158,10 @@ export const useSimpleStore = create<SimpleStore>()((set) => ({
       const initialYear = s.selectedYear === null && ys.length > 0 ? ys[0] : s.selectedYear
       const streaks: Record<number, number> = {}
       for (const y of ys) {
-        const yearActs = acts.filter((a) => a.start_date && new Date(a.start_date).getFullYear() === y)
+        const yearActs = acts.filter((a) => {
+          const dt = a.start_date_local ?? a.start_date
+          return dt && new Date(dt).getFullYear() === y
+        })
         streaks[y] = computeStreak(yearActs)
       }
       return {

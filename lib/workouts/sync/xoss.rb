@@ -1,5 +1,6 @@
 require_relative "base"
 require "fileutils"
+require "tzinfo"
 
 module Workouts
   module Sync
@@ -232,6 +233,25 @@ module Workouts
         nil
       end
 
+      def tz_resolver
+        @tz_resolver ||= Workouts::Timezone::Resolver.new({})
+      end
+
+      def resolve_local_time(start_utc, wgs_points)
+        return start_utc.iso8601 unless wgs_points&.any?
+
+        lat = wgs_points.first["positionLat"]
+        lng = wgs_points.first["positionLong"]
+        return start_utc.iso8601 unless lat && lng
+
+        tz_string = tz_resolver.resolve(lat, lng)
+        tz = TZInfo::Timezone.get(tz_string)
+        tz.utc_to_local(start_utc).iso8601
+      rescue => e
+        warn "XOSS: timezone resolution failed: #{e.message}"
+        start_utc.iso8601
+      end
+
       def process_activity(act)
         act_id = act["id"].to_s
         type = map_sport(act["sport"])
@@ -260,6 +280,7 @@ module Workouts
           source: "xoss"
         }
 
+        wgs_points = []
         if act["fit_file_hash"].to_s != ""
           fit_data = download_fit(act_id)
           if fit_data
@@ -278,6 +299,9 @@ module Workouts
             end
           end
         end
+
+        # Patch start_date_local with GPS timezone resolution
+        attrs[:start_date_local] = resolve_local_time(start_t, wgs_points)
 
         upsert_activity(attrs)
         attrs

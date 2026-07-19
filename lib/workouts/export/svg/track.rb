@@ -7,7 +7,7 @@ module Workouts
                     :average_cadence, :average_power, :max_heartrate
 
         def initialize(activity, colors, special_distance)
-          @date = Time.parse(activity[:start_date]) rescue Time.now
+          @date = Time.parse(activity[:start_date_local]) rescue Time.parse(activity[:start_date]) rescue Time.now
           @year = @date.year
           @length = activity[:distance] || 0
           @polyline = activity[:summary_polyline]

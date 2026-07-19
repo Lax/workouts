@@ -12,6 +12,7 @@ require "http/cookie_jar"
 require "yaml"
 require "fileutils"
 require "zip"
+require "tzinfo"
 
 module Workouts
   module Sync
@@ -133,6 +134,13 @@ module Workouts
         end
 
         attrs = build_attrs(details, act_id, type, polyline)
+
+        # Resolve start_date_local from GPS timezone
+        if (start_t = parse_garmin_time(details.dig("summaryDTO", "startTimeGMT")))
+          local_t = resolve_local_time(start_t, act_id, polyline)
+          attrs[:start_date_local] = local_t.iso8601 if local_t
+        end
+
         upsert_activity(attrs)
         attrs
       end
@@ -415,6 +423,57 @@ module Workouts
           retries += 1
           sleep(base_delay * (2 ** retries))
         end
+      end
+
+      # ── Timezone resolution ────────────────────────────────────
+
+      def tz_resolver
+        @tz_resolver ||= Workouts::Timezone::Resolver.new({})
+      end
+
+      # Resolve local time from GPS data. Tries L2 file first,
+      # then polyline, then falls back to config default timezone.
+      def resolve_local_time(start_utc, activity_id, polyline = nil)
+        lat = lng = nil
+
+        # Try L2 file first
+        lat, lng = first_gps_from_l2(activity_id)
+
+        # Fallback: polyline
+        if lat.nil? && polyline
+          decoded = Workouts::Geo::Polyline.decode(polyline) rescue nil
+          if decoded && decoded.any?
+            lat, lng = decoded.first
+          end
+        end
+
+        tz_string = tz_resolver.resolve(lat, lng)
+        tz = TZInfo::Timezone.get(tz_string)
+        tz.utc_to_local(start_utc)
+      rescue => e
+        warn "Garmin: timezone resolution failed for #{activity_id}: #{e.message}"
+        nil
+      end
+
+      # Extract first valid GPS coordinate (in degrees) from L2 file.
+      # FIT records use positionLat/positionLong keys (already in degrees).
+      def first_gps_from_l2(activity_id)
+        l2_path = std_path(activity_id)
+        return [nil, nil] unless File.exist?(l2_path)
+
+        l2 = JSON.parse(File.read(l2_path))
+        return [nil, nil] unless l2.is_a?(Array) && l2.any?
+
+        first = l2.find { |r|
+          lat = r["positionLat"]
+          lng = r["positionLong"]
+          lat && lng && lat.to_f != 0.0 && lng.to_f != 0.0
+        }
+        return [nil, nil] unless first
+
+        [first["positionLat"].to_f, first["positionLong"].to_f]
+      rescue JSON::ParserError
+        [nil, nil]
       end
 
       def source_prefix

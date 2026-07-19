@@ -132,8 +132,8 @@ export function computeYearStats(activities: Activity[]): YearStats {
 
 export function computeStreak(acts: Activity[]): number {
   const dates = acts
-    .filter((a) => a.start_date)
-    .map((a) => a.start_date!.slice(0, 10))
+    .filter((a) => a.start_date_local || a.start_date)
+    .map((a) => (a.start_date_local ?? a.start_date)!.slice(0, 10))
     .sort()
   if (dates.length === 0) return 0
   const unique = [...new Set(dates)].sort()

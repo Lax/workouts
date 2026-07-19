@@ -13,7 +13,7 @@ function baseAct(overrides: Partial<Activity> = {}): Activity {
     elapsed_time: 2000,
     sport_category: 'run',
     start_date: '2024-06-01T00:00:00Z',
-    start_date_local: '2024-06-01T00:00:00',
+    start_date_local: null,
     location_country: null,
     source: 'garmin',
     average_heartrate: null,

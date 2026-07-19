@@ -16,8 +16,9 @@ import type { CityStat, LocationSummary, PeriodStat, ProvinceStat, TypeStat } fr
 export function computeYears(activities: Activity[]): number[] {
   const years = new Set<number>()
   for (const a of activities) {
-    if (a.start_date) {
-      const y = new Date(a.start_date).getFullYear()
+    const dt = a.start_date_local ?? a.start_date
+    if (dt) {
+      const y = new Date(dt).getFullYear()
       if (!Number.isNaN(y)) years.add(y)
     }
   }
@@ -78,8 +79,9 @@ export function computeFilteredActivities(
   }
   if (year !== null && year !== undefined) {
     result = result.filter((a) => {
-      if (!a.start_date) return false
-      const d = new Date(a.start_date)
+      const dt = a.start_date_local ?? a.start_date
+      if (!dt) return false
+      const d = new Date(dt)
       return d.getFullYear() === year && (month === null || month === undefined || d.getMonth() + 1 === month)
     })
   }

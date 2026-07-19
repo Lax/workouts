@@ -29,4 +29,6 @@ Gem::Specification.new do |s|
   s.add_dependency "webrick", "~> 1.8"
   s.add_dependency "ostruct", "~> 0.6"
   s.add_dependency "rubyzip", "~> 2.3"
+  s.add_dependency "timezone_finder", "~> 1.5"
+  s.add_dependency "tzinfo", "~> 2.0"
 end

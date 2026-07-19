@@ -82,9 +82,9 @@ module Workouts
                                              total_power: 0.0, power_count: 0 } }
 
         rows.each do |r|
-          next unless r[:start_date]
+          next unless r[:start_date_local] || r[:start_date]
 
-          ym = r[:start_date][0..6]
+          ym = (r[:start_date_local] || r[:start_date])[0..6]
           d = r[:distance] || 0
           t = r[:moving_time] || 0
           hr = r[:average_heartrate]
@@ -131,8 +131,8 @@ module Workouts
       def compute_yearly(rows)
         by_year = Hash.new { |h, k| h[k] = [] }
         rows.each do |r|
-          next unless r[:start_date]
-          by_year[r[:start_date][0..3].to_i] << r
+          next unless r[:start_date_local] || r[:start_date]
+          by_year[(r[:start_date_local] || r[:start_date])[0..3].to_i] << r
         end
 
         by_year.sort.map { |year, acts|
@@ -150,9 +150,9 @@ module Workouts
 
       def compute_streaks(rows)
         dates = rows.filter_map { |r|
-          next nil unless r[:start_date]
+          next nil unless r[:start_date_local] || r[:start_date]
           begin
-            Date.parse(r[:start_date])
+            Date.parse(r[:start_date_local] || r[:start_date])
           rescue
             nil
           end
@@ -200,9 +200,9 @@ module Workouts
 
       def calculate_streak(rows)
         dates = rows.filter_map { |r|
-          next nil unless r[:start_date]
+          next nil unless r[:start_date_local] || r[:start_date]
           begin
-            Date.parse(r[:start_date])
+            Date.parse(r[:start_date_local] || r[:start_date])
           rescue
             nil
           end
