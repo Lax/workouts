@@ -299,9 +299,21 @@
   white-space: nowrap;
   background: none;
   border: none;
+  opacity: 0.5;
+  transition: opacity 0.15s ease, color 0.15s ease;
+}
+
+.year-pill:hover {
+  opacity: 1;
+  color: var(--color-accent);
+}
+
+.year-pill:active {
+  transform: scale(0.97);
 }
 
 .year-pill.active {
+  opacity: 1;
   color: var(--color-primary);
 }
 

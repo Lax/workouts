@@ -355,6 +355,30 @@ describe('YearSelector CSS — positioning and arrangement', () => {
     expect(cssRuleHasProperty('.year-pill.active', 'color')).toBe(true)
   })
 
+  it('year-pill has reduced opacity for default map-subtle state', () => {
+    const el = document.createElement('button')
+    el.className = 'year-pill'
+    document.body.appendChild(el)
+
+    const style = getComputedStyle(el)
+    expect(style.opacity).toBe('0.5')
+
+    document.body.removeChild(el)
+  })
+
+  it('year-pill has smooth transition for opacity and color', () => {
+    expect(cssRuleHasProperty('.year-pill', 'transition')).toBe(true)
+  })
+
+  it('year-pill:hover is fully opaque and uses accent color', () => {
+    expect(cssRuleHasProperty('.year-pill:hover', 'opacity')).toBe(true)
+    expect(cssRuleHasProperty('.year-pill:hover', 'color')).toBe(true)
+  })
+
+  it('year-pill.active overrides default opacity to stay fully visible', () => {
+    expect(cssRuleHasProperty('.year-pill.active', 'opacity')).toBe(true)
+  })
+
   it('month-chip has correct inline-flex style matching upstream', () => {
     const chip = document.createElement('div')
     chip.className = 'month-chip'
