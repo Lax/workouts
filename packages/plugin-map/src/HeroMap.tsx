@@ -15,8 +15,6 @@ export interface HeroMapProps {
   showLabels?: boolean
   dashLines?: boolean
   privacyMode?: boolean
-  animate?: boolean
-  selectedActivityId?: string | null
   onActivityClick?: (activity: Activity) => void
   onActivityHover?: (activityId: string | null) => void
 }
@@ -32,24 +30,12 @@ export function HeroMap({
   showLabels = false,
   dashLines = false,
   privacyMode = false,
-  animate = false,
-  selectedActivityId = null,
   onActivityClick,
   onActivityHover,
 }: HeroMapProps) {
   const elRef = useRef<HTMLDivElement>(null)
   const mapRef = useLeafletMap(elRef, { colorScheme, tileConfig, lightsOn, showLabels })
-  const opts: PolylineOptions = {
-    colorMode,
-    hoveredActivityId,
-    maxLines,
-    fitOnChange: true,
-    dashLines,
-    animate,
-    selectedActivityId,
-    onActivityClick,
-    onActivityHover,
-  }
+  const opts: PolylineOptions = { colorMode, hoveredActivityId, maxLines, fitOnChange: true, dashLines, onActivityClick, onActivityHover }
   useMapPolylines(mapRef, activities, opts)
   const bg = privacyMode ? 'var(--color-bg, #000)' : 'var(--color-bg)'
   return <div ref={elRef} style={{ position: 'fixed', inset: 0, zIndex: 0, background: bg }} />

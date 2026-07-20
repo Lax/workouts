@@ -16,7 +16,6 @@ export interface PanelMapProps {
   dashLines?: boolean
   privacyMode?: boolean
   animate?: boolean
-  selectedActivityId?: string | null
   initialScrollDisabled?: boolean
   attributionPosition?: 'topleft' | 'topright' | 'bottomleft' | 'bottomright'
   onActivityClick?: (activity: Activity) => void
@@ -35,7 +34,6 @@ export function PanelMap({
   dashLines = false,
   privacyMode = false,
   animate = false,
-  selectedActivityId = null,
   initialScrollDisabled,
   attributionPosition,
   onActivityClick,
@@ -58,7 +56,6 @@ export function PanelMap({
     fitOnChange: true,
     dashLines,
     animate,
-    selectedActivityId,
     onActivityClick,
     onActivityHover,
   }

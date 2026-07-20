@@ -11,7 +11,6 @@ interface SimpleMapProps {
   lightsOn?: boolean
   showLabels?: boolean
   animate?: boolean
-  selectedActivityId?: string | null
   initialScrollDisabled?: boolean
   attributionPosition?: 'topleft' | 'topright' | 'bottomleft' | 'bottomright'
   onActivityClick?: (activity: Activity) => void
@@ -27,7 +26,6 @@ export function SimpleMap({
   lightsOn,
   showLabels,
   animate,
-  selectedActivityId,
   initialScrollDisabled,
   tileConfig,
   attributionPosition,
@@ -46,7 +44,6 @@ export function SimpleMap({
       lightsOn={lightsOn}
       showLabels={showLabels}
       animate={animate}
-      selectedActivityId={selectedActivityId}
       initialScrollDisabled={initialScrollDisabled}
       attributionPosition={attributionPosition}
       onActivityClick={onActivityClick}

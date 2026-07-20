@@ -22,7 +22,6 @@ export function OverviewLayout() {
   const selectedMonth = useOverviewStore((s) => s.selectedMonth)
   const filteredActivities = useOverviewStore((s) => s.filteredActivities)
   const mapHoveredId = useOverviewStore((s) => s.mapHoveredId)
-  const selectedActivity = useOverviewStore((s) => s.selectedActivity)
   const setSelectedYear = useOverviewStore((s) => s.setSelectedYear)
   const setColorMode = useOverviewStore((s) => s.setColorMode)
   const toggleTheme = useOverviewStore((s) => s.toggleTheme)
@@ -60,8 +59,6 @@ export function OverviewLayout() {
         privacyMode={siteConfig?.privacyMode as boolean | undefined}
         lightsOn={true}
         showLabels={siteConfig?.showLabels === true}
-        animate={!!selectedActivity}
-        selectedActivityId={selectedActivity?.run_id ?? null}
         onActivityClick={openDetail}
         onActivityHover={setMapHoveredId}
       />

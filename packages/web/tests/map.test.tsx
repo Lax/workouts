@@ -12,11 +12,6 @@ vi.mock('leaflet', () => {
     on = vi.fn()
     setLatLngs = vi.fn().mockReturnThis()
   }
-  class MockCircleMarker {
-    addTo = vi.fn().mockReturnThis()
-    setLatLng = vi.fn().mockReturnThis()
-    setStyle = vi.fn().mockReturnThis()
-  }
 
   const mapInstance = {
     setView: vi.fn().mockReturnThis(),
@@ -36,7 +31,6 @@ vi.mock('leaflet', () => {
       map: mockMap,
       tileLayer: vi.fn(() => new MockTileLayer()),
       polyline: vi.fn(() => new MockPolyline()),
-      circleMarker: vi.fn(() => new MockCircleMarker()),
       control: { zoom: vi.fn(() => ({ addTo: vi.fn() })) },
       latLngBounds: vi.fn(() => ({
         isValid: vi.fn(() => true),
@@ -345,166 +339,5 @@ describe('MapView — route animation', () => {
     })
 
     expect(vi.mocked(L.polyline).mock.calls.length).toBeGreaterThan(callsBefore)
-  })
-})
-
-function mockMatchMedia(matches: boolean): void {
-  Object.defineProperty(window, 'matchMedia', {
-    writable: true,
-    value: vi.fn().mockImplementation((query: string) => ({
-      matches,
-      media: query,
-      onchange: null,
-      addListener: vi.fn(),
-      removeListener: vi.fn(),
-      addEventListener: vi.fn(),
-      removeEventListener: vi.fn(),
-      dispatchEvent: vi.fn(),
-    })),
-  })
-}
-
-describe('MapView — ghost+sweep+dot animation', () => {
-  let root: Root
-  let container: HTMLDivElement
-
-  beforeEach(() => {
-    container = document.createElement('div')
-    document.body.appendChild(container)
-    root = createRoot(container)
-    vi.clearAllMocks()
-    vi.spyOn(window, 'cancelAnimationFrame').mockImplementation(() => {})
-    onTestFinished(() => {
-      vi.mocked(window.cancelAnimationFrame).mockRestore()
-    })
-  })
-
-  afterEach(() => {
-    act(() => root.unmount())
-    document.body.removeChild(container)
-  })
-
-  it('creates ghost + sweep + dot when selectedActivityId is set', async () => {
-    await act(async () => {
-      root.render(
-        <MapView
-          activities={[testActivity({ run_id: 'sel-1', summary_polyline: '_p~iF~ps|U_ulLnnqC_mqNvxq`@' })]}
-          colorScheme="light"
-          animate
-          selectedActivityId="sel-1"
-        />,
-      )
-    })
-
-    // Ghost polyline + sweep polyline = 2 L.polyline calls, 1 L.circleMarker
-    expect(L.polyline).toHaveBeenCalledTimes(2)
-    expect(L.circleMarker).toHaveBeenCalledTimes(1)
-  })
-
-  it('dims other activities when selectedActivityId is set', async () => {
-    await act(async () => {
-      root.render(
-        <MapView
-          activities={[
-            testActivity({ run_id: 'sel-1', summary_polyline: '_p~iF~ps|U_ulLnnqC_mqNvxq`@' }),
-            testActivity({ run_id: 'dim-1', summary_polyline: '_p~iF~ps|U_ulLnnqC_mqNvxq`@' }),
-            testActivity({ run_id: 'dim-2', summary_polyline: '_p~iF~ps|U_ulLnnqC_mqNvxq`@' }),
-          ]}
-          colorScheme="light"
-          animate
-          selectedActivityId="sel-1"
-        />,
-      )
-    })
-
-    // Ghost + sweep for selected = 2, plus 2 dimmed = 4 total L.polyline calls
-    expect(L.polyline).toHaveBeenCalledTimes(4)
-    // Dot for selected
-    expect(L.circleMarker).toHaveBeenCalledTimes(1)
-  })
-
-  it('skips animation for <3 point polylines', async () => {
-    await act(async () => {
-      root.render(
-        <MapView
-          activities={[testActivity({ run_id: 'short', summary_polyline: '_p~iF~ps|U_ulLnnqC' })]}
-          colorScheme="light"
-          animate
-          selectedActivityId="short"
-        />,
-      )
-    })
-
-    // Short polyline → direct solid line, no ghost/sweep/dot
-    expect(L.polyline).toHaveBeenCalledTimes(1)
-    expect(L.circleMarker).toHaveBeenCalledTimes(0)
-  })
-
-  it('handles null summary_polyline with selectedActivityId — no crash', async () => {
-    await act(async () => {
-      root.render(
-        <MapView
-          activities={[testActivity({ run_id: 'null-poly', summary_polyline: null })]}
-          colorScheme="light"
-          animate
-          selectedActivityId="null-poly"
-        />,
-      )
-    })
-
-    expect(L.polyline).toHaveBeenCalledTimes(0)
-    expect(L.circleMarker).toHaveBeenCalledTimes(0)
-  })
-
-  it('switching selectedActivityId cancels old animation', async () => {
-    await act(async () => {
-      root.render(
-        <MapView
-          activities={[testActivity({ run_id: 'switch-a', summary_polyline: '_p~iF~ps|U_ulLnnqC_mqNvxq`@' })]}
-          colorScheme="light"
-          animate
-          selectedActivityId="switch-a"
-        />,
-      )
-    })
-
-    const callsBefore = vi.mocked(L.polyline).mock.calls.length
-
-    await act(async () => {
-      root.render(
-        <MapView
-          activities={[testActivity({ run_id: 'switch-b', summary_polyline: '_p~iF~ps|U_ulLnnqC_mqNvxq`@' })]}
-          colorScheme="light"
-          animate
-          selectedActivityId="switch-b"
-        />,
-      )
-    })
-
-    // Should create new layers for the new selection
-    expect(vi.mocked(L.polyline).mock.calls.length).toBeGreaterThan(callsBefore)
-    // cancelAnimationFrame should have been called for the old animation
-    expect(window.cancelAnimationFrame).toHaveBeenCalled()
-  })
-
-  it('respects prefers-reduced-motion: renders solid line directly', async () => {
-    mockMatchMedia(true)
-
-    await act(async () => {
-      root.render(
-        <MapView
-          activities={[testActivity({ run_id: 'reduce', summary_polyline: '_p~iF~ps|U_ulLnnqC_mqNvxq`@' })]}
-          colorScheme="light"
-          animate
-          selectedActivityId="reduce"
-        />,
-      )
-    })
-
-    // No ghost/sweep/dot — 1 solid polyline
-    expect(L.polyline).toHaveBeenCalledTimes(1)
-    expect(L.circleMarker).toHaveBeenCalledTimes(0)
-
-    mockMatchMedia(false)
   })
 })
