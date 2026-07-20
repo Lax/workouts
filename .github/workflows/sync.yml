@@ -54,10 +54,6 @@ jobs:
         id: data-store
         run: echo "mode=${DATA_STORE:-actions-by-source}" >> $GITHUB_OUTPUT
 
-      - name: Record DB digest
-        id: db-before
-        run: echo "digest=$(md5sum data/workouts.db 2>/dev/null | cut -d' ' -f1 || echo 'none')" >> $GITHUB_OUTPUT
-
       - name: Restore import marker
         id: import-cache-apple-health
         uses: actions/cache@v5.1.0
@@ -88,57 +84,9 @@ jobs:
           touch data/import/apple_health/.imported
 
       # ── Data restore (conditional on DATA_STORE) ──
-      - uses: actions/cache/restore@v4
-        if: steps.data-store.outputs.mode == 'actions-combined'
+      - uses: ./.github/actions/data-store/restore
         with:
-          path: |-
-            data/raw/
-            data/std/
-            data/workouts.db
-          key: workouts-data-v1-${{ github.run_id }}
-          restore-keys: workouts-data-v1-
-
-      - uses: ./.github/actions/sources-cache/restore
-        if: steps.data-store.outputs.mode == 'actions-by-source'
-
-      - uses: actions/cache/restore@v4
-        id: db-cache
-        if: steps.data-store.outputs.mode == 'actions-by-source'
-        with:
-          path: data/workouts.db
-          key: workouts-db-v1-${{ hashFiles('db/migrations/*.rb') }}-${{ github.run_id }}
-          restore-keys: workouts-db-v1-
-
-      - name: Restore — git-combined
-        if: steps.data-store.outputs.mode == 'git-combined'
-        run: |
-          if git ls-remote --exit-code origin refs/heads/data/_/_ >/dev/null 2>&1; then
-            git fetch origin data/_/_
-            mkdir -p data/raw data/std
-            git archive --format=tar origin/data/_/_ \
-              data/raw data/std data/workouts.db 2>/dev/null | tar xf - || true
-          fi
-
-      - name: Restore — git-by-source
-        if: steps.data-store.outputs.mode == 'git-by-source'
-        run: |
-          for src in keep igpsport xoss xingzhe garmin garmin_cn strava; do
-            B="_/_/$src"
-            git ls-remote --exit-code origin "refs/heads/$B" >/dev/null 2>&1 || continue
-            git fetch origin "$B"
-            mkdir -p "data/raw/$src" "data/std/$src"
-            git archive --format=tar "origin/$B" \
-              "data/raw/$src" "data/std/$src" 2>/dev/null | tar xf - || true
-          done
-          if git ls-remote --exit-code origin refs/heads/_/workouts-db >/dev/null 2>&1; then
-            git fetch origin _/workouts-db
-            git archive --format=tar origin/_/workouts-db data/workouts.db 2>/dev/null | tar xf - || true
-          fi
-
-      - name: Restore — git-flat
-        if: steps.data-store.outputs.mode == 'git-flat'
-        run: |
-          echo "git-flat: data already in checkout, no restore needed"
+          mode: ${{ steps.data-store.outputs.mode }}
 
       - id: load-tokens-cache
         uses: ./.github/actions/tokens-cache/restore
@@ -239,53 +187,12 @@ jobs:
           file_pattern: .github/workflows/sync.yml
           token: ${{ secrets.WORKOUTS_SYNC_PAT }}
 
-      - name: Check DB changed
-        id: db-changed
-        run: |
-          new=$(md5sum data/workouts.db 2>/dev/null | cut -d' ' -f1 || echo 'none')
-          [ "${{ steps.db-before.outputs.digest }}" != "$new" ] && echo "changed=true" || echo "changed=false"
-          echo "changed=$([ "${{ steps.db-before.outputs.digest }}" != "$new" ] && echo true || echo false)" >> $GITHUB_OUTPUT
-
       # ── Data save (conditional on DATA_STORE) ──
-      - uses: actions/cache/save@v4
-        if: steps.data-store.outputs.mode == 'actions-combined' && steps.db-changed.outputs.changed == 'true'
+      - uses: ./.github/actions/data-store/save
+        id: data-save
         with:
-          path: |-
-            data/raw/
-            data/std/
-            data/workouts.db
-          key: workouts-data-v1-${{ github.run_id }}
-
-      - uses: ./.github/actions/sources-cache/save
-        if: steps.data-store.outputs.mode == 'actions-by-source'
-
-      - uses: actions/cache/save@v4
-        if: steps.data-store.outputs.mode == 'actions-by-source' && steps.db-changed.outputs.changed == 'true'
-        with:
-          path: data/workouts.db
-          key: workouts-db-v1-${{ hashFiles('db/migrations/*.rb') }}-${{ github.run_id }}
-
-      - name: Save — git-combined
-        if: steps.data-store.outputs.mode == 'git-combined' && steps.git-setup.outputs.configured == 'true' && steps.db-changed.outputs.changed == 'true'
-        run: bash scripts/data-store-git-save.sh data/_/_ "data/raw data/std data/workouts.db"
-
-      - name: Save — git-by-source
-        if: steps.data-store.outputs.mode == 'git-by-source' && steps.git-setup.outputs.configured == 'true' && steps.db-changed.outputs.changed == 'true'
-        run: |
-          for src in keep igpsport xoss xingzhe garmin garmin_cn strava; do
-            bash scripts/data-store-git-save.sh "_/_/$src" "data/raw/$src data/std/$src"
-          done
-          bash scripts/data-store-git-save.sh _/workouts-db "data/workouts.db"
-
-      - name: Save — git-flat
-        if: steps.data-store.outputs.mode == 'git-flat' && steps.git-setup.outputs.configured == 'true' && steps.db-changed.outputs.changed == 'true'
-        run: |
-          git add -A
-          git diff --cached --quiet && echo "No changes" && exit 0
-          git -c user.name=workouts-bot -c user.email=bot@workouts \
-            commit -m "store(sync): $(date -u +%Y%m%d-%H%M%S)"
-          git pull --rebase
-          git push
+          mode: ${{ steps.data-store.outputs.mode }}
+          git-configured: ${{ steps.git-setup.outputs.configured }}
 
       - name: Save geo cache
         if: always()
@@ -297,14 +204,14 @@ jobs:
 
       - name: Upload DB artifact
         uses: actions/upload-artifact@v4
-        if: steps.db-changed.outputs.changed == 'true'
+        if: steps.data-save.outputs.any_changed == 'true'
         with:
           name: workouts-db
           path: data/workouts.db
           retention-days: 1
 
       - name: Trigger gh-pages deploy
-        if: steps.db-changed.outputs.changed == 'true'
+        if: steps.data-save.outputs.any_changed == 'true'
         run: |
           gh workflow run gh-pages.yml --ref main \
             -f artifact-run-id=${{ github.run_id }}

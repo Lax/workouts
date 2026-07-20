@@ -1,0 +1,22 @@
+name: Sources Git Save
+description: Save per-source data to git branches
+inputs:
+  mode:
+    required: true
+  git-configured:
+    required: false
+    default: 'false'
+runs:
+  using: composite
+  steps:
+    - name: Save per-source git branches
+      if: inputs.mode == 'git-by-source' && inputs.git-configured == 'true'
+      shell: bash
+      run: |
+        for src in keep igpsport xoss xingzhe garmin garmin_cn strava; do
+          ck="data/raw/$src/.checksum"
+          if [ ! -f "$ck" ] || ! sha256sum -c "$ck" --quiet 2>/dev/null; then
+            bash scripts/data-store-git-save.sh "_/_/$src" \
+              "data/raw/$src data/std/$src data/raw/$src/.checksum"
+          fi
+        done

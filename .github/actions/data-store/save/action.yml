@@ -1,0 +1,81 @@
+name: Data Store Save
+description: Save data to configured store backend
+inputs:
+  mode:
+    required: true
+  git-configured:
+    required: false
+    default: 'false'
+outputs:
+  any_changed:
+    description: Whether any data changed
+    value: ${{ steps.detect.outputs.any_changed }}
+runs:
+  using: composite
+  steps:
+    - name: Detect changed sources
+      id: detect
+      shell: bash
+      run: |
+        any=false
+        for src in keep igpsport xoss xingzhe garmin garmin_cn strava; do
+          ck="data/raw/$src/.checksum"
+          if [ -f "$ck" ] && sha256sum -c "$ck" --quiet 2>/dev/null; then
+            echo "changed_${src}=false"
+          else
+            echo "changed_${src}=true"; any=true
+          fi
+        done >> "$GITHUB_OUTPUT"
+        if [ -f data/workouts.db.checksum ] && sha256sum -c data/workouts.db.checksum --quiet 2>/dev/null; then
+          echo "changed_db=false" >> $GITHUB_OUTPUT
+        else
+          echo "changed_db=true" >> $GITHUB_OUTPUT; any=true
+        fi
+        echo "any_changed=$any" >> $GITHUB_OUTPUT
+
+    - uses: actions/cache/save@v4
+      if: inputs.mode == 'actions-combined' && steps.detect.outputs.any_changed == 'true'
+      with:
+        path: |-
+          data/raw/
+          data/std/
+          data/workouts.db
+        key: workouts-data-v1-${{ github.run_id }}
+
+    - uses: ./.github/actions/data-store/sources-cache/save
+      if: inputs.mode == 'actions-by-source'
+
+    - uses: actions/cache/save@v4
+      if: inputs.mode == 'actions-by-source' && steps.detect.outputs.changed_db == 'true'
+      with:
+        path: data/workouts.db
+        key: workouts-db-v1-${{ hashFiles('db/migrations/*.rb') }}-${{ github.run_id }}
+
+    - uses: ./.github/actions/data-store/sources-git/save
+      if: inputs.mode == 'git-by-source'
+      with:
+        git-configured: ${{ inputs.git-configured }}
+
+    - uses: actions/cache/save@v4
+      if: inputs.mode == 'git-by-source' && steps.detect.outputs.changed_db == 'true'
+      with:
+        path: data/workouts.db
+        key: workouts-db-v1-${{ hashFiles('db/migrations/*.rb') }}-${{ github.run_id }}
+
+    - name: Save — git-combined
+      if: inputs.mode == 'git-combined' && inputs.git-configured == 'true' && steps.detect.outputs.any_changed == 'true'
+      shell: bash
+      run: bash scripts/data-store-git-save.sh data/_/_ "data/raw data/std data/workouts.db data/workouts.db.checksum"
+
+    - name: Save — git-flat
+      if: inputs.mode == 'git-flat' && inputs.git-configured == 'true' && steps.detect.outputs.any_changed == 'true'
+      shell: bash
+      run: |
+        git add -f \
+          data/raw/ data/std/ data/workouts.db \
+          data/workouts.db.checksum
+        git diff --cached --quiet && exit 0
+        git -c user.name=workouts-bot -c user.email=bot@workouts \
+          commit -m "store(sync): $(date -u +%Y%m%d-%H%M%S)"
+        git pull --rebase
+        git push

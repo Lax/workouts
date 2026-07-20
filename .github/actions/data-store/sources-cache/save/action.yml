@@ -1,29 +1,22 @@
-name: Sources Cache Save
-description: Save changed source raw caches
+name: Data Store Source Save
+description: Save changed per-source raw/std caches to GH Actions cache
 runs:
   using: composite
   steps:
     - name: Detect changed sources
       id: detect
-      shell: bash {0}
+      shell: bash
       run: |
-        if [ ! -f data/.source-digests ]; then
-          echo "No digest snapshot — marking all sources as changed" >&2
-          for src in keep igpsport xoss xingzhe garmin garmin_cn strava; do
-            echo "changed_${src}=true"
-          done >> "$GITHUB_OUTPUT"
-          exit 0
-        fi
-        while read -r src before; do
-          after=$(scripts/source-digest.sh "$src")
-          if [ "$before" != "$after" ]; then
-            echo "  $src: CHANGED" >&2
-            echo "changed_${src}=true"
-          else
+        for src in keep igpsport xoss xingzhe garmin garmin_cn strava; do
+          ck="data/raw/$src/.checksum"
+          if [ -f "$ck" ] && sha256sum -c "$ck" --quiet 2>/dev/null; then
             echo "  $src: unchanged" >&2
             echo "changed_${src}=false"
+          else
+            echo "  $src: CHANGED" >&2
+            echo "changed_${src}=true"
           fi
-        done < data/.source-digests >> "$GITHUB_OUTPUT"
+        done >> "$GITHUB_OUTPUT"
 
     - name: Save — keep
       uses: actions/cache/save@v4
@@ -94,5 +87,10 @@ runs:
       run: |
         echo "=== Source digests after sync ==="
         for src in keep igpsport xoss xingzhe garmin garmin_cn strava; do
-          echo "  $src: $(scripts/source-digest.sh "$src")"
+          ck="data/raw/$src/.checksum"
+          if [ -f "$ck" ]; then
+            echo "  $src: $(sha256sum "$ck" | cut -d' ' -f1)"
+          else
+            echo "  $src: no checksum"
+          fi
         done

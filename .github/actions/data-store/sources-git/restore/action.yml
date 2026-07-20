@@ -1,0 +1,20 @@
+name: Sources Git Restore
+description: Restore per-source data from git branches
+inputs:
+  mode:
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: Restore per-source git branches
+      if: inputs.mode == 'git-by-source'
+      shell: bash
+      run: |
+        for src in keep igpsport xoss xingzhe garmin garmin_cn strava; do
+          B="_/_/$src"
+          git ls-remote --exit-code origin "refs/heads/$B" >/dev/null 2>&1 || continue
+          git fetch origin "$B"
+          mkdir -p "data/raw/$src" "data/std/$src"
+          git archive --format=tar "origin/$B" \
+            "data/raw/$src" "data/std/$src" 2>/dev/null | tar xf - || true
+        done

@@ -1,5 +1,5 @@
 ---
-description: Debug GitHub Actions, per-source cache, source-digest, adaptive cron
+description: Debug GitHub Actions, per-source cache, data-store-checksum, adaptive cron
 mode: subagent
 permission:
   edit: allow
@@ -21,7 +21,7 @@ You are a CI/CD specialist for the Workouts CLI.
 - `.github/workflows/sync.yml` — 3-job pipeline: sync → build → deploy
 - `.github/workflows/ci.yml` — PR/push: rspec + syntax check
 - `.github/actions/source-cache/action.yml` — Per-source GH Cache composite action
-- `scripts/source-digest.sh` — Content md5 detection per source (used for cache change detection)
+- `scripts/data-store-checksum.sh` — Content sha256 detection per source (used for cache change detection)
 - `lib/workouts/sync/base.rb` — `time_expired?`, `time_budget` logic
 - `config/config.yml` — All credentials (gitignored, injected via env)
 
@@ -55,7 +55,7 @@ Only schedule events update cron; workflow_dispatch never modifies it.
 
 ## Source cache
 - 7 independent caches with keys: `workouts-raw-v1-{source}-{run_id}`
-- `source-digest.sh` calculates md5 of `data/raw/{source}/ + data/std/{source}/`
+- `data-store-checksum.sh` calculates sha256 of `data/raw/{source}/ + data/std/{source}/`
 - `before_digest` recorded on restore, compared on save → only changed sources write cache
 
 ## Cache directories
@@ -72,6 +72,6 @@ data/workouts.db
 - HTTP 400 = token expiry (refresh_token rotation), HTTP 401 = permission revoked (client_id)
 
 ## Debugging
-- `bash scripts/source-digest.sh <source>` — Check digest for a source
+- `bash scripts/data-store-checksum.sh <source>` — Check digest for a source
 - `gh run list` — List recent workflow runs
 - `gh run view <id> --log` — View run logs

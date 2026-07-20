@@ -116,7 +116,7 @@ data/import/{gpx,fit,tcx}/ → Import::LocalFile → data/raw/{source}/ (L1)
 | 超时采用旗标机制 | `@timed_out` 设后不再 pop 新源，但当前 batch 完整收尾。不强制退出，数据一致 |
 | DedupService 独立于 adapter | 所有 source 完成后统一触发，不再绑定 Strava 内部 `recheck_duplicates`。双向写入，含轨迹对比 |
 | temp→rename 原子写入 raw 文件 | 崩溃恢复时 `raw_file_exists?` 不误判 |
-| Per-source 独立 GH Cache | 每源独立 cache key (`workouts-raw-v1-{source}-{run_id}`)，通过 `scripts/source-digest.sh` 计算内容 md5 检测变化，仅变动的源写 cache。通过 `.github/actions/sources-cache/restore` + `sources-cache/save` 封装。数据目录示例: `data/raw/{garmin,garmin_cn,igpsport,...}/`, `data/std/{...}/` |
+| Per-source 独立 GH Cache | 每源独立 cache key (`workouts-raw-v1-{source}-{run_id}`)，通过 `scripts/data-store-checksum.sh` 计算内容 sha256 检测变化，仅变动的源写 cache。通过 `.github/actions/data-store/sources-cache/restore` + `data-store/sources-cache/save` 封装。数据目录示例: `data/raw/{garmin,garmin_cn,igpsport,...}/`, `data/std/{...}/` |
 | 导出默认路径 `data/` → `site/` | 源数据与生成制品分离，gitignored |
 | `mini_racer` + `@garmin/fitsdk` 解析 FIT | V8 引擎在 Ruby 进程中执行 JS SDK，纯 gem 依赖，无需外部运行时 |
 | local_file 适配器单类处理三种格式 | GPX/FIT/TCX 共享相同的文件扫描、L1/L2写入、DB upsert 逻辑，仅解析器不同。单类避免三份重复代码 |
@@ -154,7 +154,7 @@ data/import/{gpx,fit,tcx}/ → Import::LocalFile → data/raw/{source}/ (L1)
 | FIT (导入) | `fit` | `data/raw/fit/` | `data/std/fit/` |
 | TCX (导入) | `tcx` | `data/raw/tcx/` | `data/std/tcx/` |
 
-每源通过 `scripts/source-digest.sh` 计算内容 md5 作为 digest，用于 CI cache 的变更检测。restore 阶段写入 `data/.source-digests`（统一快照文件），sync 后比对，仅 digest 变化时写回 cache。
+每源使用 `scripts/data-store-checksum.sh` 读取 `.checksum` 文件计算摘要，用于 CI cache 的变更检测。restore 阶段每个 source 目录下生成 `.checksum` 文件（`data/raw/{src}/.checksum`），save 阶段通过 `sha256sum -c` 逐源校验，仅变化的源写回 cache。
 
 ### Sync Adapter 接口
 
@@ -451,12 +451,12 @@ sync job (runs-on: ${{ vars.RUNNER_LABEL || 'ubuntu-latest' }}):
   3. restore DB cache
   4. record DB digest
   5. restore Garmin token caches
-  6. restore per-source caches (sources-cache/restore)
+   6. restore per-source caches (data-store/sources-cache/restore)
   7. workouts sync (受 SYNC__TIME_BUDGET 限制)
   8. 读 N → 算 f → 可能改 cron
   9. check DB changed
   10. save DB cache + Garmin token caches
-  11. save per-source caches (sources-cache/save)
+   11. save per-source caches (data-store/sources-cache/save)
   12. upload DB artifact (for build job)
 
 build job (needs: sync):

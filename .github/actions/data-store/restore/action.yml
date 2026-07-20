@@ -1,0 +1,63 @@
+name: Data Store Restore
+description: Restore data from configured store backend
+inputs:
+  mode:
+    required: true
+runs:
+  using: composite
+  steps:
+    - uses: actions/cache/restore@v4
+      if: inputs.mode == 'actions-combined'
+      with:
+        path: |-
+          data/raw/
+          data/std/
+          data/workouts.db
+        key: workouts-data-v1-${{ github.run_id }}
+        restore-keys: workouts-data-v1-
+
+    - uses: ./.github/actions/data-store/sources-cache/restore
+      if: inputs.mode == 'actions-by-source'
+
+    - uses: actions/cache/restore@v4
+      if: inputs.mode == 'actions-by-source'
+      with:
+        path: data/workouts.db
+        key: workouts-db-v1-${{ hashFiles('db/migrations/*.rb') }}-${{ github.run_id }}
+        restore-keys: workouts-db-v1-
+
+    - uses: ./.github/actions/data-store/sources-git/restore
+      if: inputs.mode == 'git-by-source'
+
+    - uses: actions/cache/restore@v4
+      if: inputs.mode == 'git-by-source'
+      with:
+        path: data/workouts.db
+        key: workouts-db-v1-${{ hashFiles('db/migrations/*.rb') }}-${{ github.run_id }}
+        restore-keys: workouts-db-v1-
+
+    - name: Restore — git-combined
+      if: inputs.mode == 'git-combined'
+      shell: bash
+      run: |
+        if git ls-remote --exit-code origin refs/heads/data/_/_ >/dev/null 2>&1; then
+          git fetch origin data/_/_
+          mkdir -p data/raw data/std
+          git archive --format=tar origin/data/_/_ \
+            data/raw data/std data/workouts.db 2>/dev/null | tar xf - || true
+        fi
+
+    - name: Restore — git-flat
+      if: inputs.mode == 'git-flat'
+      shell: bash
+      run: |
+        echo "git-flat: data already in checkout, no restore needed"
+
+    - name: Generate .checksum files
+      shell: bash
+      run: |
+        for src in keep igpsport xoss xingzhe garmin garmin_cn strava; do
+          find "data/raw/$src" "data/std/$src" -type f ! -name '.checksum' -print0 2>/dev/null \
+            | sort -z | xargs -0 sha256sum > "data/raw/$src/.checksum" 2>/dev/null || true
+        done
+        sha256sum data/workouts.db > data/workouts.db.checksum 2>/dev/null || true
