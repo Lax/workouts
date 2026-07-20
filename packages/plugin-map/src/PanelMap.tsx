@@ -53,7 +53,6 @@ export function PanelMap({
   })
   const opts: PolylineOptions = {
     colorMode,
-    colorScheme,
     hoveredActivityId,
     maxLines,
     fitOnChange: true,

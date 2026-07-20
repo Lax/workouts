@@ -41,7 +41,6 @@ export function HeroMap({
   const mapRef = useLeafletMap(elRef, { colorScheme, tileConfig, lightsOn, showLabels })
   const opts: PolylineOptions = {
     colorMode,
-    colorScheme,
     hoveredActivityId,
     maxLines,
     fitOnChange: true,
