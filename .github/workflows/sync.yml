@@ -19,16 +19,19 @@ jobs:
           persist-credentials: false
 
       - name: Configure git
+        id: git-setup
         env:
           WORKOUTS_SYNC_PAT: ${{ secrets.WORKOUTS_SYNC_PAT }}
         run: |
+          if [ -z "$WORKOUTS_SYNC_PAT" ]; then
+            echo "configured=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
           git config user.name "workouts-bot"
           git config user.email "bot@workouts"
-          # persist-credentials: false → no extraheader written.
-          # Write bare PAT extraheader (no x-access-token: prefix)
-          # so server routes as PAT, not GitHub App.
           git config --add http.https://github.com/.extraheader \
             "AUTHORIZATION: basic $(printf '%s:' "$WORKOUTS_SYNC_PAT" | base64 -w0)"
+          echo "configured=true" >> $GITHUB_OUTPUT
 
       - uses: ruby/setup-ruby@v1
         if: vars.RUNNER_LABEL != 'self-hosted'
@@ -47,13 +50,9 @@ jobs:
         if: vars.RUNNER_LABEL != 'self-hosted'
         run: pip install -r scripts/requirements.txt
 
-      - name: Restore DB cache
-        uses: actions/cache/restore@v4
-        id: db-cache
-        with:
-          path: data/workouts.db
-          key: workouts-db-v1-${{ hashFiles('db/migrations/*.rb') }}-${{ github.run_id }}
-          restore-keys: workouts-db-v1-
+      - name: Determine data store
+        id: data-store
+        run: echo "mode=${DATA_STORE:-actions-by-source}" >> $GITHUB_OUTPUT
 
       - name: Record DB digest
         id: db-before
@@ -67,7 +66,7 @@ jobs:
           key: imported-v1-apple-health
 
       - name: Import Apple Health
-        if: steps.import-cache-apple-health.outputs.cache-hit != 'true'
+        if: steps.import-cache-apple-health.outputs.cache-hit != 'true' && steps.git-setup.outputs.configured == 'true'
         run: |
           mkdir -p data/import/apple_health
           git lfs install
@@ -88,7 +87,58 @@ jobs:
           bundle exec exe/workouts import --source apple_health
           touch data/import/apple_health/.imported
 
+      # ── Data restore (conditional on DATA_STORE) ──
+      - uses: actions/cache/restore@v4
+        if: steps.data-store.outputs.mode == 'actions-combined'
+        with:
+          path: |-
+            data/raw/
+            data/std/
+            data/workouts.db
+          key: workouts-data-v1-${{ github.run_id }}
+          restore-keys: workouts-data-v1-
+
       - uses: ./.github/actions/sources-cache/restore
+        if: steps.data-store.outputs.mode == 'actions-by-source'
+
+      - uses: actions/cache/restore@v4
+        id: db-cache
+        if: steps.data-store.outputs.mode == 'actions-by-source'
+        with:
+          path: data/workouts.db
+          key: workouts-db-v1-${{ hashFiles('db/migrations/*.rb') }}-${{ github.run_id }}
+          restore-keys: workouts-db-v1-
+
+      - name: Restore — git-combined
+        if: steps.data-store.outputs.mode == 'git-combined'
+        run: |
+          if git ls-remote --exit-code origin refs/heads/data/_/_ >/dev/null 2>&1; then
+            git fetch origin data/_/_
+            mkdir -p data/raw data/std
+            git archive --format=tar origin/data/_/_ \
+              data/raw data/std data/workouts.db 2>/dev/null | tar xf - || true
+          fi
+
+      - name: Restore — git-by-source
+        if: steps.data-store.outputs.mode == 'git-by-source'
+        run: |
+          for src in keep igpsport xoss xingzhe garmin garmin_cn strava; do
+            B="_/_/$src"
+            git ls-remote --exit-code origin "refs/heads/$B" >/dev/null 2>&1 || continue
+            git fetch origin "$B"
+            mkdir -p "data/raw/$src" "data/std/$src"
+            git archive --format=tar "origin/$B" \
+              "data/raw/$src" "data/std/$src" 2>/dev/null | tar xf - || true
+          done
+          if git ls-remote --exit-code origin refs/heads/_/workouts-db >/dev/null 2>&1; then
+            git fetch origin _/workouts-db
+            git archive --format=tar origin/_/workouts-db data/workouts.db 2>/dev/null | tar xf - || true
+          fi
+
+      - name: Restore — git-flat
+        if: steps.data-store.outputs.mode == 'git-flat'
+        run: |
+          echo "git-flat: data already in checkout, no restore needed"
 
       - id: load-tokens-cache
         uses: ./.github/actions/tokens-cache/restore
@@ -165,18 +215,29 @@ jobs:
             puts "new_n=#{n}"
           ' >> $GITHUB_OUTPUT
 
-      - name: Update cron (schedule only)
-        if: github.event_name == 'schedule'
+      - name: Update cron interval
+        if: github.event_name == 'schedule' && steps.git-setup.outputs.configured == 'true'
+        id: update-cron
         env:
           NEW_N: ${{ steps.decide.outputs.new_n }}
         run: |
+          CURRENT_N=$(grep -oP '/\K\d+(?= \* \*)' .github/workflows/sync.yml | head -1)
+          if [ "$CURRENT_N" = "$NEW_N" ]; then
+            echo "changed=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
           sed -i "s|/\\([0-9]\\) \\* \\*|/${NEW_N} * *|" .github/workflows/sync.yml
-          # sed matches /{N} * * on both cron lines (same N, updates both)
-          git add .github/workflows/sync.yml
-          git diff --cached --quiet || \
-            git commit -m "chore: sync interval N=$NEW_N"
-          git pull --rebase
-          git push
+          echo "changed=true" >> $GITHUB_OUTPUT
+
+      - name: Commit cron change
+        if: steps.update-cron.outputs.changed == 'true'
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "chore: sync interval N=${{ steps.decide.outputs.new_n }}"
+          commit_user_name: workouts-bot
+          commit_user_email: bot@workouts
+          file_pattern: .github/workflows/sync.yml
+          token: ${{ secrets.WORKOUTS_SYNC_PAT }}
 
       - name: Check DB changed
         id: db-changed
@@ -185,14 +246,46 @@ jobs:
           [ "${{ steps.db-before.outputs.digest }}" != "$new" ] && echo "changed=true" || echo "changed=false"
           echo "changed=$([ "${{ steps.db-before.outputs.digest }}" != "$new" ] && echo true || echo false)" >> $GITHUB_OUTPUT
 
-      - name: Save DB cache
-        uses: actions/cache/save@v4
-        if: steps.db-changed.outputs.changed == 'true'
+      # ── Data save (conditional on DATA_STORE) ──
+      - uses: actions/cache/save@v4
+        if: steps.data-store.outputs.mode == 'actions-combined' && steps.db-changed.outputs.changed == 'true'
         with:
-          path: data/workouts.db
-          key: ${{ steps.db-cache.outputs.cache-primary-key }}
+          path: |-
+            data/raw/
+            data/std/
+            data/workouts.db
+          key: workouts-data-v1-${{ github.run_id }}
 
       - uses: ./.github/actions/sources-cache/save
+        if: steps.data-store.outputs.mode == 'actions-by-source'
+
+      - uses: actions/cache/save@v4
+        if: steps.data-store.outputs.mode == 'actions-by-source' && steps.db-changed.outputs.changed == 'true'
+        with:
+          path: data/workouts.db
+          key: workouts-db-v1-${{ hashFiles('db/migrations/*.rb') }}-${{ github.run_id }}
+
+      - name: Save — git-combined
+        if: steps.data-store.outputs.mode == 'git-combined' && steps.git-setup.outputs.configured == 'true' && steps.db-changed.outputs.changed == 'true'
+        run: bash scripts/data-store-git-save.sh data/_/_ "data/raw data/std data/workouts.db"
+
+      - name: Save — git-by-source
+        if: steps.data-store.outputs.mode == 'git-by-source' && steps.git-setup.outputs.configured == 'true' && steps.db-changed.outputs.changed == 'true'
+        run: |
+          for src in keep igpsport xoss xingzhe garmin garmin_cn strava; do
+            bash scripts/data-store-git-save.sh "_/_/$src" "data/raw/$src data/std/$src"
+          done
+          bash scripts/data-store-git-save.sh _/workouts-db "data/workouts.db"
+
+      - name: Save — git-flat
+        if: steps.data-store.outputs.mode == 'git-flat' && steps.git-setup.outputs.configured == 'true' && steps.db-changed.outputs.changed == 'true'
+        run: |
+          git add -A
+          git diff --cached --quiet && echo "No changes" && exit 0
+          git -c user.name=workouts-bot -c user.email=bot@workouts \
+            commit -m "store(sync): $(date -u +%Y%m%d-%H%M%S)"
+          git pull --rebase
+          git push
 
       - name: Save geo cache
         if: always()
