@@ -138,13 +138,13 @@ export function useMapPolylines(mapRef: MapInstance, activities: Activity[], opt
           const ghost = L.polyline(points, {
             color,
             weight: 3,
-            opacity: 0.1,
+            opacity: 0.2,
             smoothFactor: 1,
             interactive: false,
           }).addTo(mapInst)
 
           // 2. Sweep: starts empty (just first point), interactive line
-          const sweep = L.polyline([points[0]], {
+          const sweep = L.polyline([points[0], points[1]], {
             color,
             weight: 6,
             opacity: 0.9,
@@ -195,7 +195,7 @@ export function useMapPolylines(mapRef: MapInstance, activities: Activity[], opt
             const t = Math.min((timestamp - startTime) / duration, 1)
             // Ease function: cubic-bezier(0.16, 1, 0.3, 1) ≈ ease-in-out quad
             const eased = t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2
-            const traversed = Math.max(1, Math.floor(points.length * eased))
+            const traversed = Math.max(2, Math.floor(points.length * eased))
 
             // Update sweep points
             s.sweep?.setLatLngs(points.slice(0, traversed))
