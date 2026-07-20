@@ -189,6 +189,7 @@ export function useMapPolylines(mapRef: MapInstance, activities: Activity[], opt
       if (hoveredActivityId === id) {
         line.setStyle({ weight: 7, color: 'var(--color-accent, #4DD2FF)', opacity: 1 })
         line.bringToFront()
+        dotRef.current.get(id)?.setStyle({ color: 'var(--color-accent, #4DD2FF)' })
       } else {
         const a = activities.find((act) => act.run_id === id)
         if (a) {
@@ -197,6 +198,8 @@ export function useMapPolylines(mapRef: MapInstance, activities: Activity[], opt
             color: activityColor({ average_speed: a.average_speed, type: a.sport_category }, colorMode),
             opacity: 0.4,
           })
+          const origColor = activityColor({ average_speed: a.average_speed, type: a.sport_category }, colorMode)
+          dotRef.current.get(id)?.setStyle({ color: origColor })
         }
       }
     }

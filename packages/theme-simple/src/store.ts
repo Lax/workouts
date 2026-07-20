@@ -181,12 +181,16 @@ export const useSimpleStore = create<SimpleStore>()((set) => ({
       regionFilter: null,
       mapCompact: false,
       typeFilter: null,
+      selectedActivity: null,
+      mapHoveredId: null,
       filteredActivities: filterActivities(s.activities, y, null, s.sortField, s.sortDesc, null, null),
     })),
 
   setSelectedMonth: (m) =>
     set((s) => ({
       selectedMonth: m,
+      selectedActivity: null,
+      mapHoveredId: null,
       filteredActivities: filterActivities(s.activities, s.selectedYear, m, s.sortField, s.sortDesc, s.regionFilter, s.typeFilter),
     })),
 
@@ -212,6 +216,8 @@ export const useSimpleStore = create<SimpleStore>()((set) => ({
       return {
         sortField: field,
         sortDesc: desc,
+        selectedActivity: null,
+        mapHoveredId: null,
         filteredActivities: filterActivities(s.activities, s.selectedYear, s.selectedMonth, field, desc, s.regionFilter, s.typeFilter),
       }
     }),
@@ -241,6 +247,8 @@ export const useSimpleStore = create<SimpleStore>()((set) => ({
       return {
         regionFilter: next,
         mapCompact: next === '其它',
+        selectedActivity: null,
+        mapHoveredId: null,
         filteredActivities: filterActivities(s.activities, s.selectedYear, s.selectedMonth, s.sortField, s.sortDesc, next, s.typeFilter),
       }
     }),
@@ -250,6 +258,8 @@ export const useSimpleStore = create<SimpleStore>()((set) => ({
       const next = s.typeFilter === type ? null : type
       return {
         typeFilter: next,
+        selectedActivity: null,
+        mapHoveredId: null,
         filteredActivities: filterActivities(s.activities, s.selectedYear, s.selectedMonth, s.sortField, s.sortDesc, s.regionFilter, next),
       }
     }),

@@ -16,6 +16,7 @@ vi.mock('leaflet', () => {
     addTo = vi.fn().mockReturnThis()
     setLatLng = vi.fn().mockReturnThis()
     setRadius = vi.fn().mockReturnThis()
+    setStyle = vi.fn().mockReturnThis()
   }
 
   const mapInstance = {

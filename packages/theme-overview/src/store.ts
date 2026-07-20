@@ -197,6 +197,8 @@ export const useOverviewStore = create<OverviewStore>()((set) => ({
     set((s) => ({
       selectedYear: y,
       selectedMonth: y !== s.selectedYear ? null : s.selectedMonth,
+      selectedActivity: null,
+      detailOpen: false,
       filteredActivities: filterActivities(
         s.activities,
         s.filters,
