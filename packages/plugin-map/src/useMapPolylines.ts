@@ -19,6 +19,8 @@ export interface PolylineOptions {
 
 export function useMapPolylines(mapRef: MapInstance, activities: Activity[], options: PolylineOptions): void {
   const polylinesRef = useRef<Map<string, L.Polyline>>(new Map())
+  const glowRef = useRef<Map<string, L.Polyline>>(new Map())
+  const dotRef = useRef<Map<string, L.CircleMarker>>(new Map())
   const markersRef = useRef<L.CircleMarker[]>([])
   const fittedRef = useRef<string>('')
   const animFramesRef = useRef<Map<string, number>>(new Map())
@@ -41,6 +43,10 @@ export function useMapPolylines(mapRef: MapInstance, activities: Activity[], opt
 
     for (const [, line] of polylinesRef.current) mapInst.removeLayer(line)
     polylinesRef.current.clear()
+    for (const [, g] of glowRef.current) mapInst.removeLayer(g)
+    glowRef.current.clear()
+    for (const [, d] of dotRef.current) mapInst.removeLayer(d)
+    dotRef.current.clear()
     for (const m of markersRef.current) mapInst.removeLayer(m)
     markersRef.current = []
     for (const [, fid] of animFramesRef.current) cancelAnimationFrame(fid)
@@ -84,6 +90,26 @@ export function useMapPolylines(mapRef: MapInstance, activities: Activity[], opt
 
         polylinesRef.current.set(a.run_id, line)
 
+        const color = lineStyle.color ?? '#4DD2FF'
+        const glowLine = L.polyline(initial, {
+          color,
+          weight: 14,
+          opacity: 0.15,
+          smoothFactor: 1,
+          interactive: false,
+        }).addTo(mapInst)
+        glowRef.current.set(a.run_id, glowLine)
+
+        const dot = L.circleMarker(points[0], {
+          radius: 6,
+          fillColor: '#ffffff',
+          color,
+          weight: 3,
+          fillOpacity: 1,
+          interactive: false,
+        }).addTo(mapInst)
+        dotRef.current.set(a.run_id, dot)
+
         const duration = Math.min(4000, Math.max(1000, points.length * 25))
         const startTime = performance.now()
 
@@ -91,11 +117,20 @@ export function useMapPolylines(mapRef: MapInstance, activities: Activity[], opt
           const elapsed = timestamp - startTime
           const progress = Math.min(elapsed / duration, 1)
           const count = Math.max(2, Math.floor(points.length * progress))
-          line.setLatLngs(points.slice(0, count))
+          const slice = points.slice(0, count)
+          line.setLatLngs(slice)
+          glowLine.setLatLngs(slice)
+
+          const lastPoint = slice[slice.length - 1]
+          dot.setLatLng(lastPoint)
+
           if (progress < 1) {
+            const pulse = Math.sin(elapsed / 150) * 1.5 + 5
+            dot.setRadius(pulse)
             const fid = requestAnimationFrame(step)
             animFramesRef.current.set(a.run_id, fid)
           } else {
+            dot.setRadius(5)
             animFramesRef.current.delete(a.run_id)
           }
         }

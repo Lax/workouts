@@ -12,6 +12,11 @@ vi.mock('leaflet', () => {
     on = vi.fn()
     setLatLngs = vi.fn().mockReturnThis()
   }
+  class MockCircleMarker {
+    addTo = vi.fn().mockReturnThis()
+    setLatLng = vi.fn().mockReturnThis()
+    setRadius = vi.fn().mockReturnThis()
+  }
 
   const mapInstance = {
     setView: vi.fn().mockReturnThis(),
@@ -31,6 +36,7 @@ vi.mock('leaflet', () => {
       map: mockMap,
       tileLayer: vi.fn(() => new MockTileLayer()),
       polyline: vi.fn(() => new MockPolyline()),
+      circleMarker: vi.fn(() => new MockCircleMarker()),
       control: { zoom: vi.fn(() => ({ addTo: vi.fn() })) },
       latLngBounds: vi.fn(() => ({
         isValid: vi.fn(() => true),
@@ -285,9 +291,12 @@ describe('MapView — route animation', () => {
       root.render(<MapView activities={singleActivity()} colorScheme="light" animate />)
     })
 
-    expect(vi.mocked(L.polyline)).toHaveBeenCalledTimes(1)
-    const pointsArg = vi.mocked(L.polyline).mock.calls[0][0] as [number, number][]
-    expect(pointsArg.length).toBe(2)
+    expect(vi.mocked(L.polyline)).toHaveBeenCalledTimes(2)
+    const mainPoints = vi.mocked(L.polyline).mock.calls[0][0] as [number, number][]
+    expect(mainPoints.length).toBe(2)
+    const glowPoints = vi.mocked(L.polyline).mock.calls[1][0] as [number, number][]
+    expect(glowPoints.length).toBe(2)
+    expect(vi.mocked(L.circleMarker)).toHaveBeenCalledTimes(1)
   })
 
   it('no animation when activities.length>1 even with animate=true', async () => {
@@ -331,7 +340,7 @@ describe('MapView — route animation', () => {
       root.render(<MapView activities={[activityA]} colorScheme="light" animate />)
     })
 
-    expect(vi.mocked(L.polyline)).toHaveBeenCalledTimes(1)
+    expect(vi.mocked(L.polyline)).toHaveBeenCalledTimes(2)
     const callsBefore = vi.mocked(L.polyline).mock.calls.length
 
     await act(async () => {
