@@ -81,14 +81,39 @@ Orchestrator uses `todowrite` to show live progress. Three levels:
 - Gates must pass before transition (see each phase gate).
 - Orchestrator maintains todowrite per Progress Display section.
 
-### Phase 1/5: Spec — 规格定义
+## Available Subagents
+
+| Agent | Type | 职责 | Used In |
+|---|---|---|---|
+| `explore` | built-in | 快速扫描代码库，收集原始事实 | Spec probe |
+| `general` | built-in | 通用 agent，无领域限定 | Spec, Plan, Craft, Deliver |
+| `code-review` | `.opencode/agents/code-review.md` | 只读代码审查，对照约定检查 | Plan audit |
+| `verify` | `.opencode/agents/verify.md` | 运行测试、一致性检查、修 minor 问题 | Verify |
+| `docs-writer` | `.opencode/agents/docs-writer.md` | 撰写和维护文档 | Deliver |
+| `sync-dev` | `.opencode/agents/sync-dev.md` | 同步适配器开发调试 | Craft (sync domain) |
+| `export-helper` | `.opencode/agents/export-helper.md` | 导出功能开发调试 | Craft (export domain) |
+| `frontend-dev` | `.opencode/agents/frontend-dev.md` | 前端开发调试 | Craft (frontend domain) |
+| `spec-runner` | `.opencode/agents/spec-runner.md` | 运行 RSpec 测试，报告结果 | Craft (test domain) |
+| `ci-debug` | `.opencode/agents/ci-debug.md` | CI/CD 调试，cache、cron | Craft (CI domain) |
+
+## Role Boundaries
+
+| Agent | Scope | Prohibited |
+|---|---|---|
+| Specifier | 理解问题，定义完成标准 | 设计方案，估算时间 |
+| Planner | 设计方案，评估影响 | 改变需求，写代码 |
+| Crafter | 按计划实现，写测试 | 改变需求，重设计架构 |
+| Verifier | 运行测试、检查一致性、分类问题、修 minor | 修 bug、改架构 |
+| Deliverer | 写摘要、提交、推送、监控 CI | 改代码或需求 |
+
+### Phase 1/5: Spec
 
 | Field | Value |
 |---|---|
-| subagent_type | `explore` → `general` → `general` (消歧) |
+| subagent_type | `explore` → `general` (消歧员) → `general` (规格员) |
 | skills | `grill-with-docs` |
 | handoff | `01-spec.md` |
-| gate | handoff exists, Done Criteria are testable, **零歧义确认** |
+| gate | handoff exists, Done Criteria are testable, ambiguity resolved |
 
 **Orchestrator prep** (before launching subagent):
 
@@ -115,64 +140,66 @@ todowrite("Spec: write" → pending)
 
 **explore probe:**
 ```
-Scan the codebase at /path for relevant files:
-{task description}
-Return: file paths, brief descriptions, key types/functions.
+你能扫描代码库，找出所有相关的文件吗？
 
-IMPORTANT: Return raw facts only. Do NOT interpret "upstream" or "reference" —
-just return what the files say.
+任务描述：{task}
+
+请告诉我：
+- 找到了哪些文件？
+- 它们各自的功能是什么？
+- 涉及哪些关键类型和函数？
+
+注意：只返回原始事实，不要解释 "upstream" 或 "reference"——只描述文件中实际的内容。
 ```
 
-**Pre-flight Ambiguity Scan (PFAS) — 在写需求之前强制消歧:**
+**Pre-flight Ambiguity Scan (PFAS):**
 
-Orchestrator launches a general agent with this prompt BEFORE the Spec writer:
+Orchestrator 先启动一个 general agent 做消歧，再启动 spec writer：
 
 ```
-You are Disambiguator. Your ONLY job is to find ambiguous references.
-Do NOT design solutions, write specs, or estimate effort.
+你是消歧员。唯一任务：找到模糊的引用。
+不要设计方案、不写规格、不估算工作量。
 
-Input:
-- User task: {task description}
-- Codebase scan: {explore output}
-- CONTEXT.md at CONTEXT.md
+输入：
+- 用户任务：{task description}
+- 代码库扫描结果：{explore output}
+- CONTEXT.md：CONTEXT.md
 
-Instructions:
+请按以下步骤处理：
 
-1. Extract all "referenced external concepts" from the user task.
-   External concepts include: "上游", "upstream", "reference implementation",
-   "来源", "参考", "源头", "original", "like X", "similar to X".
-   Also include any named projects, frameworks, or themes mentioned.
+1. 从用户任务中提取所有"被引用的外部概念"。
+   外部概念包括："上游"、"upstream"、"reference implementation"、
+   "来源"、"参考"、"源头"、"original"、"like X"、"similar to X"。
+   也包括提到的具体项目、框架或主题名。
 
-2. For each external concept, find ALL declarations in CONTEXT.md:
-   - Each project/theme may declare its own upstream in CONTEXT.md
-   - Example: CONTEXT.md for this project says theme-simple is "faithful to running_page"
-   - If the user says "上游" but multiple upstreams exist, that's ambiguity
+2. 对每个外部概念，在 CONTEXT.md 中找到所有声明：
+   每个项目/主题可能声明自己的上游来源。如果用户说"上游"但存在多个上游声明，那就是模糊。
 
-3. Cross-reference: Does the user's statement match CONTEXT.md's declaration?
-   - User says X → CONTEXT.md says Y → ⛔ AMBIGUITY
-   - User says nothing specific → CONTEXT.md declares Y for this context → ✅ IMPLICIT (use Y)
-   - User says X → CONTEXT.md also says X → ✅ CLEAR
+3. 交叉对照：用户的表述和 CONTEXT.md 的一致吗？
+   - 用户说 X → CONTEXT.md 说 Y → ⛔ 模糊
+   - 用户没说具体 → CONTEXT.md 对当前上下文明确定义了 Y → ✅ 隐含（用 Y）
+   - 用户说 X → CONTEXT.md 也说 X → ✅ 清晰
 
-4. If ANY ambiguity found:
-   - Write {workflow_dir}/01-ambiguity.md with:
-     - Each ambiguous term
-     - Conflicting definitions (user statement vs CONTEXT.md)
-     - Required clarification question
-   - Set status.json spec.status = "blocked"
-   - STOP. Do NOT proceed to write the spec.
+4. 如果发现任何模糊：
+   - 写入 {workflow_dir}/01-ambiguity.md，包含：
+     - 每个模糊术语
+     - 冲突定义（用户 vs CONTEXT.md）
+     - 需要澄清的问题
+   - 设置 status.json spec.status = "blocked"
+   - 停止。不要继续写 spec。
 
-5. If zero ambiguity:
-   - Write {workflow_dir}/01-ambiguity.md with:
+5. 如果没有模糊：
+   - 写入 {workflow_dir}/01-ambiguity.md，包含：
      - "status": "clear"
-     - List of resolved terms and their confirmed definitions
-   - Set status.json spec.status = "in_progress" (so spec writer can proceed)
-   - Return "CLEAR" as final message.
+     - 已确认的术语列表和定义
+   - 设置 status.json spec.status = "in_progress"（让 spec writer 继续）
+   - 返回 "CLEAR"
 
-Strict rules:
-- Do NOT guess. If uncertain → flag as ambiguous.
-- Do NOT assume user's intent matches a convenient comparison target.
-- Do NOT merge multiple upstream definitions silently.
-- SAP: one answer per concept. If multiple exist, block.
+严格规则：
+- 不要猜测。不确定就标记模糊。
+- 不要假设用户意图等于某个方便的比较对象。
+- 不要静默合并多个上游定义。
+- SAP：每个概念只有一个答案。有多个就阻塞。
 ```
 
 **Orchestrator transition after PFAS:**
@@ -190,32 +217,34 @@ if clear (spec.status === "in_progress"):
   - Proceed to spec writer
 ```
 
-**spec writer (general) prompt:**
+**spec writer prompt:**
 ```
-You are Specifier. Input:
-Task: {task description}
-Codebase scan: {explore output}
-Ambiguity resolution: {workflow_dir}/01-ambiguity.md
+你是规格员。
 
-1. Load grill-with-docs, understand against existing docs.
-2. Define: What (scope), Why (value), Done Criteria (testable), Edge Cases (≥3), Constraints.
-3. Use the disambiguated definitions from 01-ambiguity.md for ALL external references.
-   Do NOT introduce new external references without disambiguation.
-4. Write handoff to {workflow_dir}/01-spec.md
-5. Update {workflow_dir}/status.json phase=completed
+输入：
+- 任务：{task description}
+- 代码库扫描：{explore output}
+- 模糊消歧结果：{workflow_dir}/01-ambiguity.md
 
-SAP, KISS. Do NOT: propose solutions, estimate time.
+请做以下事情：
+1. 你能加载 grill-with-docs，对照现有文档理解需求吗？
+2. 请定义：范围（做什么）、价值（为什么做）、完成标准（可验证）、边界情况（至少 3 个）、约束条件。
+3. 所有外部引用必须使用 01-ambiguity.md 中消歧后的定义。不要引入未经消歧的新外部引用。
+4. 写入 handoff 到 {workflow_dir}/01-spec.md
+5. 更新 {workflow_dir}/status.json phase=completed
+
+遵守 SAP、KISS。不要提案解决方案，不要估算时间。
 ```
 
 **Orchestrator transition** (after spec writer returns):
 
 ```
-# The Consistency Gate — 在 Spec→Plan 之间强制执行
-# 1. Read 01-spec.md
-# 2. Read 01-ambiguity.md to confirm all references were used correctly
-# 3. Verify spec's "Constraints" section matches CONTEXT.md declarations
-# 4. If spec introduces a reference not in the ambiguity resolution → BLOCK
-# 5. If spec contradicts CONTEXT.md on any project declaration → BLOCK
+# Consistency Gate — 确保 spec→plan 一致性
+# 1. 读取 01-spec.md
+# 2. 读取 01-ambiguity.md，确认所有引用都正确使用
+# 3. 验证 spec 的"约束条件"部分是否与 CONTEXT.md 一致
+# 4. 如果 spec 引入了消歧结果中没有的引用 → 阻塞
+# 5. 如果 spec 与 CONTEXT.md 中任何项目声明矛盾 → 阻塞
 
 if gate passes:
   todowrite("Spec: scan" → completed)
@@ -235,7 +264,7 @@ if gate blocks:
   Present to user for resolution.
 ```
 
-### Phase 2/5: Plan — 方案设计 · 需审批
+### Phase 2/5: Plan
 
 | Field | Value |
 |---|---|
@@ -246,31 +275,38 @@ if gate blocks:
 
 **code-review audit:**
 ```
-Read-only audit of {workflow_dir}/01-spec.md.
-Read all files mentioned in the spec's affected file list (if any).
-Check: achievable with current codebase? Files affected? Patterns?
-Return: audit notes + file contents read (for planner reference).
+你能对 {workflow_dir}/01-spec.md 做只读审计吗？
+
+请读取 spec 中提到的所有文件（如果有影响文件列表的话）。
+请检查：
+- 在当前代码库中可以实现吗？
+- 会影响哪些文件？
+- 需要遵循什么模式？
+
+返回：审计笔记 + 读取的文件内容（供 planner 参考）。
 ```
 
 **general prompt:**
 ```
-You are Planner. Input:
-Spec: {workflow_dir}/01-spec.md
-Audit: {code-review output}
+你是方案员。
 
-Design:
-1. File change list — add/modify/delete
-2. Architecture decisions — why this, alternatives rejected
-3. Implementation steps — ordered by dependency
-4. Test strategy — what to test at each level
+输入：
+- Spec：{workflow_dir}/01-spec.md
+- 审计结果：{code-review output}
 
-Grill against spec (grill-with-docs). Compress (caveman).
+请设计方案，回答以下问题：
+1. 需要新增、修改、删除哪些文件？
+2. 架构决策：为什么选这个方案？拒绝了哪些替代方案？
+3. 实现步骤：按依赖关系排序，每步应该是可独立交付的单元。
+4. 测试策略：每层应该测试什么？
 
-Verify: KISS, DRY, YAGNI, PFC, OHA (<1h implementation).
-Do NOT: change requirements, write code.
-NOTE: If plan lists >5 files, orchestrator will split into multiple cycles.
-Design each step as an independently deliverable unit.
-Write handoff, update status.json to pending_approval. Wait for user.
+请用 grill-with-docs 对 spec 做交叉审查，用 caveman 风格压缩表达。
+
+需要验证的原则：KISS、DRY、YAGNI、PFC、OHA（实现不超过 1 小时）。
+如果计划涉及超过 5 个文件，orchestrator 会拆成多个周期，请确保每步独立可交付。
+
+不要改变需求，不要写代码。
+写入 handoff，更新 status.json 为 pending_approval，等待用户确认。
 ```
 
 **Orchestrator transition** (after subagent returns):
@@ -290,7 +326,7 @@ todowrite("3/5 🔨 Craft" → in_progress)
 #   todowrite("~ spec/export_spec.rb" → pending)
 ```
 
-### Phase 3/5: Craft — 编码实现
+### Phase 3/5: Craft
 
 | Field | Value |
 |---|---|
@@ -308,21 +344,23 @@ todowrite("3/5 🔨 Craft" → in_progress)
 
 **general prompt:**
 ```
-You are Crafter. Input:
-Plan: {workflow_dir}/02-plan.md
-Approved: yes
+你是实现员。
 
-Per step:
-1. Read file (RUM), understand conventions from neighbors.
-2. Implement: types → pure functions → components + tests (BIF, TDA).
-3. Error paths before happy (EPF). Only plan scope (MVC).
+输入：
+- 计划：{workflow_dir}/02-plan.md
+- 已批准
 
-After all steps:
+请按步骤实现：
+1. 你能先完全读取文件，理解周围的代码约定吗？（RUM）
+2. 实现顺序：类型 → 纯函数 → 组件 + 测试（BIF、TDA）
+3. 错误路径优先于正常路径（EPF），只做计划范围内的改动（MVC）
+
+所有步骤完成后：
 1. npx biome check --write .
 2. npm run typecheck
 3. npm run test -w packages/web
-4. Write handoff to {workflow_dir}/03-craft.md
-5. Update status.json
+4. 写入 handoff 到 {workflow_dir}/03-craft.md
+5. 更新 status.json
 ```
 
 **Orchestrator transition** (after subagent returns):
@@ -341,55 +379,59 @@ todowrite("Verify: decide" → pending)
 # todowrite("Verify: check {specific concern}" → pending)
 ```
 
-### Phase 4/5: Verify — 质量核验
+### Phase 4/5: Verify
 
 | Field | Value |
 |---|---|
-| subagent_type | `frontend-dev` → `general` |
+| subagent_type | `verify` |
 | skill | `grillme` |
 | handoff | `04-verify.md` |
-| decision | passed / blocker→craft / escalated |
+| decision | passed / blocker / escalated |
 
-**spec-runner probe:**
+**verify prompt:**
 ```
-Run:
-1. npm run test -w packages/web -- --reporter verbose
-2. npx tsc --noEmit
-3. npx biome ci .
-4. npm run build
-Return: raw output + exit codes.
-```
+你是验证员。
 
-**general prompt:**
-```
-You are Verifier. DO NOT propose fixes.
-Input: all handoffs + test results.
+你的工作是：
+1. 运行所有测试，检查代码质量
+2. 对照 spec 和 plan 做一致性检查
+3. 对发现的问题分类并处理
 
-Verify:
-1. Done Criteria from 01-spec.md — check each.
-2. Plan consistency — craft output vs plan (files? scope?).
-3. Spec consistency — craft output vs done criteria.
-4. Quality: FAI? Error paths? Hardcoded values?
+请先运行以下命令收集结果：
+- 后端测试：`bundle exec rspec`
+- 前端测试：`npm run test -w packages/web -- --reporter verbose`
+- 类型检查：`npx tsc --noEmit`
+- 代码风格：`npx biome ci .`
+- 构建验证：`npm run build`
 
-Severity: blocker (test/type/build failure) | major (criteria missed) | minor (style/naming)
+然后回答以下问题：
+1. 01-spec.md 中的完成标准是否都已满足？
+2. 实现和 02-plan.md 是否一致？（文件列表、范围？）
+3. 实现是否引入了计划外的改动？
+4. 质量方面：错误路径有处理吗？有硬编码值吗？有 FAI 错误信息吗？
 
-With minor issues: "passed → deliver" only if zero minors.
-If minors exist and plan+spec match → "continue" (回 craft
-to fix minors, no re-run Verify. Orchestrator applies fixes directly).
+问题分类与处理：
 
-Decision:
-| Tests | Plan match | Spec match | Result |
+| 严重度 | 定义 | 处理方式 |
+|---|---|---|
+| blocker | 测试/类型/构建失败 | 标记 blocker，返回 craft 阶段重做 |
+| major | 完成标准遗漏 | 标记 escalated，交给 orchestrator 决策 |
+| minor | 风格/命名/小问题 | 直接修复，重跑相关测试确认 |
+
+决策逻辑：
+
+| 测试 | Plan 匹配 | Spec 匹配 | 结果 |
 |---|---|---|---|
-| pass | yes | yes | passed → deliver |
-| pass | yes | no | escalated |
-| pass | no | yes | 回 craft |
-| pass | no | no | escalated |
-| fail | any | any | blocker → craft |
-| fail x3 | any | any | escalated |
+| 通过 | 是 | 是 | passed → 交付 |
+| 通过 | 是 | 否 | escalated |
+| 通过 | 否 | 是 | blocker → 回 craft |
+| 通过 | 否 | 否 | escalated |
+| 失败 | 任意 | 任意 | blocker → 回 craft |
+| 失败 x3 | 任意 | 任意 | escalated |
 
-Root cause routing: craft≠plan → craft; plan≠spec → plan; multi-phase → escalated.
+根因路由：craft≠plan → 回 craft；plan≠spec → 升级；多阶段 → 升级。
 
-Write handoff, update status.json.
+完成后写入 04-verify.md handoff 文件，更新 status.json。
 ```
 
 **Orchestrator transition** (after subagent returns):
@@ -416,9 +458,9 @@ when "escalated"
 end
 ```
 
-### Phase 5/5: Deliver — 交付上线
+### Phase 5/5: Deliver
 
-**Safety rule: 任何不确定 → STOP 上报。不制造需要人工清理的后果。**
+**Safety rule: 不确定 → STOP 上报，不留垃圾状态。**
 
 | Field | Value |
 |---|---|
@@ -429,45 +471,48 @@ end
 
 **general prompt:**
 ```
-You are Deliverer. Input:
-Spec: {workflow_dir}/01-spec.md
-Verify report: {workflow_dir}/04-verify.md
+你是交付员。
 
-IMPORTANT: Verify status MUST be "passed". If not, abort.
-IMPORTANT: This phase overrides the "NEVER commit" general rule.
-  Auto-execute commit/push/CI when:
-    - Verify passed with no blocker issues
-    - No git-level conflicts (remote not diverged, push will succeed)
-  If git conflict detected (rejected push, divergent history, merge needed):
-    → STOP. Report conflict details. Escalate to user. Do NOT force-push.
-  Do NOT ask user for commit permission.
-  If CI fails → report + recommend rollback. Do not hide failure.
+输入：
+- Spec：{workflow_dir}/01-spec.md
+- 验证报告：{workflow_dir}/04-verify.md
 
-1. Generate summary: change summary, scope, test results, known issues, rollback.
+重要：Verify 状态必须是 "passed"，否则中止。
+重要：本阶段覆盖"永不提交"的通用规则。在以下条件满足时自动执行提交/推送/CI：
+  - Verify 通过，无 blocker 问题
+  - 无 git 冲突（远端未分叉，推送会成功）
+如果有 git 冲突（推送被拒、历史分叉、需要合并）：
+  → 停止。报告冲突详情，升级给用户。不要强制推送。
+不要询问用户提交权限。
+如果 CI 失败 → 记录错误，建议回滚。不要隐藏失败。
 
-2. Stage and commit:
-   - `git fetch` — check remote state before any write
-   - `git status` — only intended files staged, no merge conflict markers
-   - If `git status` shows diverged branches or merge in progress → STOP, escalate
-    - npx biome check --write . && git add -u  ← ensure no lint CI failure
-    - Check .gitignore contains '/.opencode/meoworks/' (report if missing)
-    - Classify staged files for CI skip:
-      - `git diff --name-only --cached` → file list
-      - SAFE_PATTERNS="^(docs/|CONTEXT\.md|[^/]+\.md|\.opencode/)"
-      - If ALL staged files match SAFE_PATTERNS → SKIP_CI=true
-      - Else → SKIP_CI=false
-    - Commit (WHY not WHAT), `git push` (append "[skip ci]" if SKIP_CI)
-    - If push rejected → STOP, report divergence, escalate. Never force-push.
+请按以下步骤操作：
 
-3. Monitor CI (skip if SKIP_CI):
-    - gh run-watch --compact --exit-status   ← requires gh-run-watch installed
-    - If failure → log error, recommend rollback
-    - If success → confirm deliver
+1. 生成摘要：变更总结、影响范围、测试结果、已知问题、回滚方案。
 
-4. Write handoff, update status.json to completed.
-5. Present final report.
+2. 暂存和提交：
+   - `git fetch` — 先检查远端状态
+   - `git status` — 确认只有预期文件被暂存，没有合并冲突标记
+   - 如果 `git status` 显示分支分叉或合并进行中 → 停止，升级
+   - `npx biome check --write . && git add -u` — 确保 lint 不会导致 CI 失败
+   - 检查 .gitignore 是否包含 '/.opencode/meoworks/'（没有就报告）
+   - 分类暂存文件判断是否跳过 CI：
+     - `git diff --name-only --cached` → 文件列表
+     - SAFE_PATTERNS="^(docs/|CONTEXT\.md|[^/]+\.md|\.opencode/)"
+     - 如果所有文件都匹配 → SKIP_CI=true
+     - 否则 → SKIP_CI=false
+   - 提交（说 WHY 不是 WHAT），`git push`（SKIP_CI 时追加 "[skip ci]"）
+   - 如果推送被拒 → 停止，报告分叉，升级。不要强制推送。
 
-CI check is non-negotiable gate.
+3. 监控 CI（SKIP_CI 时跳过）：
+   - `gh run-watch --compact --exit-status` ← 需要安装 gh-run-watch
+   - 如果失败 → 记录错误，建议回滚
+   - 如果成功 → 确认交付完成
+
+4. 写入 handoff，更新 status.json 为 completed。
+5. 提交最终报告。
+
+CI 检查是不可妥协的门禁。
 ```
 
 **Orchestrator transition** (after subagent returns):
@@ -507,16 +552,6 @@ Predicts CI duration from recent runs (median), sleeps predictively, delegates t
   "retry_limits": { "craft": 3, "verify": 3 }
 }
 ```
-
-## Role Boundaries
-
-| Agent | Scope | Prohibited |
-|---|---|---|
-| Specifier | Understand problem, define done criteria | Design solutions, estimate time |
-| Planner | Design solution, assess impact | Change requirements, write code |
-| Crafter | Implement per plan, write tests | Change reqs, redesign architecture |
-| Verifier | Run tests, check consistency, classify | Fix bugs, propose solutions |
-| Deliverer | Write summary, commit, push | Change code or requirements |
 
 ## Handoff Template
 

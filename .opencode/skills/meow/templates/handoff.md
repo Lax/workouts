@@ -1,4 +1,4 @@
-# {workflow_dir}/handoffs/NN-phase.md
+# {workflow_dir}/NN-phase.md
 
 ## Status
 - Phase: {phase_name}
