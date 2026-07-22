@@ -38,6 +38,8 @@ jobs:
         with:
           ruby-version: '3.4'
           bundler-cache: true
+        env:
+          BUNDLE_GITHUB__COM: lax:${{ secrets.WORKOUTS_SYNC_PAT }}
 
       - uses: actions/setup-python@v5
         if: vars.RUNNER_LABEL != 'self-hosted'
@@ -63,6 +65,8 @@ jobs:
 
       - name: Import Apple Health
         if: steps.import-cache-apple-health.outputs.cache-hit != 'true' && steps.git-setup.outputs.configured == 'true'
+        env:
+          GIT_FIT_DATABASE_PATH: data/workouts.db
         run: |
           mkdir -p data/import/apple_health
           git lfs install
@@ -80,7 +84,7 @@ jobs:
             echo "export.zip is not a valid zip — possible LFS smudge failure" >&2
             exit 1
           }
-          bundle exec exe/workouts import --source apple_health
+          bundle exec git fit import apple_health
           touch data/import/apple_health/.imported
 
       # ── Data restore (conditional on DATA_STORE) ──
