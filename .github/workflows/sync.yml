@@ -301,29 +301,16 @@ jobs:
             data/cache/geo-point.jsonl
           key: ${{ steps.geo-cache.outputs.cache-primary-key }}
 
-      - name: Compute global data change
-        id: change
-        if: always()
-        shell: bash
-        run: |
-          db="${{ steps.db-check.outputs.db_changed || 'false' }}"
-          ps="${{ steps.data-save.outputs.any_changed || 'false' }}"
-          if [ "$db" = "true" ] || [ "$ps" = "true" ]; then
-            echo "any_changed=true" >> $GITHUB_OUTPUT
-          else
-            echo "any_changed=false" >> $GITHUB_OUTPUT
-          fi
-
       - name: Upload DB artifact
         uses: actions/upload-artifact@v4
-        if: steps.change.outputs.any_changed == 'true'
+        if: steps.db-check.outputs.db_changed == 'true' || steps.data-save.outputs.any_changed == 'true'
         with:
           name: workouts-db
           path: data/workouts.db
           retention-days: 1
 
       - name: Trigger gh-pages deploy
-        if: steps.change.outputs.any_changed == 'true'
+        if: steps.db-check.outputs.db_changed == 'true' || steps.data-save.outputs.any_changed == 'true'
         run: |
           gh workflow run gh-pages.yml --ref main \
             -f artifact-run-id=${{ github.run_id }}
