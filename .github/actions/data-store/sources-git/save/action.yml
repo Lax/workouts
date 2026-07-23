@@ -1,9 +1,6 @@
 name: Sources Git Save
 description: Save per-source data to git branches
 inputs:
-  shall-commit-db:
-    required: false
-    default: 'false'
   shall-commit-data:
     required: false
     default: 'false'
@@ -28,6 +25,6 @@ runs:
           done
           if [ "$changed" = "true" ]; then
             bash scripts/data-store-git-save.sh "_/_/$src" \
-              "data/raw/$src data/std/$src data/raw/$src/SHA256SUMS data/std/$src/SHA256SUMS"
+              "data/raw/$src data/std/$src"
           fi
         done

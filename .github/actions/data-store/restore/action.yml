@@ -1,9 +1,6 @@
 name: Data Store Restore
 description: Restore data from configured store backend
 inputs:
-  shall-commit-db:
-    required: false
-    default: 'false'
   shall-commit-data:
     required: false
     default: 'false'
@@ -18,16 +15,9 @@ runs:
       with:
         shall-commit-data: ${{ inputs.shall-commit-data }}
 
-    - name: Restore — flat
-      if: inputs.shall-commit-data != 'true' && inputs.shall-commit-db != 'true'
-      shell: bash
-      run: |
-        echo "flat: data already in checkout, no restore needed"
-
     - name: Generate SHA256SUMS files
       shell: bash
       run: |
         for src in keep igpsport xoss xingzhe garmin garmin_cn strava; do
           bash scripts/generate-checksums.sh "data/raw/$src" "data/std/$src"
         done
-        bash scripts/generate-checksums.sh data/workouts.db

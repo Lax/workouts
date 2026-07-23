@@ -1,9 +1,6 @@
 name: Data Store Save
 description: Save data to configured store backend
 inputs:
-  shall-commit-db:
-    required: false
-    default: 'false'
   shall-commit-data:
     required: false
     default: 'false'
@@ -37,11 +34,6 @@ runs:
             echo "changed_${src}=false"
           fi
         done >> "$GITHUB_OUTPUT"
-        if [ -f data/workouts.db.SHA256SUMS ] && sha256sum -c data/workouts.db.SHA256SUMS --quiet 2>/dev/null; then
-          echo "changed_db=false" >> $GITHUB_OUTPUT
-        else
-          echo "changed_db=true" >> $GITHUB_OUTPUT; any=true
-        fi
         echo "any_changed=$any" >> $GITHUB_OUTPUT
 
     - uses: ./.github/actions/data-store/sources-cache/save
@@ -54,12 +46,9 @@ runs:
         git-configured: ${{ inputs.git-configured }}
 
     - name: Save — flat
-      if: inputs.shall-commit-data != 'true' && inputs.shall-commit-db != 'true' && inputs.git-configured == 'true' && steps.detect.outputs.any_changed == 'true'
+      if: inputs.shall-commit-data == 'true' && inputs.git-configured == 'true' && steps.detect.outputs.any_changed == 'true'
       shell: bash
       run: |
-        git add -f \
-          data/raw/ data/std/ data/workouts.db \
-          data/workouts.db.SHA256SUMS
         git diff --cached --quiet && exit 0
         git -c user.name=workouts-bot -c user.email=bot@workouts \
           commit -m "store(sync): $(date -u +%Y%m%d-%H%M%S)"
