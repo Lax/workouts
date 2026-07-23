@@ -9,22 +9,8 @@ runs:
     - uses: ./.github/actions/data-store/sources-cache/restore
       if: inputs.mode == 'actions-by-source'
 
-    - uses: actions/cache/restore@v4
-      if: inputs.mode == 'actions-by-source'
-      with:
-        path: data/workouts.db
-        key: workouts-db-v1-${{ hashFiles('db/migrations/*.rb') }}-${{ github.run_id }}
-        restore-keys: workouts-db-v1-
-
     - uses: ./.github/actions/data-store/sources-git/restore
       if: inputs.mode == 'git-by-source'
-
-    - uses: actions/cache/restore@v4
-      if: inputs.mode == 'git-by-source'
-      with:
-        path: data/workouts.db
-        key: workouts-db-v1-${{ hashFiles('db/migrations/*.rb') }}-${{ github.run_id }}
-        restore-keys: workouts-db-v1-
 
     - name: Restore — git-flat
       if: inputs.mode == 'git-flat'

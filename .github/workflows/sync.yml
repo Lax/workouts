@@ -56,6 +56,26 @@ jobs:
         id: data-store
         run: echo "mode=${DATA_STORE_MODE:-actions-by-source}" >> $GITHUB_OUTPUT
 
+      # ── DB restore (before import — import needs DB) ──
+      - name: Restore DB cache
+        uses: actions/cache/restore@v4
+        if: steps.data-store.outputs.mode == 'actions-by-source' || steps.data-store.outputs.mode == 'git-by-source'
+        with:
+          path: data/workouts.db
+          key: workouts-db-v1-${{ hashFiles('db/migrations/*.rb') }}-${{ github.run_id }}
+          restore-keys: workouts-db-v1-
+
+      - name: Restore DB from git
+        if: steps.data-store.outputs.mode == 'git-by-source'
+        shell: bash
+        run: |
+          if git ls-remote --exit-code origin refs/heads/_/workouts-db >/dev/null 2>&1; then
+            git fetch origin _/workouts-db
+            mkdir -p data
+            git archive --format=tar origin/_/workouts-db \
+              data/workouts.db 2>/dev/null | tar xf - || true
+          fi
+
       # ── Combined restore (before import — import needs DB) ──
       - name: Restore combined cache
         uses: actions/cache/restore@v4
