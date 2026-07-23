@@ -59,16 +59,6 @@ jobs:
           echo "shall_commit_data=${{ vars.GIT_FIT_SHALL_COMMIT_DATA == 'true' && 'true' || 'false' }}" >> $GITHUB_OUTPUT
 
       # ── DB restore (before import — import needs DB) ──
-      - name: Restore DB cache
-        uses: actions/cache/restore@v4
-        if: steps.mode.outputs.shall_commit_db != 'true'
-        with:
-          path: |-
-            data/workouts.db
-            data/workouts.db.SHA256SUMS
-          key: workouts-db-v1-${{ hashFiles('db/migrations/*.rb') }}-${{ github.run_id }}
-          restore-keys: workouts-db-v1-
-
       - name: Check DB git branch
         id: db-git-check
         if: steps.mode.outputs.shall_commit_db == 'true'
@@ -88,6 +78,15 @@ jobs:
           mkdir -p data
           git archive --format=tar origin/_/workouts-db \
             data/workouts.db data/workouts.db.SHA256SUMS 2>/dev/null | tar xf - || true
+
+      - name: Restore DB cache
+        uses: actions/cache/restore@v4
+        with:
+          path: |-
+            data/workouts.db
+            data/workouts.db.SHA256SUMS
+          key: workouts-db-v1-${{ hashFiles('db/migrations/*.rb') }}-${{ github.run_id }}
+          restore-keys: workouts-db-v1-
 
       - name: Verify DB restore
         id: db-restore-check
@@ -245,7 +244,6 @@ jobs:
       # ── DB save (by-source) ──
       - name: Check DB changed
         id: db-check
-        if: steps.mode.outputs.shall_commit_db != 'true'
         shell: bash
         run: |
           ck="data/workouts.db.SHA256SUMS"
@@ -256,7 +254,7 @@ jobs:
           fi
 
       - name: Generate DB SHA256SUMS
-        if: (steps.db-check.outputs.db_changed == 'true' || steps.db-restore-check.outputs.clean == 'false') && steps.mode.outputs.shall_commit_db != 'true'
+        if: steps.db-check.outputs.db_changed == 'true'
         shell: bash
         run: bash scripts/generate-checksums.sh data/workouts.db
 
@@ -267,7 +265,7 @@ jobs:
           "data/workouts.db data/workouts.db.SHA256SUMS"
 
       - name: Save DB cache
-        if: steps.mode.outputs.shall_commit_db != 'true' && (steps.db-check.outputs.db_changed == 'true' || steps.db-restore-check.outputs.clean == 'false')
+        if: steps.db-check.outputs.db_changed == 'true' || steps.db-restore-check.outputs.clean == 'false'
         uses: actions/cache/save@v4
         with:
           path: |-
