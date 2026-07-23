@@ -6,16 +6,6 @@ inputs:
 runs:
   using: composite
   steps:
-    - uses: actions/cache/restore@v4
-      if: inputs.mode == 'actions-combined'
-      with:
-        path: |-
-          data/raw/
-          data/std/
-          data/workouts.db
-        key: workouts-data-v1-${{ github.run_id }}
-        restore-keys: workouts-data-v1-
-
     - uses: ./.github/actions/data-store/sources-cache/restore
       if: inputs.mode == 'actions-by-source'
 
@@ -35,17 +25,6 @@ runs:
         path: data/workouts.db
         key: workouts-db-v1-${{ hashFiles('db/migrations/*.rb') }}-${{ github.run_id }}
         restore-keys: workouts-db-v1-
-
-    - name: Restore — git-combined
-      if: inputs.mode == 'git-combined'
-      shell: bash
-      run: |
-        if git ls-remote --exit-code origin refs/heads/data/_/_ >/dev/null 2>&1; then
-          git fetch origin data/_/_
-          mkdir -p data/raw data/std
-          git archive --format=tar origin/data/_/_ \
-            data/raw data/std data/workouts.db 2>/dev/null | tar xf - || true
-        fi
 
     - name: Restore — git-flat
       if: inputs.mode == 'git-flat'

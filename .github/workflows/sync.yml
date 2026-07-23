@@ -56,6 +56,29 @@ jobs:
         id: data-store
         run: echo "mode=${DATA_STORE_MODE:-actions-by-source}" >> $GITHUB_OUTPUT
 
+      # ── Combined restore (before import — import needs DB) ──
+      - name: Restore combined cache
+        uses: actions/cache/restore@v4
+        if: steps.data-store.outputs.mode == 'actions-combined' || steps.data-store.outputs.mode == 'git-combined'
+        with:
+          path: |-
+            data/raw/
+            data/std/
+            data/workouts.db
+          key: workouts-data-v1-${{ github.run_id }}
+          restore-keys: workouts-data-v1-
+
+      - name: Restore combined git
+        if: steps.data-store.outputs.mode == 'git-combined'
+        shell: bash
+        run: |
+          if git ls-remote --exit-code origin refs/heads/data/_/_ >/dev/null 2>&1; then
+            git fetch origin data/_/_
+            mkdir -p data/raw data/std
+            git archive --format=tar origin/data/_/_ \
+              data/raw data/std data/workouts.db 2>/dev/null | tar xf - || true
+          fi
+
       - name: Restore import marker
         id: import-cache-apple-health
         uses: actions/cache@v5.1.0
