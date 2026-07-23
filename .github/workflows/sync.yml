@@ -52,14 +52,16 @@ jobs:
         if: vars.RUNNER_LABEL != 'self-hosted'
         run: pip install -r scripts/requirements.txt
 
-      - name: Determine data store
-        id: data-store
-        run: echo "mode=${DATA_STORE_MODE:-cache}" >> $GITHUB_OUTPUT
+      - name: Determine commit mode
+        id: mode
+        run: |
+          echo "shall_commit_db=${{ vars.GIT_FIT_SHALL_COMMIT_DB == 'true' && 'true' || 'false' }}" >> $GITHUB_OUTPUT
+          echo "shall_commit_data=${{ vars.GIT_FIT_SHALL_COMMIT_DATA == 'true' && 'true' || 'false' }}" >> $GITHUB_OUTPUT
 
       # ── DB restore (before import — import needs DB) ──
       - name: Restore DB cache
         uses: actions/cache/restore@v4
-        if: steps.data-store.outputs.mode == 'cache' || steps.data-store.outputs.mode == 'git'
+        if: steps.mode.outputs.shall_commit_db != 'true'
         with:
           path: |-
             data/workouts.db
@@ -67,20 +69,29 @@ jobs:
           key: workouts-db-v1-${{ hashFiles('db/migrations/*.rb') }}-${{ github.run_id }}
           restore-keys: workouts-db-v1-
 
-      - name: Restore DB from git
-        if: steps.data-store.outputs.mode == 'git'
+      - name: Check DB git branch
+        id: db-git-check
+        if: steps.mode.outputs.shall_commit_db == 'true'
         shell: bash
         run: |
           if git ls-remote --exit-code origin refs/heads/_/workouts-db >/dev/null 2>&1; then
-            git fetch origin _/workouts-db
-            mkdir -p data
-            git archive --format=tar origin/_/workouts-db \
-              data/workouts.db data/workouts.db.SHA256SUMS 2>/dev/null | tar xf - || true
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
           fi
+
+      - name: Restore DB from git
+        if: steps.mode.outputs.shall_commit_db == 'true' && steps.db-git-check.outputs.exists == 'true'
+        shell: bash
+        run: |
+          git fetch origin _/workouts-db
+          mkdir -p data
+          git archive --format=tar origin/_/workouts-db \
+            data/workouts.db data/workouts.db.SHA256SUMS 2>/dev/null | tar xf - || true
 
       - name: Verify DB restore
         id: db-restore-check
-        if: steps.data-store.outputs.mode == 'cache' || steps.data-store.outputs.mode == 'git'
+        if: steps.mode.outputs.shall_commit_db != 'true'
         shell: bash
         run: |
           if [ ! -f data/workouts.db ]; then
@@ -126,10 +137,11 @@ jobs:
           bundle exec git fit import apple_health
           touch data/import/apple_health/.imported
 
-      # ── Data restore (conditional on DATA_STORE_MODE) ──
+      # ── Data restore (conditional on commit mode) ──
       - uses: ./.github/actions/data-store/restore
         with:
-          mode: ${{ steps.data-store.outputs.mode }}
+          shall-commit-db: ${{ steps.mode.outputs.shall_commit_db }}
+          shall-commit-data: ${{ steps.mode.outputs.shall_commit_data }}
 
       - id: load-tokens-cache
         uses: ./.github/actions/tokens-cache/restore
@@ -233,7 +245,7 @@ jobs:
       # ── DB save (by-source) ──
       - name: Check DB changed
         id: db-check
-        if: steps.data-store.outputs.mode == 'cache' || steps.data-store.outputs.mode == 'git'
+        if: steps.mode.outputs.shall_commit_db != 'true'
         shell: bash
         run: |
           ck="data/workouts.db.SHA256SUMS"
@@ -243,19 +255,19 @@ jobs:
             echo "db_changed=true" >> $GITHUB_OUTPUT
           fi
 
-      - name: Generate DB checksum
-        if: (steps.db-check.outputs.db_changed == 'true' || steps.db-restore-check.outputs.clean == 'false') && (steps.data-store.outputs.mode == 'cache' || steps.data-store.outputs.mode == 'git')
+      - name: Generate DB SHA256SUMS
+        if: (steps.db-check.outputs.db_changed == 'true' || steps.db-restore-check.outputs.clean == 'false') && steps.mode.outputs.shall_commit_db != 'true'
         shell: bash
         run: bash scripts/generate-checksums.sh data/workouts.db
 
       - name: Save DB git
-        if: steps.data-store.outputs.mode == 'git' && (steps.db-check.outputs.db_changed == 'true' || steps.db-restore-check.outputs.clean == 'false')
+        if: steps.mode.outputs.shall_commit_db == 'true' && (steps.db-check.outputs.db_changed == 'true' || steps.db-restore-check.outputs.clean == 'false')
         shell: bash
         run: bash scripts/data-store-git-save.sh _/workouts-db \
           "data/workouts.db data/workouts.db.SHA256SUMS"
 
       - name: Save DB cache
-        if: steps.data-store.outputs.mode == 'cache' && (steps.db-check.outputs.db_changed == 'true' || steps.db-restore-check.outputs.clean == 'false')
+        if: steps.mode.outputs.shall_commit_db != 'true' && (steps.db-check.outputs.db_changed == 'true' || steps.db-restore-check.outputs.clean == 'false')
         uses: actions/cache/save@v4
         with:
           path: |-
@@ -263,12 +275,38 @@ jobs:
             data/workouts.db.SHA256SUMS
           key: workouts-db-v1-${{ hashFiles('db/migrations/*.rb') }}-${{ github.run_id }}
 
-      # ── Data save (per-source, conditional on DATA_STORE_MODE) ──
+      # ── Data save (per-source, conditional on commit mode) ──
       - uses: ./.github/actions/data-store/save
         id: data-save
         with:
-          mode: ${{ steps.data-store.outputs.mode }}
+          shall-commit-db: ${{ steps.mode.outputs.shall_commit_db }}
+          shall-commit-data: ${{ steps.mode.outputs.shall_commit_data }}
           git-configured: ${{ steps.git-setup.outputs.configured }}
+
+      # ── Git add + unified commit (for commit mode) ──
+      - name: Git add DB
+        if: steps.mode.outputs.shall_commit_db == 'true' && (steps.db-check.outputs.db_changed == 'true' || steps.db-restore-check.outputs.clean == 'false')
+        shell: bash
+        run: |
+          git add -f data/workouts.db data/workouts.db.SHA256SUMS
+
+      - name: Git add sources
+        if: steps.mode.outputs.shall_commit_data == 'true' && steps.data-save.outputs.any_changed == 'true'
+        shell: bash
+        run: |
+          for src in keep igpsport xoss xingzhe garmin garmin_cn strava; do
+            git add -f "data/raw/$src/" "data/std/$src/"
+          done
+
+      - name: Unified commit
+        if: (steps.mode.outputs.shall_commit_db == 'true' && (steps.db-check.outputs.db_changed == 'true' || steps.db-restore-check.outputs.clean == 'false')) || (steps.mode.outputs.shall_commit_data == 'true' && steps.data-save.outputs.any_changed == 'true')
+        shell: bash
+        run: |
+          git diff --cached --quiet && exit 0
+          git -c user.name=workouts-bot -c user.email=bot@workouts \
+            commit -m "store(sync): $(date -u +%Y%m%d-%H%M%S)"
+          git pull --rebase
+          git push
 
       - name: Save geo cache
         if: always()
@@ -293,4 +331,3 @@ jobs:
             -f artifact-run-id=${{ github.run_id }}
         env:
           GH_TOKEN: ${{ github.token }}
-

@@ -63,6 +63,7 @@ runs:
       shell: bash
       run: |
         for src in keep igpsport xoss xingzhe garmin garmin_cn strava; do
-          bash scripts/generate-checksums.sh "data/raw/$src" "data/std/$src"
+          bash scripts/generate-checksums.sh \
+            "data/raw/$src" "data/std/$src"
           echo "  $src: done" >&2
         done

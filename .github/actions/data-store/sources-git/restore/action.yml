@@ -1,13 +1,14 @@
 name: Sources Git Restore
 description: Restore per-source data from git branches
 inputs:
-  mode:
-    required: true
+  shall-commit-data:
+    required: false
+    default: 'false'
 runs:
   using: composite
   steps:
     - name: Restore per-source git branches
-      if: inputs.mode == 'git'
+      if: inputs.shall-commit-data == 'true'
       shell: bash
       run: |
         for src in keep igpsport xoss xingzhe garmin garmin_cn strava; do

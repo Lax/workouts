@@ -8,7 +8,7 @@ data/svg/
 data/raw/
 data/std/
 data/cache/
-data/*.SHA256SUMS
+data/*.checksum
 build/
 target/
 site/

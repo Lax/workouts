@@ -1,8 +1,12 @@
 name: Sources Git Save
 description: Save per-source data to git branches
 inputs:
-  mode:
-    required: true
+  shall-commit-db:
+    required: false
+    default: 'false'
+  shall-commit-data:
+    required: false
+    default: 'false'
   git-configured:
     required: false
     default: 'false'
@@ -10,13 +14,20 @@ runs:
   using: composite
   steps:
     - name: Save per-source git branches
-      if: inputs.mode == 'git' && inputs.git-configured == 'true'
+      if: inputs.shall-commit-data == 'true' && inputs.git-configured == 'true'
       shell: bash
       run: |
         for src in keep igpsport xoss xingzhe garmin garmin_cn strava; do
-          ck="data/raw/$src/SHA256SUMS"
-          if [ ! -f "$ck" ] || ! (cd "data/raw/$src" && sha256sum -c SHA256SUMS --quiet 2>/dev/null); then
+          changed=false
+          for dir in "data/raw/$src" "data/std/$src"; do
+            if [ -d "$dir" ]; then
+              (cd "$dir" && if [ ! -f SHA256SUMS ] || ! sha256sum -c SHA256SUMS --quiet 2>/dev/null; then
+                changed=true
+              fi)
+            fi
+          done
+          if [ "$changed" = "true" ]; then
             bash scripts/data-store-git-save.sh "_/_/$src" \
-              "data/raw/$src data/std/$src data/raw/$src/SHA256SUMS"
+              "data/raw/$src data/std/$src data/raw/$src/SHA256SUMS data/std/$src/SHA256SUMS"
           fi
         done

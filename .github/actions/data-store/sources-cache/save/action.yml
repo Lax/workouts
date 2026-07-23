@@ -8,13 +8,20 @@ runs:
       shell: bash
       run: |
         for src in keep igpsport xoss xingzhe garmin garmin_cn strava; do
-          ck="data/raw/$src/SHA256SUMS"
-          if [ -f "$ck" ] && (cd "data/raw/$src" && sha256sum -c SHA256SUMS --quiet 2>/dev/null); then
-            echo "  $src: unchanged" >&2
-            echo "changed_${src}=false"
-          else
+          changed=false
+          for dir in "data/raw/$src" "data/std/$src"; do
+            if [ -d "$dir" ]; then
+              (cd "$dir" && if [ ! -f SHA256SUMS ] || ! sha256sum -c SHA256SUMS --quiet 2>/dev/null; then
+                changed=true
+              fi)
+            fi
+          done
+          if [ "$changed" = "true" ]; then
             echo "  $src: CHANGED" >&2
             echo "changed_${src}=true"
+          else
+            echo "  $src: unchanged" >&2
+            echo "changed_${src}=false"
           fi
         done >> "$GITHUB_OUTPUT"
 
@@ -87,10 +94,9 @@ runs:
       run: |
         echo "=== Source digests after sync ==="
         for src in keep igpsport xoss xingzhe garmin garmin_cn strava; do
-          ck="data/raw/$src/SHA256SUMS"
-          if [ -f "$ck" ]; then
-            echo "  $src: $(sha256sum "$ck" | cut -d' ' -f1)"
-          else
-            echo "  $src: no checksum"
-          fi
+          raw_ck="data/raw/$src/SHA256SUMS"
+          std_ck="data/std/$src/SHA256SUMS"
+          raw_digest="$(sha256sum "$raw_ck" 2>/dev/null | cut -d' ' -f1 || echo 'none')"
+          std_digest="$(sha256sum "$std_ck" 2>/dev/null | cut -d' ' -f1 || echo 'none')"
+          echo "  $src: raw=$raw_digest std=$std_digest"
         done
