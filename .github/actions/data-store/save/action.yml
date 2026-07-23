@@ -33,15 +33,6 @@ runs:
         fi
         echo "any_changed=$any" >> $GITHUB_OUTPUT
 
-    - uses: actions/cache/save@v4
-      if: inputs.mode == 'actions-combined' && steps.detect.outputs.any_changed == 'true'
-      with:
-        path: |-
-          data/raw/
-          data/std/
-          data/workouts.db
-        key: workouts-data-v1-${{ github.run_id }}
-
     - uses: ./.github/actions/data-store/sources-cache/save
       if: inputs.mode == 'actions-by-source'
 
@@ -49,11 +40,6 @@ runs:
       if: inputs.mode == 'git-by-source'
       with:
         git-configured: ${{ inputs.git-configured }}
-
-    - name: Save — git-combined
-      if: inputs.mode == 'git-combined' && inputs.git-configured == 'true' && steps.detect.outputs.any_changed == 'true'
-      shell: bash
-      run: bash scripts/data-store-git-save.sh data/_/_ "data/raw data/std data/workouts.db data/workouts.db.checksum"
 
     - name: Save — git-flat
       if: inputs.mode == 'git-flat' && inputs.git-configured == 'true' && steps.detect.outputs.any_changed == 'true'
