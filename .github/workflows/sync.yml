@@ -54,7 +54,7 @@ jobs:
 
       - name: Determine data store
         id: data-store
-        run: echo "mode=${DATA_STORE:-actions-by-source}" >> $GITHUB_OUTPUT
+        run: echo "mode=${DATA_STORE_MODE:-actions-by-source}" >> $GITHUB_OUTPUT
 
       - name: Restore import marker
         id: import-cache-apple-health
@@ -87,7 +87,7 @@ jobs:
           bundle exec git fit import apple_health
           touch data/import/apple_health/.imported
 
-      # ── Data restore (conditional on DATA_STORE) ──
+      # ── Data restore (conditional on DATA_STORE_MODE) ──
       - uses: ./.github/actions/data-store/restore
         with:
           mode: ${{ steps.data-store.outputs.mode }}
@@ -191,7 +191,7 @@ jobs:
           file_pattern: .github/workflows/sync.yml
           token: ${{ secrets.WORKOUTS_SYNC_PAT }}
 
-      # ── Data save (conditional on DATA_STORE) ──
+      # ── Data save (conditional on DATA_STORE_MODE) ──
       - uses: ./.github/actions/data-store/save
         id: data-save
         with:
