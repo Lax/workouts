@@ -7,7 +7,7 @@ runs:
   using: composite
   steps:
     - name: Restore per-source git branches
-      if: inputs.mode == 'git-by-source'
+      if: inputs.mode == 'git'
       shell: bash
       run: |
         for src in keep igpsport xoss xingzhe garmin garmin_cn strava; do

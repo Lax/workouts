@@ -10,7 +10,7 @@ runs:
   using: composite
   steps:
     - name: Save per-source git branches
-      if: inputs.mode == 'git-by-source' && inputs.git-configured == 'true'
+      if: inputs.mode == 'git' && inputs.git-configured == 'true'
       shell: bash
       run: |
         for src in keep igpsport xoss xingzhe garmin garmin_cn strava; do

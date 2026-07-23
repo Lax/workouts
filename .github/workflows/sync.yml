@@ -54,12 +54,12 @@ jobs:
 
       - name: Determine data store
         id: data-store
-        run: echo "mode=${DATA_STORE_MODE:-actions-by-source}" >> $GITHUB_OUTPUT
+        run: echo "mode=${DATA_STORE_MODE:-cache}" >> $GITHUB_OUTPUT
 
       # ── DB restore (before import — import needs DB) ──
       - name: Restore DB cache
         uses: actions/cache/restore@v4
-        if: steps.data-store.outputs.mode == 'actions-by-source' || steps.data-store.outputs.mode == 'git-by-source'
+        if: steps.data-store.outputs.mode == 'cache' || steps.data-store.outputs.mode == 'git'
         with:
           path: |-
             data/workouts.db
@@ -68,7 +68,7 @@ jobs:
           restore-keys: workouts-db-v1-
 
       - name: Restore DB from git
-        if: steps.data-store.outputs.mode == 'git-by-source'
+        if: steps.data-store.outputs.mode == 'git'
         shell: bash
         run: |
           if git ls-remote --exit-code origin refs/heads/_/workouts-db >/dev/null 2>&1; then
@@ -80,7 +80,7 @@ jobs:
 
       - name: Verify DB restore
         id: db-restore-check
-        if: steps.data-store.outputs.mode == 'actions-by-source' || steps.data-store.outputs.mode == 'git-by-source'
+        if: steps.data-store.outputs.mode == 'cache' || steps.data-store.outputs.mode == 'git'
         shell: bash
         run: |
           if [ ! -f data/workouts.db ]; then
@@ -233,7 +233,7 @@ jobs:
       # ── DB save (by-source) ──
       - name: Check DB changed
         id: db-check
-        if: steps.data-store.outputs.mode == 'actions-by-source' || steps.data-store.outputs.mode == 'git-by-source'
+        if: steps.data-store.outputs.mode == 'cache' || steps.data-store.outputs.mode == 'git'
         shell: bash
         run: |
           ck="data/workouts.db.checksum"
@@ -244,18 +244,18 @@ jobs:
           fi
 
       - name: Generate DB checksum
-        if: (steps.db-check.outputs.db_changed == 'true' || steps.db-restore-check.outputs.clean == 'false') && (steps.data-store.outputs.mode == 'actions-by-source' || steps.data-store.outputs.mode == 'git-by-source')
+        if: (steps.db-check.outputs.db_changed == 'true' || steps.db-restore-check.outputs.clean == 'false') && (steps.data-store.outputs.mode == 'cache' || steps.data-store.outputs.mode == 'git')
         shell: bash
         run: bash scripts/generate-checksums.sh data/workouts.db
 
       - name: Save DB git
-        if: steps.data-store.outputs.mode == 'git-by-source' && (steps.db-check.outputs.db_changed == 'true' || steps.db-restore-check.outputs.clean == 'false')
+        if: steps.data-store.outputs.mode == 'git' && (steps.db-check.outputs.db_changed == 'true' || steps.db-restore-check.outputs.clean == 'false')
         shell: bash
         run: bash scripts/data-store-git-save.sh _/workouts-db \
           "data/workouts.db data/workouts.db.checksum"
 
       - name: Save DB cache
-        if: steps.data-store.outputs.mode == 'actions-by-source' && (steps.db-check.outputs.db_changed == 'true' || steps.db-restore-check.outputs.clean == 'false')
+        if: steps.data-store.outputs.mode == 'cache' && (steps.db-check.outputs.db_changed == 'true' || steps.db-restore-check.outputs.clean == 'false')
         uses: actions/cache/save@v4
         with:
           path: |-

@@ -7,16 +7,16 @@ runs:
   using: composite
   steps:
     - uses: ./.github/actions/data-store/sources-cache/restore
-      if: inputs.mode == 'actions-by-source'
+      if: inputs.mode == 'cache'
 
     - uses: ./.github/actions/data-store/sources-git/restore
-      if: inputs.mode == 'git-by-source'
+      if: inputs.mode == 'git'
 
-    - name: Restore — git-flat
-      if: inputs.mode == 'git-flat'
+    - name: Restore — flat
+      if: inputs.mode == 'flat'
       shell: bash
       run: |
-        echo "git-flat: data already in checkout, no restore needed"
+        echo "flat: data already in checkout, no restore needed"
 
     - name: Generate .checksum files
       shell: bash

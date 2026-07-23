@@ -34,15 +34,15 @@ runs:
         echo "any_changed=$any" >> $GITHUB_OUTPUT
 
     - uses: ./.github/actions/data-store/sources-cache/save
-      if: inputs.mode == 'actions-by-source'
+      if: inputs.mode == 'cache'
 
     - uses: ./.github/actions/data-store/sources-git/save
-      if: inputs.mode == 'git-by-source'
+      if: inputs.mode == 'git'
       with:
         git-configured: ${{ inputs.git-configured }}
 
-    - name: Save — git-flat
-      if: inputs.mode == 'git-flat' && inputs.git-configured == 'true' && steps.detect.outputs.any_changed == 'true'
+    - name: Save — flat
+      if: inputs.mode == 'flat' && inputs.git-configured == 'true' && steps.detect.outputs.any_changed == 'true'
       shell: bash
       run: |
         git add -f \
