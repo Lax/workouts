@@ -19,14 +19,14 @@ runs:
       run: |
         any=false
         for src in keep igpsport xoss xingzhe garmin garmin_cn strava; do
-          ck="data/raw/$src/.checksum"
-          if [ -f "$ck" ] && sha256sum -c "$ck" --quiet 2>/dev/null; then
+          ck="data/raw/$src/SHA256SUMS"
+          if [ -f "$ck" ] && (cd "data/raw/$src" && sha256sum -c SHA256SUMS --quiet 2>/dev/null); then
             echo "changed_${src}=false"
           else
             echo "changed_${src}=true"; any=true
           fi
         done >> "$GITHUB_OUTPUT"
-        if [ -f data/workouts.db.checksum ] && sha256sum -c data/workouts.db.checksum --quiet 2>/dev/null; then
+        if [ -f data/workouts.db.SHA256SUMS ] && sha256sum -c data/workouts.db.SHA256SUMS --quiet 2>/dev/null; then
           echo "changed_db=false" >> $GITHUB_OUTPUT
         else
           echo "changed_db=true" >> $GITHUB_OUTPUT; any=true
@@ -47,7 +47,7 @@ runs:
       run: |
         git add -f \
           data/raw/ data/std/ data/workouts.db \
-          data/workouts.db.checksum
+          data/workouts.db.SHA256SUMS
         git diff --cached --quiet && exit 0
         git -c user.name=workouts-bot -c user.email=bot@workouts \
           commit -m "store(sync): $(date -u +%Y%m%d-%H%M%S)"

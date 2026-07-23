@@ -59,11 +59,10 @@ runs:
         key: raw-std-v1-strava-${{ github.run_id }}
         restore-keys: raw-std-v1-strava-
 
-    - name: Generate .checksum files
+    - name: Generate SHA256SUMS files
       shell: bash
       run: |
         for src in keep igpsport xoss xingzhe garmin garmin_cn strava; do
-          find "data/raw/$src" "data/std/$src" -type f ! -name '.checksum' -print0 2>/dev/null \
-            | sort -z | xargs -0 sha256sum > "data/raw/$src/.checksum" 2>/dev/null || true
+          bash scripts/generate-checksums.sh "data/raw/$src" "data/std/$src"
           echo "  $src: done" >&2
         done

@@ -15,20 +15,16 @@ RSpec.describe "scripts/generate-checksums.sh" do
       File.write("test.db", "database content")
     end
 
-    it "generates test.db.checksum with matching hash" do
-      out = `bash #{script} test.db 2>&1`
-      expect($?).to be_success
-      expect(File).to exist("test.db.checksum")
-      system("sha256sum -c test.db.checksum --quiet 2>&1")
-      expect($?).to be_success
+    it "generates test.db.SHA256SUMS with matching hash" do
+      expect(system("bash #{script} test.db 2>&1")).to be true
+      expect(File).to exist("test.db.SHA256SUMS")
+      expect(system("sha256sum -c test.db.SHA256SUMS --quiet 2>&1")).to be true
     end
 
-    it "excludes existing .checksum files from content" do
-      File.write("other.checksum", "dummy")
+    it "uses short filename in checksum file" do
       `bash #{script} test.db`
-      content = File.read("test.db.checksum")
-      expect(content).to include("test.db")
-      expect(content).not_to include("other.checksum")
+      content = File.read("test.db.SHA256SUMS")
+      expect(content).to match(/^\h{64}  test\.db$/)
     end
   end
 
@@ -39,39 +35,49 @@ RSpec.describe "scripts/generate-checksums.sh" do
       File.write("data/raw/test/b.fit", "content2")
     end
 
-    it "generates data/raw/test.checksum with all files" do
+    it "generates SHA256SUMS inside the directory" do
       `bash #{script} data/raw/test 2>&1`
-      expect(File).to exist("data/raw/test.checksum")
-      content = File.read("data/raw/test.checksum")
-      expect(content).to include("data/raw/test/a.fit")
-      expect(content).to include("data/raw/test/b.fit")
+      expect(File).to exist("data/raw/test/SHA256SUMS")
     end
 
-    it "excludes .checksum files inside directory" do
-      File.write("data/raw/test/.checksum", "fake")
+    it "uses short filenames in checksum content" do
       `bash #{script} data/raw/test`
-      content = File.read("data/raw/test.checksum")
-      expect(content).not_to include(".checksum")
+      content = File.read("data/raw/test/SHA256SUMS")
+      expect(content).to include("a.fit")
+      expect(content).to include("b.fit")
+      expect(content).not_to include("data/raw/test/a.fit")
+    end
+
+    it "excludes SHA256SUMS from its own content" do
+      File.write("data/raw/test/SHA256SUMS", "stale")
+      `bash #{script} data/raw/test`
+      content = File.read("data/raw/test/SHA256SUMS")
+      expect(content).not_to include("SHA256SUMS")
+    end
+
+    it "passes sha256sum --check" do
+      `bash #{script} data/raw/test`
+      expect(system("cd data/raw/test && sha256sum -c SHA256SUMS --quiet 2>&1")).to be true
     end
   end
 
   describe "with multiple arguments" do
     before do
       File.write("a.db", "aaa")
-      File.write("b.db", "bbb")
+      FileUtils.mkdir_p("dir")
+      File.write("dir/x", "xxx")
     end
 
     it "generates checksums for each" do
-      `bash #{script} a.db b.db`
-      expect(File).to exist("a.db.checksum")
-      expect(File).to exist("b.db.checksum")
+      `bash #{script} a.db dir`
+      expect(File).to exist("a.db.SHA256SUMS")
+      expect(File).to exist("dir/SHA256SUMS")
     end
   end
 
   describe "nonexistent path" do
     it "silently skips" do
-      out = `bash #{script} nonexistent 2>&1`
-      expect($?).to be_success
+      expect(system("bash #{script} nonexistent 2>&1")).to be true
     end
   end
 end

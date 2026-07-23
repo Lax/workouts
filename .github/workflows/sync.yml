@@ -63,7 +63,7 @@ jobs:
         with:
           path: |-
             data/workouts.db
-            data/workouts.db.checksum
+            data/workouts.db.SHA256SUMS
           key: workouts-db-v1-${{ hashFiles('db/migrations/*.rb') }}-${{ github.run_id }}
           restore-keys: workouts-db-v1-
 
@@ -75,7 +75,7 @@ jobs:
             git fetch origin _/workouts-db
             mkdir -p data
             git archive --format=tar origin/_/workouts-db \
-              data/workouts.db data/workouts.db.checksum 2>/dev/null | tar xf - || true
+              data/workouts.db data/workouts.db.SHA256SUMS 2>/dev/null | tar xf - || true
           fi
 
       - name: Verify DB restore
@@ -87,7 +87,7 @@ jobs:
             echo "clean=true" >> $GITHUB_OUTPUT
             exit 0
           fi
-          ck="data/workouts.db.checksum"
+          ck="data/workouts.db.SHA256SUMS"
           if [ -f "$ck" ] && sha256sum -c "$ck" --quiet 2>/dev/null; then
             echo "clean=true" >> $GITHUB_OUTPUT
           else
@@ -236,7 +236,7 @@ jobs:
         if: steps.data-store.outputs.mode == 'cache' || steps.data-store.outputs.mode == 'git'
         shell: bash
         run: |
-          ck="data/workouts.db.checksum"
+          ck="data/workouts.db.SHA256SUMS"
           if [ -f "$ck" ] && sha256sum -c "$ck" --quiet 2>/dev/null; then
             echo "db_changed=false" >> $GITHUB_OUTPUT
           else
@@ -252,7 +252,7 @@ jobs:
         if: steps.data-store.outputs.mode == 'git' && (steps.db-check.outputs.db_changed == 'true' || steps.db-restore-check.outputs.clean == 'false')
         shell: bash
         run: bash scripts/data-store-git-save.sh _/workouts-db \
-          "data/workouts.db data/workouts.db.checksum"
+          "data/workouts.db data/workouts.db.SHA256SUMS"
 
       - name: Save DB cache
         if: steps.data-store.outputs.mode == 'cache' && (steps.db-check.outputs.db_changed == 'true' || steps.db-restore-check.outputs.clean == 'false')
@@ -260,7 +260,7 @@ jobs:
         with:
           path: |-
             data/workouts.db
-            data/workouts.db.checksum
+            data/workouts.db.SHA256SUMS
           key: workouts-db-v1-${{ hashFiles('db/migrations/*.rb') }}-${{ github.run_id }}
 
       # ── Data save (per-source, conditional on DATA_STORE_MODE) ──

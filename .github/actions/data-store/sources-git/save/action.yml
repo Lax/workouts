@@ -14,9 +14,9 @@ runs:
       shell: bash
       run: |
         for src in keep igpsport xoss xingzhe garmin garmin_cn strava; do
-          ck="data/raw/$src/.checksum"
-          if [ ! -f "$ck" ] || ! sha256sum -c "$ck" --quiet 2>/dev/null; then
+          ck="data/raw/$src/SHA256SUMS"
+          if [ ! -f "$ck" ] || ! (cd "data/raw/$src" && sha256sum -c SHA256SUMS --quiet 2>/dev/null); then
             bash scripts/data-store-git-save.sh "_/_/$src" \
-              "data/raw/$src data/std/$src data/raw/$src/.checksum"
+              "data/raw/$src data/std/$src data/raw/$src/SHA256SUMS"
           fi
         done

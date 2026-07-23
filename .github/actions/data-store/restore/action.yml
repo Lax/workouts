@@ -18,11 +18,10 @@ runs:
       run: |
         echo "flat: data already in checkout, no restore needed"
 
-    - name: Generate .checksum files
+    - name: Generate SHA256SUMS files
       shell: bash
       run: |
         for src in keep igpsport xoss xingzhe garmin garmin_cn strava; do
-          find "data/raw/$src" "data/std/$src" -type f ! -name '.checksum' -print0 2>/dev/null \
-            | sort -z | xargs -0 sha256sum > "data/raw/$src/.checksum" 2>/dev/null || true
+          bash scripts/generate-checksums.sh "data/raw/$src" "data/std/$src"
         done
-        sha256sum data/workouts.db > data/workouts.db.checksum 2>/dev/null || true
+        bash scripts/generate-checksums.sh data/workouts.db
