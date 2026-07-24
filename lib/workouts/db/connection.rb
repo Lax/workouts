@@ -1,4 +1,5 @@
 require "fileutils"
+require "sequel"
 
 module Workouts
   module DB
@@ -19,7 +20,11 @@ module Workouts
 
       def run_migrations
         Sequel.extension :migration
-        Sequel::Migrator.run(@db, File.expand_path("../../../db/migrations", __dir__))
+        path = File.expand_path("../../../db/migrations", __dir__)
+        Sequel::Migrator.run(@db, path)
+      rescue Sequel::Migrator::Error
+        Workouts::DB::Rebuild.call(@db, @db.opts[:database], path)
+        Sequel::Migrator.run(@db, path)
       end
     end
   end
