@@ -59,6 +59,33 @@ RSpec.describe Workouts::Parser::Base do
     end
   end
 
+  describe "#normalize_sport_type" do
+    it "delegates to SportMapper.canonicalize" do
+      expect(Workouts::SportMapper).to receive(:canonicalize).with("Running").and_return("run")
+      parser.send(:normalize_sport_type, "Running")
+    end
+
+    it "returns run for Running via alias" do
+      expect(parser.send(:normalize_sport_type, "Running")).to eq("run")
+    end
+
+    it "returns hike for mountaineering via keyword" do
+      expect(parser.send(:normalize_sport_type, "mountaineering")).to eq("hike")
+    end
+
+    it "returns swim for swiming via Levenshtein" do
+      expect(parser.send(:normalize_sport_type, "swiming")).to eq("swim")
+    end
+
+    it "returns other for unrecognized input" do
+      expect(parser.send(:normalize_sport_type, "skateboarding")).to eq("other")
+    end
+
+    it "returns other for nil" do
+      expect(parser.send(:normalize_sport_type, nil)).to eq("other")
+    end
+  end
+
   describe "#build_activity_attrs" do
     it "uses format_time for start_date and format_time_local for start_date_local" do
       t = Time.new(2023, 6, 15, 17, 0, 0, "+08:00")

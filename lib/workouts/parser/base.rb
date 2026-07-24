@@ -85,26 +85,7 @@ module Workouts
       end
 
       def normalize_sport_type(type)
-        return default_sport if type.nil? || type.empty?
-
-        mapping = {
-          "running" => "run",
-          "run" => "run",
-          "cycling" => "ride",
-          "biking" => "ride",
-          "ride" => "ride",
-          "hiking" => "hike",
-          "hike" => "hike",
-          "walking" => "walk",
-          "walk" => "walk",
-          "swimming" => "swim",
-          "swim" => "swim",
-          "skiing" => "ski",
-          "ski" => "ski",
-          "workout" => "workout",
-          "other" => "other"
-        }
-        mapping[type.downcase.strip] || default_sport
+        SportMapper.canonicalize(type)
       end
 
       def build_activity_attrs(data)

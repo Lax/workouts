@@ -6,10 +6,23 @@ RSpec.describe Workouts::SportMapper do
       expect(described_class.canonicalize("strengthtraining")).to eq("workout")
     end
 
+    it "maps extended aliases (trail, virtual, indoor, gravel, ebike, backcountry, nordic)" do
+      expect(described_class.canonicalize("trailrun")).to eq("run")
+      expect(described_class.canonicalize("virtualrun")).to eq("run")
+      expect(described_class.canonicalize("indoorrun")).to eq("run")
+      expect(described_class.canonicalize("mountainbike")).to eq("ride")
+      expect(described_class.canonicalize("gravelride")).to eq("ride")
+      expect(described_class.canonicalize("ebikeride")).to eq("ride")
+      expect(described_class.canonicalize("backcountryski")).to eq("ski")
+      expect(described_class.canonicalize("nordicski")).to eq("ski")
+    end
+
     it "maps via keyword matching" do
       expect(described_class.canonicalize("mountaineering")).to eq("hike")
       expect(described_class.canonicalize("jogging")).to eq("run")
       expect(described_class.canonicalize("elliptical")).to eq("workout")
+      expect(described_class.canonicalize("crossfit")).to eq("workout")
+      expect(described_class.canonicalize("snowboard")).to eq("ski")
     end
 
     it "maps via Levenshtein distance" do

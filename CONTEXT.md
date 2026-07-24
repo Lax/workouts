@@ -50,7 +50,7 @@ lib/workouts/import/
   local_file.rb                  # 本地 GPX/FIT/TCX 文件导入适配器
 lib/workouts/sync/runner.rb      # Sync::Runner — 队列调度 + Worker 池
 lib/workouts/parser/
-  base.rb                        # 解析器基类（haversine、polyline、sport 归一化）
+  base.rb                        # 解析器基类（haversine、polyline、sport 归一化 → SportMapper）
   gpx.rb                         # GPX 解析器（Nokogiri）
   tcx.rb                         # TCX 解析器（Nokogiri）
   fit.rb                         # FIT 解析器（mini_racer + @garmin/fitsdk）
@@ -401,9 +401,11 @@ Secrets 名用单 `_`（`SYNC_KEEP_PHONE`），Workflow env 块映射为 `SYNC__
      → ④ "other"
 ```
 
-- 精确别名：`running` → `run`, `cycling` → `ride`
-- 关键词：`mountaineering` → `hike`, `jogging` → `run`
+- 精确别名：`running` → `run`, `cycling` → `ride`，含 trail/virtual/indoor/gravel/ebike/backcountry/nordic 等扩展别名
+- 关键词：`mountaineering` → `hike`, `jogging` → `run`，含 crossfit/yoga/pilates/elliptical/strength/snowboard 等
 - Levenshtein：`swiming` → `swim`, `runing` → `run`
+
+**统一接入点**：`Parser::Base#normalize_sport_type` 已委托给 `SportMapper.canonicalize`，FIT/GPX/TCX 三个 parser 与 Strava/AppleHealth/LocalFile 使用同一套三层映射，不再有独立简单 hash 降级逻辑。
 
 各适配器保留自己的整数 SPORT_MAP（平台特有 code 体系不可统一）。
 
