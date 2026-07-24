@@ -52,7 +52,6 @@ jobs:
         with:
           path: data/workouts.db
           key-prefix: workouts-db
-          db-schema-hash: ${{ hashFiles('db/migrations/*.rb') }}
           shall-commit-db: true
           git-branch: _/workouts-db
 

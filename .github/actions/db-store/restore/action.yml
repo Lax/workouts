@@ -32,8 +32,11 @@ runs:
       id: ck
       shell: bash
       run: |
-        mhash="${{ inputs.db-schema-hash }}"
-        [[ -n "$mhash" ]] && mhash="-${mhash}"
+        if bundle exec git fit db schema --hash >/dev/null 2>&1; then
+          mhash="-$(bundle exec git fit db schema --hash)"
+        else
+          mhash=""
+        fi
         echo "key=${{ inputs.key-prefix }}-v1${mhash}-${{ github.run_id }}" >> $GITHUB_OUTPUT
 
     - name: Check git branch exists

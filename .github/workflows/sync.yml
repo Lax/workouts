@@ -67,7 +67,6 @@ jobs:
         with:
           path: data/workouts.db
           key-prefix: workouts-db
-          db-schema-hash: ${{ hashFiles('db/migrations/*.rb') }}
           shall-commit-db: ${{ steps.mode.outputs.shall_commit_db }}
           git-branch: _/workouts-db
 
@@ -399,7 +398,6 @@ jobs:
         with:
           path: data/workouts.db
           key-prefix: workouts-db
-          db-schema-hash: ${{ hashFiles('db/migrations/*.rb') }}
           shall-commit-db: ${{ steps.mode.outputs.shall_commit_db }}
           git-branch: _/workouts-db
           commit-author-name: workouts-bot
