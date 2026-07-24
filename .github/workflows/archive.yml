@@ -96,6 +96,25 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Setup Ruby
+        if: vars.RUNNER_LABEL != 'self-hosted'
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.4'
+          bundler-cache: true
+        env:
+          BUNDLE_GITHUB__COM: ${{ github.repository_owner }}:${{ secrets.WORKOUTS_SYNC_PAT }}
+
+      - name: Compute DB schema hash
+        id: schema
+        shell: bash
+        run: |
+          if bundle exec git fit db schema --hash >/dev/null 2>&1; then
+            echo "schema_hash=$(bundle exec git fit db schema --hash)" >> $GITHUB_OUTPUT
+          else
+            echo "schema_hash=" >> $GITHUB_OUTPUT
+          fi
+
       - name: Configure git auth
         run: |
           git config --add http.https://github.com/.extraheader \
@@ -126,7 +145,7 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: data/workouts.db
-          key: workouts-db-v1-${{ hashFiles('db/migrations/*.rb') }}-${{ github.run_id }}
+          key: workouts-db-v1-${{ steps.schema.outputs.schema_hash }}-${{ github.run_id }}
           restore-keys: workouts-db-v1-
 
       - name: Commit & push
