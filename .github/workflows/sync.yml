@@ -71,6 +71,21 @@ jobs:
           shall-commit-db: ${{ steps.mode.outputs.shall_commit_db }}
           git-branch: _/workouts-db
 
+      - name: Fallback DB restore from archive branch
+        shell: bash
+        run: |
+          if [ ! -s data/workouts.db ]; then
+            echo "Cache miss — falling back to archive branch"
+            git fetch origin _/workouts-db
+            git archive --format=tar origin/_/workouts-db \
+              data/workouts.db data/workouts.db.SHA256SUMS 2>/dev/null | tar xf - || true
+            if [ -f data/workouts.db ] && [ -s data/workouts.db ]; then
+              echo "Restored DB from archive branch: $(stat -c%s data/workouts.db) bytes"
+            else
+              echo "Archive branch restore failed — DB will be created fresh by sync"
+            fi
+          fi
+
       - name: DB state after restore
         id: db-state-restore
         shell: bash
