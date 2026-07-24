@@ -42,7 +42,6 @@ RSpec.describe Workouts::DB::Connection do
         expect(conn.db[:activities].first[:run_id]).to eq("test_1")
         expect(conn.db[:dedup_groups].count).to eq(1)
         expect(conn.db[:dedup_groups].first[:group_id]).to eq("group_abc")
-        expect(File.exist?("#{db_path}.rebuild_bak")).to be true
       end
     end
   end

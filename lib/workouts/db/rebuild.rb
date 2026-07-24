@@ -32,6 +32,9 @@ module Workouts
         end
 
         warn "Rebuilt #{db_path}: #{data.values.sum(&:size)} rows from #{data.size} tables"
+        [backup, "#{backup}-wal", "#{backup}-shm"].each do |f|
+          FileUtils.rm_f(f)
+        end
       rescue => e
         if backup && File.exist?(backup)
           FileUtils.cp(backup, db_path)
@@ -41,10 +44,6 @@ module Workouts
           end
         end
         raise RebuildError, "Rebuild failed: #{e.message}"
-      ensure
-        [backup, "#{backup}-wal", "#{backup}-shm"].each do |f|
-          FileUtils.rm_f(f)
-        end
       end
 
       def self.export_table(db, table)
