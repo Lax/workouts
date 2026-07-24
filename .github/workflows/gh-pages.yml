@@ -14,7 +14,7 @@ on:
 jobs:
   deploy-pages:
     if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.RUNNER_LABEL || 'ubuntu-latest' }}
     permissions:
       actions: read
       pages: write
@@ -32,6 +32,7 @@ jobs:
           token: ${{ secrets.WORKOUTS_SYNC_PAT }}
 
       - uses: ruby/setup-ruby@v1
+        if: vars.RUNNER_LABEL != 'self-hosted'
         with:
           ruby-version: '3.4'
           bundler-cache: true
@@ -39,6 +40,7 @@ jobs:
           BUNDLE_GITHUB__COM: lax:${{ secrets.WORKOUTS_SYNC_PAT }}
 
       - uses: actions/setup-node@v4
+        if: vars.RUNNER_LABEL != 'self-hosted'
         with:
           node-version: '22'
           cache: npm
