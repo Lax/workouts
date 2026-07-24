@@ -1,6 +1,6 @@
 # git-fit db-store 引入 — 实现方案
 
-> 范围：仅替换 sync.yml 中 DB restore/save 逻辑为 git-fit 0.5.8 自带的 `db-store` composite actions。不动 data-store、tokens-cache、Apple Health import、sync 逻辑等其他部分。
+> 范围：仅替换 sync.yml 中 DB restore/save 逻辑为 git-fit 0.5.9 自带的 `db-store` composite actions。不动 data-store、tokens-cache、Apple Health import、sync 逻辑等其他部分。
 
 ---
 
@@ -9,21 +9,22 @@
 ```
 -  revision: 7af01426b4a3fb35f66f56cfc7441f49aa16a6b7   (0.5.7)
 +  revision: 0b41784d2d87fcbf239b73fe2b720aa423107aa9   (0.5.8)
++  revision: 917de90833e8a6df41676c9d6d1c3b6e0a3d1b2c   (0.5.9)
 ```
 
-本地 0.5.8 已安装，`git-fit install actions` 可用。Gemfile.lock 变更 staged 但未 commit。
+Gemfile.lock 已升级并 committed（`fc8750c`）。`git-fit install actions --check` 通过。
 
 ---
 
-## 0.5 变量命名评估：`steps.db-save.outputs.save-required`
+## 0.5 变量命名评估：`steps.db-save.outputs.db-changed`
 
 ### 当前命名
 
-`save-required` 语义：`true` = DB 有变更需执行保存操作。
+`db-changed` 语义：`true` = DB 有变更需执行保存操作。
 
 ### 评估
 
-| 维度 | `save-required` | 替代方案 `changed` |
+| 维度 | `db-changed` | 替代方案 `changed` |
 |---|---|---|
 | 直观性 | 中等 — 需理解 "save is required" 这个条件判断逻辑 | 高 — 直接表达状态 |
 | 常见模式 | 不常见 | `steps.changed.outputs.any_changed`（本项目 data-store/save 已用） |
@@ -32,9 +33,9 @@
 
 ### 结论
 
-`save-required` 功能上可用，但不是最优命名。建议向 git-fit 提交 issue 建议改为 `changed` 或 `db-changed`，与 data-store 命名风格统一。
+`db-changed` 功能上可用，但不是最优命名。建议向 git-fit 提交 issue 建议改为 `changed` 或 `db-changed`，与 data-store 命名风格统一。
 
-**本次实现不等待 issue 合并，直接使用 `steps.db-save.outputs.save-required`。** 若 git-fit 后续版本改为 `changed`，同步修改 sync.yml 中两处引用（Edit 5 + Edit 6）。
+**本次实现不等待 issue 合并，直接使用 `steps.db-save.outputs.db-changed`。** 若 git-fit 后续版本改为 `changed`，同步修改 sync.yml 中两处引用（Edit 5 + Edit 6）。
 
 ---
 
@@ -60,21 +61,24 @@
 | `db-schema-hash` | `""` | `${{ hashFiles('db/migrations/*.rb') }}` |
 | `shall-commit-db` | `'false'` | `${{ steps.mode.outputs.shall_commit_db }}` |
 | `git-branch` | `_/fit-db` | `_/workouts-db` |
+| `commit-author-name` | `"git-fit-bot"` | `"workouts-bot"` |
+| `commit-author-email` | `"bot@git-fit"` | `"bot@workouts"` |
 
 ### 1.2 save 内建 steps（按序）
 
 ```
 1. Check DB changed (id: check)                  → 无条件
-        若有 checksum 且匹配: save-required=false; 否则: true
-2. Generate DB SHA256SUMS                        → save-required == 'true'
-3. Save DB git (commit-tree → push)              → shall-commit-db && save-required
+        若有 checksum 且匹配: db-changed=false; 否则: true
+2. Generate DB SHA256SUMS                        → db-changed == 'true'
+3. Save DB git (commit-tree → push)              → shall-commit-db && db-changed
 4. Build cache key (id: ck)                      → 无条件
-5. Save DB cache (actions/cache/save@v4)         → save-required == 'true'
+5. Save DB cache (actions/cache/save@v4)         → db-changed == 'true'
 ```
 
 | 输出 | 说明 |
 |---|---|
-| `save-required` | `true` = DB 有变更需保存 |
+| `db-changed` | `true` = DB 有变更需保存 |
+| `saved` | `true` = 实际执行了保存操作（cache 或 git） |
 
 > **Note:** save step 3 使用 `commit-tree` 直接写 ref 到 git-branch，不经过 working tree / index，不影响后续 `git add` / `git commit` 操作。
 
@@ -141,7 +145,7 @@ mhash = inputs.db-schema-hash (非空则 "workouts-db-v1-abc123-{run_id}"，空�
  290  Unified commit (仅 data)
 ```
 
-`steps.db-check.outputs.db_changed` 不再存在 → 下游替换为 `steps.db-save.outputs.save-required`。
+`steps.db-check.outputs.db_changed` 不再存在 → 下游替换为 `steps.db-save.outputs.db-changed`。
 
 ---
 
@@ -328,7 +332,7 @@ mhash = inputs.db-schema-hash (非空则 "workouts-db-v1-abc123-{run_id}"，空�
 ```
 
 ```newString
-        if: steps.db-save.outputs.save-required == 'true' || steps.data-save.outputs.any_changed == 'true'
+        if: steps.db-save.outputs.db-changed == 'true' || steps.data-save.outputs.any_changed == 'true'
 ```
 
 **影响：** 1 处。
@@ -342,7 +346,7 @@ mhash = inputs.db-schema-hash (非空则 "workouts-db-v1-abc123-{run_id}"，空�
 ```
 
 ```newString
-        if: steps.db-save.outputs.save-required == 'true' || steps.data-save.outputs.any_changed == 'true'
+        if: steps.db-save.outputs.db-changed == 'true' || steps.data-save.outputs.any_changed == 'true'
 ```
 
 **影响：** 1 处。
@@ -394,7 +398,7 @@ mhash = inputs.db-schema-hash (非空则 "workouts-db-v1-abc123-{run_id}"，空�
 # 行 6:  default: data/workouts.db
 # 行 9:  default: git-fit-db
 # 行 18: default: _/fit-db
-# 行 22: outputs.save-required           ← 替代旧 db_changed
+# 行 22: outputs.db-changed           ← 替代旧 db_changed
 # 行 50-76: Save DB git 步骤             ← commit-tree 方式
 ```
 
@@ -402,18 +406,109 @@ mhash = inputs.db-schema-hash (非空则 "workouts-db-v1-abc123-{run_id}"，空�
 
 **restore：** 无暴露 output（`clean` 仅内部 `$GITHUB_OUTPUT`，无 `outputs:` 声明）
 
-**save：** `save-required`（string: `"true"` / `"false"`），等价于旧 `db-check.outputs.db_changed`
+**save：** `db-changed`（string: `"true"` / `"false"`），等价于旧 `db-check.outputs.db_changed`
 
 ---
 
-## 7. 文件变更清单
+## 7. gh-pages workflow: db-store/restore 集成
+
+gh-pages.yml 原使用 bare `actions/cache/restore` 恢复 DB，仅依赖 cache（7 天 TTL）。已替换为 `db-store/restore`，提供分层恢复：
+
+```
+优先级（高→低）:
+  1. actions/download-artifact@v4   ← 仅 manual dispatch 且有 artifact-run-id 时
+  2. git archive origin/_/workouts-db   ← shall-commit-db: true 时启用
+  3. actions/cache/restore@v4 (schema key)   ← db-store 内建
+  4. actions/cache/restore@v4 (prefix fallback)   ← db-store 内建
+```
+
+```yaml
+# .github/workflows/gh-pages.yml (行 49-55)
+- uses: ./.github/actions/db-store/restore
+  with:
+    path: data/workouts.db
+    key-prefix: workouts-db
+    db-schema-hash: ${{ hashFiles('db/migrations/*.rb') }}
+    shall-commit-db: true
+    git-branch: _/workouts-db
+```
+
+**变更原因：** 当 cache 过期且 archive 尚未运行时，gh-pages 可能拿到空 DB。git branch 恢复层确保至少有一个 sync 完成后的 DB 可用。
+
+**注意：** `download-artifact` step 在 `db-store/restore` 之后执行，仅在 manual dispatch 且有 `artifact-run-id` 时覆盖。normal `workflow_run` 触发时跳过，避免覆盖当前 DB。
+
+---
+
+## 8. data-store sha256sum subshell 崩溃修复
+
+**文件：**
+- `.github/actions/data-store/save/action.yml`
+- `.github/actions/data-store/sources-cache/save/action.yml`
+- `.github/actions/data-store/sources-git/save/action.yml`
+
+**根因：** Ubuntu runner 上 `sha256sum -c --quiet` 仍向 stderr 输出 `file: FAILED`。原始代码在 subshell 中运行：
+
+```bash
+(cd "$dir" && sha256sum -c SHA256SUMS --quiet 2>/dev/null)
+```
+
+stderr 泄露到父进程的 `$GITHUB_OUTPUT`，触发 GHA `Invalid format` 错误。
+
+**修复：** 将 `sha256sum` 隔离在独立 subshell，外层用 `if ! (cd ...)` 判断：
+
+```bash
+if [ ! -f "$dir/SHA256SUMS" ] || ! (cd "$dir" && sha256sum -c SHA256SUMS --quiet 2>/dev/null); then
+  changed=true
+fi
+```
+
+---
+
+## 9. 跨 workflow 并发控制：`workouts-db` concurrency group
+
+**问题：** `sync.yml`（via db-store/save）和 `archive.yml`（archive-db job）均向 `_/workouts-db` branch 写入，无协调机制。并发 push 可能触发 non-fast-forward  rejection。
+
+**修复：** 两 job 共享 concurrency group `workouts-db`：
+
+```yaml
+# sync.yml sync job
+concurrency:
+  group: workouts-db
+  cancel-in-progress: false
+
+# archive.yml archive-db job
+concurrency:
+  group: workouts-db
+  cancel-in-progress: false
+```
+
+`cancel-in-progress: false` 确保两 workflow 互相排队，不取消对方。
+
+---
+
+## 10. 待跟进：`shall-commit-db` 语义歧义
+
+已向 `Lax/git-fit` 提交 issue：https://github.com/Lax/git-fit/issues/10
+
+`shall-commit-db` 在 `db-store/save` 中语义正确（是否提交到 git），但在 `db-store/restore` 中语义相反（是否从 git 恢复）。建议 rename 为 `use-git-branch` 并走 deprecation 路径。
+
+当前 workouts 项目中，`shall-commit-db: true` 传入 `db-store/restore` 的语义是"从 git branch 恢复"，需留意上游修复后的迁移。
+
+---
+
+## 11. 文件变更清单（已 committed）
 
 | 文件 | 状态 | 说明 |
 |---|---|---|
-| `Gemfile.lock` | staged 待 commit | 0.5.7 → 0.5.8 |
-| `.github/actions/db-store/restore/action.yml` | 新建（已生成，需 commit） | git-fit install actions 产物，固化在仓库中 |
-| `.github/actions/db-store/save/action.yml` | 新建（已生成，需 commit） | git-fit install actions 产物，固化在仓库中 |
-| `.github/workflows/sync.yml` | 待编辑 | 6 处精确 edit |
+| `Gemfile.lock` | committed（`fc8750c`） | 0.5.8 → 0.5.9 |
+| `.github/actions/db-store/restore/action.yml` | committed（`fc8750c`） | v0.5.9 模板：`outputs.clean`，`id: db-restore-check` |
+| `.github/actions/db-store/save/action.yml` | committed（`fc8750c`） | v0.5.9 模板：`db-changed`/`saved` outputs，`commit-author-*` inputs |
+| `.github/actions/data-store/save/action.yml` | committed（`fc8750c`） | sha256sum subshell 隔离修复 |
+| `.github/actions/data-store/sources-cache/save/action.yml` | committed（`fc8750c`） | sha256sum subshell 隔离修复 |
+| `.github/actions/data-store/sources-git/save/action.yml` | committed（`fc8750c`） | sha256sum subshell 隔离修复 |
+| `.github/workflows/sync.yml` | committed（`fc8750c` + `aa09a0d`） | concurrency group，db-changed refs，commit-author passthrough，移除 stray `shall-commit-db` |
+| `.github/workflows/archive.yml` | committed（`aa09a0d`） | archive-db concurrency group 改为 `workouts-db` |
+| `.github/workflows/gh-pages.yml` | committed（`aa09a0d`） | bare `actions/cache/restore` → `db-store/restore` + git branch fallback |
 
 > **设计决策：为何不动态生成？** GitHub Actions 的 `uses:` 在 workflow parse time 解析，运行时无法创建并使用 composite action。因此 `.github/actions/db-store/` 必须作为静态文件提交到仓库。与现有 `data-store/`、`tokens-cache/` 模式一致。git-fit 升级后需重新运行 `install actions` 并 commit 更新后的文件。
 
@@ -426,40 +521,43 @@ mhash = inputs.db-schema-hash (非空则 "workouts-db-v1-abc123-{run_id}"，空�
 
 ---
 
-## 8. 提交方案
+## 8. 实际提交记录
+
+变更已通过 2 个 commit 推送至 `main`：
 
 ```bash
-git add Gemfile.lock \
-       .github/actions/db-store/restore/action.yml \
-       .github/actions/db-store/save/action.yml \
-       .github/workflows/sync.yml
-
-git commit -m "feat(ci): replace hand-rolled DB cache with git-fit db-store composite actions
-
-- Gemfile.lock: git-fit 0.5.7 -> 0.5.8
-- Replace 6 inline restore/save/verify steps with git-fit's built-in
-  db-store composite actions (restore + save)
-- Pass db-schema-hash for compatible cache key
-- Override git-branch to _/workouts-db for backward compatibility
-- DB save uses commit-tree (no working tree pollution)"
+fc8750c  chore: upgrade git-fit to v0.5.9 + fix data-store sha256sum crash
+aa09a0d  fix: add cross-workflow concurrency for _/workouts-db + gh-pages git restore
 ```
+
+**fc8750c 包含：**
+- Gemfile.lock: git-fit 0.5.8 → 0.5.9
+- db-store/restore + db-store/save 重新生成（v0.5.9 模板）
+- sync.yml: `save-required` → `db-changed`，新增 `commit-author-*` passthrough
+- 3 个 data-store save action sha256sum subshell 隔离修复
+
+**aa09a0d 包含：**
+- sync.yml + archive.yml: concurrency group `workouts-db`
+- gh-pages.yml: bare `actions/cache/restore` → `db-store/restore` + git branch fallback
 
 ---
 
 ## 9. 验证清单
 
-| # | 验证项 | 命令/方式 |
+| # | 验证项 | 状态 |
 |---|---|---|
-| 1 | YAML 语法合法 | `python3 -c "import yaml; yaml.safe_load(open('.github/workflows/sync.yml'))"` |
-| 2 | 无残留引用 `steps.db-check` | `rg 'steps\.db-check' .github/workflows/sync.yml` (应输出空) |
-| 3 | 无残留引用 `steps.db-restore-check` | `rg 'steps\.db-restore-check' .github/workflows/sync.yml` (应输出空) |
-| 4 | db-store actions 包含正确 path | `rg 'data/workouts.db' .github/actions/db-store/ -l` (应输出 2 文件) |
-| 5 | 无残留引用 `steps.db-git-check` | `rg 'steps\.db-git-check' .github/workflows/sync.yml` (应输出空) |
-| 6 | gem 版本 0.5.8 | `bundle exec git-fit version` |
-| 7 | `git-fit install actions` 可执行 | 已执行（生成 2 文件验证） |
-| 8 | restore action 无 `outputs:` 声明（已知设计问题） | `rg '^outputs:' .github/actions/db-store/restore/action.yml` (应输出空，确认 Issue 2) |
-| 9 | save action 的 `save-required` 输出声明正确 | `rg 'save-required' .github/actions/db-store/save/action.yml` (应在 outputs 和 step 中各出现) |
-| 10 | 两个 action 均使用 `data/workouts.db` 作为默认 path | 已通过 `GIT_FIT_DATABASE_PATH` 注入验证 |
+| 1 | `git-fit install actions --check` 通过 | ✅ `fc8750c` CI 已验证 |
+| 2 | `bundle exec rspec` 通过 | ✅ 687 examples, 0 failures |
+| 3 | 无残留引用 `steps.db-check` | ✅ 已清除 |
+| 4 | 无残留引用 `steps.db-restore-check` | ✅ 已清除 |
+| 5 | 无残留引用 `steps.db-git-check` | ✅ 已清除 |
+| 6 | gem 版本 0.5.9 | ✅ `bundle exec git-fit version` |
+| 7 | db-store actions 包含正确 path | ✅ `rg 'data/workouts.db' .github/actions/db-store/ -l` → 2 文件 |
+| 8 | sync.yml 中 `db-changed` 引用正确 | ✅ L257, L264 |
+| 9 | sync.yml 中 `commit-author-name/email` 传入 db-store/save | ✅ L218-219 |
+| 10 | gh-pages.yml 使用 `db-store/restore` + `shall-commit-db: true` | ✅ L49-55 |
+| 11 | archive.yml archive-db concurrency group = `workouts-db` | ✅ L92 |
+| 12 | data-store/save 无 `shall-commit-db` 传入（GHA warning 修复） | ✅ 已移除 |
 
 ---
 
@@ -467,9 +565,10 @@ git commit -m "feat(ci): replace hand-rolled DB cache with git-fit db-store comp
 
 | 风险 | 概率 | 影响 | 缓解 |
 |---|---|---|---|
+| `_/_/<source>` 分支并发写入冲突 | 中 | archive  weekly job 与 sync data-store/save 同时 push，non-fast-forward rejection | 目前 archive 每周日 06:00 触发，sync 每 2 天触发，冲突窗口小。如需消除，可对 per-source branches 增加 concurrency group |
 | db-store/save 的 `commit-tree` push 到 git-branch 失败 | 低 | DB branch 未保存，artifact 仍可用 | `build` job 从 artifact 下载 DB，不依赖 branch |
+| `shall-commit-db` 语义歧义导致误用 | 低 | restore 中 `true` 意为"从 git 恢复"而非"提交到 git" | 已向 git-fit 提交 Issue #10；当前 gh-pages.yml 传入 `true` 语义正确 |
 | cache key 不一致导致 cache miss | 极低 | 首次 sync 无 cache | keys 已验证等价；cache miss 只影响首次 restore |
-| `save-required` output 时机问题（action 未声明映射） | 极低 | 下游条件失效 | 测试: `echo $save-required` 可在 GHA step 中输出验证 |
 
 ---
 
@@ -516,33 +615,32 @@ git commit -m "feat(ci): replace hand-rolled DB cache with git-fit db-store comp
 
 ---
 
-## 12. git-fit 设计问题清单（待提交 issue）
+## 12. git-fit 设计问题清单
 
-以下问题从本次集成实践中发现，建议向 `Lax/git-fit` 提交 issue。
+以下问题从本次集成实践中发现。部分已提交 issue，部分已在 v0.5.9 解决。
 
-### Issue 1：`db-store/save` 输出命名 `save-required` 不直观
+### Issue 1（已解决）：`db-store/save` 输出命名 `save-required` → `db-changed`
 
-**严重程度：** Low（不影响功能）
+**状态：** v0.5.9 已将输出从 `save-required` 重命名为 `db-changed`。✅ 已解决。
 
-**描述：** 输出名 `save-required` 采用反问式命名（"需要保存吗？"），不如陈述式命名直观。本项目 `data-store/save` 使用 `any_changed`，命名风格应统一。
+原描述：输出名 `save-required` 采用反问式命名（"需要保存吗？"），不如陈述式命名直观。
 
-**建议：** 改为 `changed` 或 `db-changed`。
+---
 
-```yaml
-# 当前
-outputs:
-  save-required:
-    description: "true if cache save should run, false if unchanged"
-    value: ${{ steps.check.outputs.save-required }}
+### Issue 2（待跟进）：`shall-commit-db` 在 restore/save 中语义相反
 
-# 建议
-outputs:
-  changed:
-    description: "true if the database has changed since last sync"
-    value: ${{ steps.check.outputs.save-required }}
-```
+**严重程度：** Medium（影响可读性和安全性）
 
-**迁移影响：** 所有引用 `steps.<id>.outputs.save-required` 的 workflow 需同步修改。
+**描述：** `shall-commit-db` 在 `db-store/save` 中语义正确（是否提交到 git），但在 `db-store/restore` 中语义相反（是否从 git 恢复）。用户在 restore 上下文中看到 `shall-commit-db: true` 容易误以为该 action 会修改 git branch。
+
+**已提交 issue：** https://github.com/Lax/git-fit/issues/10
+
+**建议方案：**
+- v0.5.10：在 restore action description 中澄清语义
+- v0.6.0：新增 `use-git-branch` 参数，`shall-commit-db` 标记为 deprecated
+- v1.0.0：移除 restore 中的 `shall-commit-db`
+
+**当前 workaround：** workouts 项目中 `shall-commit-db: true` 传入 `db-store/restore` 的语义是"从 git branch 恢复"，代码和文档已明确此用法。
 
 ---
 
@@ -570,6 +668,8 @@ outputs:
 ### Issue 3：`db-store` 默认值与 git-fit 自身项目强耦合
 
 **严重程度：** Medium（影响作为 library 的可用性）
+
+**状态：** 未解决。v0.5.9 仍使用 `git-fit-db` 和 `_/fit-db` 作为默认值。
 
 **描述：** 以下默认值仅对 git-fit 自身项目有意义，对将 git-fit 作为 library 使用的项目（如 workouts）完全无效：
 
@@ -604,84 +704,55 @@ inputs:
 
 ---
 
-### Issue 4：`Save DB git` 的 commit author 硬编码
+### Issue 4（已解决）：`Save DB git` 的 commit author 硬编码
 
 **严重程度：** Low
 
-**描述：** save action 的 "Save DB git" step 使用硬编码的 git 身份：
+**状态：** v0.5.9 已解决。✅ 新增 `commit-author-name` / `commit-author-email` inputs，调用方可覆盖。
 
-```bash
-git -c user.name="git-fit-bot" -c user.email="bot@git-fit" \
-  commit-tree -m "store($BRANCH): ..."
-```
-
-消费方项目（如 workouts）使用 `workouts-bot / bot@workouts`，需额外在 workflow 中配置 git identity。action 内部又写一次 `git-fit-bot` 是冗余的，且与调用方的 bot identity 不一致。
-
-**建议：** 将 author 信息作为可选输入，调用方可覆盖：
-
-```yaml
-inputs:
-  commit-author-name:
-    required: false
-    default: "git-fit-bot"
-  commit-author-email:
-    required: false
-    default: "bot@git-fit"
-```
+原描述：save action 的 "Save DB git" step 使用硬编码的 git 身份 `git-fit-bot / bot@git-fit`，与调用方的 bot identity 不一致。
 
 ---
 
-### Issue 5：`db-store/save` 缺少 `saved` output
+### Issue 5（已解决）：`db-store/save` 缺少 `saved` output
 
 **严重程度：** Low
 
-**描述：** 当前只有 `save-required` 输出，表示"是否需要保存"。但 workflow 有时需要知道"是否实际执行了保存"（例如 `shall-commit-db=false` 时只做 cache save，不推送 git branch）。
+**状态：** v0.5.9 已解决。✅ 新增 `saved` output。
 
-**建议：** 增加 `saved` 输出，表示实际保存操作是否执行：
-
-```yaml
-outputs:
-  save-required:
-    description: "Whether the DB changed and needs saving"
-    value: ${{ steps.check.outputs.save-required }}
-  saved:
-    description: "Whether the DB was actually saved (cache or git)"
-    value: ${{ steps.check.outputs.save-required }}  # 或更精确的逻辑
-```
+原描述：当前只有 `db-changed` 输出，表示"是否需要保存"。workflow 有时需要知道"是否实际执行了保存"。
 
 ---
 
-### Issue 6：`install actions` 缺少版本化/校验机制
+### Issue 6（部分解决）：`install actions` 缺少版本化/校验机制
 
 **严重程度：** Medium
 
-**描述：** `git fit install actions` 将模板渲染为 action YAML 写入 `.github/actions/`，但：
+**状态：** 部分解决。v0.5.9 新增 `--check` 选项。⚠️ `--dry-run` 和 `generated-by` 注释仍未实现。
 
-1. 不检查目标文件是否已存在（会静默覆盖）
-2. 不校验生成内容与 git-fit 版本的一致性
-3. 没有 `--force` 或 `--check` 选项
+**已解决：**
+- `--check` 选项：检查现有文件是否与当前版本模板一致（`git-fit install actions --check` 已通过 CI 验证）
 
-**建议：** 
-- 增加 `--check` 选项：检查现有文件是否与当前版本模板一致，不一致时提示重新运行
-- 增加 `--dry-run` 选项：显示将写入的内容，不实际写入
-- 在 action YAML 头部添加 `generated-by: git-fit vX.Y.Z` 注释，便于追踪来源
+**仍未解决：**
+- `--dry-run` 选项：显示将写入的内容，不实际写入
+- action YAML 头部 `generated-by: git-fit vX.Y.Z` 注释
 
 ---
 
 ## 13. 实施后 git-fit 升级流程建议
 
-每次 git-fit 版本升级时，需执行以下额外步骤（当前未在流程中）：
+每次 git-fit 版本升级时，需执行以下步骤：
 
 ```bash
 # 1. bundle update git-fit（或手动修改 Gemfile.lock）
 # 2. 重新生成 actions
 GIT_FIT_DATABASE_PATH=data/workouts.db bundle exec git-fit install actions
 
-# 3. diff 生成的 action 文件，确认变更内容
-git diff .github/actions/db-store/
+# 3. 检查生成内容与已提交版本是否一致
+git-fit install actions --check
 
 # 4. 如有变更，一并 commit
 git add .github/actions/db-store/
 ```
 
-> **建议：** 向 git-fit 提交 issue，建议增加 `git fit install actions --check` 子命令，在 CI 中自动检测 action 文件是否与 gem 版本一致。
+> v0.5.9 已新增 `--check` 子命令，在 CI 中自动检测 action 文件是否与 gem 版本一致。建议在 CI 中增加 `git-fit install actions --check` 步骤。
