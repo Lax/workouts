@@ -63,12 +63,38 @@ jobs:
 
       # ── DB restore (git-fit db-store) ──
       - uses: ./.github/actions/db-store/restore
+        id: db-restore
         with:
           path: data/workouts.db
           key-prefix: workouts-db
           db-schema-hash: ${{ hashFiles('db/migrations/*.rb') }}
           shall-commit-db: ${{ steps.mode.outputs.shall_commit_db }}
           git-branch: _/workouts-db
+
+      - name: DB state after restore
+        id: db-state-restore
+        shell: bash
+        run: |
+          echo "=== DB state after restore ==="
+          echo "db_size=$(stat -c%s data/workouts.db 2>/dev/null || echo 0)"
+          echo "wal_size=$(stat -c%s data/workouts.db-wal 2>/dev/null || echo 0)"
+          echo "shm_size=$(stat -c%s data/workouts.db-shm 2>/dev/null || echo 0)"
+          bundle exec ruby -e '
+            require "sequel"
+            db = Sequel.sqlite("data/workouts.db")
+            puts "tables=#{db.tables.sort.join(",")}"
+            if db.table_exists?(:schema_migrations)
+              puts "migration_type=schema_migrations"
+              puts "migration_count=#{db[:schema_migrations].count}"
+            elsif db.table_exists?(:schema_info)
+              version = db[:schema_info].first[:version]
+              puts "migration_type=schema_info"
+              puts "migration_version=#{version}"
+            else
+              puts "migration_type=none"
+            end
+            puts "activity_count=#{db[:activities].count rescue 0}"
+          '
 
       - name: Restore import marker
         id: import-cache-apple-health
@@ -135,6 +161,31 @@ jobs:
           MIGRATE__IGPSPORT_TO_GARMIN_CN__LIMIT: ${{ vars.MIGRATE_IGPSPORT_TO_GARMIN_CN_LIMIT || 10 }}
         run: bundle exec exe/workouts sync
 
+      - name: DB state after sync
+        id: db-state-sync
+        shell: bash
+        run: |
+          echo "=== DB state after sync ==="
+          echo "db_size=$(stat -c%s data/workouts.db 2>/dev/null || echo 0)"
+          echo "wal_size=$(stat -c%s data/workouts.db-wal 2>/dev/null || echo 0)"
+          echo "shm_size=$(stat -c%s data/workouts.db-shm 2>/dev/null || echo 0)"
+          bundle exec ruby -e '
+            require "sequel"
+            db = Sequel.sqlite("data/workouts.db")
+            puts "tables=#{db.tables.sort.join(",")}"
+            if db.table_exists?(:schema_migrations)
+              puts "migration_type=schema_migrations"
+              puts "migration_count=#{db[:schema_migrations].count}"
+            elsif db.table_exists?(:schema_info)
+              version = db[:schema_info].first[:version]
+              puts "migration_type=schema_info"
+              puts "migration_version=#{version}"
+            else
+              puts "migration_type=none"
+            end
+            puts "activity_count=#{db[:activities].count rescue 0}"
+          '
+
       - name: Checkpoint SQLite WAL
         if: always()
         shell: bash
@@ -166,6 +217,32 @@ jobs:
         run: |
           bash scripts/run_geo_detection.sh \
             200 20 proportional 300
+
+      - name: DB state after geo
+        id: db-state-geo
+        shell: bash
+        run: |
+          echo "=== DB state after geo ==="
+          echo "db_size=$(stat -c%s data/workouts.db 2>/dev/null || echo 0)"
+          echo "wal_size=$(stat -c%s data/workouts.db-wal 2>/dev/null || echo 0)"
+          echo "shm_size=$(stat -c%s data/workouts.db-shm 2>/dev/null || echo 0)"
+          bundle exec ruby -e '
+            require "sequel"
+            db = Sequel.sqlite("data/workouts.db")
+            puts "tables=#{db.tables.sort.join(",")}"
+            if db.table_exists?(:schema_migrations)
+              puts "migration_type=schema_migrations"
+              puts "migration_count=#{db[:schema_migrations].count}"
+            elsif db.table_exists?(:schema_info)
+              version = db[:schema_info].first[:version]
+              puts "migration_type=schema_info"
+              puts "migration_version=#{version}"
+            else
+              puts "migration_type=none"
+            end
+            puts "activity_count=#{db[:activities].count rescue 0}"
+            puts "divisions_filled=#{db[:activities].where{divisions IS NOT NULL}.count rescue 0}"
+          '
 
       - id: cron
         run: echo "N=$(grep -oP '/\K\d+(?= \* \*)' .github/workflows/sync.yml | head -1)" >> $GITHUB_OUTPUT
@@ -220,6 +297,38 @@ jobs:
           token: ${{ secrets.WORKOUTS_SYNC_PAT }}
 
       # ── DB save (git-fit db-store) ──
+      - name: DB state before save
+        id: db-state-before-save
+        shell: bash
+        run: |
+          echo "=== DB state before save ==="
+          echo "db_size=$(stat -c%s data/workouts.db 2>/dev/null || echo 0)"
+          echo "wal_size=$(stat -c%s data/workouts.db-wal 2>/dev/null || echo 0)"
+          echo "shm_size=$(stat -c%s data/workouts.db-shm 2>/dev/null || echo 0)"
+          bundle exec ruby -e '
+            require "sequel"
+            db = Sequel.sqlite("data/workouts.db")
+            puts "tables=#{db.tables.sort.join(",")}"
+            if db.table_exists?(:schema_migrations)
+              puts "migration_type=schema_migrations"
+              puts "migration_count=#{db[:schema_migrations].count}"
+            elsif db.table_exists?(:schema_info)
+              version = db[:schema_info].first[:version]
+              puts "migration_type=schema_info"
+              puts "migration_version=#{version}"
+            else
+              puts "migration_type=none"
+            end
+            puts "activity_count=#{db[:activities].count rescue 0}"
+            cols = db[:activities].columns rescue []
+            expected = [:run_id, :distance, :moving_time, :sport_category, :start_date,
+                        :duplicate_info, :divisions, :title, :external_id]
+            missing = expected - cols
+            puts "activity_columns=#{cols.join(",")}"
+            puts "missing_columns=#{missing.join(",")}"
+            puts "has_dedup_tables=#{db.tables.include?(:dedup_groups) && db.tables.include?(:dedup_group_members)}"
+          '
+
       - uses: ./.github/actions/db-store/save
         id: db-save
         with:
