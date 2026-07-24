@@ -89,7 +89,7 @@ jobs:
     permissions:
       contents: write
     concurrency:
-      group: archive-db
+      group: workouts-db
       cancel-in-progress: false
     steps:
       - uses: actions/checkout@v4

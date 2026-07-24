@@ -46,12 +46,13 @@ jobs:
       - name: Install npm dependencies
         run: npm ci
 
-      - name: Restore DB from cache
-        uses: actions/cache/restore@v4
+      - uses: ./.github/actions/db-store/restore
         with:
           path: data/workouts.db
-          key: workouts-db-v1-
-          restore-keys: workouts-db-v1-
+          key-prefix: workouts-db
+          db-schema-hash: ${{ hashFiles('db/migrations/*.rb') }}
+          shall-commit-db: true
+          git-branch: _/workouts-db
 
       - name: Download fresh DB artifact
         if: inputs.artifact-run-id != ''

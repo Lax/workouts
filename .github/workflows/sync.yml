@@ -8,6 +8,9 @@ on:
 
 jobs:
   sync:
+    concurrency:
+      group: workouts-db
+      cancel-in-progress: false
     # set RUNNER_LABEL=self-hosted → local runner
     runs-on: ${{ vars.RUNNER_LABEL || 'ubuntu-latest' }}
     permissions:
