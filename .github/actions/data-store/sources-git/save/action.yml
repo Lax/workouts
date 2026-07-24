@@ -18,9 +18,9 @@ runs:
           changed=false
           for dir in "data/raw/$src" "data/std/$src"; do
             if [ -d "$dir" ]; then
-              (cd "$dir" && if [ ! -f SHA256SUMS ] || ! sha256sum -c SHA256SUMS --quiet 2>/dev/null; then
+              if [ ! -f "$dir/SHA256SUMS" ] || ! (cd "$dir" && sha256sum -c SHA256SUMS --quiet 2>/dev/null); then
                 changed=true
-              fi)
+              fi
             fi
           done
           if [ "$changed" = "true" ]; then

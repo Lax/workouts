@@ -212,12 +212,13 @@ jobs:
           db-schema-hash: ${{ hashFiles('db/migrations/*.rb') }}
           shall-commit-db: ${{ steps.mode.outputs.shall_commit_db }}
           git-branch: _/workouts-db
+          commit-author-name: workouts-bot
+          commit-author-email: bot@workouts
 
       # ── Data save (per-source, conditional on commit mode) ──
       - uses: ./.github/actions/data-store/save
         id: data-save
         with:
-          shall-commit-db: ${{ steps.mode.outputs.shall_commit_db }}
           shall-commit-data: ${{ steps.mode.outputs.shall_commit_data }}
           git-configured: ${{ steps.git-setup.outputs.configured }}
 
@@ -250,14 +251,14 @@ jobs:
 
       - name: Upload DB artifact
         uses: actions/upload-artifact@v4
-        if: steps.db-save.outputs.save-required == 'true' || steps.data-save.outputs.any_changed == 'true'
+        if: steps.db-save.outputs.db-changed == 'true' || steps.data-save.outputs.any_changed == 'true'
         with:
           name: workouts-db
           path: data/workouts.db
           retention-days: 1
 
       - name: Trigger gh-pages deploy
-        if: steps.db-save.outputs.save-required == 'true' || steps.data-save.outputs.any_changed == 'true'
+        if: steps.db-save.outputs.db-changed == 'true' || steps.data-save.outputs.any_changed == 'true'
         run: |
           gh workflow run gh-pages.yml --ref main \
             -f artifact-run-id=${{ github.run_id }}
