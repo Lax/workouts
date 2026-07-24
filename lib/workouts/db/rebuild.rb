@@ -9,6 +9,10 @@ module Workouts
       def self.call(db, db_path, migrations_path)
         backup = "#{db_path}.rebuild_bak"
         FileUtils.cp(db_path, backup)
+        %w[-wal -shm].each do |ext|
+          src = "#{db_path}#{ext}"
+          FileUtils.cp(src, "#{backup}#{ext}") if File.exist?(src)
+        end
 
         tables = db.tables - [:schema_migrations]
         data = {}
@@ -31,8 +35,16 @@ module Workouts
       rescue => e
         if backup && File.exist?(backup)
           FileUtils.cp(backup, db_path)
+          %w[-wal -shm].each do |ext|
+            src = "#{backup}#{ext}"
+            FileUtils.cp(src, "#{db_path}#{ext}") if File.exist?(src)
+          end
         end
         raise RebuildError, "Rebuild failed: #{e.message}"
+      ensure
+        [backup, "#{backup}-wal", "#{backup}-shm"].each do |f|
+          FileUtils.rm_f(f)
+        end
       end
 
       def self.export_table(db, table)

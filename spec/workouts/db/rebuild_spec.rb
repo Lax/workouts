@@ -89,7 +89,7 @@ RSpec.describe Workouts::DB::Rebuild do
         described_class.call(target, db_path, migrations_path)
         expect(target[:items].count).to eq(1)
         expect(target[:items].first[:name]).to eq("keep")
-        expect(File).to exist("#{db_path}.rebuild_bak")
+        expect(File).not_to exist("#{db_path}.rebuild_bak")
       end
     end
 
@@ -130,6 +130,21 @@ RSpec.describe Workouts::DB::Rebuild do
         recovered = Sequel.sqlite(db_path)
         expect(recovered.table_exists?(:items)).to be true
         expect(recovered[:items].first[:name]).to eq("safe")
+      end
+    end
+
+    context "WAL mode backup" do
+      it "backs up and restores -wal and -shm files" do
+        source = Sequel.sqlite(db_path)
+        source.run("PRAGMA journal_mode=WAL")
+        source.create_table(:items) { Integer :id, primary_key: true; String :name }
+        source[:items].insert(name: "wal_test")
+        source.disconnect
+
+        target = Sequel.sqlite(db_path)
+        described_class.call(target, db_path, migrations_path)
+        expect(target[:items].count).to eq(1)
+        expect(File).not_to exist("#{db_path}.rebuild_bak")
       end
     end
 
