@@ -103,7 +103,9 @@ runs:
       run: |
         mhash="${{ inputs.db-schema-hash }}"
         [[ -n "$mhash" ]] && mhash="-${mhash}"
-        echo "key=${{ inputs.key-prefix }}-v1${mhash}-${{ github.run_id }}" >> $GITHUB_OUTPUT
+        attempt_suffix=""
+        [ "${{ github.run_attempt }}" -gt 1 ] && attempt_suffix="-${{ github.run_attempt }}"
+        echo "key=${{ inputs.key-prefix }}-v1${mhash}-${{ github.run_id }}${attempt_suffix}" >> $GITHUB_OUTPUT
 
     - name: Save DB cache
       uses: actions/cache/save@v4
