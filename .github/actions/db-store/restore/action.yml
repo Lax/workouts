@@ -36,7 +36,7 @@ runs:
         [[ -n "$mhash" ]] && mhash="-${mhash}"
         echo "key=${{ inputs.key-prefix }}-v1${mhash}-${{ github.run_id }}" >> $GITHUB_OUTPUT
 
-    - name: Check DB git branch
+    - name: Check git branch exists
       id: db-git-check
       if: inputs.shall-commit-db == 'true'
       shell: bash
@@ -70,7 +70,7 @@ runs:
         key: ${{ steps.ck.outputs.key }}
         restore-keys: ${{ inputs.key-prefix }}-v1-
 
-    - name: Verify DB restore
+    - name: Verify DB checksum
       id: db-restore-check
       shell: bash
       run: |
@@ -87,7 +87,7 @@ runs:
           [ ! -f "$ck" ] && sha256sum "$db" > "$ck"
         fi
 
-    - name: Log cache hit status
+    - name: Log cache hit
       shell: bash
       run: |
         echo "cache-hit: ${{ steps.restore-db.outputs.cache-hit }}"

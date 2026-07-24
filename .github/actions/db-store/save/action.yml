@@ -34,7 +34,7 @@ outputs:
 runs:
   using: composite
   steps:
-    - name: Check DB changed
+    - name: Detect DB changes
       id: check
       shell: bash
       run: |
@@ -62,7 +62,7 @@ runs:
           fi
         done
 
-    - name: Save DB git
+    - name: Save DB to git
       if: inputs.shall-commit-db == 'true' && steps.check.outputs.db-changed == 'true'
       shell: bash
       run: |

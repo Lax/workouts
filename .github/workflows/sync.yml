@@ -51,11 +51,11 @@ jobs:
           cache: pip
           cache-dependency-path: scripts/requirements.txt
 
-      - name: Install Python deps (curl_cffi for Garmin auth Strategy A)
+      - name: Install Python dependencies
         if: vars.RUNNER_LABEL != 'self-hosted'
         run: pip install -r scripts/requirements.txt
 
-      - name: Determine commit mode
+      - name: Detect commit mode
         id: mode
         run: |
           echo "shall_commit_db=${{ vars.GIT_FIT_SHALL_COMMIT_DB == 'true' && 'true' || 'false' }}" >> $GITHUB_OUTPUT
@@ -92,7 +92,7 @@ jobs:
             fi
           fi
 
-      - name: DB state after restore
+      - name: Diagnose DB after restore
         id: db-state-restore
         shell: bash
         run: |
@@ -127,7 +127,7 @@ jobs:
             '
           fi
 
-      - name: Restore import marker
+      - name: Restore Apple Health import marker
         id: import-cache-apple-health
         uses: actions/cache@v5.1.0
         with:
@@ -167,7 +167,7 @@ jobs:
       - id: load-tokens-cache
         uses: ./.github/actions/tokens-cache/restore
 
-      - name: Sync
+      - name: Sync activities
         env:
           SYNC__KEEP__PHONE: ${{ secrets.SYNC_KEEP_PHONE }}
           SYNC__KEEP__PASSWORD: ${{ secrets.SYNC_KEEP_PASSWORD }}
@@ -192,7 +192,7 @@ jobs:
           MIGRATE__IGPSPORT_TO_GARMIN_CN__LIMIT: ${{ vars.MIGRATE_IGPSPORT_TO_GARMIN_CN_LIMIT || 10 }}
         run: bundle exec exe/workouts sync
 
-      - name: DB state after sync
+      - name: Diagnose DB after sync
         id: db-state-sync
         shell: bash
         run: |
@@ -259,7 +259,7 @@ jobs:
           bash scripts/run_geo_detection.sh \
             200 20 proportional 300
 
-      - name: DB state after geo
+      - name: Diagnose DB after geo
         id: db-state-geo
         shell: bash
         run: |
@@ -299,7 +299,7 @@ jobs:
       - id: cron
         run: echo "N=$(grep -oP '/\K\d+(?= \* \*)' .github/workflows/sync.yml | head -1)" >> $GITHUB_OUTPUT
 
-      - name: Decide interval
+      - name: Compute sync interval
         id: decide
         env:
           N: ${{ steps.cron.outputs.N || 3 }}
@@ -324,7 +324,7 @@ jobs:
             puts "new_n=#{n}"
           ' >> $GITHUB_OUTPUT
 
-      - name: Update cron interval
+      - name: Update sync cron
         if: github.event_name == 'schedule' && steps.git-setup.outputs.configured == 'true'
         id: update-cron
         env:
@@ -349,7 +349,7 @@ jobs:
           token: ${{ secrets.WORKOUTS_SYNC_PAT }}
 
       # ── DB save (git-fit db-store) ──
-      - name: DB state before save
+      - name: Diagnose DB before save
         id: db-state-before-save
         shell: bash
         run: |
@@ -413,7 +413,7 @@ jobs:
           git-configured: ${{ steps.git-setup.outputs.configured }}
 
       # ── Git add + unified commit (for commit mode) ──
-      - name: Git add sources
+      - name: Stage data sources
         if: steps.mode.outputs.shall_commit_data == 'true' && steps.data-save.outputs.any_changed == 'true'
         shell: bash
         run: |
@@ -421,7 +421,7 @@ jobs:
             git add -f "data/raw/$src/" "data/std/$src/"
           done
 
-      - name: Unified commit
+      - name: Commit data changes
         if: steps.mode.outputs.shall_commit_data == 'true' && steps.data-save.outputs.any_changed == 'true'
         shell: bash
         run: |

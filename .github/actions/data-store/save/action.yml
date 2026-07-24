@@ -14,7 +14,7 @@ outputs:
 runs:
   using: composite
   steps:
-    - name: Detect changed sources
+    - name: Detect data changes
       id: detect
       shell: bash
       run: |
@@ -45,7 +45,7 @@ runs:
         shall-commit-data: ${{ inputs.shall-commit-data }}
         git-configured: ${{ inputs.git-configured }}
 
-    - name: Save — flat
+    - name: Commit data
       if: inputs.shall-commit-data == 'true' && inputs.git-configured == 'true' && steps.detect.outputs.any_changed == 'true'
       shell: bash
       run: |

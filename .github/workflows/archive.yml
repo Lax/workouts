@@ -122,7 +122,7 @@ jobs:
           git fetch origin "$BRANCH"
           git checkout "$BRANCH"
 
-      - name: Restore DB cache
+      - name: Restore DB from cache
         uses: actions/cache/restore@v4
         with:
           path: data/workouts.db
