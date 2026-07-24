@@ -22,6 +22,9 @@ outputs:
   clean:
     description: "Whether the restored DB passed SHA256 verification"
     value: ${{ steps.db-restore-check.outputs.clean }}
+  cache_hit:
+    description: "Whether the actions/cache/restore step found a matching cache"
+    value: ${{ steps.restore-db.outputs.cache-hit }}
 runs:
   using: composite
   steps:
@@ -83,3 +86,8 @@ runs:
           echo "clean=false" >> $GITHUB_OUTPUT
           [ ! -f "$ck" ] && sha256sum "$db" > "$ck"
         fi
+
+    - name: Log cache hit status
+      shell: bash
+      run: |
+        echo "cache-hit: ${{ steps.restore-db.outputs.cache-hit }}"
