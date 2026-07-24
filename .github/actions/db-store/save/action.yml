@@ -1,0 +1,93 @@
+name: DB Store Save
+description: Save DB to cache and/or git with SHA256SUMS, skip if unchanged
+inputs:
+  path:
+    required: false
+    default: data/workouts.db
+  key-prefix:
+    required: false
+    default: git-fit-db
+  db-schema-hash:
+    required: false
+    default: ""
+  shall-commit-db:
+    required: false
+    default: 'false'
+  git-branch:
+    required: false
+    default: _/fit-db
+outputs:
+  save-required:
+    description: "true if cache save should run, false if unchanged"
+    value: ${{ steps.check.outputs.save-required }}
+runs:
+  using: composite
+  steps:
+    - name: Check DB changed
+      id: check
+      shell: bash
+      run: |
+        db="${{ inputs.path }}"
+        ck="${db}.SHA256SUMS"
+        if [ ! -f "$db" ]; then
+          echo "save-required=false" >> $GITHUB_OUTPUT
+          exit 0
+        fi
+        if [ -f "$ck" ] && sha256sum -c "$ck" --quiet 2>/dev/null; then
+          echo "save-required=false" >> $GITHUB_OUTPUT
+        else
+          echo "save-required=true" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Generate DB SHA256SUMS
+      if: steps.check.outputs.save-required == 'true'
+      shell: bash
+      run: sha256sum "${{ inputs.path }}" > "${{ inputs.path }}.SHA256SUMS"
+
+    - name: Save DB git
+      if: inputs.shall-commit-db == 'true' && steps.check.outputs.save-required == 'true'
+      shell: bash
+      run: |
+        BRANCH="${{ inputs.git-branch }}"
+        DB="${{ inputs.path }}"
+        CK="${DB}.SHA256SUMS"
+        TEMP_INDEX=".git/cache-index-$$"
+        cleanup() { rm -f "$TEMP_INDEX"; }
+        trap cleanup EXIT
+        if ! git fetch origin "$BRANCH" 2>/dev/null; then
+          echo "Git fetch failed for $BRANCH, skipping git save" >&2
+          exit 0
+        fi
+        GIT_INDEX_FILE="$TEMP_INDEX" git read-tree --empty
+        GIT_INDEX_FILE="$TEMP_INDEX" git add -f "$DB" "$CK"
+        GIT_INDEX_FILE="$TEMP_INDEX" git diff-index --cached --quiet "origin/$BRANCH" 2>/dev/null && {
+          echo "No changes to $BRANCH" >&2
+          exit 0
+        }
+        TREE=$(GIT_INDEX_FILE="$TEMP_INDEX" git write-tree)
+        if git rev-parse --verify "origin/$BRANCH" >/dev/null 2>&1; then
+          PARENT=$(git rev-parse "origin/$BRANCH")
+          COMMIT=$(git -c user.name="git-fit-bot" -c user.email="bot@git-fit" \
+            commit-tree -p "$PARENT" -m "store($BRANCH): $(date -u +%Y%m%d-%H%M%S)" "$TREE")
+        else
+          COMMIT=$(git -c user.name="git-fit-bot" -c user.email="bot@git-fit" \
+            commit-tree -m "store($BRANCH): $(date -u +%Y%m%d-%H%M%S)" "$TREE")
+        fi
+        git push origin "$COMMIT:refs/heads/$BRANCH"
+
+    - name: Build cache key
+      id: ck
+      shell: bash
+      run: |
+        mhash="${{ inputs.db-schema-hash }}"
+        [[ -n "$mhash" ]] && mhash="-${mhash}"
+        echo "key=${{ inputs.key-prefix }}-v1${mhash}-${{ github.run_id }}" >> $GITHUB_OUTPUT
+
+    - name: Save DB cache
+      uses: actions/cache/save@v4
+      if: steps.check.outputs.save-required == 'true'
+      with:
+        path: |-
+          ${{ inputs.path }}
+          ${{ inputs.path }}.SHA256SUMS
+        key: ${{ steps.ck.outputs.key }}

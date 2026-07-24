@@ -1,0 +1,75 @@
+name: DB Store Restore
+description: Restore DB from cache and/or git with SHA256SUMS verification
+inputs:
+  path:
+    required: false
+    default: data/workouts.db
+  key-prefix:
+    required: false
+    default: git-fit-db
+  db-schema-hash:
+    required: false
+    default: ""
+  shall-commit-db:
+    required: false
+    default: 'false'
+  git-branch:
+    required: false
+    default: _/fit-db
+runs:
+  using: composite
+  steps:
+    - name: Build cache key
+      id: ck
+      shell: bash
+      run: |
+        mhash="${{ inputs.db-schema-hash }}"
+        [[ -n "$mhash" ]] && mhash="-${mhash}"
+        echo "key=${{ inputs.key-prefix }}-v1${mhash}-${{ github.run_id }}" >> $GITHUB_OUTPUT
+
+    - name: Check DB git branch
+      id: db-git-check
+      if: inputs.shall-commit-db == 'true'
+      shell: bash
+      run: |
+        if git ls-remote --exit-code origin refs/heads/${{ inputs.git-branch }} >/dev/null 2>&1; then
+          echo "exists=true" >> $GITHUB_OUTPUT
+        else
+          echo "exists=false" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Restore DB from git
+      if: inputs.shall-commit-db == 'true' && steps.db-git-check.outputs.exists == 'true'
+      shell: bash
+      run: |
+        dir=$(dirname "${{ inputs.path }}")
+        git fetch origin "${{ inputs.git-branch }}"
+        mkdir -p "$dir"
+        git archive --format=tar "origin/${{ inputs.git-branch }}" \
+          "${{ inputs.path }}" "${{ inputs.path }}.SHA256SUMS" 2>/dev/null | tar xf - || true
+
+    - name: Restore DB cache
+      uses: actions/cache/restore@v4
+      id: restore-db
+      with:
+        path: |-
+          ${{ inputs.path }}
+          ${{ inputs.path }}.SHA256SUMS
+        key: ${{ steps.ck.outputs.key }}
+        restore-keys: ${{ inputs.key-prefix }}-v1-
+
+    - name: Verify DB restore
+      shell: bash
+      run: |
+        db="${{ inputs.path }}"
+        ck="${db}.SHA256SUMS"
+        if [ ! -f "$db" ]; then
+          echo "clean=true" >> $GITHUB_OUTPUT
+          exit 0
+        fi
+        if [ -f "$ck" ] && sha256sum -c "$ck" --quiet 2>/dev/null; then
+          echo "clean=true" >> $GITHUB_OUTPUT
+        else
+          echo "clean=false" >> $GITHUB_OUTPUT
+          [ ! -f "$ck" ] && sha256sum "$db" > "$ck"
+        fi
