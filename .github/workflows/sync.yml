@@ -135,6 +135,19 @@ jobs:
           MIGRATE__IGPSPORT_TO_GARMIN_CN__LIMIT: ${{ vars.MIGRATE_IGPSPORT_TO_GARMIN_CN_LIMIT || 10 }}
         run: bundle exec exe/workouts sync
 
+      - name: Checkpoint SQLite WAL
+        if: always()
+        shell: bash
+        run: |
+          if [ -f data/workouts.db ]; then
+            bundle exec ruby -e '
+              require "sequel"
+              db = Sequel.sqlite("data/workouts.db")
+              db.run("PRAGMA wal_checkpoint(TRUNCATE)")
+              puts "WAL checkpoint: #{File.size("data/workouts.db")} bytes"
+            '
+          fi
+
       - uses: ./.github/actions/tokens-cache/save
         if: always() && steps.load-tokens-cache.outputs.restored == 'true'
 

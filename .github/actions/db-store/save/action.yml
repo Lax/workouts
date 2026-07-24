@@ -44,7 +44,7 @@ runs:
           echo "db-changed=false" >> $GITHUB_OUTPUT
           exit 0
         fi
-        if [ -f "$ck" ] && sha256sum -c "$ck" --quiet 2>/dev/null; then
+        if [ -f "$ck" ] && sha256sum -c "$ck" --quiet >/dev/null 2>&1; then
           echo "db-changed=false" >> $GITHUB_OUTPUT
         else
           echo "db-changed=true" >> $GITHUB_OUTPUT
@@ -53,7 +53,14 @@ runs:
     - name: Generate DB SHA256SUMS
       if: steps.check.outputs.db-changed == 'true'
       shell: bash
-      run: sha256sum "${{ inputs.path }}" > "${{ inputs.path }}.SHA256SUMS"
+      run: |
+        db="${{ inputs.path }}"
+        sha256sum "$db" > "${db}.SHA256SUMS"
+        for f in "${db}-wal" "${db}-shm"; do
+          if [ -f "$f" ]; then
+            sha256sum "$f" >> "${db}.SHA256SUMS"
+          fi
+        done
 
     - name: Save DB git
       if: inputs.shall-commit-db == 'true' && steps.check.outputs.db-changed == 'true'
@@ -71,6 +78,10 @@ runs:
         fi
         GIT_INDEX_FILE="$TEMP_INDEX" git read-tree --empty
         GIT_INDEX_FILE="$TEMP_INDEX" git add -f "$DB" "$CK"
+        for ext in wal shm; do
+          f="${DB}-${ext}"
+          [ -f "$f" ] && GIT_INDEX_FILE="$TEMP_INDEX" git add -f "$f"
+        done
         GIT_INDEX_FILE="$TEMP_INDEX" git diff-index --cached --quiet "origin/$BRANCH" 2>/dev/null && {
           echo "No changes to $BRANCH" >&2
           exit 0
@@ -101,4 +112,6 @@ runs:
         path: |-
           ${{ inputs.path }}
           ${{ inputs.path }}.SHA256SUMS
+          ${{ inputs.path }}-wal
+          ${{ inputs.path }}-shm
         key: ${{ steps.ck.outputs.key }}

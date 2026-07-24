@@ -52,7 +52,8 @@ runs:
         git fetch origin "${{ inputs.git-branch }}"
         mkdir -p "$dir"
         git archive --format=tar "origin/${{ inputs.git-branch }}" \
-          "${{ inputs.path }}" "${{ inputs.path }}.SHA256SUMS" 2>/dev/null | tar xf - || true
+          "${{ inputs.path }}" "${{ inputs.path }}.SHA256SUMS" \
+          "${{ inputs.path }}-wal" "${{ inputs.path }}-shm" 2>/dev/null | tar xf - || true
 
     - name: Restore DB cache
       uses: actions/cache/restore@v4
@@ -61,6 +62,8 @@ runs:
         path: |-
           ${{ inputs.path }}
           ${{ inputs.path }}.SHA256SUMS
+          ${{ inputs.path }}-wal
+          ${{ inputs.path }}-shm
         key: ${{ steps.ck.outputs.key }}
         restore-keys: ${{ inputs.key-prefix }}-v1-
 
@@ -74,7 +77,7 @@ runs:
           echo "clean=true" >> $GITHUB_OUTPUT
           exit 0
         fi
-        if [ -f "$ck" ] && sha256sum -c "$ck" --quiet 2>/dev/null; then
+        if [ -f "$ck" ] && sha256sum -c "$ck" --quiet >/dev/null 2>&1; then
           echo "clean=true" >> $GITHUB_OUTPUT
         else
           echo "clean=false" >> $GITHUB_OUTPUT
