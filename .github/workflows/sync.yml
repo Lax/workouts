@@ -259,7 +259,16 @@ jobs:
           key: workouts-geo-v1-${{ hashFiles('db/migrations/*.rb') }}-${{ github.run_id }}
           restore-keys: workouts-geo-v1-
 
-      - name: Geo region detection
+      - name: Geo region detection (git-fit)
+        env:
+          AMAP_API_KEY: ${{ secrets.AMAP_API_KEY }}
+        run: |
+          echo "Starting geo region detection (git-fit)..."
+          bundle exec git fit geo detect \
+            --limit 200 --batch 20 --strategy proportional --time 300
+          echo "Geo detection complete (git-fit)."
+
+      - name: Geo region detection (workouts)
         env:
           AMAP_API_KEY: ${{ secrets.AMAP_API_KEY }}
         run: |

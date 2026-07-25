@@ -1,11 +1,15 @@
 GIT
   remote: https://github.com/Lax/git-fit.git
-  revision: 1b92d2f789fdafe4bcb39549ade097af89a8c202
+  revision: cb008c13335ef3826a899e75a43e5db1e9e1dd26
   glob: ruby/*.gemspec
   specs:
-    git-fit (0.7.0)
+    git-fit (0.7.2)
+      faraday (~> 2.0)
+      http-cookie (~> 1.0)
       mini_racer (~> 0.12)
       nokogiri (~> 1.16)
+      oauth (~> 1.0)
+      ostruct (~> 0.6)
       rubyzip (~> 2.0)
       sequel (~> 5.0)
       sqlite3 (~> 2.0)
@@ -39,11 +43,12 @@ PATH
 GEM
   remote: https://rubygems.org/
   specs:
-    auth-sanitizer (0.1.5)
-      version_gem (~> 1.1, >= 1.1.9)
+    anonymous_loader (0.1.3)
+      version_gem (~> 1.1, >= 1.1.14)
+    auth-sanitizer (0.2.3)
+      version_gem (~> 1.1, >= 1.1.14)
     base64 (0.3.0)
     bigdecimal (4.1.2)
-    cgi (0.5.1)
     coderay (1.1.3)
     concurrent-ruby (1.3.8)
     csv (3.3.5)
@@ -65,7 +70,7 @@ GEM
     http-cookie (1.1.6)
       domain_name (~> 0.5)
     io-console (0.8.2)
-    json (2.19.9)
+    json (2.21.1)
     libv8-node (24.12.0.1)
     libv8-node (24.12.0.1-aarch64-linux)
     libv8-node (24.12.0.1-aarch64-linux-musl)
@@ -96,17 +101,17 @@ GEM
       racc (~> 1.4)
     nokogiri (1.19.4-x86_64-linux-musl)
       racc (~> 1.4)
-    oauth (1.1.5)
-      auth-sanitizer (~> 0.1, >= 0.1.3)
+    oauth (1.1.8)
+      anonymous_loader (~> 0.1, >= 0.1.3)
+      auth-sanitizer (~> 0.2, >= 0.2.3)
       base64 (~> 0.1)
-      cgi
-      oauth-tty (~> 1.0, >= 1.0.8)
-      snaky_hash (~> 2.0, >= 2.0.4)
-      version_gem (~> 1.1, >= 1.1.9)
-    oauth-tty (1.0.8)
-      auth-sanitizer (~> 0.1, >= 0.1.3)
-      cgi
-      version_gem (~> 1.1, >= 1.1.9)
+      oauth-tty (~> 1.0, >= 1.0.13)
+      snaky_hash (~> 2.0, >= 2.0.7)
+      version_gem (~> 1.1, >= 1.1.14)
+    oauth-tty (1.0.13)
+      anonymous_loader (~> 0.1, >= 0.1.3)
+      auth-sanitizer (~> 0.2, >= 0.2.3)
+      version_gem (~> 1.1, >= 1.1.14)
     openssl (3.3.3)
     ostruct (0.6.3)
     pry (0.16.0)
@@ -133,9 +138,9 @@ GEM
     rubyzip (2.4.1)
     sequel (5.106.0)
       bigdecimal
-    snaky_hash (2.0.4)
+    snaky_hash (2.0.7)
       hashie (>= 0.1.0, < 6)
-      version_gem (>= 1.1.8, < 3)
+      version_gem (~> 1.1, >= 1.1.14)
     sqlite3 (2.9.5-aarch64-linux-gnu)
     sqlite3 (2.9.5-aarch64-linux-musl)
     sqlite3 (2.9.5-arm-linux-gnu)
@@ -149,7 +154,7 @@ GEM
     tzinfo (2.0.6)
       concurrent-ruby (~> 1.0)
     uri (1.1.1)
-    version_gem (1.1.10)
+    version_gem (1.1.14)
     webrick (1.9.2)
     zlib (3.2.3)
 
