@@ -1,9 +1,9 @@
 GIT
   remote: https://github.com/Lax/git-fit.git
-  revision: 4c49cc3d74823dd94353183fa2cbb0312d144887
+  revision: 1b92d2f789fdafe4bcb39549ade097af89a8c202
   glob: ruby/*.gemspec
   specs:
-    git-fit (0.6.1)
+    git-fit (0.7.0)
       mini_racer (~> 0.12)
       nokogiri (~> 1.16)
       rubyzip (~> 2.0)
