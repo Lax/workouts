@@ -215,14 +215,14 @@ export const useOverviewStore = create<OverviewStore>()((set) => ({
     })),
   setColorMode: (m) => set({ colorMode: m }),
   setTilePreset: (id: string) => {
-    localStorage.setItem(TILE_PRESET_STORAGE_KEY, id)
+    if (typeof localStorage !== 'undefined') localStorage.setItem(TILE_PRESET_STORAGE_KEY, id)
     set({ tilePresetId: id })
   },
   toggleTheme: () =>
     set((s) => {
       const next = s.colorScheme === 'light' ? 'dark' : 'light'
       document.documentElement.setAttribute('data-theme', next)
-      localStorage.setItem('theme', next)
+      if (typeof localStorage !== 'undefined') localStorage.setItem('theme', next)
       return { colorScheme: next }
     }),
   setMapHoveredId: (id) => set({ mapHoveredId: id }),

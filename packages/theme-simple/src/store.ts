@@ -198,7 +198,7 @@ export const useSimpleStore = create<SimpleStore>()((set) => ({
 
   setLightsOn: (v: boolean) => set({ lightsOn: v }),
   setTilePreset: (id: string) => {
-    localStorage.setItem(TILE_PRESET_STORAGE_KEY, id)
+    if (typeof localStorage !== 'undefined') localStorage.setItem(TILE_PRESET_STORAGE_KEY, id)
     set({ tilePresetId: id })
   },
 
@@ -206,7 +206,7 @@ export const useSimpleStore = create<SimpleStore>()((set) => ({
     set((s) => {
       const next = s.colorScheme === 'light' ? 'dark' : 'light'
       document.documentElement.setAttribute('data-theme', next)
-      localStorage.setItem('theme', next)
+      if (typeof localStorage !== 'undefined') localStorage.setItem('theme', next)
       return { colorScheme: next }
     }),
 
