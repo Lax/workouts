@@ -260,6 +260,8 @@ jobs:
           restore-keys: workouts-geo-v1-
 
       - name: Geo region detection (git-fit)
+        id: geo-git-fit
+        continue-on-error: true
         env:
           AMAP_API_KEY: ${{ secrets.AMAP_API_KEY }}
         run: |
