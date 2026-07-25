@@ -166,7 +166,15 @@ jobs:
       - id: load-tokens-cache
         uses: ./.github/actions/tokens-cache/restore
 
-      - name: Sync activities
+      - name: Sync activities - git fit sync
+        env:
+          SYNC__TIME_BUDGET: ${{ vars.SYNC_TIME_BUDGET || '' }}
+          SYNC__TOTAL_TIMEOUT: ${{ vars.SYNC_TOTAL_TIMEOUT || '' }}
+          MIGRATE__IGPSPORT_TO_GARMIN__LIMIT: ${{ vars.MIGRATE_IGPSPORT_TO_GARMIN_LIMIT || 10 }}
+          MIGRATE__IGPSPORT_TO_GARMIN_CN__LIMIT: ${{ vars.MIGRATE_IGPSPORT_TO_GARMIN_CN_LIMIT || 10 }}
+        run: bundle exec git fit sync
+
+      - name: Sync activities - workouts sync
         env:
           SYNC__KEEP__PHONE: ${{ secrets.SYNC_KEEP_PHONE }}
           SYNC__KEEP__PASSWORD: ${{ secrets.SYNC_KEEP_PASSWORD }}
