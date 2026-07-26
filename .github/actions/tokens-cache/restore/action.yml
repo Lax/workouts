@@ -14,12 +14,14 @@ runs:
         key: tokens-v1-garmin_cn-${{ github.run_id }}
         restore-keys: tokens-v1-garmin_cn-
 
-    - id: restore-garmin-intl-old
+    - id: restore-garmin-intl-auth
       uses: actions/cache/restore@v6.1.0
       with:
-        path: data/cache/garmin_garmin_com_tokens.json
-        key: tokens-v1-garmin_intl-${{ github.run_id }}
-        restore-keys: tokens-v1-garmin_intl-
+        path: |
+          data/cache/garmin_garmin_com_tokens.json
+          data/auth/garmin_garmin_com_tokens.json
+        key: tokens-v1-garmin_com-auth-cache-${{ github.run_id }}
+        restore-keys: tokens-v1-garmin_com-auth-cache-
 
     - id: restore-xoss
       uses: actions/cache/restore@v6.1.0
@@ -34,7 +36,7 @@ runs:
         hit=false
         if [ "${{ steps.restore-garmin-cn.outputs.cache-hit }}" = "true" ]; then
           hit=true
-        elif [ "${{ steps.restore-garmin-intl-old.outputs.cache-hit }}" = "true" ]; then
+        elif [ "${{ steps.restore-garmin-intl-auth.outputs.cache-hit }}" = "true" ]; then
           hit=true
         elif [ "${{ steps.restore-xoss.outputs.cache-hit }}" = "true" ]; then
           hit=true
