@@ -2,18 +2,20 @@ name: Tokens Cache Restore
 description: Restore Garmin/Garmin CN/XOSS token caches
 outputs:
   restored:
-    description: Always "true" when restore executed
-    value: "true"
+    description: "true if any token cache was restored from GitHub Actions cache"
+    value: ${{ steps.check-restored.outputs.restored }}
 runs:
   using: composite
   steps:
-    - uses: actions/cache/restore@v6.1.0
+    - id: restore-garmin-cn
+      uses: actions/cache/restore@v6.1.0
       with:
         path: data/cache/garmin_garmin_cn_tokens.json
         key: tokens-v1-garmin_cn-${{ github.run_id }}
         restore-keys: tokens-v1-garmin_cn-
 
-    - uses: actions/cache/restore@v6.1.0
+    - id: restore-garmin-intl
+      uses: actions/cache/restore@v6.1.0
       with:
         path: |
           data/cache/garmin_garmin_com_tokens.json
@@ -21,8 +23,22 @@ runs:
         key: tokens-v1-garmin_intl-${{ github.run_id }}
         restore-keys: tokens-v1-garmin_intl-
 
-    - uses: actions/cache/restore@v6.1.0
+    - id: restore-xoss
+      uses: actions/cache/restore@v6.1.0
       with:
         path: data/cache/xoss_tokens.json
         key: tokens-v1-xoss-${{ github.run_id }}
         restore-keys: tokens-v1-xoss-
+
+    - id: check-restored
+      shell: bash
+      run: |
+        hit=false
+        if [ "${{ steps.restore-garmin-cn.outputs.cache-hit }}" = "true" ]; then
+          hit=true
+        elif [ "${{ steps.restore-garmin-intl.outputs.cache-hit }}" = "true" ]; then
+          hit=true
+        elif [ "${{ steps.restore-xoss.outputs.cache-hit }}" = "true" ]; then
+          hit=true
+        fi
+        echo "restored=$hit" >> $GITHUB_OUTPUT

@@ -253,7 +253,7 @@ jobs:
           fi
 
       - uses: ./.github/actions/tokens-cache/save
-        if: always() && steps.load-tokens-cache.outputs.restored == 'true'
+        if: always()
 
       - name: Restore geo cache
         uses: actions/cache/restore@v4
