@@ -174,7 +174,7 @@ jobs:
           GIT_FIT_GARMIN_TOKEN_PATH: data/auth/garmin_garmin_com_tokens.json
           GIT_FIT_GARMIN_CN_TOKEN_PATH: data/auth/garmin_garmin_cn_tokens.json
           GIT_FIT_GARMIN_CN_SECRET: ${{ secrets.SYNC_GARMIN_CN_SECRET }}
-          GIT_FIT_XOSS_PHONE: ${{ secrets.SYNC_XOSS_EMAIL }}
+          GIT_FIT_XOSS_EMAIL: ${{ secrets.SYNC_XOSS_EMAIL }}
           GIT_FIT_XOSS_PASSWORD: ${{ secrets.SYNC_XOSS_PASSWORD }}
           GIT_FIT_XOSS_TOKEN_PATH: data/auth/xoss_tokens.json
           GIT_FIT_DATABASE_PATH: data/workouts.db
