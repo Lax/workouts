@@ -171,7 +171,7 @@ jobs:
           GIT_FIT_SYNC_TIME_BUDGET: ${{ vars.SYNC_TIME_BUDGET || '' }}
           GIT_FIT_SYNC_TOTAL_TIMEOUT: ${{ vars.SYNC_TOTAL_TIMEOUT || '' }}
           GIT_FIT_GARMIN_AUTH_SEED: ${{ secrets.SYNC_GARMIN_AUTH_SEED }}
-          GIT_FIT_GARMIN_TOKEN_PATH: data/cache/garmin_garmin_com_tokens.json
+          GIT_FIT_GARMIN_TOKEN_PATH: data/auth/garmin_garmin_com_tokens.json
           GIT_FIT_DATABASE_PATH: data/workouts.db
         run: bundle exec git fit sync
 
@@ -195,15 +195,15 @@ jobs:
           SYNC__TOTAL_TIMEOUT: ${{ vars.SYNC_TOTAL_TIMEOUT || '' }}
           MIGRATE__IGPSPORT_TO_GARMIN__LIMIT: ${{ vars.MIGRATE_IGPSPORT_TO_GARMIN_LIMIT || 10 }}
           MIGRATE__IGPSPORT_TO_GARMIN_CN__LIMIT: ${{ vars.MIGRATE_IGPSPORT_TO_GARMIN_CN_LIMIT || 10 }}
-          SYNC__GARMIN__TOKEN_PATH: data/cache/garmin_garmin_com_tokens.json
+          SYNC__GARMIN__TOKEN_PATH: data/auth/garmin_garmin_com_tokens.json
         run: bundle exec exe/workouts sync
 
-      - name: Bridge Garmin token to git-fit auth dir
+      - name: Bridge Garmin token to workouts cache dir
         if: always()
         run: |
-          mkdir -p data/auth
-          test -f data/cache/garmin_garmin_com_tokens.json && \
-            cp data/cache/garmin_garmin_com_tokens.json data/auth/garmin_garmin_com_tokens.json || true
+          mkdir -p data/cache
+          test -f data/auth/garmin_garmin_com_tokens.json && \
+            cp data/auth/garmin_garmin_com_tokens.json data/cache/garmin_garmin_com_tokens.json || true
 
       - name: Diagnose DB after sync
         id: db-state-sync
