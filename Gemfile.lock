@@ -1,9 +1,9 @@
 GIT
   remote: https://github.com/Lax/git-fit.git
-  revision: b18706c28b2dec3d06829d71924662eafa72ce45
+  revision: 559d637864d011fa817649e2637c979d3feb8fb0
   glob: ruby/*.gemspec
   specs:
-    git-fit (0.7.8)
+    git-fit (0.8.1)
       faraday (~> 2.0)
       http-cookie (~> 1.0)
       mini_racer (~> 0.12)
