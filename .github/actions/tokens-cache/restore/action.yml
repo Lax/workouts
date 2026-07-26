@@ -18,10 +18,9 @@ runs:
       uses: actions/cache/restore@v6.1.0
       with:
         path: |
-          data/cache/garmin_garmin_com_tokens.json
           data/auth/garmin_garmin_com_tokens.json
-        key: tokens-v1-garmin_com-auth-cache-${{ github.run_id }}
-        restore-keys: tokens-v1-garmin_com-auth-cache-
+        key: tokens-v1-garmin_com-auth-${{ github.run_id }}
+        restore-keys: tokens-v1-garmin_com-auth-
 
     - id: restore-xoss
       uses: actions/cache/restore@v6.1.0
