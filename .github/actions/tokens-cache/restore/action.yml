@@ -10,9 +10,9 @@ runs:
     - id: restore-garmin-cn
       uses: actions/cache/restore@v6.1.0
       with:
-        path: data/cache/garmin_garmin_cn_tokens.json
-        key: tokens-v1-garmin_cn-old-${{ github.run_id }}
-        restore-keys: tokens-v1-garmin_cn-old-
+        path: data/auth/garmin_garmin_cn_tokens.json
+        key: tokens-v1-garmin_cn-auth-${{ github.run_id }}
+        restore-keys: tokens-v1-garmin_cn-auth-
 
     - id: restore-garmin-intl-auth
       uses: actions/cache/restore@v6.1.0
@@ -25,9 +25,9 @@ runs:
     - id: restore-xoss
       uses: actions/cache/restore@v6.1.0
       with:
-        path: data/cache/xoss_tokens.json
-        key: tokens-v1-xoss-old-${{ github.run_id }}
-        restore-keys: tokens-v1-xoss-old-
+        path: data/auth/xoss_tokens.json
+        key: tokens-v1-xoss-auth-${{ github.run_id }}
+        restore-keys: tokens-v1-xoss-auth-
 
     - id: check-restored
       shell: bash

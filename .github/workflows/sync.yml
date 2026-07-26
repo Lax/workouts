@@ -198,8 +198,8 @@ jobs:
           MIGRATE__IGPSPORT_TO_GARMIN__LIMIT: ${{ vars.MIGRATE_IGPSPORT_TO_GARMIN_LIMIT || 10 }}
           MIGRATE__IGPSPORT_TO_GARMIN_CN__LIMIT: ${{ vars.MIGRATE_IGPSPORT_TO_GARMIN_CN_LIMIT || 10 }}
           SYNC__GARMIN__TOKEN_PATH: data/auth/garmin_garmin_com_tokens.json
-          SYNC__GARMIN_CN__TOKEN_PATH: data/cache/garmin_garmin_cn_tokens.json
-          SYNC__XOSS__TOKEN_PATH: data/cache/xoss_tokens.json
+          SYNC__GARMIN_CN__TOKEN_PATH: data/auth/garmin_garmin_cn_tokens.json
+          SYNC__XOSS__TOKEN_PATH: data/auth/xoss_tokens.json
         run: bundle exec exe/workouts sync
 
       - name: Bridge Garmin token cache to auth dir
@@ -209,12 +209,12 @@ jobs:
           # Garmin Intl: auth -> cache
           test -f data/auth/garmin_garmin_com_tokens.json && \
             cp data/auth/garmin_garmin_com_tokens.json data/cache/garmin_garmin_com_tokens.json || true
-          # Garmin CN: cache -> auth
-          test -f data/cache/garmin_garmin_cn_tokens.json && \
-            cp data/cache/garmin_garmin_cn_tokens.json data/auth/garmin_garmin_cn_tokens.json || true
-          # XOSS: cache -> auth
-          test -f data/cache/xoss_tokens.json && \
-            cp data/cache/xoss_tokens.json data/auth/xoss_tokens.json || true
+          # Garmin CN: auth -> cache
+          test -f data/auth/garmin_garmin_cn_tokens.json && \
+            cp data/auth/garmin_garmin_cn_tokens.json data/cache/garmin_garmin_cn_tokens.json || true
+          # XOSS: auth -> cache
+          test -f data/auth/xoss_tokens.json && \
+            cp data/auth/xoss_tokens.json data/cache/xoss_tokens.json || true
 
       - name: Diagnose DB after sync
         id: db-state-sync
