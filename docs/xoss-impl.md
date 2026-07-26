@@ -16,8 +16,14 @@ workouts sync --source xoss --act ride   # Sync only ride activities
 | `lib/workouts/cli.rb` | `--source` / `auth` help text |
 | `lib/workouts/sync/strava.rb:10` | Duplicate source list |
 | `spec/sync/xoss_spec.rb` | 23 tests (all stubbed, zero network) |
-| `spec/fixtures/xoss/login_response.json` | JWT login response fixture |
-| `spec/fixtures/xoss/activity_list_page.json` | Paginated list fixture (2 activities) |
+| `spec/fixtures/xoss/login_response.json` | JWT login response fixture (synthetic) |
+| `spec/fixtures/xoss/login_response_real.json` | Real login response (masked) |
+| `spec/fixtures/xoss/login_error_response.json` | Login error: invalid credentials |
+| `spec/fixtures/xoss/refresh_response.json` | Refresh success response (masked) |
+| `spec/fixtures/xoss/refresh_error_response.json` | Refresh error: expired token |
+| `spec/fixtures/xoss/activity_list_page.json` | Paginated list fixture (synthetic) |
+| `spec/fixtures/xoss/activity_list_real.json` | Real activity list (masked) |
+| `spec/fixtures/xoss/activity_list_error.json` | Activity list: invalid access token |
 | `spec/fixtures/xoss/fit_sample.56751769.fit` | Real FIT file (268 GPS points) |
 | `.github/workflows/sync.yml` | CI: token cache restore/save |
 | `.github/actions/data-store/sources-cache/*/action.yml` | CI: raw/std cache per source |
@@ -45,16 +51,33 @@ Response body:
 }
 ```
 
-Error response (HTTP 400, code 10301):
+error response (HTTP 400, code 10301):
 ```json
 {"code":10301,"data":{"non_field_errors":"No active account found with the given credentials"},"msg":"Invalid input."}
 ```
+
+### Token Refresh
+
+`POST /api/v1/jwt-token/refresh/` with body `{"refresh":"..."}`
+
+Response body (success, rotated tokens):
+```json
+{"code":0,"data":{"access":"eyJ...","refresh":"eyJ..."},"msg":"Success"}
+```
+
+Error codes:
+- 10401: "Token is invalid or expired" (HTTP 400)
 
 Token rotation: each refresh call returns a **new** refresh token (old one invalidated).
 
 ### Activity List
 
 `GET /api/v3/activity/?offset=N&limit=M`
+
+Error response (HTTP 401, invalid/expired access token):
+```json
+{"code":10001,"data":{"detail":"Given token not valid for any token type","code":"token_not_valid","messages":{"token_class":"AccessToken","token_type":"access","message":"Token is invalid or expired"}},"msg":"Token is invalid or expired"}
+```
 
 Paginated list with summary fields. Key fields:
 
@@ -207,55 +230,33 @@ Tested real FIT file (XingZhe G2 N5 device): temperature 16.2°C, no HR/cadence/
 
 ## Verification Log
 
-### 2026-07-26: Auth debug session
+### 2026-07-26: Auth debug — 3 paths validated + 6 fixtures from real API
 
-**Purpose:** Record complete auth flow I/O using config.yml credentials, verify API response structure.
+**3 auth paths tested:**
 
-**Command:**
-```bash
-bundle exec exe/workouts auth xoss
-```
+| Path | Condition | Trigger | HTTP |
+|---|---|---|---|
+| cached token | load_tokens + access_token_valid? | Second run (token file exists) | 0 |
+| refresh | access expired, refresh valid | Manually set expires_at=1 | POST `/refresh/` → 200 |
+| login | no cache / all expired | First run (no token file) | POST `/jwt-token/` → 200 |
 
-**Pre-conditions:** No cached token file (`data/cache/xoss_tokens.json` not found).
+**6 fixtures captured from real API:**
 
-**Full output (stderr debug + stdout):**
+| Fixture | Scenario | HTTP | Key fields |
+|---|---|---|---|
+| `login_response_real.json` | Login success | 200 | `code:0`, `data.access`, `data.refresh`, `data.email`, `data.username` |
+| `login_error_response.json` | Login: bad credentials | 400 | `code:10301`, `data.non_field_errors`, `msg:"Invalid input."` |
+| `refresh_response.json` | Refresh success | 200 | `code:0`, `data.access`, `data.refresh` (both rotated) |
+| `refresh_error_response.json` | Refresh: expired token | 400 | `code:10401`, `msg:"Invalid input."` |
+| `activity_list_real.json` | List: valid token | 200 | `code:0`, `data.count`, `data.results[]` |
+| `activity_list_error.json` | List: invalid token | 401 | `code:10001`, `data.code:"token_not_valid"`, `data.messages.token_type:"access"` |
 
-```
-Rebuilt data/workouts.db: 1197 rows from 4 tables
-        auth  Logging in to xoss...
-[AUTH DEBUG] === authenticate begin ===
-[AUTH DEBUG] token_path=data/cache/xoss_tokens.json
-[AUTH DEBUG] token_file_exists=false
-[AUTH DEBUG] cached token NOT valid, try refresh...
-[AUTH DEBUG] refresh failed, try login...
-[AUTH DEBUG] login: POST /api/v1/jwt-token/
-[AUTH DEBUG] login: body={"email": liu***, "password": "***"}
-[AUTH DEBUG] login: HTTP 400
-[AUTH DEBUG] login: body={"code":10301,"data":{"non_field_errors":"No active account found with the given credentials"},"msg":"Invalid input."}
-[AUTH DEBUG] PATH: ALL FAILED
-       error  Authentication failed
-```
-
-**Findings:**
-
-| Item | Observation |
-|---|---|
-| Auth chain order | Correct: cached → refresh → login (matches code) |
-| Default token_path | `data/cache/xoss_tokens.json` (workouts adapter); CI overrides to `data/auth/` |
-| Login request | `POST /api/v1/jwt-token/` with `{"email":"...","password":"..."}`, header: `Origin: xoss` |
-| Login response format | `{"code":<int>,"data":{...},"msg":"..."}"` |
-| Error code | 10301 = invalid credentials |
-| config.yml credentials | Invalid — "No active account found" (email: `liu***@gmail.com`, password: `***462`) |
-| Token file write | Not attempted (login fails before save_tokens) |
-| Network | API reachable (verified: `curl` returns HTTP 401 without auth, confirms server responds) |
-
-**Implications:**
-- `config/config.yml` credentials need updating for XOSS sync to work
-- Token path default (`data/cache/`) differs from git-fit default (`data/auth/`) — CI overrides unify this
-- `expires_in` is NOT in the API response — hardcoded `ACCESS_TOKEN_TTL = 86400` is the only source of truth
-- Refresh token 7d TTL cannot be validated by code — only API-side enforcement via HTTP 400 on refresh
-
-**Status:** config.yml needs credential update. Once corrected, re-run to capture successful login response + token file structure.
+**Findings from real API:**
+- Activity list error returns `code:10001` not `10301` — token errors have distinct codes
+- Refresh rotates BOTH access and refresh (confirmed real behavior)
+- Refresh response structure differs from login: has `data.access` + `data.refresh` but NOT `data.email`/`data.username`/`data.id`
+- Access token error response includes `token_class`, `token_type`, `message` in `data.messages`
+- Activity list `count` field is an integer (not null as initially observed — first page with `limit=1` returned null, re-test with full dataset returned integer)
 
 ## Change Log
 
@@ -268,4 +269,4 @@ Rebuilt data/workouts.db: 1197 rows from 4 tables
 | 2026-07-03 | FIT download + decode pipeline |
 | 2026-07-03 | Adversarial review: rescue FIT decode, calories, retry logic |
 | 2026-07-03 | CONTEXT.md + config_template updated |
-| 2026-07-26 | Auth debug session: verified API response structure, error codes, auth chain. Config credentials need update (HTTP 400 / code 10301). Documented token_path default disparity (workouts vs git-fit), expires_in absence. |
+| 2026-07-26 | Auth debug: 3 auth paths validated (login/refresh/cached). 6 real-API fixtures captured. Error message handling added. Documented token_path disparity, expires_in absence, error code taxonomy. |
