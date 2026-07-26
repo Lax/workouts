@@ -202,12 +202,19 @@ jobs:
           SYNC__XOSS__TOKEN_PATH: data/cache/xoss_tokens.json
         run: bundle exec exe/workouts sync
 
-      - name: Bridge Garmin token to workouts cache dir
+      - name: Bridge Garmin token cache to auth dir
         if: always()
         run: |
-          mkdir -p data/cache
+          mkdir -p data/cache data/auth
+          # Garmin Intl: auth -> cache
           test -f data/auth/garmin_garmin_com_tokens.json && \
             cp data/auth/garmin_garmin_com_tokens.json data/cache/garmin_garmin_com_tokens.json || true
+          # Garmin CN: cache -> auth
+          test -f data/cache/garmin_garmin_cn_tokens.json && \
+            cp data/cache/garmin_garmin_cn_tokens.json data/auth/garmin_garmin_cn_tokens.json || true
+          # XOSS: cache -> auth
+          test -f data/cache/xoss_tokens.json && \
+            cp data/cache/xoss_tokens.json data/auth/xoss_tokens.json || true
 
       - name: Diagnose DB after sync
         id: db-state-sync
