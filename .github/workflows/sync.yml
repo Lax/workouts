@@ -173,6 +173,7 @@ jobs:
           GIT_FIT_GARMIN_AUTH_SEED: ${{ secrets.SYNC_GARMIN_AUTH_SEED }}
           GIT_FIT_GARMIN_TOKEN_PATH: data/auth/garmin_garmin_com_tokens.json
           GIT_FIT_GARMIN_CN_TOKEN_PATH: data/auth/garmin_garmin_cn_tokens.json
+          GIT_FIT_GARMIN_CN_SECRET: ${{ secrets.SYNC_GARMIN_CN_SECRET }}
           GIT_FIT_XOSS_TOKEN_PATH: data/auth/xoss_tokens.json
           GIT_FIT_DATABASE_PATH: data/workouts.db
         run: bundle exec git fit sync
@@ -187,9 +188,6 @@ jobs:
           SYNC__XOSS__PASSWORD: ${{ secrets.SYNC_XOSS_PASSWORD }}
           SYNC__XINGZHE__EMAIL: ${{ secrets.SYNC_XINGZHE_EMAIL }}
           SYNC__XINGZHE__PASSWORD: ${{ secrets.SYNC_XINGZHE_PASSWORD }}
-          SYNC__GARMIN_CN__EMAIL: ${{ secrets.SYNC_GARMIN_CN_EMAIL }}
-          SYNC__GARMIN_CN__PASSWORD: ${{ secrets.SYNC_GARMIN_CN_PASSWORD }}
-          SYNC__GARMIN_CN__SECRET: ${{ secrets.SYNC_GARMIN_CN_SECRET }}
           SYNC__STRAVA__CLIENT_ID: ${{ secrets.SYNC_STRAVA_CLIENT_ID }}
           SYNC__STRAVA__CLIENT_SECRET: ${{ secrets.SYNC_STRAVA_CLIENT_SECRET }}
           SYNC__STRAVA__REFRESH_TOKEN: ${{ secrets.SYNC_STRAVA_REFRESH_TOKEN }}
