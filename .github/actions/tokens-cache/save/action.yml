@@ -10,14 +10,21 @@ runs:
         path: data/cache/garmin_garmin_cn_tokens.json
         key: tokens-v1-garmin_cn-${{ github.run_id }}
 
-    - name: Save Garmin Intl tokens
+    - name: Save Garmin Intl tokens (old)
+      uses: actions/cache/save@v6.1.0
+      if: always()
+      with:
+        path: data/cache/garmin_garmin_com_tokens.json
+        key: tokens-v1-garmin_intl-${{ github.run_id }}
+
+    - name: Save Garmin Intl tokens (auth cache)
       uses: actions/cache/save@v6.1.0
       if: always()
       with:
         path: |
           data/cache/garmin_garmin_com_tokens.json
           data/auth/garmin_garmin_com_tokens.json
-        key: tokens-v1-garmin_intl-${{ github.run_id }}
+        key: tokens-v1-garmin_com-auth-cache-${{ github.run_id }}
 
     - name: Save XOSS tokens
       uses: actions/cache/save@v6.1.0
