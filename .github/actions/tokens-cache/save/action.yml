@@ -14,7 +14,9 @@ runs:
       uses: actions/cache/save@v6.1.0
       if: always()
       with:
-        path: data/cache/garmin_garmin_com_tokens.json
+        path: |
+          data/cache/garmin_garmin_com_tokens.json
+          data/auth/garmin_garmin_com_tokens.json
         key: tokens-v1-garmin_intl-${{ github.run_id }}
 
     - name: Save XOSS tokens
