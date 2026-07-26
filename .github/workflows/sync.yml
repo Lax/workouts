@@ -172,8 +172,8 @@ jobs:
           GIT_FIT_SYNC_TOTAL_TIMEOUT: ${{ vars.SYNC_TOTAL_TIMEOUT || '' }}
           GIT_FIT_GARMIN_AUTH_SEED: ${{ secrets.SYNC_GARMIN_AUTH_SEED }}
           GIT_FIT_GARMIN_TOKEN_PATH: data/auth/garmin_garmin_com_tokens.json
-          GIT_FIT_GARMIN_CN_TOKEN_PATH: data/cache/garmin_garmin_cn_tokens.json
-          GIT_FIT_XOSS_TOKEN_PATH: data/cache/xoss_tokens.json
+          GIT_FIT_GARMIN_CN_TOKEN_PATH: data/auth/garmin_garmin_cn_tokens.json
+          GIT_FIT_XOSS_TOKEN_PATH: data/auth/xoss_tokens.json
           GIT_FIT_DATABASE_PATH: data/workouts.db
         run: bundle exec git fit sync
 
