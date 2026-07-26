@@ -265,11 +265,16 @@ jobs:
           bundle exec ruby -e '
             require "sequel"
             db = Sequel.sqlite("data/workouts.db")
-            db.run("DELETE FROM schema_migrations WHERE rowid NOT IN (SELECT MIN(rowid) FROM schema_migrations GROUP BY filename)")
-            puts "schema_migrations deduplicated"
+            if db.table_exists?(:schema_migrations)
+              db.run("DELETE FROM schema_migrations WHERE rowid NOT IN (SELECT MIN(rowid) FROM schema_migrations GROUP BY filename)")
+              puts "schema_migrations deduplicated"
+            else
+              puts "schema_migrations not present, skip dedup"
+            end
           '
 
       - name: Geo region detection
+        continue-on-error: true
         env:
           AMAP_API_KEY: ${{ secrets.AMAP_API_KEY }}
           GIT_FIT_DATABASE_PATH: data/workouts.db
