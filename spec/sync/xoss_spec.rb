@@ -82,12 +82,27 @@ RSpec.describe Workouts::Sync::XOSS do
     end
 
     context "when login returns non-200" do
+      let(:error_body) { File.read("spec/fixtures/xoss/login_error_response.json") }
+
       before do
-        resp = instance_double(Net::HTTPResponse, code: "401", body: "{}")
+        resp = instance_double(Net::HTTPResponse, code: "400", body: error_body)
         allow(xoss).to receive(:http_request).and_return(resp)
       end
 
       it "returns 0" do
+        expect(xoss.call).to eq(0)
+      end
+    end
+
+    context "when login returns 200 with error code" do
+      let(:error_body) { File.read("spec/fixtures/xoss/login_error_response.json") }
+
+      before do
+        resp = instance_double(Net::HTTPResponse, code: "200", body: error_body)
+        allow(xoss).to receive(:http_request).and_return(resp)
+      end
+
+      it "returns 0 for code != 0" do
         expect(xoss.call).to eq(0)
       end
     end

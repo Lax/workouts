@@ -34,9 +34,15 @@ module Workouts
       end
 
       def authenticate
-        return true if load_tokens && access_token_valid?
-        return true if refresh_access_token
-        return true if login
+        if load_tokens && access_token_valid?
+          return true
+        end
+        if refresh_access_token
+          return true
+        end
+        if login
+          return true
+        end
         false
       end
 
@@ -65,6 +71,16 @@ module Workouts
       end
 
       private
+
+      def error_message(body)
+        data = JSON.parse(body) rescue {}
+        msg = data["msg"].to_s.strip
+        detail = data.dig("data", "non_field_errors") || data.dig("data", "detail")
+        parts = [msg, detail].compact.reject(&:empty?)
+        parts.any? ? parts.join(": ") : "(empty response)"
+      rescue
+        body.to_s[0..200]
+      end
 
       def http_request(method, path, body: nil, params: nil, headers: {})
         uri = URI("#{BASE_URL}#{path}")
@@ -101,10 +117,16 @@ module Workouts
           body: JSON.generate({ email: @email, password: @password }),
           headers: { "Content-Type" => "application/json", "Origin" => "xoss" }
         )
-        return false unless resp.code.to_i == 200
+        unless resp.code.to_i == 200
+          warn "XOSS: login HTTP #{resp.code}: #{error_message(resp.body)}"
+          return false
+        end
 
         data = JSON.parse(resp.body)
-        return false unless data["code"] == 0
+        unless data["code"] == 0
+          warn "XOSS: login failed: #{error_message(resp.body)}"
+          return false
+        end
 
         @access_token = data.dig("data", "access")
         @refresh_token = data.dig("data", "refresh")
@@ -176,12 +198,14 @@ module Workouts
           headers: { "Content-Type" => "application/json", "Origin" => "xoss" }
         )
         unless resp.code.to_i == 200
+          warn "XOSS: token refresh HTTP #{resp.code}: #{error_message(resp.body)}"
           remove_stale_tokens
           return false
         end
 
         data = JSON.parse(resp.body)
         unless data["code"] == 0
+          warn "XOSS: token refresh failed: #{error_message(resp.body)}"
           remove_stale_tokens
           return false
         end

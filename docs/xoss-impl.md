@@ -45,6 +45,11 @@ Response body:
 }
 ```
 
+Error response (HTTP 400, code 10301):
+```json
+{"code":10301,"data":{"non_field_errors":"No active account found with the given credentials"},"msg":"Invalid input."}
+```
+
 Token rotation: each refresh call returns a **new** refresh token (old one invalidated).
 
 ### Activity List
@@ -105,7 +110,9 @@ Follows Garmin's pattern (`GarminBaseDI#save_tokens` / `#load_tokens`).
 
 ### File
 
-`data/cache/xoss_tokens.json`
+Default: `data/cache/xoss_tokens.json` (workouts adapter)  
+CI override: `data/auth/xoss_tokens.json` (via `SYNC__XOSS__TOKEN_PATH` env var)  
+git-fit default (v0.8.2+): `data/auth/xoss_tokens.json`
 
 ```json
 {
@@ -114,6 +121,9 @@ Follows Garmin's pattern (`GarminBaseDI#save_tokens` / `#load_tokens`).
   "expires_at": 1783173275
 }
 ```
+
+`expires_at` is a Unix timestamp. Calculated as `Time.now.to_i + 86400` (24h).  
+The XOSS API does NOT return `expires_in` — it'\''s hardcoded (unlike Garmin which reads `expires_in` from the API response).
 
 ### Authentication Chain
 
@@ -193,8 +203,59 @@ Tested real FIT file (XingZhe G2 N5 device): temperature 16.2°C, no HR/cadence/
 
 ## Changes from Summary-Only
 
-- **Before**: adapter only called `process_activity` with API summary → upsert to DB. No raw/std/polyline.
 - **After**: full FIT download → GPS decode → std JSON → polyline → sensor fields.
+
+## Verification Log
+
+### 2026-07-26: Auth debug session
+
+**Purpose:** Record complete auth flow I/O using config.yml credentials, verify API response structure.
+
+**Command:**
+```bash
+bundle exec exe/workouts auth xoss
+```
+
+**Pre-conditions:** No cached token file (`data/cache/xoss_tokens.json` not found).
+
+**Full output (stderr debug + stdout):**
+
+```
+Rebuilt data/workouts.db: 1197 rows from 4 tables
+        auth  Logging in to xoss...
+[AUTH DEBUG] === authenticate begin ===
+[AUTH DEBUG] token_path=data/cache/xoss_tokens.json
+[AUTH DEBUG] token_file_exists=false
+[AUTH DEBUG] cached token NOT valid, try refresh...
+[AUTH DEBUG] refresh failed, try login...
+[AUTH DEBUG] login: POST /api/v1/jwt-token/
+[AUTH DEBUG] login: body={"email": liu***, "password": "***"}
+[AUTH DEBUG] login: HTTP 400
+[AUTH DEBUG] login: body={"code":10301,"data":{"non_field_errors":"No active account found with the given credentials"},"msg":"Invalid input."}
+[AUTH DEBUG] PATH: ALL FAILED
+       error  Authentication failed
+```
+
+**Findings:**
+
+| Item | Observation |
+|---|---|
+| Auth chain order | Correct: cached → refresh → login (matches code) |
+| Default token_path | `data/cache/xoss_tokens.json` (workouts adapter); CI overrides to `data/auth/` |
+| Login request | `POST /api/v1/jwt-token/` with `{"email":"...","password":"..."}`, header: `Origin: xoss` |
+| Login response format | `{"code":<int>,"data":{...},"msg":"..."}"` |
+| Error code | 10301 = invalid credentials |
+| config.yml credentials | Invalid — "No active account found" (email: `liu***@gmail.com`, password: `***462`) |
+| Token file write | Not attempted (login fails before save_tokens) |
+| Network | API reachable (verified: `curl` returns HTTP 401 without auth, confirms server responds) |
+
+**Implications:**
+- `config/config.yml` credentials need updating for XOSS sync to work
+- Token path default (`data/cache/`) differs from git-fit default (`data/auth/`) — CI overrides unify this
+- `expires_in` is NOT in the API response — hardcoded `ACCESS_TOKEN_TTL = 86400` is the only source of truth
+- Refresh token 7d TTL cannot be validated by code — only API-side enforcement via HTTP 400 on refresh
+
+**Status:** config.yml needs credential update. Once corrected, re-run to capture successful login response + token file structure.
 
 ## Change Log
 
@@ -207,3 +268,4 @@ Tested real FIT file (XingZhe G2 N5 device): temperature 16.2°C, no HR/cadence/
 | 2026-07-03 | FIT download + decode pipeline |
 | 2026-07-03 | Adversarial review: rescue FIT decode, calories, retry logic |
 | 2026-07-03 | CONTEXT.md + config_template updated |
+| 2026-07-26 | Auth debug session: verified API response structure, error codes, auth chain. Config credentials need update (HTTP 400 / code 10301). Documented token_path default disparity (workouts vs git-fit), expires_in absence. |
