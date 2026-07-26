@@ -26,16 +26,16 @@ runs:
           data/auth/garmin_garmin_com_tokens.json
         key: tokens-v1-garmin_com-auth-cache-${{ github.run_id }}
 
-    - name: Save Garmin Intl tokens (auth-only)
-      uses: actions/cache/save@v6.1.0
-      if: always()
-      with:
-        path: data/auth/garmin_garmin_com_tokens.json
-        key: tokens-v1-garmin_com-auth-${{ github.run_id }}
-
     - name: Save XOSS tokens
       uses: actions/cache/save@v6.1.0
       if: always()
       with:
         path: data/cache/xoss_tokens.json
         key: tokens-v1-xoss-${{ github.run_id }}
+
+    - name: Save Garmin Intl tokens (auth-only)
+      uses: actions/cache/save@v6.1.0
+      if: always()
+      with:
+        path: data/auth/garmin_garmin_com_tokens.json
+        key: tokens-v1-garmin_com-auth-${{ github.run_id }}
