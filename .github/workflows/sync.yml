@@ -267,14 +267,6 @@ jobs:
           bundle exec git fit geo detect \
             --limit 200 --batch 20 --strategy proportional --time 300
 
-      - name: Geo region detection (workouts fallback)
-        env:
-          AMAP_API_KEY: ${{ secrets.AMAP_API_KEY }}
-          GIT_FIT_DATABASE_PATH: data/workouts.db
-        run: |
-          bundle exec exe/workouts geo detect \
-            --limit 200 --batch 20 --strategy proportional --time 300
-
       - name: Diagnose DB after geo
         id: db-state-geo
         shell: bash
