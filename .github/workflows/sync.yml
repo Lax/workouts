@@ -152,6 +152,12 @@ jobs:
 
           git fetch origin "refs/heads/$AH_BRANCH:refs/remotes/$AH_REMOTE"
 
+          if [ "${{ steps.import-cache-apple-health.outputs.cache-hit }}" = "true" ]; then
+            echo "[cache] SHA256SUMS + .imported-at restored" >&2
+          else
+            echo "[cache] No cache hit — fresh start" >&2
+          fi
+
           export_sha=$(git log --format=%H -1 "$AH_REMOTE" -- "$AH_DIR/export.zip")
           if [ -z "$export_sha" ]; then
             echo "export.zip not found in branch — skip" >&2
@@ -183,7 +189,15 @@ jobs:
             fi
           fi
 
+          if ! git cat-file -e "$export_sha:$AH_DIR/export.zip" 2>/dev/null; then
+            echo "Blob missing at ${export_sha:0:7} ($export_subject) — branch may have been pruned, skipping" >&2
+            echo "skip=true" >> $GITHUB_OUTPUT
+            echo "reason=blob-missing" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
           echo "skip=false" >> $GITHUB_OUTPUT
+          echo "export_sha=$export_sha" >> $GITHUB_OUTPUT
           if [ -z "$cached" ]; then
             echo "First import — ${export_sha:0:7} $export_subject ($export_date)" >&2
           else
@@ -200,24 +214,34 @@ jobs:
         run: |
           mkdir -p "$AH_DIR"
           git lfs install
-          git show "$AH_REMOTE:$AH_DIR/export.zip" | git lfs smudge > "$AH_DIR/export.zip"
-          if [ ! -f "$AH_DIR/export.zip" ]; then
-            echo "No export.zip in branch — skipping" >&2
-            exit 0
-          fi
+
+          export_sha="${{ steps.ah-check.outputs.export_sha }}"
+          echo "[import] Fetching export.zip at commit ${export_sha:0:7}..." >&2
+          git show "$export_sha:$AH_DIR/export.zip" \
+            | git lfs smudge > "$AH_DIR/export.zip"
+
+          size=$(stat -c%s "$AH_DIR/export.zip" 2>/dev/null \
+            || stat -f%z "$AH_DIR/export.zip" 2>/dev/null)
+          echo "[import] Downloaded ${size} bytes" >&2
+
           file "$AH_DIR/export.zip" | grep -qi "Zip archive" || {
-            echo "export.zip is not a valid zip — possible LFS smudge failure" >&2
+            echo "[import] export.zip is not a valid zip" >&2
             exit 1
           }
+          echo "[import] Validation passed" >&2
 
+          echo "[import] Running git fit import apple_health..." >&2
           bundle exec git fit import apple_health
 
+          echo "[import] Generating SHA256SUMS..." >&2
           bash scripts/generate-checksums.sh "$AH_DIR/export.zip"
 
+          echo "[import] Saving state to branch..." >&2
           bash scripts/data-store-git-save.sh "$AH_BRANCH" "$AH_DIR/SHA256SUMS"
 
           git log --format=%H -1 "$AH_REMOTE" -- "$AH_DIR/export.zip" \
             > "$AH_DIR/.imported-at"
+          echo "[import] .imported-at updated" >&2
 
       # ── Data restore (conditional on commit mode) ──
       - uses: ./.github/actions/data-store/restore
