@@ -142,6 +142,7 @@ jobs:
           if ! git ls-remote --exit-code origin refs/heads/_/import/apple_health >/dev/null 2>&1; then
             echo "No apple_health branch — skip import" >&2
             echo "skip=true" >> $GITHUB_OUTPUT
+            echo "reason=no-branch" >> $GITHUB_OUTPUT
             exit 0
           fi
 
@@ -151,25 +152,39 @@ jobs:
           if [ -z "$export_sha" ]; then
             echo "export.zip not found in branch — skip" >&2
             echo "skip=true" >> $GITHUB_OUTPUT
+            echo "reason=export-zip-missing" >> $GITHUB_OUTPUT
             exit 0
           fi
 
+          export_date=$(git log --format=%ci -1 "origin/_/import/apple_health" -- data/import/apple_health/export.zip)
+          export_subject=$(git log --format=%s -1 "origin/_/import/apple_health" -- data/import/apple_health/export.zip)
+
           cached=$(cat data/import/apple_health/.imported-at 2>/dev/null || echo "")
           if [ "$export_sha" = "$cached" ]; then
-            echo "export.zip unchanged at $export_sha — skip" >&2
+            echo "export.zip unchanged at ${export_sha:0:7} ($export_date) — skip" >&2
             echo "skip=true" >> $GITHUB_OUTPUT
+            echo "reason=unchanged" >> $GITHUB_OUTPUT
+            echo "export_sha=${export_sha:0:7}" >> $GITHUB_OUTPUT
+            echo "export_date=$export_date" >> $GITHUB_OUTPUT
+            echo "export_subject=$export_subject" >> $GITHUB_OUTPUT
             exit 0
           fi
 
           if git show "origin/_/import/apple_health:data/import/apple_health/SHA256SUMS" > /tmp/apple-health.sha256 2>/dev/null; then
             if [ -f data/import/apple_health/SHA256SUMS ] && cmp -s /tmp/apple-health.sha256 data/import/apple_health/SHA256SUMS; then
-              echo "SHA256 match (branch rebuilt) — skip" >&2
+              echo "SHA256 match — commit ID changed (${cached:0:7} → ${export_sha:0:7}) but content unchanged, skip" >&2
               echo "skip=true" >> $GITHUB_OUTPUT
+              echo "reason=sha256-match" >> $GITHUB_OUTPUT
               exit 0
             fi
           fi
 
           echo "skip=false" >> $GITHUB_OUTPUT
+          if [ -z "$cached" ]; then
+            echo "First import — ${export_sha:0:7} $export_subject ($export_date)" >&2
+          else
+            echo "export.zip changed — ${cached:0:7} → ${export_sha:0:7} ($export_date)" >&2
+          fi
 
       - name: Import Apple Health
         if: steps.ah-check.outputs.skip == 'false' && steps.git-setup.outputs.configured == 'true'
