@@ -183,14 +183,14 @@ jobs:
           GIT_FIT_KEEP_PASSWORD: ${{ secrets.SYNC_KEEP_PASSWORD }}
           GIT_FIT_IGPSPORT_PHONE: ${{ secrets.SYNC_IGPSPORT_PHONE }}
           GIT_FIT_IGPSPORT_PASSWORD: ${{ secrets.SYNC_IGPSPORT_PASSWORD }}
+          GIT_FIT_STRAVA_CLIENT_ID: ${{ secrets.SYNC_STRAVA_CLIENT_ID }}
+          GIT_FIT_STRAVA_CLIENT_SECRET: ${{ secrets.SYNC_STRAVA_CLIENT_SECRET }}
+          GIT_FIT_STRAVA_REFRESH_TOKEN: ${{ secrets.SYNC_STRAVA_REFRESH_TOKEN }}
           GIT_FIT_DATABASE_PATH: data/workouts.db
         run: bundle exec git fit sync
 
       - name: Sync activities - workouts sync
         env:
-          SYNC__STRAVA__CLIENT_ID: ${{ secrets.SYNC_STRAVA_CLIENT_ID }}
-          SYNC__STRAVA__CLIENT_SECRET: ${{ secrets.SYNC_STRAVA_CLIENT_SECRET }}
-          SYNC__STRAVA__REFRESH_TOKEN: ${{ secrets.SYNC_STRAVA_REFRESH_TOKEN }}
           SYNC__TIME_BUDGET: ${{ vars.SYNC_TIME_BUDGET || '' }}
           SYNC__TOTAL_TIMEOUT: ${{ vars.SYNC_TOTAL_TIMEOUT || '' }}
           MIGRATE__IGPSPORT_TO_GARMIN__LIMIT: ${{ vars.MIGRATE_IGPSPORT_TO_GARMIN_LIMIT || 10 }}
