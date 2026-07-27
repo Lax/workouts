@@ -170,8 +170,8 @@ jobs:
             exit 0
           fi
 
-          if git show "origin/_/import/apple_health:data/import/apple_health/SHA256SUMS" > /tmp/apple-health.sha256 2>/dev/null; then
-            if [ -f data/import/apple_health/SHA256SUMS ] && cmp -s /tmp/apple-health.sha256 data/import/apple_health/SHA256SUMS; then
+          if git show "origin/_/import/apple_health:data/import/apple_health/SHA256SUMS" > "$RUNNER_TEMP/apple-health.sha256" 2>/dev/null; then
+            if [ -f data/import/apple_health/SHA256SUMS ] && cmp -s "$RUNNER_TEMP/apple-health.sha256" data/import/apple_health/SHA256SUMS; then
               echo "SHA256 match — commit ID changed (${cached:0:7} → ${export_sha:0:7}) but content unchanged, skip" >&2
               echo "skip=true" >> $GITHUB_OUTPUT
               echo "reason=sha256-match" >> $GITHUB_OUTPUT
