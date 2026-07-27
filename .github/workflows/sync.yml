@@ -250,6 +250,14 @@ jobs:
       - uses: ./.github/actions/tokens-cache/save
         if: always()
 
+      - uses: actions/cache@v4
+        id: geo-point-cache
+        with:
+          path: |
+            data/cache/geo-point.jsonl
+            data/cache/geo-point.jsonl.SHA256SUMS
+          key: workouts-geo-v2-cache
+
       - name: Restore geo cache
         uses: actions/cache/restore@v4
         id: geo-cache
@@ -437,6 +445,14 @@ jobs:
             commit -m "store(sync): $(date -u +%Y%m%d-%H%M%S)"
           git pull --rebase
           git push
+
+      - name: Generate geo cache SHA256SUMS
+        if: always()
+        shell: bash
+        run: |
+          if [ -f data/cache/geo-point.jsonl ]; then
+            sha256sum data/cache/geo-point.jsonl > data/cache/geo-point.jsonl.SHA256SUMS
+          fi
 
       - name: Save geo cache
         if: always()
