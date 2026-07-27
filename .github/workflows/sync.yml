@@ -189,16 +189,6 @@ jobs:
           GIT_FIT_DATABASE_PATH: data/workouts.db
         run: bundle exec git fit sync
 
-      - name: Sync activities - workouts sync
-        env:
-          SYNC__TIME_BUDGET: ${{ vars.SYNC_TIME_BUDGET || '' }}
-          SYNC__TOTAL_TIMEOUT: ${{ vars.SYNC_TOTAL_TIMEOUT || '' }}
-          MIGRATE__IGPSPORT_TO_GARMIN__LIMIT: ${{ vars.MIGRATE_IGPSPORT_TO_GARMIN_LIMIT || 10 }}
-          MIGRATE__IGPSPORT_TO_GARMIN_CN__LIMIT: ${{ vars.MIGRATE_IGPSPORT_TO_GARMIN_CN_LIMIT || 10 }}
-          SYNC__GARMIN__TOKEN_PATH: data/auth/garmin_garmin_com_tokens.json
-          SYNC__GARMIN_CN__TOKEN_PATH: data/auth/garmin_garmin_cn_tokens.json
-        run: bundle exec exe/workouts sync
-
       - name: Diagnose DB after sync
         id: db-state-sync
         shell: bash
