@@ -138,17 +138,21 @@ jobs:
       - name: Check Apple Health export.zip change
         id: ah-check
         shell: bash
+        env:
+          AH_BRANCH: _/import/apple_health
+          AH_DIR: data/import/apple_health
+          AH_REMOTE: origin/_/import/apple_health
         run: |
-          if ! git ls-remote --exit-code origin refs/heads/_/import/apple_health >/dev/null 2>&1; then
+          if ! git ls-remote --exit-code origin "refs/heads/$AH_BRANCH" >/dev/null 2>&1; then
             echo "No apple_health branch — skip import" >&2
             echo "skip=true" >> $GITHUB_OUTPUT
             echo "reason=no-branch" >> $GITHUB_OUTPUT
             exit 0
           fi
 
-          git fetch origin refs/heads/_/import/apple_health
+          git fetch origin "refs/heads/$AH_BRANCH"
 
-          export_sha=$(git log --format=%H -1 "origin/_/import/apple_health" -- data/import/apple_health/export.zip)
+          export_sha=$(git log --format=%H -1 "$AH_REMOTE" -- "$AH_DIR/export.zip")
           if [ -z "$export_sha" ]; then
             echo "export.zip not found in branch — skip" >&2
             echo "skip=true" >> $GITHUB_OUTPUT
@@ -156,10 +160,10 @@ jobs:
             exit 0
           fi
 
-          export_date=$(git log --format=%ci -1 "origin/_/import/apple_health" -- data/import/apple_health/export.zip)
-          export_subject=$(git log --format=%s -1 "origin/_/import/apple_health" -- data/import/apple_health/export.zip)
+          export_date=$(git log --format=%ci -1 "$AH_REMOTE" -- "$AH_DIR/export.zip")
+          export_subject=$(git log --format=%s -1 "$AH_REMOTE" -- "$AH_DIR/export.zip")
 
-          cached=$(cat data/import/apple_health/.imported-at 2>/dev/null || echo "")
+          cached=$(cat "$AH_DIR/.imported-at" 2>/dev/null || echo "")
           if [ "$export_sha" = "$cached" ]; then
             echo "export.zip unchanged at ${export_sha:0:7} ($export_date) — skip" >&2
             echo "skip=true" >> $GITHUB_OUTPUT
@@ -170,8 +174,8 @@ jobs:
             exit 0
           fi
 
-          if git show "origin/_/import/apple_health:data/import/apple_health/SHA256SUMS" > "$RUNNER_TEMP/apple-health.sha256" 2>/dev/null; then
-            if [ -f data/import/apple_health/SHA256SUMS ] && cmp -s "$RUNNER_TEMP/apple-health.sha256" data/import/apple_health/SHA256SUMS; then
+          if git show "$AH_REMOTE:$AH_DIR/SHA256SUMS" > "$RUNNER_TEMP/apple-health.sha256" 2>/dev/null; then
+            if [ -f "$AH_DIR/SHA256SUMS" ] && cmp -s "$RUNNER_TEMP/apple-health.sha256" "$AH_DIR/SHA256SUMS"; then
               echo "SHA256 match — commit ID changed (${cached:0:7} → ${export_sha:0:7}) but content unchanged, skip" >&2
               echo "skip=true" >> $GITHUB_OUTPUT
               echo "reason=sha256-match" >> $GITHUB_OUTPUT
@@ -190,28 +194,30 @@ jobs:
         if: steps.ah-check.outputs.skip == 'false' && steps.git-setup.outputs.configured == 'true'
         env:
           GIT_FIT_DATABASE_PATH: data/workouts.db
+          AH_BRANCH: _/import/apple_health
+          AH_DIR: data/import/apple_health
+          AH_REMOTE: origin/_/import/apple_health
         run: |
-          mkdir -p data/import/apple_health
+          mkdir -p "$AH_DIR"
           git lfs install
-          git show "origin/_/import/apple_health:data/import/apple_health/export.zip" | git lfs smudge > data/import/apple_health/export.zip
-          if [ ! -f data/import/apple_health/export.zip ]; then
+          git show "$AH_REMOTE:$AH_DIR/export.zip" | git lfs smudge > "$AH_DIR/export.zip"
+          if [ ! -f "$AH_DIR/export.zip" ]; then
             echo "No export.zip in branch — skipping" >&2
             exit 0
           fi
-          file data/import/apple_health/export.zip | grep -qi "Zip archive" || {
+          file "$AH_DIR/export.zip" | grep -qi "Zip archive" || {
             echo "export.zip is not a valid zip — possible LFS smudge failure" >&2
             exit 1
           }
 
           bundle exec git fit import apple_health
 
-          bash scripts/generate-checksums.sh data/import/apple_health/export.zip
+          bash scripts/generate-checksums.sh "$AH_DIR/export.zip"
 
-          bash scripts/data-store-git-save.sh "_/import/apple_health" \
-            "data/import/apple_health/SHA256SUMS"
+          bash scripts/data-store-git-save.sh "$AH_BRANCH" "$AH_DIR/SHA256SUMS"
 
-          git log --format=%H -1 "origin/_/import/apple_health" -- data/import/apple_health/export.zip \
-            > data/import/apple_health/.imported-at
+          git log --format=%H -1 "$AH_REMOTE" -- "$AH_DIR/export.zip" \
+            > "$AH_DIR/.imported-at"
 
       # ── Data restore (conditional on commit mode) ──
       - uses: ./.github/actions/data-store/restore
