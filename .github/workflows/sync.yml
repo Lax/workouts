@@ -177,6 +177,8 @@ jobs:
           GIT_FIT_XOSS_EMAIL: ${{ secrets.SYNC_XOSS_EMAIL }}
           GIT_FIT_XOSS_PASSWORD: ${{ secrets.SYNC_XOSS_PASSWORD }}
           GIT_FIT_XOSS_TOKEN_PATH: data/auth/xoss_tokens.json
+          GIT_FIT_XINGZHE_EMAIL: ${{ secrets.SYNC_XINGZHE_EMAIL }}
+          GIT_FIT_XINGZHE_PASSWORD: ${{ secrets.SYNC_XINGZHE_PASSWORD }}
           GIT_FIT_DATABASE_PATH: data/workouts.db
         run: bundle exec git fit sync
 
@@ -186,8 +188,6 @@ jobs:
           SYNC__KEEP__PASSWORD: ${{ secrets.SYNC_KEEP_PASSWORD }}
           SYNC__IGPSPORT__PHONE: ${{ secrets.SYNC_IGPSPORT_PHONE }}
           SYNC__IGPSPORT__PASSWORD: ${{ secrets.SYNC_IGPSPORT_PASSWORD }}
-          SYNC__XINGZHE__EMAIL: ${{ secrets.SYNC_XINGZHE_EMAIL }}
-          SYNC__XINGZHE__PASSWORD: ${{ secrets.SYNC_XINGZHE_PASSWORD }}
           SYNC__STRAVA__CLIENT_ID: ${{ secrets.SYNC_STRAVA_CLIENT_ID }}
           SYNC__STRAVA__CLIENT_SECRET: ${{ secrets.SYNC_STRAVA_CLIENT_SECRET }}
           SYNC__STRAVA__REFRESH_TOKEN: ${{ secrets.SYNC_STRAVA_REFRESH_TOKEN }}
