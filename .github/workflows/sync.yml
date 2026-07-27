@@ -126,14 +126,16 @@ jobs:
             '
           fi
 
-      - name: Restore Apple Health SHA256SUMS
+      - name: Restore Apple Health cache
         id: import-cache-apple-health
         uses: actions/cache@v4
         with:
-          path: data/import/apple_health/SHA256SUMS
+          path: |
+            data/import/apple_health/SHA256SUMS
+            data/import/apple_health/.imported-at
           key: imported-v2-apple-health
 
-      - name: Check Apple Health SHA256SUMS
+      - name: Check Apple Health export.zip change
         id: ah-check
         shell: bash
         run: |
@@ -145,9 +147,23 @@ jobs:
 
           git fetch origin refs/heads/_/import/apple_health
 
+          export_sha=$(git log --format=%H -1 "origin/_/import/apple_health" -- data/import/apple_health/export.zip)
+          if [ -z "$export_sha" ]; then
+            echo "export.zip not found in branch — skip" >&2
+            echo "skip=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          cached=$(cat data/import/apple_health/.imported-at 2>/dev/null || echo "")
+          if [ "$export_sha" = "$cached" ]; then
+            echo "export.zip unchanged at $export_sha — skip" >&2
+            echo "skip=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
           if git show "origin/_/import/apple_health:data/import/apple_health/SHA256SUMS" > /tmp/apple-health.sha256 2>/dev/null; then
             if [ -f data/import/apple_health/SHA256SUMS ] && cmp -s /tmp/apple-health.sha256 data/import/apple_health/SHA256SUMS; then
-              echo "SHA256SUMS match — skip import" >&2
+              echo "SHA256 match (branch rebuilt) — skip" >&2
               echo "skip=true" >> $GITHUB_OUTPUT
               exit 0
             fi
@@ -178,6 +194,9 @@ jobs:
 
           bash scripts/data-store-git-save.sh "_/import/apple_health" \
             "data/import/apple_health/SHA256SUMS"
+
+          git log --format=%H -1 "origin/_/import/apple_health" -- data/import/apple_health/export.zip \
+            > data/import/apple_health/.imported-at
 
       # ── Data restore (conditional on commit mode) ──
       - uses: ./.github/actions/data-store/restore
