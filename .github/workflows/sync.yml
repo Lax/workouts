@@ -126,26 +126,43 @@ jobs:
             '
           fi
 
-      - name: Restore Apple Health import marker
+      - name: Restore Apple Health SHA256SUMS
         id: import-cache-apple-health
-        uses: actions/cache@v5.1.0
+        uses: actions/cache@v4
         with:
-          path: data/import/apple_health/.imported
-          key: imported-v1-apple-health
+          path: data/import/apple_health/SHA256SUMS
+          key: imported-v2-apple-health
+
+      - name: Check Apple Health SHA256SUMS
+        id: ah-check
+        shell: bash
+        run: |
+          if ! git ls-remote --exit-code origin refs/heads/_/import/apple_health >/dev/null 2>&1; then
+            echo "No apple_health branch — skip import" >&2
+            echo "skip=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          git fetch origin refs/heads/_/import/apple_health
+
+          if git show "origin/_/import/apple_health:data/import/apple_health/SHA256SUMS" > /tmp/apple-health.sha256 2>/dev/null; then
+            if [ -f data/import/apple_health/SHA256SUMS ] && cmp -s /tmp/apple-health.sha256 data/import/apple_health/SHA256SUMS; then
+              echo "SHA256SUMS match — skip import" >&2
+              echo "skip=true" >> $GITHUB_OUTPUT
+              exit 0
+            fi
+          fi
+
+          echo "skip=false" >> $GITHUB_OUTPUT
 
       - name: Import Apple Health
-        if: steps.import-cache-apple-health.outputs.cache-hit != 'true' && steps.git-setup.outputs.configured == 'true'
+        if: steps.ah-check.outputs.skip == 'false' && steps.git-setup.outputs.configured == 'true'
         env:
           GIT_FIT_DATABASE_PATH: data/workouts.db
         run: |
           mkdir -p data/import/apple_health
           git lfs install
-          git ls-remote --exit-code origin refs/heads/_/import/apple_health >/dev/null 2>&1 || {
-            echo "No _/import/apple_health branch yet — skipping" >&2
-            exit 0
-          }
-          git fetch origin refs/heads/_/import/apple_health:refs/remotes/origin/_/import/apple_health
-          git show origin/_/import/apple_health:data/import/apple_health/export.zip | git lfs smudge > data/import/apple_health/export.zip
+          git show "origin/_/import/apple_health:data/import/apple_health/export.zip" | git lfs smudge > data/import/apple_health/export.zip
           if [ ! -f data/import/apple_health/export.zip ]; then
             echo "No export.zip in branch — skipping" >&2
             exit 0
@@ -154,8 +171,13 @@ jobs:
             echo "export.zip is not a valid zip — possible LFS smudge failure" >&2
             exit 1
           }
+
           bundle exec git fit import apple_health
-          touch data/import/apple_health/.imported
+
+          bash scripts/generate-checksums.sh data/import/apple_health/export.zip
+
+          bash scripts/data-store-git-save.sh "_/import/apple_health" \
+            "data/import/apple_health/SHA256SUMS"
 
       # ── Data restore (conditional on commit mode) ──
       - uses: ./.github/actions/data-store/restore
