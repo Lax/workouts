@@ -139,6 +139,22 @@ jobs:
 
       - name: Sync activities
         uses: ./.github/actions/sync-activities
+        with:
+          sync-time-budget: ${{ vars.SYNC_TIME_BUDGET || '' }}
+          sync-total-timeout: ${{ vars.SYNC_TOTAL_TIMEOUT || '' }}
+          garmin-auth-seed: ${{ secrets.SYNC_GARMIN_AUTH_SEED }}
+          garmin-cn-secret: ${{ secrets.SYNC_GARMIN_CN_SECRET }}
+          xoss-email: ${{ secrets.SYNC_XOSS_EMAIL }}
+          xoss-password: ${{ secrets.SYNC_XOSS_PASSWORD }}
+          xingzhe-email: ${{ secrets.SYNC_XINGZHE_EMAIL }}
+          xingzhe-password: ${{ secrets.SYNC_XINGZHE_PASSWORD }}
+          keep-phone: ${{ secrets.SYNC_KEEP_PHONE }}
+          keep-password: ${{ secrets.SYNC_KEEP_PASSWORD }}
+          igpsport-phone: ${{ secrets.SYNC_IGPSPORT_PHONE }}
+          igpsport-password: ${{ secrets.SYNC_IGPSPORT_PASSWORD }}
+          strava-client-id: ${{ secrets.SYNC_STRAVA_CLIENT_ID }}
+          strava-client-secret: ${{ secrets.SYNC_STRAVA_CLIENT_SECRET }}
+          strava-refresh-token: ${{ secrets.SYNC_STRAVA_REFRESH_TOKEN }}
 
       - name: Diagnose DB after sync
         id: db-state-sync

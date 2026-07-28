@@ -1,6 +1,71 @@
 name: Sync activities
 description: Restore token caches, run git fit sync, save token caches
 
+inputs:
+  sync-time-budget:
+    description: Sync time budget
+    required: false
+    default: ''
+  sync-total-timeout:
+    description: Sync total timeout
+    required: false
+    default: ''
+  garmin-auth-seed:
+    description: Garmin auth seed
+    required: true
+  garmin-token-path:
+    description: Garmin Intl token path
+    required: false
+    default: data/auth/garmin_garmin_com_tokens.json
+  garmin-cn-token-path:
+    description: Garmin CN token path
+    required: false
+    default: data/auth/garmin_garmin_cn_tokens.json
+  garmin-cn-secret:
+    description: Garmin CN secret
+    required: true
+  xoss-email:
+    description: XOSS email
+    required: true
+  xoss-password:
+    description: XOSS password
+    required: true
+  xoss-token-path:
+    description: XOSS token path
+    required: false
+    default: data/auth/xoss_tokens.json
+  xingzhe-email:
+    description: XingZhe email
+    required: true
+  xingzhe-password:
+    description: XingZhe password
+    required: true
+  keep-phone:
+    description: Keep phone
+    required: true
+  keep-password:
+    description: Keep password
+    required: true
+  igpsport-phone:
+    description: iGPSPORT phone
+    required: true
+  igpsport-password:
+    description: iGPSPORT password
+    required: true
+  strava-client-id:
+    description: Strava client ID
+    required: true
+  strava-client-secret:
+    description: Strava client secret
+    required: true
+  strava-refresh-token:
+    description: Strava refresh token
+    required: true
+  db-path:
+    description: SQLite database path
+    required: false
+    default: data/workouts.db
+
 runs:
   using: composite
   steps:
@@ -10,25 +75,25 @@ runs:
     - name: Run sync
       shell: bash
       env:
-        GIT_FIT_SYNC_TIME_BUDGET: ${{ vars.SYNC_TIME_BUDGET || '' }}
-        GIT_FIT_SYNC_TOTAL_TIMEOUT: ${{ vars.SYNC_TOTAL_TIMEOUT || '' }}
-        GIT_FIT_GARMIN_AUTH_SEED: ${{ secrets.SYNC_GARMIN_AUTH_SEED }}
-        GIT_FIT_GARMIN_TOKEN_PATH: data/auth/garmin_garmin_com_tokens.json
-        GIT_FIT_GARMIN_CN_TOKEN_PATH: data/auth/garmin_garmin_cn_tokens.json
-        GIT_FIT_GARMIN_CN_SECRET: ${{ secrets.SYNC_GARMIN_CN_SECRET }}
-        GIT_FIT_XOSS_EMAIL: ${{ secrets.SYNC_XOSS_EMAIL }}
-        GIT_FIT_XOSS_PASSWORD: ${{ secrets.SYNC_XOSS_PASSWORD }}
-        GIT_FIT_XOSS_TOKEN_PATH: data/auth/xoss_tokens.json
-        GIT_FIT_XINGZHE_EMAIL: ${{ secrets.SYNC_XINGZHE_EMAIL }}
-        GIT_FIT_XINGZHE_PASSWORD: ${{ secrets.SYNC_XINGZHE_PASSWORD }}
-        GIT_FIT_KEEP_PHONE: ${{ secrets.SYNC_KEEP_PHONE }}
-        GIT_FIT_KEEP_PASSWORD: ${{ secrets.SYNC_KEEP_PASSWORD }}
-        GIT_FIT_IGPSPORT_PHONE: ${{ secrets.SYNC_IGPSPORT_PHONE }}
-        GIT_FIT_IGPSPORT_PASSWORD: ${{ secrets.SYNC_IGPSPORT_PASSWORD }}
-        GIT_FIT_STRAVA_CLIENT_ID: ${{ secrets.SYNC_STRAVA_CLIENT_ID }}
-        GIT_FIT_STRAVA_CLIENT_SECRET: ${{ secrets.SYNC_STRAVA_CLIENT_SECRET }}
-        GIT_FIT_STRAVA_REFRESH_TOKEN: ${{ secrets.SYNC_STRAVA_REFRESH_TOKEN }}
-        GIT_FIT_DATABASE_PATH: data/workouts.db
+        GIT_FIT_SYNC_TIME_BUDGET: ${{ inputs.sync-time-budget }}
+        GIT_FIT_SYNC_TOTAL_TIMEOUT: ${{ inputs.sync-total-timeout }}
+        GIT_FIT_GARMIN_AUTH_SEED: ${{ inputs.garmin-auth-seed }}
+        GIT_FIT_GARMIN_TOKEN_PATH: ${{ inputs.garmin-token-path }}
+        GIT_FIT_GARMIN_CN_TOKEN_PATH: ${{ inputs.garmin-cn-token-path }}
+        GIT_FIT_GARMIN_CN_SECRET: ${{ inputs.garmin-cn-secret }}
+        GIT_FIT_XOSS_EMAIL: ${{ inputs.xoss-email }}
+        GIT_FIT_XOSS_PASSWORD: ${{ inputs.xoss-password }}
+        GIT_FIT_XOSS_TOKEN_PATH: ${{ inputs.xoss-token-path }}
+        GIT_FIT_XINGZHE_EMAIL: ${{ inputs.xingzhe-email }}
+        GIT_FIT_XINGZHE_PASSWORD: ${{ inputs.xingzhe-password }}
+        GIT_FIT_KEEP_PHONE: ${{ inputs.keep-phone }}
+        GIT_FIT_KEEP_PASSWORD: ${{ inputs.keep-password }}
+        GIT_FIT_IGPSPORT_PHONE: ${{ inputs.igpsport-phone }}
+        GIT_FIT_IGPSPORT_PASSWORD: ${{ inputs.igpsport-password }}
+        GIT_FIT_STRAVA_CLIENT_ID: ${{ inputs.strava-client-id }}
+        GIT_FIT_STRAVA_CLIENT_SECRET: ${{ inputs.strava-client-secret }}
+        GIT_FIT_STRAVA_REFRESH_TOKEN: ${{ inputs.strava-refresh-token }}
+        GIT_FIT_DATABASE_PATH: ${{ inputs.db-path }}
       run: bundle exec git fit sync
 
     - name: Save token caches
