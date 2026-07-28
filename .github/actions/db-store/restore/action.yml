@@ -62,7 +62,7 @@ runs:
           "${{ inputs.path }}-wal" "${{ inputs.path }}-shm" 2>/dev/null | tar xf - || true
 
     - name: Restore DB cache
-      uses: actions/cache/restore@v4
+      uses: actions/cache@v4
       id: restore-db
       with:
         path: |-
