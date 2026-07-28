@@ -75,12 +75,3 @@ runs:
         if [ -f "$GEO_CACHE_PATH" ]; then
           sha256sum "$GEO_CACHE_PATH" > "$GEO_CACHE_PATH.SHA256SUMS"
         fi
-
-    - name: Save geo cache
-      if: always()
-      uses: actions/cache/save@v4
-      with:
-        path: |
-          ${{ inputs.cache-path }}
-          ${{ inputs.cache-path }}.SHA256SUMS
-        key: ${{ inputs.cache-key }}
