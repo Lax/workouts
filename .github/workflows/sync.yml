@@ -132,11 +132,11 @@ jobs:
         with:
           path: |
             data/import/apple_health/export.zip.SHA256SUMS
-            data/import/apple_health/.imported-at
-          key: imported-v2-apple-health
+            data/import/apple_health/.modified-at
+          key: imported-v3-apple-health
 
-      - name: Check Apple Health export.zip change
-        id: ah-check
+      - name: Preflight Apple Health
+        id: ah-preflight
         shell: bash
         env:
           AH_BRANCH: _/import/apple_health
@@ -152,59 +152,77 @@ jobs:
 
           git fetch origin "+refs/heads/$AH_BRANCH:refs/remotes/$AH_REMOTE"
 
-          if [ "${{ steps.import-cache-apple-health.outputs.cache-hit }}" = "true" ]; then
-            echo "[cache] SHA256SUMS + .imported-at restored" >&2
-          else
-            echo "[cache] No cache hit — fresh start" >&2
-          fi
-
-          export_sha=$(git log --format=%H -1 "$AH_REMOTE" -- "$AH_DIR/export.zip")
-          if [ -z "$export_sha" ]; then
+          modified_sha=$(git log --format=%H -1 "$AH_REMOTE" -- "$AH_DIR/export.zip")
+          if [ -z "$modified_sha" ]; then
             echo "export.zip not found in branch — skip" >&2
             echo "skip=true" >> $GITHUB_OUTPUT
             echo "reason=export-zip-missing" >> $GITHUB_OUTPUT
             exit 0
           fi
 
-          export_date=$(git log --format=%ci -1 "$AH_REMOTE" -- "$AH_DIR/export.zip")
-          export_subject=$(git log --format=%s -1 "$AH_REMOTE" -- "$AH_DIR/export.zip")
+          if ! git cat-file -e "$modified_sha:$AH_DIR/export.zip" 2>/dev/null; then
+            echo "Blob missing at ${modified_sha:0:7} — deleted in git history, skipping" >&2
+            echo "skip=true" >> $GITHUB_OUTPUT
+            echo "reason=export-zip-deleted" >> $GITHUB_OUTPUT
+            exit 0
+          fi
 
-          cached=$(cat "$AH_DIR/.imported-at" 2>/dev/null || echo "")
-          if [ "$export_sha" = "$cached" ]; then
-            echo "export.zip unchanged at ${export_sha:0:7} ($export_date) — skip" >&2
+          echo "skip=false" >> $GITHUB_OUTPUT
+          echo "modified_sha=$modified_sha" >> $GITHUB_OUTPUT
+
+      - name: Restore Apple Health cache
+        id: import-cache-apple-health
+        if: steps.ah-preflight.outputs.skip != 'true'
+        uses: actions/cache@v4
+        with:
+          path: |
+            data/import/apple_health/export.zip.SHA256SUMS
+            data/import/apple_health/.modified-at
+          key: imported-v3-apple-health
+
+      - name: Detect Apple Health change
+        id: ah-detect
+        if: steps.ah-preflight.outputs.skip != 'true'
+        shell: bash
+        env:
+          AH_BRANCH: _/import/apple_health
+          AH_DIR: data/import/apple_health
+          AH_REMOTE: origin/_/import/apple_health
+        run: |
+          modified_sha="${{ steps.ah-preflight.outputs.modified_sha }}"
+
+          if [ "${{ steps.import-cache-apple-health.outputs.cache-hit }}" = "true" ]; then
+            echo "[cache] .modified-at + export.zip.SHA256SUMS restored" >&2
+          else
+            echo "[cache] No cache hit — fresh start" >&2
+          fi
+
+          cached_sha=$(cat "$AH_DIR/.modified-at" 2>/dev/null || echo "")
+          if [ "$modified_sha" = "$cached_sha" ]; then
+            echo "export.zip unchanged at ${modified_sha:0:7} — skip" >&2
             echo "skip=true" >> $GITHUB_OUTPUT
             echo "reason=unchanged" >> $GITHUB_OUTPUT
-            echo "export_sha=${export_sha:0:7}" >> $GITHUB_OUTPUT
-            echo "export_date=$export_date" >> $GITHUB_OUTPUT
-            echo "export_subject=$export_subject" >> $GITHUB_OUTPUT
             exit 0
           fi
 
           if git show "$AH_REMOTE:$AH_DIR/export.zip.SHA256SUMS" > "$RUNNER_TEMP/apple-health.sha256" 2>/dev/null; then
             if [ -f "$AH_DIR/export.zip.SHA256SUMS" ] && cmp -s "$RUNNER_TEMP/apple-health.sha256" "$AH_DIR/export.zip.SHA256SUMS"; then
-              echo "SHA256 match — commit ID changed (${cached:0:7} → ${export_sha:0:7}) but content unchanged, skip" >&2
+              echo "SHA256 match — commit ID changed (${cached_sha:0:7} → ${modified_sha:0:7}) but content unchanged, skip" >&2
               echo "skip=true" >> $GITHUB_OUTPUT
               echo "reason=sha256-match" >> $GITHUB_OUTPUT
               exit 0
             fi
           fi
 
-          if ! git cat-file -e "$AH_REMOTE:$AH_DIR/export.zip" 2>/dev/null; then
-            echo "Blob missing at HEAD ($export_subject) — branch may have been pruned, skipping" >&2
-            echo "skip=true" >> $GITHUB_OUTPUT
-            echo "reason=blob-missing" >> $GITHUB_OUTPUT
-            exit 0
-          fi
-
           echo "skip=false" >> $GITHUB_OUTPUT
-          if [ -z "$cached" ]; then
-            echo "First import — ${export_sha:0:7} $export_subject ($export_date)" >&2
+          if [ -z "$cached_sha" ]; then
+            echo "First import — ${modified_sha:0:7}" >&2
           else
-            echo "export.zip changed — ${cached:0:7} → ${export_sha:0:7} ($export_date)" >&2
+            echo "export.zip changed — ${cached_sha:0:7} → ${modified_sha:0:7}" >&2
           fi
 
       - name: Import Apple Health
-        if: steps.ah-check.outputs.skip == 'false' && steps.git-setup.outputs.configured == 'true'
+        if: steps.ah-detect.outputs.skip == 'false' && steps.git-setup.outputs.configured == 'true'
         env:
           GIT_FIT_DATABASE_PATH: data/workouts.db
           AH_BRANCH: _/import/apple_health
@@ -235,12 +253,13 @@ jobs:
           bash scripts/generate-checksums.sh "$AH_DIR/export.zip"
 
           echo "[import] Saving state to branch..." >&2
-          bash scripts/create-or-append-to-branch.sh "$AH_BRANCH" \
+          bash scripts/append-to-branch.sh "$AH_BRANCH" \
             "$AH_DIR/export.zip.SHA256SUMS"
 
+          git fetch origin "+refs/heads/$AH_BRANCH:refs/remotes/$AH_REMOTE"
           git log --format=%H -1 "$AH_REMOTE" -- "$AH_DIR/export.zip" \
-            > "$AH_DIR/.imported-at"
-          echo "[import] .imported-at updated" >&2
+            > "$AH_DIR/.modified-at"
+          echo "[import] .modified-at updated" >&2
 
       # ── Data restore (conditional on commit mode) ──
       - uses: ./.github/actions/data-store/restore
