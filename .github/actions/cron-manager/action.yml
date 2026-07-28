@@ -1,0 +1,84 @@
+name: Manage sync cron
+description: >
+  Read current cron interval, compute new interval based on DB freshness,
+  update workflow file and commit if changed.
+
+inputs:
+  workflow-file:
+    description: Path to workflow file containing cron schedule
+    required: false
+    default: .github/workflows/sync.yml
+  git-configured:
+    description: Whether git push auth is configured
+    required: true
+  default-n:
+    description: Default cron interval N
+    required: false
+    default: '3'
+
+outputs:
+  new_n:
+    description: Computed new cron interval
+    value: ${{ steps.manage.outputs.new_n }}
+  changed:
+    description: Whether cron was updated
+    value: ${{ steps.manage.outputs.changed }}
+
+runs:
+  using: composite
+  steps:
+    - name: Read current cron interval
+      id: read
+      shell: bash
+      run: echo "N=$(grep -oP '/\\K\\d+(?= \\* \\*)' '${{ inputs.workflow-file }}' | head -1)" >> $GITHUB_OUTPUT
+
+    - name: Compute new interval
+      id: compute
+      shell: bash
+      env:
+        N: ${{ steps.read.outputs.N || inputs.default-n }}
+      run: |
+        bundle exec ruby -e '
+          n = ENV["N"].to_i
+          db = "data/workouts.db"
+          unless File.exist?(db)
+            puts "new_n=#{n}"
+            exit
+          end
+          require "sequel"
+          row = Sequel.sqlite(db)[:activities].order(Sequel.desc(:start_date)).first
+          unless row
+            puts "new_n=#{n}"
+            exit
+          end
+          f = ((Time.now - Time.parse(row[:start_date].to_s)) / 86400).round
+          n -= 1 if f < n && n > 1
+          n += 1 if f > 2 * n + 1 && n < 7
+          puts "f=#{f}"
+          puts "new_n=#{n}"
+        ' >> $GITHUB_OUTPUT
+
+    - name: Update and commit cron
+      id: manage
+      shell: bash
+      env:
+        NEW_N: ${{ steps.compute.outputs.new_n }}
+        WORKFLOW_FILE: ${{ inputs.workflow-file }}
+        GIT_CONFIGURED: ${{ inputs.git-configured }}
+      run: |
+        CURRENT_N=$(grep -oP '/\K\d+(?= \* \*)' "$WORKFLOW_FILE" | head -1)
+        if [ "$CURRENT_N" = "$NEW_N" ]; then
+          echo "changed=false" >> $GITHUB_OUTPUT
+          echo "new_n=$NEW_N" >> $GITHUB_OUTPUT
+          exit 0
+        fi
+        sed -i "s|/\\([0-9]\\) \\* \\*|/${NEW_N} * *|" "$WORKFLOW_FILE"
+        echo "new_n=$NEW_N" >> $GITHUB_OUTPUT
+        echo "changed=true" >> $GITHUB_OUTPUT
+
+        if [ "$GITHUB_EVENT_NAME" = "schedule" ] && [ "$GIT_CONFIGURED" = "true" ]; then
+          git -c user.name=workouts-bot -c user.email=bot@workouts \
+            commit -m "chore: sync interval N=$NEW_N" "$WORKFLOW_FILE"
+          git pull --rebase
+          git push
+        fi

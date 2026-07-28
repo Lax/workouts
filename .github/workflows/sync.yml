@@ -215,57 +215,10 @@ jobs:
           detect-strategy: proportional
           detect-time: 300
 
-      - id: cron
-        run: echo "N=$(grep -oP '/\K\d+(?= \* \*)' .github/workflows/sync.yml | head -1)" >> $GITHUB_OUTPUT
-
-      - name: Compute sync interval
-        id: decide
-        env:
-          N: ${{ steps.cron.outputs.N || 3 }}
-        run: |
-          bundle exec ruby -e '
-            n = ENV["N"].to_i
-            db = "data/workouts.db"
-            unless File.exist?(db)
-              puts "new_n=#{n}"
-              exit
-            end
-            require "sequel"
-            row = Sequel.sqlite(db)[:activities].order(Sequel.desc(:start_date)).first
-            unless row
-              puts "new_n=#{n}"
-              exit
-            end
-            f = ((Time.now - Time.parse(row[:start_date].to_s)) / 86400).round
-            n -= 1 if f < n && n > 1
-            n += 1 if f > 2 * n + 1 && n < 7
-            puts "f=#{f}"
-            puts "new_n=#{n}"
-          ' >> $GITHUB_OUTPUT
-
-      - name: Update sync cron
-        if: github.event_name == 'schedule' && steps.git-setup.outputs.configured == 'true'
-        id: update-cron
-        env:
-          NEW_N: ${{ steps.decide.outputs.new_n }}
-        run: |
-          CURRENT_N=$(grep -oP '/\K\d+(?= \* \*)' .github/workflows/sync.yml | head -1)
-          if [ "$CURRENT_N" = "$NEW_N" ]; then
-            echo "changed=false" >> $GITHUB_OUTPUT
-            exit 0
-          fi
-          sed -i "s|/\\([0-9]\\) \\* \\*|/${NEW_N} * *|" .github/workflows/sync.yml
-          echo "changed=true" >> $GITHUB_OUTPUT
-
-      - name: Commit cron update
-        if: steps.update-cron.outputs.changed == 'true'
-        uses: stefanzweifel/git-auto-commit-action@v5
+      - name: Manage sync cron
+        uses: ./.github/actions/cron-manager
         with:
-          commit_message: "chore: sync interval N=${{ steps.decide.outputs.new_n }}"
-          commit_user_name: workouts-bot
-          commit_user_email: bot@workouts
-          file_pattern: .github/workflows/sync.yml
-          token: ${{ secrets.WORKOUTS_SYNC_PAT }}
+          git-configured: ${{ steps.git-setup.outputs.configured }}
 
       # ── DB save (git-fit db-store) ──
       - name: Diagnose DB before save
