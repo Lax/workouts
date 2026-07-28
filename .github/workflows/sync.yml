@@ -142,6 +142,7 @@ jobs:
           fi
 
           git fetch origin "+refs/heads/$AH_BRANCH:refs/remotes/$AH_REMOTE"
+          echo "Fetched $AH_BRANCH" >&2
 
           modified_sha=$(git log --format=%H -1 "$AH_REMOTE" -- "$AH_DIR/export.zip")
           if [ -z "$modified_sha" ]; then
@@ -157,6 +158,8 @@ jobs:
             echo "reason=export-zip-deleted" >> $GITHUB_OUTPUT
             exit 0
           fi
+
+          echo "export.zip at ${modified_sha:0:7}" >&2
 
           echo "skip=false" >> $GITHUB_OUTPUT
           echo "modified_sha=$modified_sha" >> $GITHUB_OUTPUT
