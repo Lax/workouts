@@ -64,13 +64,17 @@ runs:
       env:
         AMAP_API_KEY: ${{ inputs.amap-key }}
         GIT_FIT_DATABASE_PATH: ${{ inputs.db-path }}
-        GIT_FIT_GEO_CACHE_DIR: ${{ inputs.geo-cache-dir }}
       run: |
+        CACHE_DIR_FLAG=""
+        if [ "${{ inputs.geo-cache-dir }}" != "" ]; then
+          CACHE_DIR_FLAG="--cache-dir ${{ inputs.geo-cache-dir }}"
+        fi
         bundle exec git fit geo detect \
           --limit ${{ inputs.detect-limit }} \
           --batch ${{ inputs.detect-batch }} \
           --strategy ${{ inputs.detect-strategy }} \
-          --time ${{ inputs.detect-time }}
+          --time ${{ inputs.detect-time }} \
+          $CACHE_DIR_FLAG
 
     - name: Generate geo cache SHA256SUMS
       if: always() && ${{ inputs.geo-cache-dir != '' }}
