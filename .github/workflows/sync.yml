@@ -221,51 +221,6 @@ jobs:
           git-configured: ${{ steps.git-setup.outputs.configured }}
 
       # ── DB save (git-fit db-store) ──
-      - name: Diagnose DB before save
-        id: db-state-before-save
-        shell: bash
-        run: |
-          echo "=== DB state before save ==="
-          if [ ! -f data/workouts.db ] || [ ! -s data/workouts.db ]; then
-            echo "db_missing=true"
-            echo "db_size=0"
-            echo "wal_size=0"
-            echo "shm_size=0"
-            echo "tables=none"
-            echo "migration_type=none"
-            echo "activity_count=0"
-            echo "activity_columns=none"
-            echo "missing_columns=none"
-            echo "has_dedup_tables=false"
-          else
-            echo "db_size=$(stat -c%s data/workouts.db 2>/dev/null || echo 0)"
-            echo "wal_size=$(stat -c%s data/workouts.db-wal 2>/dev/null || echo 0)"
-            echo "shm_size=$(stat -c%s data/workouts.db-shm 2>/dev/null || echo 0)"
-            bundle exec ruby -e '
-              require "sequel"
-              db = Sequel.sqlite("data/workouts.db")
-              puts "tables=#{db.tables.sort.join(",")}"
-              if db.table_exists?(:schema_migrations)
-                puts "migration_type=schema_migrations"
-                puts "migration_count=#{db[:schema_migrations].count}"
-              elsif db.table_exists?(:schema_info)
-                version = db[:schema_info].first[:version]
-                puts "migration_type=schema_info"
-                puts "migration_version=#{version}"
-              else
-                puts "migration_type=none"
-              end
-              puts "activity_count=#{db[:activities].count rescue 0}"
-              cols = db[:activities].columns rescue []
-              expected = [:run_id, :distance, :moving_time, :sport_category, :start_date,
-                          :duplicate_info, :divisions, :title, :external_id]
-              missing = expected - cols
-              puts "activity_columns=#{cols.join(",")}"
-              puts "missing_columns=#{missing.join(",")}"
-              puts "has_dedup_tables=#{db.tables.include?(:dedup_groups) && db.tables.include?(:dedup_group_members)}"
-            '
-          fi
-
       - uses: ./.github/actions/db-store/save
         id: db-save
         with:
