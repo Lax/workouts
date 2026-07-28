@@ -127,11 +127,11 @@ runs:
           echo "export.zip changed — ${cached_sha:0:7} → ${modified_sha:0:7}" >&2
         fi
 
-    - name: Import
+    - name: Download export.zip
+      id: download
       if: steps.detect.outputs.skip == 'false' && inputs.git-configured == 'true'
       shell: bash
       env:
-        GIT_FIT_DATABASE_PATH: ${{ inputs.db-path }}
         AH_BRANCH: ${{ inputs.branch }}
         AH_DIR: ${{ inputs.dir }}
         AH_REMOTE: ${{ inputs.remote }}
@@ -139,31 +139,45 @@ runs:
         mkdir -p "$AH_DIR"
         git lfs install
 
-        echo "[import] Fetching export.zip from HEAD..." >&2
+        echo "[download] Fetching export.zip from HEAD..." >&2
         git show "$AH_REMOTE:$AH_DIR/export.zip" \
           | git lfs smudge > "$AH_DIR/export.zip"
 
         size=$(stat -c%s "$AH_DIR/export.zip" 2>/dev/null \
           || stat -f%z "$AH_DIR/export.zip" 2>/dev/null)
-        echo "[import] Downloaded ${size} bytes" >&2
+        echo "[download] Downloaded ${size} bytes" >&2
 
         file "$AH_DIR/export.zip" | grep -qi "Zip archive" || {
-          echo "[import] export.zip is not a valid zip" >&2
+          echo "[download] export.zip is not a valid zip" >&2
           exit 1
         }
-        echo "[import] Validation passed" >&2
+        echo "[download] Validation passed" >&2
 
+    - name: Import
+      if: steps.download.conclusion == 'success'
+      shell: bash
+      env:
+        GIT_FIT_DATABASE_PATH: ${{ inputs.db-path }}
+      run: |
         echo "[import] Running git fit import apple_health..." >&2
         bundle exec git fit import apple_health
 
-        echo "[import] Generating SHA256SUMS..." >&2
+    - name: Store state
+      if: steps.import.conclusion == 'success'
+      shell: bash
+      env:
+        AH_BRANCH: ${{ inputs.branch }}
+        AH_DIR: ${{ inputs.dir }}
+        AH_REMOTE: ${{ inputs.remote }}
+      run: |
+        echo "[store] Generating SHA256SUMS..." >&2
         bash scripts/generate-checksums.sh "$AH_DIR/export.zip"
 
-        echo "[import] Saving state to branch..." >&2
+        echo "[store] Saving state to branch..." >&2
         bash scripts/append-to-branch.sh "$AH_BRANCH" \
           "$AH_DIR/export.zip.SHA256SUMS"
 
         git fetch origin "+refs/heads/$AH_BRANCH:refs/remotes/$AH_REMOTE"
         git log --format=%H -1 "$AH_REMOTE" -- "$AH_DIR/export.zip" \
           > "$AH_DIR/.modified-at"
-        echo "[import] .modified-at updated" >&2
+        echo "[store] .modified-at updated" >&2
