@@ -150,7 +150,7 @@ jobs:
             exit 0
           fi
 
-          git fetch origin "refs/heads/$AH_BRANCH:refs/remotes/$AH_REMOTE"
+          git fetch origin "+refs/heads/$AH_BRANCH:refs/remotes/$AH_REMOTE"
 
           if [ "${{ steps.import-cache-apple-health.outputs.cache-hit }}" = "true" ]; then
             echo "[cache] SHA256SUMS + .imported-at restored" >&2
