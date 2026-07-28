@@ -140,7 +140,7 @@ jobs:
       - id: load-tokens-cache
         uses: ./.github/actions/tokens-cache/restore
 
-      - name: Sync activities - git fit sync
+      - name: Sync activities
         env:
           GIT_FIT_SYNC_TIME_BUDGET: ${{ vars.SYNC_TIME_BUDGET || '' }}
           GIT_FIT_SYNC_TOTAL_TIMEOUT: ${{ vars.SYNC_TOTAL_TIMEOUT || '' }}
@@ -214,7 +214,7 @@ jobs:
       - uses: ./.github/actions/tokens-cache/save
         if: always()
 
-      - name: Geo cache
+      - name: Detect geo regions
         uses: ./.github/actions/detect-geo-region
         with:
           amap-key: ${{ secrets.AMAP_API_KEY }}
@@ -267,7 +267,7 @@ jobs:
           sed -i "s|/\\([0-9]\\) \\* \\*|/${NEW_N} * *|" .github/workflows/sync.yml
           echo "changed=true" >> $GITHUB_OUTPUT
 
-      - name: Commit cron change
+      - name: Commit cron update
         if: steps.update-cron.outputs.changed == 'true'
         uses: stefanzweifel/git-auto-commit-action@v5
         with:

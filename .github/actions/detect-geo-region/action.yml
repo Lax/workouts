@@ -54,6 +54,11 @@ runs:
         key: ${{ inputs.cache-key }}
         restore-keys: workouts-geo-v1-
 
+    - name: Capture cache key
+      id: cache-key
+      shell: bash
+      run: echo "primary_key=${{ steps.restore.outputs.cache-primary-key }}" >> "$GITHUB_OUTPUT"
+
     - name: Geo region detection
       shell: bash
       env:
@@ -83,4 +88,4 @@ runs:
         path: |
           ${{ inputs.cache-path }}
           ${{ inputs.cache-path }}.SHA256SUMS
-        key: ${{ steps.restore.outputs.cache-primary-key }}
+        key: ${{ steps.cache-key.outputs.primary_key }}
