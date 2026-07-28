@@ -1,17 +1,20 @@
-name: GEO Detect
+name: Parse Geo Regions
 description: >
   Restore geo point cache, run region detection, save cache.
   Cache key auto-invalidated by action file hash.
+  Set geo-cache-dir to empty string to disable cache writes and GHA cache.
 
 inputs:
-  cache-path:
-    description: Path to geo point cache file
+  geo-cache-dir:
+    description: >
+      Geo cache directory. Per-provider files (amap-points.jsonl, nominatim-points.jsonl)
+      written under this dir. Empty string disables cache writes and GHA cache.
     required: false
-    default: data/cache/geo-point.jsonl
+    default: data/cache
   cache-key:
     description: Cache key (hash of this file appended automatically)
     required: false
-    default: workouts-geo-v1-${{ hashFiles('.github/actions/detect-geo-region/action.yml') }}
+    default: workouts-geo-v1-${{ hashFiles('.github/actions/parse-geo-regions/action.yml') }}
   amap-key:
     description: Amap API key
     required: true
@@ -45,12 +48,14 @@ runs:
   using: composite
   steps:
     - name: Restore geo cache
+      if: ${{ inputs.geo-cache-dir != '' }}
       id: restore
       uses: actions/cache@v4
       with:
         path: |
-          ${{ inputs.cache-path }}
-          ${{ inputs.cache-path }}.SHA256SUMS
+          ${{ inputs.geo-cache-dir }}/amap-points.jsonl
+          ${{ inputs.geo-cache-dir }}/nominatim-points.jsonl
+          ${{ inputs.geo-cache-dir }}/SHA256SUMS
         key: ${{ inputs.cache-key }}
         restore-keys: workouts-geo-v1-
 
@@ -59,6 +64,7 @@ runs:
       env:
         AMAP_API_KEY: ${{ inputs.amap-key }}
         GIT_FIT_DATABASE_PATH: ${{ inputs.db-path }}
+        GIT_FIT_GEO_CACHE_DIR: ${{ inputs.geo-cache-dir }}
       run: |
         bundle exec git fit geo detect \
           --limit ${{ inputs.detect-limit }} \
@@ -67,11 +73,13 @@ runs:
           --time ${{ inputs.detect-time }}
 
     - name: Generate geo cache SHA256SUMS
-      if: always()
+      if: always() && ${{ inputs.geo-cache-dir != '' }}
       shell: bash
       env:
-        GEO_CACHE_PATH: ${{ inputs.cache-path }}
+        GEO_CACHE_DIR: ${{ inputs.geo-cache-dir }}
       run: |
-        if [ -f "$GEO_CACHE_PATH" ]; then
-          sha256sum "$GEO_CACHE_PATH" > "$GEO_CACHE_PATH.SHA256SUMS"
+        if [ -d "$GEO_CACHE_DIR" ]; then
+          pushd "$GEO_CACHE_DIR" > /dev/null
+          sha256sum amap-points.jsonl nominatim-points.jsonl 2>/dev/null > SHA256SUMS || true
+          popd > /dev/null
         fi
