@@ -214,60 +214,16 @@ jobs:
       - uses: ./.github/actions/tokens-cache/save
         if: always()
 
-      - name: Restore geo cache
-        id: geo-cache
-        uses: actions/cache@v4
+      - name: Geo cache
+        uses: ./.github/actions/geo-cache
         with:
-          path: |
-            data/cache/geo-point.jsonl
-            data/cache/geo-point.jsonl.SHA256SUMS
-          key: workouts-geo-v1
-          restore-keys: workouts-geo-v1-
-
-      - name: Geo region detection
-        env:
-          AMAP_API_KEY: ${{ secrets.AMAP_API_KEY }}
-          GIT_FIT_DATABASE_PATH: data/workouts.db
-        run: |
-          bundle exec git fit geo detect \
-            --limit 200 --batch 20 --strategy proportional --time 300
-
-      - name: Diagnose DB after geo
-        id: db-state-geo
-        shell: bash
-        run: |
-          echo "=== DB state after geo ==="
-          if [ ! -f data/workouts.db ] || [ ! -s data/workouts.db ]; then
-            echo "db_missing=true"
-            echo "db_size=0"
-            echo "wal_size=0"
-            echo "shm_size=0"
-            echo "tables=none"
-            echo "migration_type=none"
-            echo "activity_count=0"
-            echo "divisions_filled=0"
-          else
-            echo "db_size=$(stat -c%s data/workouts.db 2>/dev/null || echo 0)"
-            echo "wal_size=$(stat -c%s data/workouts.db-wal 2>/dev/null || echo 0)"
-            echo "shm_size=$(stat -c%s data/workouts.db-shm 2>/dev/null || echo 0)"
-            bundle exec ruby -e '
-              require "sequel"
-              db = Sequel.sqlite("data/workouts.db")
-              puts "tables=#{db.tables.sort.join(",")}"
-              if db.table_exists?(:schema_migrations)
-                puts "migration_type=schema_migrations"
-                puts "migration_count=#{db[:schema_migrations].count}"
-              elsif db.table_exists?(:schema_info)
-                version = db[:schema_info].first[:version]
-                puts "migration_type=schema_info"
-                puts "migration_version=#{version}"
-              else
-                puts "migration_type=none"
-              end
-              puts "activity_count=#{db[:activities].count rescue 0}"
-              puts "divisions_filled=#{db[:activities].where{divisions IS NOT NULL}.count rescue 0}"
-            '
-          fi
+          amap-key: ${{ secrets.AMAP_API_KEY }}
+          db-path: data/workouts.db
+          cache-path: data/cache/geo-point.jsonl
+          detect-limit: 200
+          detect-batch: 20
+          detect-strategy: proportional
+          detect-time: 300
 
       - id: cron
         run: echo "N=$(grep -oP '/\K\d+(?= \* \*)' .github/workflows/sync.yml | head -1)" >> $GITHUB_OUTPUT
@@ -402,23 +358,6 @@ jobs:
             commit -m "store(sync): $(date -u +%Y%m%d-%H%M%S)"
           git pull --rebase
           git push
-
-      - name: Generate geo cache SHA256SUMS
-        if: always()
-        shell: bash
-        run: |
-          if [ -f data/cache/geo-point.jsonl ]; then
-            sha256sum data/cache/geo-point.jsonl > data/cache/geo-point.jsonl.SHA256SUMS
-          fi
-
-      - name: Save geo cache
-        if: always()
-        uses: actions/cache/save@v4
-        with:
-          path: |
-            data/cache/geo-point.jsonl
-            data/cache/geo-point.jsonl.SHA256SUMS
-          key: ${{ steps.geo-cache.outputs.cache-primary-key }}
 
       - name: Upload DB artifact
         uses: actions/upload-artifact@v4

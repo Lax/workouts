@@ -1,0 +1,85 @@
+name: Geo cache
+description: >
+  Restore geo point cache, run region detection, save cache.
+  Cache key auto-invalidated by action file hash.
+
+inputs:
+  cache-path:
+    description: Path to geo point cache file
+    required: false
+    default: data/cache/geo-point.jsonl
+  cache-key:
+    description: Cache key (hash of this file appended automatically)
+    required: false
+    default: workouts-geo-v1-${{ hashFiles('.github/actions/geo-cache/action.yml') }}
+  amap-key:
+    description: Amap API key
+    required: true
+  db-path:
+    description: SQLite database path
+    required: false
+    default: data/workouts.db
+  detect-limit:
+    description: Max activities to process
+    required: false
+    default: '200'
+  detect-batch:
+    description: Batch size
+    required: false
+    default: '20'
+  detect-strategy:
+    description: Sampling strategy
+    required: false
+    default: proportional
+  detect-time:
+    description: Time budget in seconds
+    required: false
+    default: '300'
+
+outputs:
+  cache-hit:
+    description: Whether the cache was hit
+    value: ${{ steps.restore.outputs.cache-hit }}
+
+runs:
+  using: composite
+  steps:
+    - name: Restore geo cache
+      id: restore
+      uses: actions/cache@v4
+      with:
+        path: |
+          ${{ inputs.cache-path }}
+          ${{ inputs.cache-path }}.SHA256SUMS
+        key: ${{ inputs.cache-key }}
+        restore-keys: workouts-geo-v1-
+
+    - name: Geo region detection
+      env:
+        AMAP_API_KEY: ${{ inputs.amap-key }}
+        GIT_FIT_DATABASE_PATH: ${{ inputs.db-path }}
+      run: |
+        bundle exec git fit geo detect \
+          --limit ${{ inputs.detect-limit }} \
+          --batch ${{ inputs.detect-batch }} \
+          --strategy ${{ inputs.detect-strategy }} \
+          --time ${{ inputs.detect-time }}
+
+    - name: Generate geo cache SHA256SUMS
+      if: always()
+      shell: bash
+      env:
+        GEO_CACHE_PATH: ${{ inputs.cache-path }}
+      run: |
+        if [ -f "$GEO_CACHE_PATH" ]; then
+          sha256sum "$GEO_CACHE_PATH" > "$GEO_CACHE_PATH.SHA256SUMS"
+        fi
+
+    - name: Save geo cache
+      if: always()
+      uses: actions/cache/save@v4
+      with:
+        path: |
+          ${{ inputs.cache-path }}
+          ${{ inputs.cache-path }}.SHA256SUMS
+        key: ${{ steps.restore.outputs.cache-primary-key }}
