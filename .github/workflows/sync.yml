@@ -21,6 +21,41 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Inspect PAT response headers
+        shell: bash
+        env:
+          WORKOUTS_SYNC_PAT: ${{ secrets.WORKOUTS_SYNC_PAT }}
+          GITHUB_API_URL: ${{ github.api_url }}
+        run: |
+          if [ -z "$WORKOUTS_SYNC_PAT" ]; then
+            echo "::warning::WORKOUTS_SYNC_PAT not set — skipping header inspection" >&2
+            exit 0
+          fi
+
+          API="${GITHUB_API_URL:-https://api.github.com}"
+          AUTH="Authorization: Bearer ${WORKOUTS_SYNC_PAT}"
+
+          echo "::group::Raw HTTP response headers (/rate_limit with PAT)" >&2
+          curl -s -o /dev/null -D - \
+            -H "$AUTH" \
+            "${API}/rate_limit" >&2
+          echo "::endgroup::" >&2
+
+          echo "::group::Parsed header_json (curl machine-readable)" >&2
+          curl -s -o /dev/null -w "%{header_json}" \
+            -H "$AUTH" \
+            "${API}/rate_limit" >&2
+          echo "" >&2
+          echo "::endgroup::" >&2
+
+          RAW_HEADERS=$(curl -s -o /dev/null -w "%{header_json}" \
+            -H "$AUTH" \
+            "${API}/rate_limit")
+          SCOPE=$(printf "%b\n" "$RAW_HEADERS" | grep -oi '"x-oauth-scopes":\[[^]]*\]' | head -1 || true)
+          PERM=$(printf "%b\n" "$RAW_HEADERS" | grep -oi '"x-accepted-github-permissions":\[[^]]*\]' | head -1 || true)
+          echo "x_oauth_scopes=${SCOPE:-not_present}" >> $GITHUB_OUTPUT
+          echo "x_accepted_permissions=${PERM:-not_present}" >> $GITHUB_OUTPUT
+
       - name: Configure git
         id: git-setup
         env:
