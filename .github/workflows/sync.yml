@@ -91,41 +91,6 @@ jobs:
             fi
           fi
 
-      - name: Diagnose DB after restore
-        id: db-state-restore
-        shell: bash
-        run: |
-          echo "=== DB state after restore ==="
-          if [ ! -f data/workouts.db ] || [ ! -s data/workouts.db ]; then
-            echo "db_missing=true"
-            echo "db_size=0"
-            echo "wal_size=0"
-            echo "shm_size=0"
-            echo "tables=none"
-            echo "migration_type=none"
-            echo "activity_count=0"
-          else
-            echo "db_size=$(stat -c%s data/workouts.db 2>/dev/null || echo 0)"
-            echo "wal_size=$(stat -c%s data/workouts.db-wal 2>/dev/null || echo 0)"
-            echo "shm_size=$(stat -c%s data/workouts.db-shm 2>/dev/null || echo 0)"
-            bundle exec ruby -e '
-              require "sequel"
-              db = Sequel.sqlite("data/workouts.db")
-              puts "tables=#{db.tables.sort.join(",")}"
-              if db.table_exists?(:schema_migrations)
-                puts "migration_type=schema_migrations"
-                puts "migration_count=#{db[:schema_migrations].count}"
-              elsif db.table_exists?(:schema_info)
-                version = db[:schema_info].first[:version]
-                puts "migration_type=schema_info"
-                puts "migration_version=#{version}"
-              else
-                puts "migration_type=none"
-              end
-              puts "activity_count=#{db[:activities].count rescue 0}"
-            '
-          fi
-
       - name: Import Apple Health
         uses: ./.github/actions/import-apple-health
         with:
@@ -155,41 +120,6 @@ jobs:
           strava-client-id: ${{ secrets.SYNC_STRAVA_CLIENT_ID }}
           strava-client-secret: ${{ secrets.SYNC_STRAVA_CLIENT_SECRET }}
           strava-refresh-token: ${{ secrets.SYNC_STRAVA_REFRESH_TOKEN }}
-
-      - name: Diagnose DB after sync
-        id: db-state-sync
-        shell: bash
-        run: |
-          echo "=== DB state after sync ==="
-          if [ ! -f data/workouts.db ] || [ ! -s data/workouts.db ]; then
-            echo "db_missing=true"
-            echo "db_size=0"
-            echo "wal_size=0"
-            echo "shm_size=0"
-            echo "tables=none"
-            echo "migration_type=none"
-            echo "activity_count=0"
-          else
-            echo "db_size=$(stat -c%s data/workouts.db 2>/dev/null || echo 0)"
-            echo "wal_size=$(stat -c%s data/workouts.db-wal 2>/dev/null || echo 0)"
-            echo "shm_size=$(stat -c%s data/workouts.db-shm 2>/dev/null || echo 0)"
-            bundle exec ruby -e '
-              require "sequel"
-              db = Sequel.sqlite("data/workouts.db")
-              puts "tables=#{db.tables.sort.join(",")}"
-              if db.table_exists?(:schema_migrations)
-                puts "migration_type=schema_migrations"
-                puts "migration_count=#{db[:schema_migrations].count}"
-              elsif db.table_exists?(:schema_info)
-                version = db[:schema_info].first[:version]
-                puts "migration_type=schema_info"
-                puts "migration_version=#{version}"
-              else
-                puts "migration_type=none"
-              end
-              puts "activity_count=#{db[:activities].count rescue 0}"
-            '
-          fi
 
       - name: Checkpoint SQLite WAL
         if: always()
