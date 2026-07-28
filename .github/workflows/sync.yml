@@ -215,7 +215,7 @@ jobs:
         if: always()
 
       - name: Geo cache
-        uses: ./.github/actions/geo-cache
+        uses: ./.github/actions/detect-geo-region
         with:
           amap-key: ${{ secrets.AMAP_API_KEY }}
           db-path: data/workouts.db

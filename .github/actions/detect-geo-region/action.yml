@@ -1,4 +1,4 @@
-name: Geo cache
+name: GEO Detect
 description: >
   Restore geo point cache, run region detection, save cache.
   Cache key auto-invalidated by action file hash.
@@ -11,7 +11,7 @@ inputs:
   cache-key:
     description: Cache key (hash of this file appended automatically)
     required: false
-    default: workouts-geo-v1-${{ hashFiles('.github/actions/geo-cache/action.yml') }}
+    default: workouts-geo-v1-${{ hashFiles('.github/actions/detect-geo-region/action.yml') }}
   amap-key:
     description: Amap API key
     required: true
@@ -55,6 +55,7 @@ runs:
         restore-keys: workouts-geo-v1-
 
     - name: Geo region detection
+      shell: bash
       env:
         AMAP_API_KEY: ${{ inputs.amap-key }}
         GIT_FIT_DATABASE_PATH: ${{ inputs.db-path }}
