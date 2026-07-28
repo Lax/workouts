@@ -121,6 +121,17 @@ jobs:
           strava-client-secret: ${{ secrets.SYNC_STRAVA_CLIENT_SECRET }}
           strava-refresh-token: ${{ secrets.SYNC_STRAVA_REFRESH_TOKEN }}
 
+      - name: Detect geo regions
+        uses: ./.github/actions/detect-geo-region
+        with:
+          amap-key: ${{ secrets.AMAP_API_KEY }}
+          db-path: data/workouts.db
+          cache-path: data/cache/geo-point.jsonl
+          detect-limit: 200
+          detect-batch: 20
+          detect-strategy: proportional
+          detect-time: 300
+
       - name: Checkpoint SQLite WAL
         if: always()
         shell: bash
@@ -133,17 +144,6 @@ jobs:
               puts "WAL checkpoint: #{File.size("data/workouts.db")} bytes"
             '
           fi
-
-      - name: Detect geo regions
-        uses: ./.github/actions/detect-geo-region
-        with:
-          amap-key: ${{ secrets.AMAP_API_KEY }}
-          db-path: data/workouts.db
-          cache-path: data/cache/geo-point.jsonl
-          detect-limit: 200
-          detect-batch: 20
-          detect-strategy: proportional
-          detect-time: 300
 
       - name: Manage sync cron
         uses: ./.github/actions/cron-manager
