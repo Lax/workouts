@@ -126,15 +126,6 @@ jobs:
             '
           fi
 
-      - name: Restore Apple Health cache
-        id: import-cache-apple-health
-        uses: actions/cache@v4
-        with:
-          path: |
-            data/import/apple_health/export.zip.SHA256SUMS
-            data/import/apple_health/.modified-at
-          key: imported-v3-apple-health
-
       - name: Preflight Apple Health
         id: ah-preflight
         shell: bash
