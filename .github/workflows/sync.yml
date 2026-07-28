@@ -169,7 +169,7 @@ jobs:
           path: |
             data/import/apple_health/export.zip.SHA256SUMS
             data/import/apple_health/.modified-at
-          key: imported-v3-apple-health
+          key: import-apple-health-v1-detect
 
       - name: Detect Apple Health change
         id: ah-detect
