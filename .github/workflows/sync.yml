@@ -131,7 +131,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: |
-            data/import/apple_health/SHA256SUMS
+            data/import/apple_health/export.zip.SHA256SUMS
             data/import/apple_health/.imported-at
           key: imported-v2-apple-health
 
@@ -180,8 +180,8 @@ jobs:
             exit 0
           fi
 
-          if git show "$AH_REMOTE:$AH_DIR/SHA256SUMS" > "$RUNNER_TEMP/apple-health.sha256" 2>/dev/null; then
-            if [ -f "$AH_DIR/SHA256SUMS" ] && cmp -s "$RUNNER_TEMP/apple-health.sha256" "$AH_DIR/SHA256SUMS"; then
+          if git show "$AH_REMOTE:$AH_DIR/export.zip.SHA256SUMS" > "$RUNNER_TEMP/apple-health.sha256" 2>/dev/null; then
+            if [ -f "$AH_DIR/export.zip.SHA256SUMS" ] && cmp -s "$RUNNER_TEMP/apple-health.sha256" "$AH_DIR/export.zip.SHA256SUMS"; then
               echo "SHA256 match — commit ID changed (${cached:0:7} → ${export_sha:0:7}) but content unchanged, skip" >&2
               echo "skip=true" >> $GITHUB_OUTPUT
               echo "reason=sha256-match" >> $GITHUB_OUTPUT
@@ -189,15 +189,14 @@ jobs:
             fi
           fi
 
-          if ! git cat-file -e "$export_sha:$AH_DIR/export.zip" 2>/dev/null; then
-            echo "Blob missing at ${export_sha:0:7} ($export_subject) — branch may have been pruned, skipping" >&2
+          if ! git cat-file -e "$AH_REMOTE:$AH_DIR/export.zip" 2>/dev/null; then
+            echo "Blob missing at HEAD ($export_subject) — branch may have been pruned, skipping" >&2
             echo "skip=true" >> $GITHUB_OUTPUT
             echo "reason=blob-missing" >> $GITHUB_OUTPUT
             exit 0
           fi
 
           echo "skip=false" >> $GITHUB_OUTPUT
-          echo "export_sha=$export_sha" >> $GITHUB_OUTPUT
           if [ -z "$cached" ]; then
             echo "First import — ${export_sha:0:7} $export_subject ($export_date)" >&2
           else
@@ -215,9 +214,8 @@ jobs:
           mkdir -p "$AH_DIR"
           git lfs install
 
-          export_sha="${{ steps.ah-check.outputs.export_sha }}"
-          echo "[import] Fetching export.zip at commit ${export_sha:0:7}..." >&2
-          git show "$export_sha:$AH_DIR/export.zip" \
+          echo "[import] Fetching export.zip from HEAD..." >&2
+          git show "$AH_REMOTE:$AH_DIR/export.zip" \
             | git lfs smudge > "$AH_DIR/export.zip"
 
           size=$(stat -c%s "$AH_DIR/export.zip" 2>/dev/null \
@@ -237,7 +235,8 @@ jobs:
           bash scripts/generate-checksums.sh "$AH_DIR/export.zip"
 
           echo "[import] Saving state to branch..." >&2
-          bash scripts/data-store-git-save.sh "$AH_BRANCH" "$AH_DIR/SHA256SUMS"
+          bash scripts/create-or-append-to-branch.sh "$AH_BRANCH" \
+            "$AH_DIR/export.zip.SHA256SUMS"
 
           git log --format=%H -1 "$AH_REMOTE" -- "$AH_DIR/export.zip" \
             > "$AH_DIR/.imported-at"
