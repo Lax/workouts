@@ -112,6 +112,8 @@ jobs:
           PAT_TOKEN: ${{ inputs.pat_token || secrets.WORKOUTS_SYNC_PAT }}
           GITHUB_API_URL: ${{ github.api_url }}
           GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+          GITHUB_JOB: ${{ github.job }}
         run: |
           set -euo pipefail
           if [ -z "${PAT_TOKEN}" ]; then
@@ -121,9 +123,9 @@ jobs:
           API="${GITHUB_API_URL:-https://api.github.com}"
           REPO="${GITHUB_REPOSITORY}"
           AUTH="Authorization: Bearer ${PAT_TOKEN}"
-          TEST_FILE=".github/workflows/__pat_probe_$$.yml"
+          TEST_FILE=".github/workflows/__pat_probe-${GITHUB_RUN_ID}_${GITHUB_JOB}.yml"
 
-          echo "::group::Contents API — write workflow file (expected: 403)" >&2
+          echo "::group::Contents API — write workflow file" >&2
           HTTP_CODE=$(curl -s -o /tmp/_wf_probe.json -w "%{http_code}" \
             -X PUT \
             -H "$AUTH" \
@@ -148,7 +150,9 @@ jobs:
           echo "::endgroup::" >&2
           echo "workflow_probe_http=${HTTP_CODE}" >> $GITHUB_OUTPUT
 
-          SHA=$(cat /tmp/_wf_probe.json | grep '"sha"' | head -1 | sed 's/.*"sha"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/')
+          SHA=$(gh api \
+            "/repos/${REPO}/contents/${TEST_FILE}" \
+            --jq '.content.sha // empty' 2>/dev/null || true)
           if [ -n "$SHA" ]; then
             curl -s -o /dev/null -w "%{http_code}" \
               -X DELETE \
