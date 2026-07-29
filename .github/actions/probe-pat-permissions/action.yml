@@ -89,7 +89,7 @@ runs:
           -H "Accept: application/vnd.github+json" \
           -H "X-GitHub-Api-Version: 2022-11-28" \
           "${API}/repos/${REPO}/contents/${PROBE_FILE}" \
-          -d "{\"message\":\"permission probe\",\"content\":\"${PROBE_CONTENT}\"}" 2>/dev/null || echo "000")
+          -d "{\"message\":\"permission probe [skip ci]\",\"content\":\"${PROBE_CONTENT}\"}" 2>/dev/null || echo "000")
 
         PERM_LIST=$(grep -i '^x-accepted-github-permissions:' "$HEADERS" | head -1 | sed 's/^[^:]*: //' | tr -d '\r\n')
         rm -f "$HEADERS"
