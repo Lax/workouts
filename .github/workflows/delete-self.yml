@@ -6,6 +6,10 @@ on:
         description: 'Path to workflow file to delete (e.g. .github/workflows/__pat_probe-30419222651_probe.yml)'
         required: true
         default: '.github/workflows/__pat_probe-30419222651_probe.yml'
+      pat_token:
+        description: 'PAT with workflows:write (leave empty to use secrets.WORKOUTS_SYNC_PAT)'
+        required: false
+        default: ''
 
 jobs:
   delete:
@@ -17,19 +21,23 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Delete workflow file
+      - name: Delete workflow file via PAT
         shell: bash
         env:
           GITHUB_API_URL: ${{ github.api_url }}
           GITHUB_REPOSITORY: ${{ github.repository }}
-          GITHUB_TOKEN: ${{ github.token }}
+          PAT_TOKEN: ${{ inputs.pat_token || secrets.WORKOUTS_SYNC_PAT }}
           WORKFLOW_FILE: ${{ inputs.workflow_file }}
         run: |
           set -euo pipefail
+          if [ -z "${PAT_TOKEN}" ]; then
+            echo "::error::PAT token not provided" >&2
+            exit 1
+          fi
           API="${GITHUB_API_URL:-https://api.github.com}"
           REPO="${GITHUB_REPOSITORY}"
           FILE="$WORKFLOW_FILE"
-          AUTH="Authorization: Bearer ${GITHUB_TOKEN}"
+          AUTH="Authorization: Bearer ${PAT_TOKEN}"
 
           echo "Fetching info for ${FILE}" >&2
           RESP=$(curl -s -H "$AUTH" \
