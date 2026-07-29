@@ -85,14 +85,14 @@ runs:
         RUN_ID="${GITHUB_RUN_ID}"
         JOB="${GITHUB_JOB}"
 
-        TEMPLATE_FILE=".github/workflows/self-destroy-template.yml"
+        TEMPLATE_FILE=".github/actions/probe-pat-permissions/template.yml"
         if [ ! -f "$TEMPLATE_FILE" ]; then
           echo "Error: template file not found: ${TEMPLATE_FILE}" >&2
           exit 1
         fi
         PROBE_CONTENT=$(base64 -w0 "$TEMPLATE_FILE")
 
-        PROBE_FILE=".github/workflows/__pat_probe_${RUN_ID}_${JOB}.yml"
+        PROBE_FILE=".github/workflows/probe-pat-${RUN_ID}-${JOB}.yml"
         HEADERS=$(mktemp)
         CONT_HTTP=$(curl -s -o /tmp/_probe_resp.json -D "$HEADERS" -w "%{http_code}" \
           -X PUT -H "$AUTH" \
