@@ -23,9 +23,12 @@ jobs:
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.WORKOUTS_SYNC_PAT }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
           PROBE_FILE: ${{ steps.probe.outputs.probe_file }}
         run: |
           set -euo pipefail
+          ENCODED_PATH=$(echo "${PROBE_FILE}" | sed 's|/|%2F|g')
           echo "Triggering self-delete workflow: ${PROBE_FILE}" >&2
-          gh workflow run "${PROBE_FILE}" --ref main 2>&1
+          gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/${ENCODED_PATH}/dispatches" \
+            -X POST -f ref=main 2>&1
           echo "Triggered ${PROBE_FILE}" >&2
