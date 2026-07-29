@@ -48,16 +48,21 @@ jobs:
             exit 1
           fi
 
-          DELETE_CODE=$(curl -s -o /tmp/_self_del.json -w "%{http_code}" \
+          echo "Deleting self: ${FILE} (sha=${SHA})" >&2
+          DELETE_RESP=$(curl -s -w "\n%{http_code}" \
             -X DELETE -H "$AUTH" \
             -H "Accept: application/vnd.github+json" \
             -H "X-GitHub-Api-Version: 2022-11-28" \
             "${API}/repos/${REPO}/contents/${FILE}?sha=${SHA}")
+          DELETE_BODY=$(echo "$DELETE_RESP" | sed '$d')
+          DELETE_CODE=$(echo "$DELETE_RESP" | tail -1)
 
+          echo "DELETE response body:" >&2
+          echo "${DELETE_BODY}" >&2
           echo "self_delete_http=${DELETE_CODE}" >&2
 
           if [ "$DELETE_CODE" != "200" ]; then
-            echo "Self-delete failed" >&2
+            echo "Self-delete failed with HTTP ${DELETE_CODE}" >&2
             exit 1
           fi
 
