@@ -1,0 +1,126 @@
+name: Probe PAT permissions
+description: Probe PAT permissions via variables API and contents/workflow API
+
+inputs:
+  pat_token:
+    description: PAT to probe
+    required: true
+
+outputs:
+  has_variables_write:
+    description: Whether PAT has variables:write permission
+    value: ${{ steps.probe.outputs.has_variables_write }}
+  has_contents_write:
+    description: Whether PAT has contents:write permission
+    value: ${{ steps.probe.outputs.has_contents_write }}
+  has_workflows_write:
+    description: Whether PAT has workflows:write permission
+    value: ${{ steps.probe.outputs.has_workflows_write }}
+  permission_list:
+    description: Raw X-Accepted-GitHub-Permissions header value
+    value: ${{ steps.probe.outputs.permission_list }}
+  permissions_json:
+    description: Minified JSON with full probe results
+    value: ${{ steps.probe.outputs.permissions_json }}
+
+runs:
+  using: composite
+  steps:
+    - name: Probe PAT permissions
+      id: probe
+      shell: bash
+      env:
+        PAT_TOKEN: ${{ inputs.pat_token }}
+        GITHUB_API_URL: ${{ github.api_url }}
+        GITHUB_REPOSITORY: ${{ github.repository }}
+        GITHUB_RUN_ID: ${{ github.run_id }}
+        GITHUB_JOB: ${{ github.job }}
+      run: |
+        set -euo pipefail
+        API="${GITHUB_API_URL:-https://api.github.com}"
+        REPO="${GITHUB_REPOSITORY}"
+        AUTH="Authorization: Bearer ${PAT_TOKEN}"
+        RUN_ID="${GITHUB_RUN_ID}"
+        JOB="${GITHUB_JOB}"
+
+        # 1. Probe variables API
+        TEST_VAR="__pat_probe_${RUN_ID}_${JOB}"
+        VAR_HTTP=$(curl -s -o /dev/null -w "%{http_code}" \
+          -X POST -H "$AUTH" \
+          -H "Accept: application/vnd.github+json" \
+          -H "X-GitHub-Api-Version: 2022-11-28" \
+          "${API}/repos/${REPO}/actions/variables" \
+          -d "{\"name\":\"${TEST_VAR}\",\"value\":\"probe\"}" 2>/dev/null || echo "000")
+
+        # Cleanup test variable
+        curl -s -o /dev/null -w "%{http_code}" \
+          -X DELETE -H "$AUTH" \
+          "${API}/repos/${REPO}/actions/variables/${TEST_VAR}" 2>/dev/null || true
+
+        HAS_VARIABLES="false"
+        [ "$VAR_HTTP" = "201" ] && HAS_VARIABLES="true"
+
+        # 2. Probe contents/workflow API
+        PROBE_FILE=".github/workflows/__pat_probe_${RUN_ID}_${JOB}.yml"
+        PROBE_CONTENT='bmFtZTogX19wYXRfcHJvYmUKb246IHdvcmtmbG93X2Rpc3BhdGNoCmpvYnM6CiAgcHJvYmU6CiAgICBydW5zLW9uOiB1YnVudHUtbGF0ZXN0CiAgICBzdGVwczoKICAgICAgLSBydW46IGVjaG8gInByb2JlIgo='
+        HEADERS=$(mktemp)
+        CONT_HTTP=$(curl -s -o /tmp/_probe_resp.json -D "$HEADERS" -w "%{http_code}" \
+          -X PUT -H "$AUTH" \
+          -H "Accept: application/vnd.github+json" \
+          -H "X-GitHub-Api-Version: 2022-11-28" \
+          "${API}/repos/${REPO}/contents/${PROBE_FILE}" \
+          -d "{\"message\":\"permission probe\",\"content\":\"${PROBE_CONTENT}\"}" 2>/dev/null || echo "000")
+
+        # Extract X-Accepted-GitHub-Permissions header
+        PERM_LIST=$(grep -i '^x-accepted-github-permissions:' "$HEADERS" | head -1 | sed 's/^[^:]*: //' | tr -d '\r\n')
+        rm -f "$HEADERS"
+
+        # Parse permissions from header
+        HAS_CONTENTS="false"
+        HAS_WORKFLOWS="false"
+        if [ -n "$PERM_LIST" ]; then
+          LAST_SCOPE=$(echo "$PERM_LIST" | awk -F';' '{print $NF}' | sed 's/^ *//;s/ *$//')
+          echo "$LAST_SCOPE" | grep -qi 'contents=write' && HAS_CONTENTS="true"
+          echo "$LAST_SCOPE" | grep -qi 'workflows' && HAS_WORKFLOWS="true"
+        fi
+
+        # Cleanup probe file
+        PROBE_SHA=$(sed -n 's/.*"sha"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' /tmp/_probe_resp.json | head -1)
+        if [ -n "$PROBE_SHA" ]; then
+          curl -s -o /dev/null -w "%{http_code}" \
+            -X DELETE -H "$AUTH" \
+            "${API}/repos/${REPO}/contents/${PROBE_FILE}?sha=${PROBE_SHA}" 2>/dev/null || true
+        fi
+
+        # 3. Emit outputs
+        echo "has_variables_write=${HAS_VARIABLES}" >> $GITHUB_OUTPUT
+        echo "has_contents_write=${HAS_CONTENTS}" >> $GITHUB_OUTPUT
+        echo "has_workflows_write=${HAS_WORKFLOWS}" >> $GITHUB_OUTPUT
+        echo "permission_list=${PERM_LIST}" >> $GITHUB_OUTPUT
+
+        # Build minified JSON
+        JSON=$(printf '{"github_token":{"variables_api":{"http":%s}},"workouts_sync_pat":{"variables_api":{"http":%s,"permission":"%s"},"contents_workflow_api":{"http":%s,"headers":"%s","permission":"%s"}},"has_variables_write":%s,"has_contents_write":%s,"has_workflows_write":%s}' \
+          "N/A" \
+          "$VAR_HTTP" "$HAS_VARIABLES" \
+          "$CONT_HTTP" "$PERM_LIST" "$HAS_WORKFLOWS" \
+          "$HAS_VARIABLES" "$HAS_CONTENTS" "$HAS_WORKFLOWS")
+        echo "permissions_json=${JSON}" >> $GITHUB_OUTPUT
+
+        # 4. Write step summary
+        {
+          echo "## Permission Probe Summary"
+          echo ""
+          echo "| Token | Endpoint | HTTP | Permission |"
+          echo "|---|---|---|---|"
+          echo "| GITHUB_TOKEN | variables API | N/A | baseline |"
+          echo "| WORKOUTS_SYNC_PAT | variables API | ${VAR_HTTP} | ${HAS_VARIABLES} |"
+          echo "| WORKOUTS_SYNC_PAT | contents/workflow API | ${CONT_HTTP} | contents=${HAS_CONTENTS}, workflows=${HAS_WORKFLOWS} |"
+          echo ""
+          echo "Header: \`${PERM_LIST:-none}\`"
+        } > $GITHUB_STEP_SUMMARY
+
+        # 5. Log results
+        echo "variables:write=${HAS_VARIABLES}" >&2
+        echo "contents:write=${HAS_CONTENTS}" >&2
+        echo "workflows:write=${HAS_WORKFLOWS}" >&2
+        echo "permission_list=${PERM_LIST}" >&2
