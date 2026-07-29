@@ -132,7 +132,7 @@ jobs:
             -H "Accept: application/vnd.github+json" \
             -H "X-GitHub-Api-Version: 2022-11-28" \
             "${API}/repos/${REPO}/contents/${TEST_FILE}" \
-            -d '{"message":"permission probe","content":"IyBwcm9iZS0gZGVwbG95IGF0dGVtcHRl"}' \
+            -d '{"message":"permission probe","content":"bmFtZTogX19wYXRfcHJvYmUKb246IHdvcmtmbG93X2Rpc3BhdGNoCmpvYnM6CiAgcHJvYmU6CiAgICBydW5zLW9uOiB1YnVudHUtbGF0ZXN0CiAgICBzdGVwczoKICAgICAgLSBydW46IGVjaG8gInByb2JlIgo="}' \
             2>/dev/null || echo "000")
           echo "HTTP ${HTTP_CODE}" >&2
           echo "--- Body ---" >&2
@@ -145,18 +145,19 @@ jobs:
             -H "Accept: application/vnd.github+json" \
             -H "X-GitHub-Api-Version: 2022-11-28" \
             "${API}/repos/${REPO}/contents/${TEST_FILE}" \
-            -d '{"message":"permission probe","content":"IyBwcm9iZS0gZGVwbG95IGF0dGVtcHRl"}' >&2
+            -d '{"message":"permission probe","content":"bmFtZTogX19wYXRfcHJvYmUKb246IHdvcmtmbG93X2Rpc3BhdGNoCmpvYnM6CiAgcHJvYmU6CiAgICBydW5zLW9uOiB1YnVudHUtbGF0ZXN0CiAgICBzdGVwczoKICAgICAgLSBydW46IGVjaG8gInByb2JlIgo="}' >&2
           echo "" >&2
           echo "::endgroup::" >&2
           echo "workflow_probe_http=${HTTP_CODE}" >> $GITHUB_OUTPUT
 
-          SHA=$(curl -s -o /tmp/_wf_get.json -w "%{http_code}" \
-            -H "$AUTH" \
-            "${API}/repos/${REPO}/contents/${TEST_FILE}" 2>/dev/null || echo "000")
-          SHA=$(sed -n 's/.*"sha"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' /tmp/_wf_get.json | head -1)
+          SHA=$(sed -n 's/.*"sha"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' /tmp/_wf_probe.json | head -1)
+          echo "cleanup: extracted SHA=[${SHA}]" >&2
           if [ -n "$SHA" ]; then
-            curl -s -o /dev/null -w "%{http_code}" \
+            DELETE_CODE=$(curl -s -o /dev/null -w "%{http_code}" \
               -X DELETE \
               -H "$AUTH" \
-              "${API}/repos/${REPO}/contents/${TEST_FILE}?sha=${SHA}" 2>/dev/null || true
+              "${API}/repos/${REPO}/contents/${TEST_FILE}?sha=${SHA}" 2>/dev/null || echo "000")
+            echo "cleanup: DELETE ${TEST_FILE} → HTTP ${DELETE_CODE}" >&2
+          else
+            echo "cleanup: no SHA extracted, skipping DELETE" >&2
           fi
