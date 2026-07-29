@@ -38,7 +38,7 @@ jobs:
             -H "X-GitHub-Api-Version: 2022-11-28" \
             -H "Content-Type: application/json" \
             "${API}/repos/${REPO}/contents/${FILE}?sha=${SHA}" \
-            -d "{\"message\":\"delete self: ${FILE}\"}")
+            -d "{\"message\":\"delete self: ${FILE} [skip ci]\"}")
           echo "self_delete_http=${DELETE_CODE}" >&2
           if [ "$DELETE_CODE" != "200" ]; then
             echo "Self-delete failed" >&2
