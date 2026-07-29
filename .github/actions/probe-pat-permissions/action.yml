@@ -27,20 +27,19 @@ outputs:
     value: ${{ steps.aggregate.outputs.permissions_json }}
   probe_file:
     description: Path to the probe workflow file that was created
-    value: ${{ steps.probe.outputs.probe_file }}
+    value: ${{ steps.create.outputs.probe_file }}
 
 runs:
   using: composite
   steps:
-    - name: Probe variables and create workflow
-      id: probe
+    - name: Probe variables:write
+      id: variables
       shell: bash
       env:
         PAT_TOKEN: ${{ inputs.pat_token }}
         GITHUB_API_URL: ${{ github.api_url }}
         GITHUB_REPOSITORY: ${{ github.repository }}
         GITHUB_RUN_ID: ${{ github.run_id }}
-        GITHUB_JOB: ${{ github.job }}
         GITHUB_RUN_ATTEMPT: ${{ github.run_attempt }}
       run: |
         set -euo pipefail
@@ -48,10 +47,8 @@ runs:
         REPO="${GITHUB_REPOSITORY}"
         AUTH="Authorization: Bearer ${PAT_TOKEN}"
         RUN_ID="${GITHUB_RUN_ID}"
-        JOB="${GITHUB_JOB}"
         ATTEMPT="${GITHUB_RUN_ATTEMPT}"
 
-        # 1. Write fixed variable __pat_probe__ with value {run_id}-{attempt}
         TEST_VAR="__pat_probe__"
         VAR_VALUE="${RUN_ID}-${ATTEMPT}"
         VAR_HTTP=$(curl -s -o /dev/null -w "%{http_code}" \
@@ -61,7 +58,6 @@ runs:
           "${API}/repos/${REPO}/actions/variables" \
           -d "{\"name\":\"${TEST_VAR}\",\"value\":\"${VAR_VALUE}\"}" 2>/dev/null || echo "000")
 
-        # Immediately cleanup test variable
         curl -s -o /dev/null -w "%{http_code}" \
           -X DELETE -H "$AUTH" \
           "${API}/repos/${REPO}/actions/variables/${TEST_VAR}" 2>/dev/null || true
@@ -69,7 +65,26 @@ runs:
         HAS_VARIABLES="false"
         [ "$VAR_HTTP" = "201" ] && HAS_VARIABLES="true"
 
-        # 2. Read self-destroy-template.yml and base64 encode
+        echo "has_variables_write=${HAS_VARIABLES}" >> $GITHUB_OUTPUT
+        echo "var_http=${VAR_HTTP}" >> $GITHUB_OUTPUT
+
+    - name: Create probe workflow
+      id: create
+      shell: bash
+      env:
+        PAT_TOKEN: ${{ inputs.pat_token }}
+        GITHUB_API_URL: ${{ github.api_url }}
+        GITHUB_REPOSITORY: ${{ github.repository }}
+        GITHUB_RUN_ID: ${{ github.run_id }}
+        GITHUB_JOB: ${{ github.job }}
+      run: |
+        set -euo pipefail
+        API="${GITHUB_API_URL:-https://api.github.com}"
+        REPO="${GITHUB_REPOSITORY}"
+        AUTH="Authorization: Bearer ${PAT_TOKEN}"
+        RUN_ID="${GITHUB_RUN_ID}"
+        JOB="${GITHUB_JOB}"
+
         TEMPLATE_FILE=".github/workflows/self-destroy-template.yml"
         if [ ! -f "$TEMPLATE_FILE" ]; then
           echo "Error: template file not found: ${TEMPLATE_FILE}" >&2
@@ -77,7 +92,6 @@ runs:
         fi
         PROBE_CONTENT=$(base64 -w0 "$TEMPLATE_FILE")
 
-        # 3. Probe contents/workflow API
         PROBE_FILE=".github/workflows/__pat_probe_${RUN_ID}_${JOB}.yml"
         HEADERS=$(mktemp)
         CONT_HTTP=$(curl -s -o /tmp/_probe_resp.json -D "$HEADERS" -w "%{http_code}" \
@@ -87,11 +101,9 @@ runs:
           "${API}/repos/${REPO}/contents/${PROBE_FILE}" \
           -d "{\"message\":\"permission probe\",\"content\":\"${PROBE_CONTENT}\"}" 2>/dev/null || echo "000")
 
-        # Extract X-Accepted-GitHub-Permissions header
         PERM_LIST=$(grep -i '^x-accepted-github-permissions:' "$HEADERS" | head -1 | sed 's/^[^:]*: //' | tr -d '\r\n')
         rm -f "$HEADERS"
 
-        # Parse permissions from header
         HAS_CONTENTS="false"
         HAS_WORKFLOWS="false"
         if [ -n "$PERM_LIST" ]; then
@@ -100,13 +112,10 @@ runs:
           echo "$LAST_SCOPE" | grep -qi 'workflows' && HAS_WORKFLOWS="true"
         fi
 
-        # 4. Emit outputs
-        echo "has_variables_write=${HAS_VARIABLES}" >> $GITHUB_OUTPUT
         echo "has_contents_write=${HAS_CONTENTS}" >> $GITHUB_OUTPUT
         echo "has_workflows_write=${HAS_WORKFLOWS}" >> $GITHUB_OUTPUT
         echo "permission_list=${PERM_LIST}" >> $GITHUB_OUTPUT
         echo "probe_file=${PROBE_FILE}" >> $GITHUB_OUTPUT
-        echo "var_http=${VAR_HTTP}" >> $GITHUB_OUTPUT
         echo "cont_http=${CONT_HTTP}" >> $GITHUB_OUTPUT
 
     - name: Execute probe workflow
@@ -116,7 +125,7 @@ runs:
         GH_TOKEN: ${{ inputs.pat_token }}
         GITHUB_API_URL: ${{ github.api_url }}
         GITHUB_REPOSITORY: ${{ github.repository }}
-        PROBE_FILE: ${{ steps.probe.outputs.probe_file }}
+        PROBE_FILE: ${{ steps.create.outputs.probe_file }}
       run: |
         set -euo pipefail
         API="${GITHUB_API_URL:-https://api.github.com}"
@@ -125,7 +134,6 @@ runs:
         ENCODED_PATH=$(echo "${PROBE_FILE}" | sed 's|/|%2F|g')
         echo "Dispatching probe workflow: ${PROBE_FILE}" >&2
 
-        # Wait for workflow registration (up to 60s)
         for i in $(seq 1 12); do
           echo "Attempt ${i}: checking workflow registration..." >&2
           HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" \
@@ -159,29 +167,24 @@ runs:
       id: aggregate
       shell: bash
       env:
-        HAS_VARIABLES: ${{ steps.probe.outputs.has_variables_write }}
-        HAS_CONTENTS: ${{ steps.probe.outputs.has_contents_write }}
-        HAS_WORKFLOWS: ${{ steps.probe.outputs.has_workflows_write }}
+        HAS_VARIABLES: ${{ steps.variables.outputs.has_variables_write }}
+        HAS_CONTENTS: ${{ steps.create.outputs.has_contents_write }}
+        HAS_WORKFLOWS: ${{ steps.create.outputs.has_workflows_write }}
+        HAS_ACTIONS: ${{ steps.dispatch.outputs.has_actions_write }}
+        PERM_LIST: ${{ steps.create.outputs.permission_list }}
+        PROBE_FILE: ${{ steps.create.outputs.probe_file }}
+        VAR_HTTP: ${{ steps.variables.outputs.var_http }}
+        CONT_HTTP: ${{ steps.create.outputs.cont_http }}
         DISPATCH_CODE: ${{ steps.dispatch.outputs.has_actions_write }}
-        PERM_LIST: ${{ steps.probe.outputs.permission_list }}
-        PROBE_FILE: ${{ steps.probe.outputs.probe_file }}
-        VAR_HTTP: ${{ steps.probe.outputs.var_http }}
-        CONT_HTTP: ${{ steps.probe.outputs.cont_http }}
       run: |
         set -euo pipefail
 
-        # Parse actions:write from dispatch response
-        HAS_ACTIONS="false"
-        [ "$DISPATCH_CODE" = "204" ] && HAS_ACTIONS="true"
-
-        # Emit final outputs
         echo "has_variables_write=${HAS_VARIABLES}" >> $GITHUB_OUTPUT
         echo "has_contents_write=${HAS_CONTENTS}" >> $GITHUB_OUTPUT
         echo "has_workflows_write=${HAS_WORKFLOWS}" >> $GITHUB_OUTPUT
         echo "has_actions_write=${HAS_ACTIONS}" >> $GITHUB_OUTPUT
         echo "permission_list=${PERM_LIST}" >> $GITHUB_OUTPUT
 
-        # Build minified JSON
         JSON=$(printf '{"github_token":{"variables_api":{"http":"N/A"}},"workouts_sync_pat":{"variables_api":{"http":"%s","permission":"%s"},"contents_workflow_api":{"http":"%s","headers":"%s","permission":"%s"},"actions_api":{"http":"%s","permission":"%s"}},"has_variables_write":%s,"has_contents_write":%s,"has_workflows_write":%s,"has_actions_write":%s}' \
           "$VAR_HTTP" "$HAS_VARIABLES" \
           "$CONT_HTTP" "$PERM_LIST" "$HAS_WORKFLOWS" \
@@ -189,7 +192,6 @@ runs:
           "$HAS_VARIABLES" "$HAS_CONTENTS" "$HAS_WORKFLOWS" "$HAS_ACTIONS")
         echo "permissions_json=${JSON}" >> $GITHUB_OUTPUT
 
-        # Write step summary
         {
           echo "## Permission Probe Summary"
           echo ""
