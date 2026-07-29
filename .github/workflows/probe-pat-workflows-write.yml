@@ -1,0 +1,18 @@
+name: Probe PAT workflows:write (Self-Delete)
+on:
+  workflow_dispatch:
+
+jobs:
+  probe:
+    runs-on: ${{ vars.RUNNER_LABEL || 'ubuntu-latest' }}
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Probe PAT permissions
+        uses: ./.github/actions/probe-pat-permissions
+        with:
+          pat_token: ${{ secrets.WORKOUTS_SYNC_PAT }}
