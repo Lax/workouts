@@ -126,7 +126,7 @@ jobs:
           TEST_FILE=".github/workflows/__pat_probe-${GITHUB_RUN_ID}_${GITHUB_JOB}.yml"
 
           echo "::group::Contents API — write workflow file" >&2
-          HTTP_CODE=$(curl -s -o /tmp/_wf_probe.json -w "%{http_code}" \
+          HTTP_CODE=$(curl -s -o /tmp/_wf_probe.json -D /tmp/_wf_headers.txt -w "%{http_code}" \
             -X PUT \
             -H "$AUTH" \
             -H "Accept: application/vnd.github+json" \
@@ -139,13 +139,7 @@ jobs:
           cat /tmp/_wf_probe.json >&2
           echo "" >&2
           echo "--- Headers ---" >&2
-          curl -s -o /dev/null -D - \
-            -X PUT \
-            -H "$AUTH" \
-            -H "Accept: application/vnd.github+json" \
-            -H "X-GitHub-Api-Version: 2022-11-28" \
-            "${API}/repos/${REPO}/contents/${TEST_FILE}" \
-            -d '{"message":"permission probe","content":"bmFtZTogX19wYXRfcHJvYmUKb246IHdvcmtmbG93X2Rpc3BhdGNoCmpvYnM6CiAgcHJvYmU6CiAgICBydW5zLW9uOiB1YnVudHUtbGF0ZXN0CiAgICBzdGVwczoKICAgICAgLSBydW46IGVjaG8gInByb2JlIgo="}' >&2
+          cat /tmp/_wf_headers.txt >&2
           echo "" >&2
           echo "::endgroup::" >&2
           echo "workflow_probe_http=${HTTP_CODE}" >> $GITHUB_OUTPUT
