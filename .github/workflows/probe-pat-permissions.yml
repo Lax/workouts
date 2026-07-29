@@ -150,9 +150,10 @@ jobs:
           echo "::endgroup::" >&2
           echo "workflow_probe_http=${HTTP_CODE}" >> $GITHUB_OUTPUT
 
-          SHA=$(gh api \
-            "/repos/${REPO}/contents/${TEST_FILE}" \
-            --jq '.content.sha // empty' 2>/dev/null || true)
+          SHA=$(curl -s -o /tmp/_wf_get.json -w "%{http_code}" \
+            -H "$AUTH" \
+            "${API}/repos/${REPO}/contents/${TEST_FILE}" 2>/dev/null || echo "000")
+          SHA=$(sed -n 's/.*"sha"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' /tmp/_wf_get.json | head -1)
           if [ -n "$SHA" ]; then
             curl -s -o /dev/null -w "%{http_code}" \
               -X DELETE \
