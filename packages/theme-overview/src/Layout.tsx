@@ -57,8 +57,7 @@ export function OverviewLayout() {
         tileConfig={tileConfig}
         dashLines={siteConfig?.dashLines as boolean | undefined}
         privacyMode={siteConfig?.privacyMode as boolean | undefined}
-        lightsOn={true}
-        showLabels={siteConfig?.showLabels === true}
+        lightsOn={siteConfig?.showLabels === true}
         onActivityClick={openDetail}
         onActivityHover={setMapHoveredId}
       />

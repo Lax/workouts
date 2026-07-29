@@ -98,7 +98,7 @@ Layout 是主题入口。管理 `view: 'main' | 'summary'` 切换。
 | `Source` (animated-run) + `Layer` (animated-run) | Leaflet `flyTo` + `L.polyline` 动画 |
 | `FullscreenControl` + `NavigationControl` | `L.control.zoom` |
 | `MapboxLanguage` (Chinese) | 不需要（Carto 默认中文） |
-| `Mapbox` / `Carto` / `Maptiler` tiles | Carto dark_nolabels / light_nolabels |
+| `Mapbox` / `Carto` / `Maptiler` tiles | Carto dark_nolabels / light_nolabels（关灯）→ dark_all / light_all（开灯） |
 
 复用 axis 的 polyline 渲染模式。
 

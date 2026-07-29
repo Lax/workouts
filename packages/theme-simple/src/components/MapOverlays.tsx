@@ -21,7 +21,7 @@ export function MapOverlays() {
   return (
     <>
       <div className="map-lights">
-        <LightsToggle showLabels={lightsOn} onToggle={() => setLightsOn(!lightsOn)} />
+        <LightsToggle lightsOn={lightsOn} onToggle={() => setLightsOn(!lightsOn)} />
       </div>
       {fsSupported && (
         <div className="map-fullscreen">

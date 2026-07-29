@@ -9,7 +9,6 @@ interface SimpleMapProps {
   tileConfig?: TileConfig
   privacyMode?: boolean
   lightsOn?: boolean
-  showLabels?: boolean
   animate?: boolean
   initialScrollDisabled?: boolean
   attributionPosition?: 'topleft' | 'topright' | 'bottomleft' | 'bottomright'
@@ -24,7 +23,6 @@ export function SimpleMap({
   hoveredActivityId,
   privacyMode,
   lightsOn,
-  showLabels,
   animate,
   initialScrollDisabled,
   tileConfig,
@@ -42,7 +40,6 @@ export function SimpleMap({
       dashLines={true}
       privacyMode={privacyMode}
       lightsOn={lightsOn}
-      showLabels={showLabels}
       animate={animate}
       initialScrollDisabled={initialScrollDisabled}
       attributionPosition={attributionPosition}

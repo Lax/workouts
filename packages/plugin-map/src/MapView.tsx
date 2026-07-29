@@ -15,7 +15,6 @@ export interface MapViewProps {
   variant?: MapVariant
   tileConfig?: TileConfig
   lightsOn?: boolean
-  showLabels?: boolean
   dashLines?: boolean
   privacyMode?: boolean
   animate?: boolean
@@ -34,7 +33,6 @@ export function MapView({
   variant = 'fullscreen',
   tileConfig,
   lightsOn = true,
-  showLabels = false,
   dashLines = false,
   privacyMode = false,
   animate = false,
@@ -49,7 +47,6 @@ export function MapView({
     colorScheme,
     tileConfig,
     lightsOn,
-    showLabels,
     zoomControl: showZoomControl,
     attributionControl: showAttribution,
   })

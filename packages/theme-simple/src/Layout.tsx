@@ -16,7 +16,6 @@ import { YearSelector } from './components/YearSelector'
 import { YearStats } from './components/YearStats'
 import { StatsPanel } from './StatsPanel'
 import { useSimpleStore } from './store'
-import { useFullscreenSync } from './useFullscreenSync'
 import { getRunIdFromHash } from './utils'
 import './simple.css'
 
@@ -69,8 +68,6 @@ export function SimpleLayout() {
   const lightsOn = useSimpleStore((s) => s.lightsOn)
   const tilePresetId = useSimpleStore((s) => s.tilePresetId)
   const _setTilePreset = useSimpleStore((s) => s.setTilePreset)
-  const isFullscreen = useFullscreenSync()
-  const showLabels = isFullscreen && lightsOn
   const setMapHoveredId = useSimpleStore((s) => s.setMapHoveredId)
   const viewMode = useSimpleStore((s) => s.viewMode)
   const setViewMode = useSimpleStore((s) => s.setViewMode)
@@ -187,7 +184,6 @@ export function SimpleLayout() {
               tileConfig={tileConfig}
               privacyMode={siteConfig?.privacyMode as boolean | undefined}
               lightsOn={lightsOn}
-              showLabels={showLabels}
               animate={!!selectedActivity}
               initialScrollDisabled={true}
               attributionPosition="bottomleft"

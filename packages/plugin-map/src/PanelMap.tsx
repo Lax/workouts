@@ -12,7 +12,6 @@ export interface PanelMapProps {
   maxLines?: number
   tileConfig?: TileConfig
   lightsOn?: boolean
-  showLabels?: boolean
   dashLines?: boolean
   privacyMode?: boolean
   animate?: boolean
@@ -30,7 +29,6 @@ export function PanelMap({
   maxLines = 500,
   tileConfig,
   lightsOn = true,
-  showLabels = false,
   dashLines = false,
   privacyMode = false,
   animate = false,
@@ -44,7 +42,6 @@ export function PanelMap({
     colorScheme,
     tileConfig,
     lightsOn,
-    showLabels,
     zoomPosition: 'bottomright',
     attributionPosition,
     initialScrollDisabled,

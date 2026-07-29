@@ -10,7 +10,6 @@ interface OverviewMapProps {
   dashLines?: boolean
   privacyMode?: boolean
   lightsOn?: boolean
-  showLabels?: boolean
   onActivityClick?: (activity: Activity) => void
   onActivityHover?: (activityId: string | null) => void
 }
@@ -24,7 +23,6 @@ export function OverviewMap({
   dashLines,
   privacyMode,
   lightsOn,
-  showLabels,
   onActivityClick,
   onActivityHover,
 }: OverviewMapProps) {
@@ -38,7 +36,6 @@ export function OverviewMap({
       dashLines={dashLines}
       privacyMode={privacyMode}
       lightsOn={lightsOn}
-      showLabels={showLabels}
       onActivityClick={onActivityClick}
       onActivityHover={onActivityHover}
     />

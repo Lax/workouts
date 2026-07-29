@@ -596,45 +596,102 @@ test('lights toggle aria-label toggles on click', async ({ page }) => {
   await expect(page.locator('button[aria-label="Turn on map lights"]')).toBeVisible()
 })
 
-test('lights off removes tiles so map bg matches page', async ({ page }) => {
+test('lights toggle switches between nolabels and labeled tiles', async ({ page }) => {
   await waitLoaded(page)
-  // Initial: lights off, no tiles
-  expect(await page.locator('.leaflet-tile-loaded').count()).toBe(0)
-
-  // Turn lights on → tiles appear
-  await page.locator('button[aria-label="Turn on map lights"]').click()
   const tiles = page.locator('.leaflet-tile-loaded')
+
+  // Initial: lights off → nolabels tiles loaded
   await expect(tiles.first()).toBeVisible({ timeout: 15000 })
   expect(await tiles.count()).toBeGreaterThan(0)
+  expect(await tiles.first().getAttribute('src')).toContain('dark_nolabels')
 
-  // Turn lights off → tiles disappear
-  await page.locator('button[aria-label="Turn off map lights"]').click()
-  await page.waitForTimeout(1000)
+  // Turn lights on → labels tiles
+  await page.locator('button[aria-label="Turn on map lights"]').click()
   await expect(async () => {
-    expect(await tiles.count()).toBe(0)
-  }).toPass({ timeout: 5000 })
+    expect(await tiles.first().getAttribute('src')).toContain('dark_all')
+  }).toPass({ timeout: 10000 })
+
+  // Turn lights off → nolabels tiles restored
+  await page.locator('button[aria-label="Turn off map lights"]').click()
+  await expect(async () => {
+    expect(await tiles.first().getAttribute('src')).toContain('dark_nolabels')
+  }).toPass({ timeout: 10000 })
 })
 
-test('lights toggle back on restores tile layers', async ({ page }) => {
+test('lights toggle on after off loads labeled tiles', async ({ page }) => {
   await waitLoaded(page)
-  // Initial: lights off, no tiles
 
-  // Turn lights on → tiles appear
+  // Turn lights on → labels tiles
   await page.locator('button[aria-label="Turn on map lights"]').click()
-  await expect(page.locator('.leaflet-tile-loaded').first()).toBeVisible({ timeout: 15000 })
+  await expect(async () => {
+    expect(await page.locator('.leaflet-tile-loaded').first().getAttribute('src')).toContain('dark_all')
+  }).toPass({ timeout: 10000 })
 
-  // Turn lights off → tiles disappear
+  // Turn lights off → nolabels tiles
   await page.locator('button[aria-label="Turn off map lights"]').click()
-  await page.waitForTimeout(500)
-  expect(await page.locator('.leaflet-tile-loaded').count()).toBe(0)
+  await expect(async () => {
+    expect(await page.locator('.leaflet-tile-loaded').first().getAttribute('src')).toContain('dark_nolabels')
+  }).toPass({ timeout: 10000 })
 
-  // Turn lights back on
+  // Turn lights back on → labels tiles reload
   await page.locator('button[aria-label="Turn on map lights"]').click()
+  await expect(async () => {
+    expect(await page.locator('.leaflet-tile-loaded').first().getAttribute('src')).toContain('dark_all')
+  }).toPass({ timeout: 10000 })
+})
 
-  // Tiles should reload
+test('lights × theme × sport filter matrix', async ({ page }) => {
+  await waitLoaded(page)
   const tiles = page.locator('.leaflet-tile-loaded')
+  const theme = () => page.evaluate(() => document.documentElement.getAttribute('data-theme') || 'dark')
+  const tileSrc = () => tiles.first().getAttribute('src')
+
+  // Cell 1: dark + lights off → dark_nolabels
   await expect(tiles.first()).toBeVisible({ timeout: 15000 })
-  expect(await tiles.count()).toBeGreaterThan(0)
+  expect(await theme()).toBe('dark')
+  expect(await tileSrc()).toContain('dark_nolabels')
+
+  // Cell 2: dark + lights on → dark_all
+  await page.locator('button[aria-label="Turn on map lights"]').click()
+  await expect(async () => {
+    expect(await tileSrc()).toContain('dark_all')
+  }).toPass({ timeout: 10000 })
+
+  // Cell 3: light + lights on → light_all
+  await page.locator('button[aria-label="Toggle theme"]').click()
+  expect(await theme()).toBe('light')
+  await expect(async () => {
+    expect(await tileSrc()).toContain('light_all')
+  }).toPass({ timeout: 10000 })
+
+  // Cell 4: light + lights off → light_nolabels
+  await page.locator('button[aria-label="Turn off map lights"]').click()
+  await expect(async () => {
+    expect(await tileSrc()).toContain('light_nolabels')
+  }).toPass({ timeout: 10000 })
+
+  // Cell 5: back to dark + lights off → dark_nolabels
+  await page.locator('button[aria-label="Toggle theme"]').click()
+  expect(await theme()).toBe('dark')
+  await expect(async () => {
+    expect(await tileSrc()).toContain('dark_nolabels')
+  }).toPass({ timeout: 10000 })
+
+  // Year filter → tiles survive, stay nolabels
+  await page.locator('.year-pill').nth(1).click()
+  await page.waitForTimeout(300)
+  expect(await tileSrc()).toContain('dark_nolabels')
+
+  // Toggle lights on during filter → dark_all
+  await page.locator('button[aria-label="Turn on map lights"]').click()
+  await expect(async () => {
+    expect(await tileSrc()).toContain('dark_all')
+  }).toPass({ timeout: 10000 })
+
+  // Clear filter → tiles stay dark_all
+  await page.locator('.year-pill:has-text("All")').click()
+  await page.waitForTimeout(300)
+  expect(await tileSrc()).toContain('dark_all')
 })
 
 test('lights and fullscreen buttons are positioned at top-right of map', async ({ page }) => {

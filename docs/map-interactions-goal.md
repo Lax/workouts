@@ -30,6 +30,7 @@ if (fittedRef.current !== actKey) {
 | Interaction | User action | Store mutation | MapView prop change | Effect fired | Zoom? |
 |---|---|---|---|---|---|
 | **Theme toggle** | Click 🌙/☀️ | `colorScheme` flips | `colorScheme` | #2 only | ❌ |
+| **Lights toggle** | Click 💡 | `lightsOn` flips | `lightsOn` | #2 only | ❌ |
 | **Color mode** | Click 类型/速度 | `colorMode` changes | `colorMode` | #3, #4 | ❌ (digest same) |
 | **Year filter** | Click year pill | `selectedYear` + `filteredActivities` | `activities` ref changes | #3, #4 | ✅ (digest changes) |
 | **Month filter** | Click month | `selectedMonth` + `filteredActivities` | `activities` ref changes | #3, #4 | ✅ (digest changes) |

@@ -9,7 +9,6 @@ export interface LeafletMapOptions {
   colorScheme: 'light' | 'dark'
   tileConfig?: TileConfig
   lightsOn?: boolean
-  showLabels?: boolean
   zoomControl?: boolean
   zoomPosition?: ZoomPosition
   attributionControl?: boolean
@@ -27,14 +26,12 @@ export function useLeafletMap(elRef: React.RefObject<HTMLDivElement | null>, opt
   const prevTileKeyRef = useRef<string>('')
 
   const lightsOn = options.lightsOn ?? true
-  const showLabels = options.showLabels ?? false
 
   const tileUrl = useCallback(() => {
-    if (!lightsOn) return ''
     const tc = options.tileConfig ?? { vendor: 'carto' }
-    if (showLabels) return resolveLabeledTileUrl(tc, options.colorScheme)
+    if (lightsOn) return resolveLabeledTileUrl(tc, options.colorScheme)
     return resolveTileUrl(tc, options.colorScheme)
-  }, [options.colorScheme, options.tileConfig, lightsOn, showLabels])
+  }, [options.colorScheme, options.tileConfig, lightsOn])
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: one-time init
   useEffect(() => {
@@ -79,7 +76,7 @@ export function useLeafletMap(elRef: React.RefObject<HTMLDivElement | null>, opt
     const m = mapRef.current
     if (!m) return
     const url = tileUrl()
-    const key = `${options.colorScheme}|${url}|${String(lightsOn)}|${String(showLabels)}`
+    const key = `${options.colorScheme}|${url}|${String(lightsOn)}`
     if (prevTileKeyRef.current === key) return
     prevTileKeyRef.current = key
     if (tileLayerRef.current) {
@@ -90,7 +87,7 @@ export function useLeafletMap(elRef: React.RefObject<HTMLDivElement | null>, opt
       layer.addTo(m)
       tileLayerRef.current = layer
     }
-  }, [tileUrl, options.colorScheme, lightsOn, showLabels])
+  }, [tileUrl, options.colorScheme, lightsOn])
 
   return mapRef
 }

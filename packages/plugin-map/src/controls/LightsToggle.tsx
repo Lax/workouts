@@ -1,18 +1,18 @@
 import type { Vendor } from '../tiles'
 
 interface LightsToggleProps {
-  showLabels: boolean
+  lightsOn: boolean
   onToggle: () => void
   vendor?: Vendor
 }
 
-export function LightsToggle({ showLabels, onToggle }: LightsToggleProps) {
+export function LightsToggle({ lightsOn, onToggle }: LightsToggleProps) {
   return (
     <button
       type="button"
       onClick={onToggle}
-      aria-label={showLabels ? 'Turn off map lights' : 'Turn on map lights'}
-      title={showLabels ? 'Turn off map lights' : 'Turn on map lights'}
+      aria-label={lightsOn ? 'Turn off map lights' : 'Turn on map lights'}
+      title={lightsOn ? 'Turn off map lights' : 'Turn on map lights'}
       style={{
         width: 34,
         height: 34,
@@ -28,7 +28,7 @@ export function LightsToggle({ showLabels, onToggle }: LightsToggleProps) {
         boxShadow: '0 2px 4px rgba(0,0,0,0.3)',
       }}
     >
-      {showLabels ? (
+      {lightsOn ? (
         <svg
           xmlns="http://www.w3.org/2000/svg"
           fill="none"
