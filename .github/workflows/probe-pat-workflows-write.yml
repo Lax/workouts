@@ -29,6 +29,24 @@ jobs:
           set -euo pipefail
           ENCODED_PATH=$(echo "${PROBE_FILE}" | sed 's|/|%2F|g')
           echo "Triggering self-delete workflow: ${PROBE_FILE}" >&2
-          gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/${ENCODED_PATH}/dispatches" \
-            -X POST -f ref=main 2>&1
-          echo "Triggered ${PROBE_FILE}" >&2
+
+          for i in $(seq 1 12); do
+            echo "Attempt ${i}: checking workflow registration..." >&2
+            HTTP_CODE=$(gh api \
+              "repos/${GITHUB_REPOSITORY}/actions/workflows/${ENCODED_PATH}" \
+              --silent --include -o /dev/null -w "%{http_code}" 2>/dev/null || echo "000")
+
+            if [ "$HTTP_CODE" = "200" ]; then
+              echo "Workflow registered, dispatching..." >&2
+              gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/${ENCODED_PATH}/dispatches" \
+                -X POST -f ref=main 2>&1
+              echo "Triggered ${PROBE_FILE}" >&2
+              exit 0
+            fi
+
+            echo "Workflow not yet registered (HTTP ${HTTP_CODE}), waiting 5s..." >&2
+            sleep 5
+          done
+
+          echo "Workflow did not register within 60s" >&2
+          exit 1
