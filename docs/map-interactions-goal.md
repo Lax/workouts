@@ -7,7 +7,7 @@ MapView component (`packages/plugin-map/src/MapView.tsx`) manages 4 useEffect bl
 | # | Effect | Deps | Triggered by | Zoom change | Animation |
 |---|---|---|---|---|---|
 | 1 | Init map | `[]` | Mount | `setView(30,110,4)` first time only | Leaflet default |
-| 2 | Swap tile layer | `[tileUrl]` | Theme toggle (`colorScheme`) | ❌ No | None (instant) |
+| 2 | Swap tile layer | `[tileUrl]` | Theme toggle (`colorScheme`), Lights toggle (`lightsOn`) | ❌ No | None (instant) |
 | 3 | Draw polylines + fitBounds | `[activities, colorMode, maxLines]` | Filter/sort change, color mode toggle | ✅ Only when activity **content** changes | `fitBounds` default (0.25s) |
 | 4 | Hover style | `[hoveredActivityId, colorMode]` | Hover on map/list | ❌ No | None (instant) |
 

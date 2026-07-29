@@ -101,7 +101,7 @@ Theme-simple 当前使用 `activityColor` from `@workouts/shared`（速度/类�
 | 默认瓦片商 | MapCN (CartoCDN, 免费, 无 token) |
 | 亮色样式 | `osm-bright` |
 | 暗色样式 | `dark-matter` |
-| 隐私模式 `PRIVACY_MODE` | 当前 `true`（仅路线不显示底图） |
+| 隐私模式 `PRIVACY_MODE` | 当前 `true`（纯色背景，不加载地图瓦片） |
 | 默认灯光 `LIGHTS_ON` | `false` |
 | 路线虚线 `USE_DASH_LINE` | `true`（dasharray: [2,2]) |
 | 路线透明度 `LINE_OPACITY` | 0.4（正常）/ 1.0（选中/灯光关） |
@@ -170,7 +170,7 @@ Theme-simple 用 `tiles.ts` builder 模式（`carto()` / `mapbox(token, style?)`
 | 点击年份药丸按钮 | 筛选该年全部路线到地图 |
 | 切换明暗主题 | 地图瓦片样式动态切换（保存/恢复视口） |
 | 悬浮年份块 | 1s 延迟后浮动显示年度 SVG + GitHub 风格格子 |
-| 灯光开关 | 隐藏/显示地图瓦片底图，仅保留路线 |
+| 灯光开关 | 切换无标签底图（关灯）↔ 有标签底图（开灯） |
 | 点击地图单路线 | 触发该路线动画 |
 
 ## 关键配置常量（running_page `src/utils/const.ts`）
