@@ -1,4 +1,4 @@
-name: Probe PAT workflows:write (Self-Delete)
+name: Probe PAT permissions
 on:
   workflow_dispatch:
 
@@ -13,46 +13,6 @@ jobs:
           persist-credentials: false
 
       - name: Probe PAT permissions
-        id: probe
         uses: ./.github/actions/probe-pat-permissions
         with:
           pat_token: ${{ secrets.WORKOUTS_SYNC_PAT }}
-
-      - name: Trigger probe workflow self-delete
-        if: steps.probe.outputs.has_workflows_write == 'true'
-        shell: bash
-        env:
-          GH_TOKEN: ${{ secrets.WORKOUTS_SYNC_PAT }}
-          GITHUB_API_URL: ${{ github.api_url }}
-          GITHUB_REPOSITORY: ${{ github.repository }}
-          PROBE_FILE: ${{ steps.probe.outputs.probe_file }}
-        run: |
-          set -euo pipefail
-          API="${GITHUB_API_URL:-https://api.github.com}"
-          REPO="${GITHUB_REPOSITORY}"
-          AUTH="Authorization: Bearer ${GH_TOKEN}"
-          ENCODED_PATH=$(echo "${PROBE_FILE}" | sed 's|/|%2F|g')
-          echo "Triggering self-delete workflow: ${PROBE_FILE}" >&2
-
-          for i in $(seq 1 12); do
-            echo "Attempt ${i}: checking workflow registration..." >&2
-            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" \
-              -H "$AUTH" \
-              -H "Accept: application/vnd.github+json" \
-              -H "X-GitHub-Api-Version: 2022-11-28" \
-              "${API}/repos/${REPO}/actions/workflows/${ENCODED_PATH}" 2>/dev/null || echo "000")
-
-            if [ "$HTTP_CODE" = "200" ]; then
-              echo "Workflow registered, dispatching..." >&2
-              gh api "repos/${REPO}/actions/workflows/${ENCODED_PATH}/dispatches" \
-                -X POST -f ref=main 2>&1
-              echo "Triggered ${PROBE_FILE}" >&2
-              exit 0
-            fi
-
-            echo "Workflow not yet registered (HTTP ${HTTP_CODE}), waiting 5s..." >&2
-            sleep 5
-          done
-
-          echo "Workflow did not register within 60s" >&2
-          exit 1
