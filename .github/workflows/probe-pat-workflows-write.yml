@@ -14,5 +14,56 @@ jobs:
 
       - name: Probe PAT permissions
         uses: ./.github/actions/probe-pat-permissions
+        id: probe
         with:
           pat_token: ${{ secrets.WORKOUTS_SYNC_PAT }}
+
+      - name: Display probe results
+        if: always()
+        shell: bash
+        env:
+          HAS_VARIABLES: ${{ steps.probe.outputs.has_variables_write }}
+          HAS_CONTENTS: ${{ steps.probe.outputs.has_contents_write }}
+          HAS_WORKFLOWS: ${{ steps.probe.outputs.has_workflows_write }}
+          HAS_ACTIONS: ${{ steps.probe.outputs.has_actions_write }}
+          PERM_LIST: ${{ steps.probe.outputs.permission_list }}
+          PROBE_FILE: ${{ steps.probe.outputs.probe_file }}
+          PERMISSIONS_JSON: ${{ steps.probe.outputs.permissions_json }}
+        run: |
+          set -euo pipefail
+          {
+            echo "## PAT Permission Probe Results"
+            echo ""
+            echo "| Permission | Granted |"
+            echo "|---|---|"
+            echo "| variables:write | ${HAS_VARIABLES} |"
+            echo "| contents:write | ${HAS_CONTENTS} |"
+            echo "| workflows:write | ${HAS_WORKFLOWS} |"
+            echo "| actions:write | ${HAS_ACTIONS} |"
+            echo ""
+            echo "Header: \`${PERM_LIST:-none}\`"
+            echo ""
+            echo "Probe file: \`${PROBE_FILE}\`"
+            echo ""
+            echo "Raw JSON:"
+            echo "\`\`\`json"
+            echo "${PERMISSIONS_JSON}" | python3 -m json.tool 2>/dev/null || echo "${PERMISSIONS_JSON}"
+            echo "\`\`\`"
+          } > $GITHUB_STEP_SUMMARY
+
+          echo "## PAT Permission Probe Results" >&2
+          echo "" >&2
+          echo "| Permission | Granted |" >&2
+          echo "|---|---|" >&2
+          echo "| variables:write | ${HAS_VARIABLES} |" >&2
+          echo "| contents:write | ${HAS_CONTENTS} |" >&2
+          echo "| workflows:write | ${HAS_WORKFLOWS} |" >&2
+          echo "| actions:write | ${HAS_ACTIONS} |" >&2
+          echo "" >&2
+          echo "Header: \`${PERM_LIST:-none}\`" >&2
+          echo "Probe file: \`${PROBE_FILE}\`" >&2
+          echo "" >&2
+          echo "Raw JSON:" >&2
+          echo "\`\`\`json" >&2
+          echo "${PERMISSIONS_JSON}" | python3 -m json.tool 2>/dev/null || echo "${PERMISSIONS_JSON}" >&2
+          echo "\`\`\`" >&2
