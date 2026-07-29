@@ -1,0 +1,59 @@
+name: Delete Self
+on:
+  workflow_dispatch:
+
+jobs:
+  delete-self:
+    runs-on: ${{ vars.RUNNER_LABEL || 'ubuntu-latest' }}
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Delete this workflow file
+        shell: bash
+        env:
+          GITHUB_API_URL: ${{ github.api_url }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_TOKEN: ${{ github.token }}
+          WORKFLOW_FILE: .github/workflows/delete-self.yml
+        run: |
+          set -euo pipefail
+          API="${GITHUB_API_URL:-https://api.github.com}"
+          REPO="${GITHUB_REPOSITORY}"
+          FILE="$WORKFLOW_FILE"
+          AUTH="Authorization: Bearer ${GITHUB_TOKEN}"
+
+          echo "Fetching info for ${FILE}" >&2
+          RESP=$(curl -s -H "$AUTH" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "${API}/repos/${REPO}/contents/${FILE}")
+
+          SHA=$(echo "$RESP" | sed -n 's/.*"sha"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -1)
+
+          if [ -z "$SHA" ]; then
+            echo "Error: cannot find SHA for ${FILE}" >&2
+            echo "$RESP" >&2
+            exit 1
+          fi
+
+          echo "Deleting ${FILE} (sha=${SHA})" >&2
+          HTTP_CODE=$(curl -s -o /tmp/_del.json -w "%{http_code}" \
+            -X DELETE \
+            -H "$AUTH" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "${API}/repos/${REPO}/contents/${FILE}?sha=${SHA}")
+
+          echo "HTTP=${HTTP_CODE}" >&2
+          cat /tmp/_del.json >&2
+
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "Delete failed" >&2
+            exit 1
+          fi
+
+          echo "Deleted ${FILE}" >&2
