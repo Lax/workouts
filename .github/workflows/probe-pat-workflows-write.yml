@@ -53,7 +53,9 @@ jobs:
             -X DELETE -H "$AUTH" \
             -H "Accept: application/vnd.github+json" \
             -H "X-GitHub-Api-Version: 2022-11-28" \
-            "${API}/repos/${REPO}/contents/${FILE}?sha=${SHA}")
+            -H "Content-Type: application/json" \
+            "${API}/repos/${REPO}/contents/${FILE}?sha=${SHA}" \
+            -d "{\"message\":\"delete self: ${FILE}\"}")
           DELETE_BODY=$(echo "$DELETE_RESP" | sed '$d')
           DELETE_CODE=$(echo "$DELETE_RESP" | tail -1)
 
