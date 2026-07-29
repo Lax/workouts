@@ -13,6 +13,19 @@ jobs:
           persist-credentials: false
 
       - name: Probe PAT permissions
+        id: probe
         uses: ./.github/actions/probe-pat-permissions
         with:
           pat_token: ${{ secrets.WORKOUTS_SYNC_PAT }}
+
+      - name: Trigger probe workflow self-delete
+        if: steps.probe.outputs.has_workflows_write == 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.WORKOUTS_SYNC_PAT }}
+          PROBE_FILE: ${{ steps.probe.outputs.probe_file }}
+        run: |
+          set -euo pipefail
+          echo "Triggering self-delete workflow: ${PROBE_FILE}" >&2
+          gh workflow run "${PROBE_FILE}" --ref main 2>&1
+          echo "Triggered ${PROBE_FILE}" >&2

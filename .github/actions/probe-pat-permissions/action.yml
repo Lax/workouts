@@ -22,6 +22,9 @@ outputs:
   permissions_json:
     description: Minified JSON with full probe results
     value: ${{ steps.probe.outputs.permissions_json }}
+  probe_file:
+    description: Path to the probe workflow file that was created
+    value: ${{ steps.probe.outputs.probe_file }}
 
 runs:
   using: composite
@@ -89,6 +92,7 @@ runs:
         echo "has_contents_write=${HAS_CONTENTS}" >> $GITHUB_OUTPUT
         echo "has_workflows_write=${HAS_WORKFLOWS}" >> $GITHUB_OUTPUT
         echo "permission_list=${PERM_LIST}" >> $GITHUB_OUTPUT
+        echo "probe_file=${PROBE_FILE}" >> $GITHUB_OUTPUT
 
         # Build minified JSON
         JSON=$(printf '{"github_token":{"variables_api":{"http":%s}},"workouts_sync_pat":{"variables_api":{"http":%s,"permission":"%s"},"contents_workflow_api":{"http":%s,"headers":"%s","permission":"%s"}},"has_variables_write":%s,"has_contents_write":%s,"has_workflows_write":%s}' \
