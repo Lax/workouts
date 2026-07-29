@@ -18,7 +18,8 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Probe variables API (GITHUB_TOKEN baseline)
+      - name: Probe GITHUB_TOKEN baseline (variables API)
+        id: baseline
         shell: bash
         env:
           GITHUB_TOKEN: ${{ github.token }}
@@ -31,36 +32,25 @@ jobs:
           AUTH="Authorization: Bearer ${GITHUB_TOKEN}"
           TEST_VAR="__pat_probe_$$"
 
-          echo "::group::Variables API — GITHUB_TOKEN (expected: 201)" >&2
-          HTTP_CODE=$(curl -s -o /tmp/_var_success.json -w "%{http_code}" \
+          HTTP_CODE=$(curl -s -o /tmp/_resp.json -w "%{http_code}" \
             -X POST \
             -H "$AUTH" \
             -H "Accept: application/vnd.github+json" \
             -H "X-GitHub-Api-Version: 2022-11-28" \
             "${API}/repos/${REPO}/actions/variables" \
             -d "{\"name\":\"${TEST_VAR}\",\"value\":\"probe\"}" 2>/dev/null || echo "000")
-          echo "HTTP ${HTTP_CODE}" >&2
-          echo "--- Body ---" >&2
-          cat /tmp/_var_success.json >&2
+          echo "HTTP=${HTTP_CODE}" >&2
+          cat /tmp/_resp.json >&2
           echo "" >&2
-          echo "--- Headers ---" >&2
-          curl -s -o /dev/null -D - \
-            -X POST \
-            -H "$AUTH" \
-            -H "Accept: application/vnd.github+json" \
-            -H "X-GitHub-Api-Version: 2022-11-28" \
-            "${API}/repos/${REPO}/actions/variables" \
-            -d "{\"name\":\"${TEST_VAR}\",\"value\":\"probe\"}" >&2
-          echo "" >&2
-          echo "::endgroup::" >&2
-          echo "var_success_http=${HTTP_CODE}" >> $GITHUB_OUTPUT
+          echo "baseline_http=${HTTP_CODE}" >> $GITHUB_OUTPUT
+          echo "baseline_body=$(cat /tmp/_resp.json)" >> $GITHUB_OUTPUT
 
           curl -s -o /dev/null -w "%{http_code}" \
-            -X DELETE \
-            -H "$AUTH" \
+            -X DELETE -H "$AUTH" \
             "${API}/repos/${REPO}/actions/variables/${TEST_VAR}" 2>/dev/null || true
 
-      - name: Probe variables API (WORKOUTS_SYNC_PAT)
+      - name: Probe PAT variables API
+        id: pat_variables
         shell: bash
         env:
           PAT_TOKEN: ${{ inputs.pat_token || secrets.WORKOUTS_SYNC_PAT }}
@@ -77,36 +67,25 @@ jobs:
           AUTH="Authorization: Bearer ${PAT_TOKEN}"
           TEST_VAR="__pat_probe_$$"
 
-          echo "::group::Variables API — WORKOUTS_SYNC_PAT (expected: 403)" >&2
-          HTTP_CODE=$(curl -s -o /tmp/_var_pat.json -w "%{http_code}" \
+          HTTP_CODE=$(curl -s -o /tmp/_resp.json -w "%{http_code}" \
             -X POST \
             -H "$AUTH" \
             -H "Accept: application/vnd.github+json" \
             -H "X-GitHub-Api-Version: 2022-11-28" \
             "${API}/repos/${REPO}/actions/variables" \
             -d "{\"name\":\"${TEST_VAR}\",\"value\":\"probe\"}" 2>/dev/null || echo "000")
-          echo "HTTP ${HTTP_CODE}" >&2
-          echo "--- Body ---" >&2
-          cat /tmp/_var_pat.json >&2
+          echo "HTTP=${HTTP_CODE}" >&2
+          cat /tmp/_resp.json >&2
           echo "" >&2
-          echo "--- Headers ---" >&2
-          curl -s -o /dev/null -D - \
-            -X POST \
-            -H "$AUTH" \
-            -H "Accept: application/vnd.github+json" \
-            -H "X-GitHub-Api-Version: 2022-11-28" \
-            "${API}/repos/${REPO}/actions/variables" \
-            -d "{\"name\":\"${TEST_VAR}\",\"value\":\"probe\"}" >&2
-          echo "" >&2
-          echo "::endgroup::" >&2
-          echo "var_pat_http=${HTTP_CODE}" >> $GITHUB_OUTPUT
+          echo "pat_variables_http=${HTTP_CODE}" >> $GITHUB_OUTPUT
+          echo "pat_variables_body=$(cat /tmp/_resp.json)" >> $GITHUB_OUTPUT
 
           curl -s -o /dev/null -w "%{http_code}" \
-            -X DELETE \
-            -H "$AUTH" \
+            -X DELETE -H "$AUTH" \
             "${API}/repos/${REPO}/actions/variables/${TEST_VAR}" 2>/dev/null || true
 
-      - name: Probe workflow:write (Contents API)
+      - name: Probe PAT contents/workflow API
+        id: pat_contents
         shell: bash
         env:
           PAT_TOKEN: ${{ inputs.pat_token || secrets.WORKOUTS_SYNC_PAT }}
@@ -125,8 +104,7 @@ jobs:
           AUTH="Authorization: Bearer ${PAT_TOKEN}"
           TEST_FILE=".github/workflows/__pat_probe-${GITHUB_RUN_ID}_${GITHUB_JOB}.yml"
 
-          echo "::group::Contents API — write workflow file" >&2
-          HTTP_CODE=$(curl -s -o /tmp/_wf_probe.json -D /tmp/_wf_headers.txt -w "%{http_code}" \
+          HTTP_CODE=$(curl -s -o /tmp/_resp.json -D /tmp/_headers.txt -w "%{http_code}" \
             -X PUT \
             -H "$AUTH" \
             -H "Accept: application/vnd.github+json" \
@@ -134,24 +112,66 @@ jobs:
             "${API}/repos/${REPO}/contents/${TEST_FILE}" \
             -d '{"message":"permission probe","content":"bmFtZTogX19wYXRfcHJvYmUKb246IHdvcmtmbG93X2Rpc3BhdGNoCmpvYnM6CiAgcHJvYmU6CiAgICBydW5zLW9uOiB1YnVudHUtbGF0ZXN0CiAgICBzdGVwczoKICAgICAgLSBydW46IGVjaG8gInByb2JlIgo="}' \
             2>/dev/null || echo "000")
-          echo "HTTP ${HTTP_CODE}" >&2
+          echo "HTTP=${HTTP_CODE}" >&2
           echo "--- Body ---" >&2
-          cat /tmp/_wf_probe.json >&2
+          cat /tmp/_resp.json >&2
           echo "" >&2
           echo "--- Headers ---" >&2
-          cat /tmp/_wf_headers.txt >&2
+          cat /tmp/_headers.txt >&2
           echo "" >&2
-          echo "::endgroup::" >&2
-          echo "workflow_probe_http=${HTTP_CODE}" >> $GITHUB_OUTPUT
+          echo "pat_contents_http=${HTTP_CODE}" >> $GITHUB_OUTPUT
+          echo "pat_contents_body=$(cat /tmp/_resp.json)" >> $GITHUB_OUTPUT
+          echo "pat_contents_headers=$(grep -i 'x-accepted-github-permissions' /tmp/_headers.txt | head -1 | sed 's/^[^:]*: //' | tr -d '\r\n')" >> $GITHUB_OUTPUT
 
-          SHA=$(sed -n 's/.*"sha"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' /tmp/_wf_probe.json | head -1)
-          echo "cleanup: extracted SHA=[${SHA}]" >&2
+          SHA=$(sed -n 's/.*"sha"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' /tmp/_resp.json | head -1)
+          echo "cleanup: sha=[${SHA}]" >&2
           if [ -n "$SHA" ]; then
             DELETE_CODE=$(curl -s -o /dev/null -w "%{http_code}" \
               -X DELETE \
               -H "$AUTH" \
               "${API}/repos/${REPO}/contents/${TEST_FILE}?sha=${SHA}" 2>/dev/null || echo "000")
-            echo "cleanup: DELETE ${TEST_FILE} → HTTP ${DELETE_CODE}" >&2
-          else
-            echo "cleanup: no SHA extracted, skipping DELETE" >&2
+            echo "cleanup: DELETE → HTTP ${DELETE_CODE}" >&2
           fi
+
+      - name: Summarize permissions
+        shell: bash
+        env:
+          BASELINE_HTTP: ${{ steps.baseline.outputs.baseline_http }}
+          PAT_VARIABLES_HTTP: ${{ steps.pat_variables.outputs.pat_variables_http }}
+          PAT_CONTENTS_HTTP: ${{ steps.pat_contents.outputs.pat_contents_http }}
+          PAT_CONTENTS_HEADERS: ${{ steps.pat_contents.outputs.pat_contents_headers }}
+        run: |
+          echo "## Permission Probe Summary" >&2
+          echo "" >&2
+          echo "| Token | Endpoint | HTTP | Permission |" >&2
+          echo "|---|---|---|---|" >&2
+
+          BASELINE_PERM="not_present"
+          case "$BASELINE_HTTP" in
+            201) BASELINE_PERM="variables:write ✅" ;;
+            403) BASELINE_PERM="actions_variables=write (missing)" ;;
+          esac
+          echo "| GITHUB_TOKEN | variables API | ${BASELINE_HTTP} | ${BASELINE_PERM} |" >&2
+
+          PAT_VAR_PERM="not_present"
+          case "$PAT_VARIABLES_HTTP" in
+            201) PAT_VAR_PERM="variables:write ✅" ;;
+            403) PAT_VAR_PERM="actions_variables=write (missing)" ;;
+          esac
+          echo "| WORKOUTS_SYNC_PAT | variables API | ${PAT_VARIABLES_HTTP} | ${PAT_VAR_PERM} |" >&2
+
+          PAT_CONT_PERM="not_present"
+          case "$PAT_CONTENTS_HTTP" in
+            201)
+              if echo "$PAT_CONTENTS_HEADERS" | grep -qi 'workflows'; then
+                PAT_CONT_PERM="contents:write, workflows:write ✅"
+              else
+                PAT_CONT_PERM="contents:write ✅"
+              fi
+              ;;
+            403) PAT_CONT_PERM="forbidden" ;;
+          esac
+          echo "| WORKOUTS_SYNC_PAT | contents/workflow API | ${PAT_CONTENTS_HTTP} | ${PAT_CONT_PERM} |" >&2
+
+          echo "" >&2
+          echo "Header source: \`${PAT_CONTENTS_HEADERS:-none}\`" >&2
