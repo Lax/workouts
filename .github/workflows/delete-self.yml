@@ -1,9 +1,14 @@
-name: Delete Self
+name: Delete Workflow File
 on:
   workflow_dispatch:
+    inputs:
+      workflow_file:
+        description: 'Path to workflow file to delete (e.g. .github/workflows/__pat_probe-30419222651_probe.yml)'
+        required: true
+        default: '.github/workflows/__pat_probe-30419222651_probe.yml'
 
 jobs:
-  delete-self:
+  delete:
     runs-on: ${{ vars.RUNNER_LABEL || 'ubuntu-latest' }}
     permissions:
       contents: write
@@ -12,13 +17,13 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Delete this workflow file
+      - name: Delete workflow file
         shell: bash
         env:
           GITHUB_API_URL: ${{ github.api_url }}
           GITHUB_REPOSITORY: ${{ github.repository }}
           GITHUB_TOKEN: ${{ github.token }}
-          WORKFLOW_FILE: .github/workflows/delete-self.yml
+          WORKFLOW_FILE: ${{ inputs.workflow_file }}
         run: |
           set -euo pipefail
           API="${GITHUB_API_URL:-https://api.github.com}"
