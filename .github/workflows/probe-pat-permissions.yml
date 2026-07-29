@@ -43,7 +43,6 @@ jobs:
           cat /tmp/_resp.json >&2
           echo "" >&2
           echo "baseline_http=${HTTP_CODE}" >> $GITHUB_OUTPUT
-          echo "baseline_body=$(cat /tmp/_resp.json)" >> $GITHUB_OUTPUT
 
           curl -s -o /dev/null -w "%{http_code}" \
             -X DELETE -H "$AUTH" \
@@ -78,7 +77,6 @@ jobs:
           cat /tmp/_resp.json >&2
           echo "" >&2
           echo "pat_variables_http=${HTTP_CODE}" >> $GITHUB_OUTPUT
-          echo "pat_variables_body=$(cat /tmp/_resp.json)" >> $GITHUB_OUTPUT
 
           curl -s -o /dev/null -w "%{http_code}" \
             -X DELETE -H "$AUTH" \
@@ -120,7 +118,6 @@ jobs:
           cat /tmp/_headers.txt >&2
           echo "" >&2
           echo "pat_contents_http=${HTTP_CODE}" >> $GITHUB_OUTPUT
-          echo "pat_contents_body=$(cat /tmp/_resp.json)" >> $GITHUB_OUTPUT
           echo "pat_contents_headers=$(grep -i 'x-accepted-github-permissions' /tmp/_headers.txt | head -1 | sed 's/^[^:]*: //' | tr -d '\r\n')" >> $GITHUB_OUTPUT
 
           SHA=$(sed -n 's/.*"sha"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' /tmp/_resp.json | head -1)
