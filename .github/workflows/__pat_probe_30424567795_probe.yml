@@ -1,0 +1,6 @@
+name: Probe Self Delete
+on: workflow_dispatch
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    push;
