@@ -19,15 +19,6 @@ outputs:
   has_actions_write:
     description: Whether PAT has actions:write permission
     value: ${{ steps.aggregate.outputs.has_actions_write }}
-  permission_list:
-    description: Raw X-Accepted-GitHub-Permissions header value
-    value: ${{ steps.aggregate.outputs.permission_list }}
-  permissions_json:
-    description: Minified JSON with full probe results
-    value: ${{ steps.aggregate.outputs.permissions_json }}
-  probe_file:
-    description: Path to the probe workflow file that was created
-    value: ${{ steps.create.outputs.probe_file }}
 
 runs:
   using: composite
@@ -66,7 +57,6 @@ runs:
         [ "$VAR_HTTP" = "201" ] && HAS_VARIABLES="true"
 
         echo "has_variables_write=${HAS_VARIABLES}" >> $GITHUB_OUTPUT
-        echo "var_http=${VAR_HTTP}" >> $GITHUB_OUTPUT
 
     - name: Create probe workflow
       id: create
@@ -114,9 +104,7 @@ runs:
 
         echo "has_contents_write=${HAS_CONTENTS}" >> $GITHUB_OUTPUT
         echo "has_workflows_write=${HAS_WORKFLOWS}" >> $GITHUB_OUTPUT
-        echo "permission_list=${PERM_LIST}" >> $GITHUB_OUTPUT
         echo "probe_file=${PROBE_FILE}" >> $GITHUB_OUTPUT
-        echo "cont_http=${CONT_HTTP}" >> $GITHUB_OUTPUT
 
     - name: Execute probe workflow
       id: dispatch
@@ -150,7 +138,6 @@ runs:
               -H "X-GitHub-Api-Version: 2022-11-28" \
               "${API}/repos/${REPO}/actions/workflows/${ENCODED_PATH}/dispatches" \
               -d "{\"ref\":\"main\"}" 2>/dev/null || echo "000")
-            echo "Dispatch HTTP: ${DISPATCH_CODE}" >&2
             echo "has_actions_write=${DISPATCH_CODE}" >> $GITHUB_OUTPUT
             exit 0
           fi
@@ -171,11 +158,6 @@ runs:
         HAS_CONTENTS: ${{ steps.create.outputs.has_contents_write }}
         HAS_WORKFLOWS: ${{ steps.create.outputs.has_workflows_write }}
         HAS_ACTIONS: ${{ steps.dispatch.outputs.has_actions_write }}
-        PERM_LIST: ${{ steps.create.outputs.permission_list }}
-        PROBE_FILE: ${{ steps.create.outputs.probe_file }}
-        VAR_HTTP: ${{ steps.variables.outputs.var_http }}
-        CONT_HTTP: ${{ steps.create.outputs.cont_http }}
-        DISPATCH_CODE: ${{ steps.dispatch.outputs.has_actions_write }}
       run: |
         set -euo pipefail
 
@@ -183,26 +165,3 @@ runs:
         echo "has_contents_write=${HAS_CONTENTS}" >> $GITHUB_OUTPUT
         echo "has_workflows_write=${HAS_WORKFLOWS}" >> $GITHUB_OUTPUT
         echo "has_actions_write=${HAS_ACTIONS}" >> $GITHUB_OUTPUT
-        echo "permission_list=${PERM_LIST}" >> $GITHUB_OUTPUT
-
-        JSON=$(printf '{"github_token":{"variables_api":{"http":"N/A"}},"workouts_sync_pat":{"variables_api":{"http":"%s","permission":"%s"},"contents_workflow_api":{"http":"%s","headers":"%s","permission":"%s"},"actions_api":{"http":"%s","permission":"%s"}},"has_variables_write":%s,"has_contents_write":%s,"has_workflows_write":%s,"has_actions_write":%s}' \
-          "$VAR_HTTP" "$HAS_VARIABLES" \
-          "$CONT_HTTP" "$PERM_LIST" "$HAS_WORKFLOWS" \
-          "$DISPATCH_CODE" "$HAS_ACTIONS" \
-          "$HAS_VARIABLES" "$HAS_CONTENTS" "$HAS_WORKFLOWS" "$HAS_ACTIONS")
-        echo "permissions_json=${JSON}" >> $GITHUB_OUTPUT
-
-        {
-          echo "## Permission Probe Summary"
-          echo ""
-          echo "| Token | Endpoint | HTTP | Permission |"
-          echo "|---|---|---|---|"
-          echo "| GITHUB_TOKEN | variables API | N/A | baseline |"
-          echo "| WORKOUTS_SYNC_PAT | variables API | ${VAR_HTTP} | ${HAS_VARIABLES} |"
-          echo "| WORKOUTS_SYNC_PAT | contents/workflow API | ${CONT_HTTP} | contents=${HAS_CONTENTS}, workflows=${HAS_WORKFLOWS} |"
-          echo "| WORKOUTS_SYNC_PAT | actions dispatch API | ${DISPATCH_CODE} | actions=${HAS_ACTIONS} |"
-          echo ""
-          echo "Header: \`${PERM_LIST:-none}\`"
-          echo ""
-          echo "Probe file: \`${PROBE_FILE}\`"
-        } > $GITHUB_STEP_SUMMARY
