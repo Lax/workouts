@@ -1,0 +1,23 @@
+name: Migrate Strava Cache (rename .json → .api.json)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Checkout archive branch
+        run: |
+          git fetch origin _/_/strava
+          git checkout _/_/strava
+
+      - name: Save migrated files to cache
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            data/raw/strava/
+            data/std/strava/
+          key: raw-std-v1-strava-${{ github.run_id }}-migrate
