@@ -99,7 +99,6 @@ jobs:
       # ── Data restore (conditional on commit mode) ──
       - uses: ./.github/actions/data-store/restore
         with:
-          shall-commit-db: ${{ steps.mode.outputs.shall_commit_db }}
           shall-commit-data: ${{ steps.mode.outputs.shall_commit_data }}
 
       - name: Sync activities
