@@ -4,6 +4,11 @@ on:
   schedule:
     - cron: '0 6 * * 0'
   workflow_dispatch:
+    inputs:
+      source:
+        description: 'Single source to archive (empty = all)'
+        required: false
+        type: string
 
 jobs:
   archive:
@@ -13,7 +18,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        source: [keep, igpsport, xoss, xingzhe, garmin, garmin_cn, strava]
+        source: ${{ fromJson(inputs.source != '' && format('["{0}"]', inputs.source) || '["keep","igpsport","xoss","xingzhe","garmin","garmin_cn","strava"]') }}
     runs-on: ${{ vars.RUNNER_LABEL || 'ubuntu-latest' }}
     permissions:
       contents: write

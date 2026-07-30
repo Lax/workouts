@@ -1,6 +1,6 @@
 GIT
   remote: https://github.com/Lax/git-fit.git
-  revision: fcecaf6e830030343389e70ed460eab040ddfc7a
+  revision: b4cc9818214ed88fbef210df26c791c75d65b367
   glob: ruby/*.gemspec
   specs:
     git-fit (0.9.0)
