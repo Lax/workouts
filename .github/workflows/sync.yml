@@ -128,6 +128,13 @@ jobs:
           SYNC__STRAVA__WEB_AUTH__AUTH_SEED: ${{ secrets.SYNC_STRAVA_WEB_AUTH_SEED }}
         run: bundle exec workouts strava fetch --db data/workouts.db --limit 10
 
+      - name: Regenerate data checksums
+        shell: bash
+        run: |
+          for src in keep igpsport xoss xingzhe garmin garmin_cn strava; do
+            bash scripts/generate-checksums.sh "data/raw/$src" "data/std/$src"
+          done
+
       - name: Parse Geo Regions
         uses: ./.github/actions/parse-geo-regions
         with:

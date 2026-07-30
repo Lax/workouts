@@ -23,8 +23,14 @@ runs:
           changed=false
           for dir in "data/raw/$src" "data/std/$src"; do
             if [ -d "$dir" ]; then
-              if [ ! -f "$dir/SHA256SUMS" ] || ! (cd "$dir" && sha256sum -c SHA256SUMS --quiet >/dev/null 2>&1); then
+              if [ ! -f "$dir/SHA256SUMS" ]; then
                 changed=true
+              else
+                current_hash=$(sha256sum "$dir/SHA256SUMS" | cut -d' ' -f1)
+                saved_hash=$(grep " $dir$" "$RUNNER_TEMP/data-store-orig-checksums" 2>/dev/null | cut -d' ' -f1 || echo "")
+                if [ "$current_hash" != "$saved_hash" ]; then
+                  changed=true
+                fi
               fi
             fi
           done

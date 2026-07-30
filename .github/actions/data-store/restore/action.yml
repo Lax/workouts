@@ -21,3 +21,17 @@ runs:
         for src in keep igpsport xoss xingzhe garmin garmin_cn strava; do
           bash scripts/generate-checksums.sh "data/raw/$src" "data/std/$src"
         done
+
+    - name: Save original data checksums
+      shell: bash
+      run: |
+        mkdir -p "$RUNNER_TEMP"
+        echo "# data-store original checksums" > "$RUNNER_TEMP/data-store-orig-checksums"
+        for src in keep igpsport xoss xingzhe garmin garmin_cn strava; do
+          for dir in "data/raw/$src" "data/std/$src"; do
+            if [ -f "$dir/SHA256SUMS" ]; then
+              hash=$(sha256sum "$dir/SHA256SUMS" | cut -d' ' -f1)
+              echo "$hash $dir" >> "$RUNNER_TEMP/data-store-orig-checksums"
+            fi
+          done
+        done
