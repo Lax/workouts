@@ -64,9 +64,9 @@ module Workouts
         dlat = deg_to_rad(p2[0] - p1[0])
         dlon = deg_to_rad(p2[1] - p1[1])
 
-        a = Math.sin(dlat / 2) ** 2 +
-            Math.cos(lat1) * Math.cos(lat2) *
-            Math.sin(dlon / 2) ** 2
+        a = Math.sin(dlat / 2)**2 +
+          Math.cos(lat1) * Math.cos(lat2) *
+            Math.sin(dlon / 2)**2
         c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
         6371.0 * c
       end
@@ -93,7 +93,7 @@ module Workouts
             shift += 5
           end while byte >= 0x20
 
-          dlat = (result & 1) != 0 ? ~(result >> 1) : (result >> 1)
+          dlat = ((result & 1) != 0) ? ~(result >> 1) : (result >> 1)
           lat += dlat
 
           shift = 0
@@ -105,7 +105,7 @@ module Workouts
             shift += 5
           end while byte >= 0x20
 
-          dlng = (result & 1) != 0 ? ~(result >> 1) : (result >> 1)
+          dlng = ((result & 1) != 0) ? ~(result >> 1) : (result >> 1)
           lng += dlng
 
           points << [lat * 1e-5, lng * 1e-5]
@@ -134,7 +134,7 @@ module Workouts
       end
 
       def encode_number(num)
-        num = num < 0 ? ~(num << 1) : (num << 1)
+        num = (num < 0) ? ~(num << 1) : (num << 1)
         result = ""
 
         while num >= 0x20

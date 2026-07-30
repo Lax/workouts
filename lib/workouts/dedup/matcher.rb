@@ -3,10 +3,10 @@ require "time"
 module Workouts
   module Dedup
     class Matcher
-      WEIGHTS = { time: 0.35, distance: 0.35, duration: 0.15, category: 0.15 }.freeze
+      WEIGHTS = {time: 0.35, distance: 0.35, duration: 0.15, category: 0.15}.freeze
       TRAJECTORY_WEIGHTS = {
         dtw_similarity: 0.30,
-        overlap_score:  0.25,
+        overlap_score: 0.25,
         hausdorff_score: 0.25,
         distance_match: 0.20
       }.freeze
@@ -25,7 +25,7 @@ module Workouts
         b_normalized = b_eid.sub(%r{^strava://activities/}, "")
 
         if a_normalized == b_normalized
-          { confidence: 1.0, flag: "derived", source: "external_id" }
+          {confidence: 1.0, flag: "derived", source: "external_id"}
         end
       end
 
@@ -42,12 +42,12 @@ module Workouts
         return 0.0 unless d_score
 
         dur_score = duration_score(effective_duration(a), effective_duration(b))
-        cat_score = a[:sport_category] == b[:sport_category] ? 1.0 : -0.67
+        cat_score = (a[:sport_category] == b[:sport_category]) ? 1.0 : -0.67
 
         result = t_score * WEIGHTS[:time] +
-                 d_score * WEIGHTS[:distance] +
-                 dur_score * WEIGHTS[:duration] +
-                 cat_score * WEIGHTS[:category]
+          d_score * WEIGHTS[:distance] +
+          dur_score * WEIGHTS[:duration] +
+          cat_score * WEIGHTS[:category]
         result.round(4)
       end
 

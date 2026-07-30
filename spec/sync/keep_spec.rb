@@ -102,9 +102,9 @@ RSpec.describe Workouts::Sync::Keep do
   describe "#find_nearest_hr" do
     let(:hr_data) do
       [
-        { "timestamp" => 100, "beatsPerMinute" => 140 },
-        { "timestamp" => 200, "beatsPerMinute" => 150 },
-        { "timestamp" => 300, "beatsPerMinute" => 160 }
+        {"timestamp" => 100, "beatsPerMinute" => 140},
+        {"timestamp" => 200, "beatsPerMinute" => 150},
+        {"timestamp" => 300, "beatsPerMinute" => 160}
       ]
     end
     let(:start_time) { 0 }
@@ -127,14 +127,14 @@ RSpec.describe Workouts::Sync::Keep do
 
     it "uses large timestamp normalization" do
       hr_data_large = [
-        { "timestamp" => 1_700_000_000, "beatsPerMinute" => 140 }
+        {"timestamp" => 1_700_000_000, "beatsPerMinute" => 140}
       ]
       result = keep.send(:find_nearest_hr, hr_data_large, 1_700_000_100, start_time)
       expect(result).to eq(140)
     end
 
     it "returns nil when HR has non-positive value" do
-      bad_hr = [{ "timestamp" => 100, "beatsPerMinute" => -1 }]
+      bad_hr = [{"timestamp" => 100, "beatsPerMinute" => -1}]
       expect(keep.send(:find_nearest_hr, bad_hr, 100, start_time)).to be_nil
     end
   end
@@ -167,11 +167,11 @@ RSpec.describe Workouts::Sync::Keep do
 
   describe "#build_activity_from_wgs" do
     let(:run_data) do
-      { "id" => "test_123_rn", "startTime" => 1_718_208_000_000,
-        "endTime" => 1_718_208_000_000 + 3600_000,
-        "duration" => 3540, "dataType" => "outdoorRunning",
-        "distance" => 5000, "elevation" => 50,
-        "region" => "Shanghai" }
+      {"id" => "test_123_rn", "startTime" => 1_718_208_000_000,
+       "endTime" => 1_718_208_000_000 + 3600_000,
+       "duration" => 3540, "dataType" => "outdoorRunning",
+       "distance" => 5000, "elevation" => 50,
+       "region" => "Shanghai"}
     end
 
     it "produces start_date_local with timezone offset when GPS available" do

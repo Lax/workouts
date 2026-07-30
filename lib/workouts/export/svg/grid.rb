@@ -14,8 +14,8 @@ module Workouts
 
           cell = sizes[0]
           count_x, count_y = counts
-          spacing_x = count_x <= 1 ? 0 : (size[0] - cell * count_x) / (count_x - 1)
-          spacing_y = count_y <= 1 ? 0 : (size[1] - cell * count_y) / (count_y - 1)
+          spacing_x = (count_x <= 1) ? 0 : (size[0] - cell * count_x) / (count_x - 1)
+          spacing_y = (count_y <= 1) ? 0 : (size[1] - cell * count_y) / (count_y - 1)
 
           off_x = offset[0] + (size[0] - count_x * cell - (count_x - 1) * spacing_x) / 2
           off_y = offset[1] + (size[1] - count_y * cell - (count_y - 1) * spacing_y) / 2
@@ -46,14 +46,14 @@ module Workouts
           sd1 = poster.special_distance[:special_distance]
           sd2 = poster.special_distance[:special_distance2]
           color = if dist_km >= sd2
-                    poster.colors[:special2] || poster.colors[:special]
-                  elsif sd1 < dist_km && dist_km < sd2
-                    poster.colors[:special]
-                  else
-                    poster.colors[:track]
-                  end
+            poster.colors[:special2] || poster.colors[:special]
+          elsif sd1 < dist_km && dist_km < sd2
+            poster.colors[:special]
+          else
+            poster.colors[:track]
+          end
 
-          title = "#{tr.date} #{format('%.1f', dist_km)}#{poster.u}"
+          title = "#{tr.date} #{format("%.1f", dist_km)}#{poster.u}"
           is_indoor = tr.subtype == "indoor"
 
           line_group = polylines.flat_map { |polyline| project(polyline, cell_size, offset, bbox) }

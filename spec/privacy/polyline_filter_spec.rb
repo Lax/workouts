@@ -17,7 +17,7 @@ RSpec.describe Workouts::Privacy::PolylineFilter do
   let(:polyline) { Workouts::Geo::Polyline.encode(points) }
 
   it "removes start and end points within range" do
-    filter = described_class.new(config: { "start_end_range" => 50 })
+    filter = described_class.new(config: {"start_end_range" => 50})
     result = filter.filter(polyline)
     expect(result).not_to be_nil
 
@@ -36,7 +36,7 @@ RSpec.describe Workouts::Privacy::PolylineFilter do
   end
 
   it "does not filter when range is 0" do
-    filter = described_class.new(config: { "start_end_range" => 0 })
+    filter = described_class.new(config: {"start_end_range" => 0})
     expect(filter.filter(polyline)).to eq(polyline)
   end
 
@@ -58,7 +58,7 @@ RSpec.describe Workouts::Privacy::PolylineFilter do
     filter_normal = described_class.new
     expect(filter_normal.before_saving?).to be false
 
-    filter_before = described_class.new(config: { "before_saving" => true })
+    filter_before = described_class.new(config: {"before_saving" => true})
     expect(filter_before.before_saving?).to be true
   end
 end

@@ -34,11 +34,11 @@ module Workouts
             yl_style = "font-size:#{110 * 3.0 / 80.0}px; font-family:#{font_family};"
             mn_style = "font-size:2.5px; font-family:#{font_family}"
 
-            lines << tag("text", { x: offset[0], y: cur_offset_y, fill: poster.colors[:text], "dominant-baseline" => "hanging", style: year_style }, year.to_s)
-            lines << tag("text", { x: offset[0] + 165, y: cur_offset_y + 5, fill: poster.colors[:text], "dominant-baseline" => "hanging", style: yl_style }, "#{format("%.1f", poster.m2u(year_len))} #{poster.u}")
+            lines << tag("text", {:x => offset[0], :y => cur_offset_y, :fill => poster.colors[:text], "dominant-baseline" => "hanging", :style => year_style}, year.to_s)
+            lines << tag("text", {:x => offset[0] + 165, :y => cur_offset_y + 5, :fill => poster.colors[:text], "dominant-baseline" => "hanging", :style => yl_style}, "#{format("%.1f", poster.m2u(year_len))} #{poster.u}")
 
             month_names.each_with_index do |name, i|
-              lines << tag("text", { x: offset[0] + 15.5 * i, y: cur_offset_y + 14, fill: poster.colors[:text], style: mn_style }, name)
+              lines << tag("text", {x: offset[0] + 15.5 * i, y: cur_offset_y + 14, fill: poster.colors[:text], style: mn_style}, name)
             end
 
             rect_x = offset[0] + 10.0
@@ -65,7 +65,7 @@ module Workouts
                   base_color = poster.color_by_category[dom_cat] || poster.colors[:track]
                   cat_max = poster.per_category_max[dom_cat] || dom_len
                   if cat_max > 0
-                    intensity = (dom_len / cat_max.to_f) ** 0.3
+                    intensity = (dom_len / cat_max.to_f)**0.3
                     intensity = [[intensity, 0.0].max, 1.0].min
                   else
                     intensity = 0
@@ -79,11 +79,11 @@ module Workouts
                   title = date_key
                 end
 
-                rect = tag("rect", { x: rect_x, y: rect_y, width: dom[0], height: dom[1], fill: color })
-                if css_class
-                  lines << %(<g class="#{css_class}"><title>#{escape(title)}</title>#{rect}</g>)
+                rect = tag("rect", {x: rect_x, y: rect_y, width: dom[0], height: dom[1], fill: color})
+                lines << if css_class
+                  %(<g class="#{css_class}"><title>#{escape(title)}</title>#{rect}</g>)
                 else
-                  lines << %(<g><title>#{escape(title)}</title>#{rect}</g>)
+                  %(<g><title>#{escape(title)}</title>#{rect}</g>)
                 end
                 github_day += 1
               end
@@ -185,7 +185,7 @@ module Workouts
 
         def source_short(track)
           run_id = track.instance_variable_get(:@run_id).to_s
-          run_id.sub(/_\d+\z/, "").sub(/_/, "")
+          run_id.sub(/_\d+\z/, "").sub("_", "")
         end
 
         def format_dist(meters)
@@ -196,7 +196,7 @@ module Workouts
           return "" unless seconds && seconds > 0
           mins = (seconds / 60).to_i
           if mins >= 60
-            "#{mins / 60}h #{format('%02d', mins % 60)}min"
+            "#{mins / 60}h #{format("%02d", mins % 60)}min"
           else
             "#{mins}min"
           end

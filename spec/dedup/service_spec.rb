@@ -10,37 +10,37 @@ RSpec.describe Workouts::Dedup::Service do
   end
 
   describe "#classify_flag" do
-    let(:a) { { run_id: "garmin_1" } }
-    let(:b) { { run_id: "strava_2" } }
+    let(:a) { {run_id: "garmin_1"} }
+    let(:b) { {run_id: "strava_2"} }
 
     it "returns derived for score >= 0.85" do
       expect(service.send(:classify_flag, a, b, 0.85)).to eq("derived")
     end
 
     it "returns duplicate for equivalent containment" do
-      allow(trajectory).to receive(:points).with("garmin_1").and_return([{ "latitude" => 39.0, "longitude" => 116.0 }] * 5)
-      allow(trajectory).to receive(:points).with("strava_2").and_return([{ "latitude" => 39.0, "longitude" => 116.0 }] * 5)
+      allow(trajectory).to receive(:points).with("garmin_1").and_return([{"latitude" => 39.0, "longitude" => 116.0}] * 5)
+      allow(trajectory).to receive(:points).with("strava_2").and_return([{"latitude" => 39.0, "longitude" => 116.0}] * 5)
       allow(trajectory).to receive(:containment_relation).and_return(:equivalent)
       expect(service.send(:classify_flag, a, b, 0.5)).to eq("duplicate")
     end
 
     it "returns contained for contained_a containment" do
-      allow(trajectory).to receive(:points).with("garmin_1").and_return([{ "latitude" => 39.0, "longitude" => 116.0 }] * 5)
-      allow(trajectory).to receive(:points).with("strava_2").and_return([{ "latitude" => 39.0, "longitude" => 116.0 }] * 5)
+      allow(trajectory).to receive(:points).with("garmin_1").and_return([{"latitude" => 39.0, "longitude" => 116.0}] * 5)
+      allow(trajectory).to receive(:points).with("strava_2").and_return([{"latitude" => 39.0, "longitude" => 116.0}] * 5)
       allow(trajectory).to receive(:containment_relation).and_return(:contained_a)
       expect(service.send(:classify_flag, a, b, 0.5)).to eq("contained")
     end
 
     it "returns partial for partial containment" do
-      allow(trajectory).to receive(:points).with("garmin_1").and_return([{ "latitude" => 39.0, "longitude" => 116.0 }] * 5)
-      allow(trajectory).to receive(:points).with("strava_2").and_return([{ "latitude" => 39.0, "longitude" => 116.0 }] * 5)
+      allow(trajectory).to receive(:points).with("garmin_1").and_return([{"latitude" => 39.0, "longitude" => 116.0}] * 5)
+      allow(trajectory).to receive(:points).with("strava_2").and_return([{"latitude" => 39.0, "longitude" => 116.0}] * 5)
       allow(trajectory).to receive(:containment_relation).and_return(:partial)
       expect(service.send(:classify_flag, a, b, 0.5)).to eq("partial")
     end
 
     it "returns cross for cross containment" do
-      allow(trajectory).to receive(:points).with("garmin_1").and_return([{ "latitude" => 39.0, "longitude" => 116.0 }] * 5)
-      allow(trajectory).to receive(:points).with("strava_2").and_return([{ "latitude" => 39.0, "longitude" => 116.0 }] * 5)
+      allow(trajectory).to receive(:points).with("garmin_1").and_return([{"latitude" => 39.0, "longitude" => 116.0}] * 5)
+      allow(trajectory).to receive(:points).with("strava_2").and_return([{"latitude" => 39.0, "longitude" => 116.0}] * 5)
       allow(trajectory).to receive(:containment_relation).and_return(:cross)
       expect(service.send(:classify_flag, a, b, 0.5)).to eq("cross")
     end
@@ -52,8 +52,8 @@ RSpec.describe Workouts::Dedup::Service do
     end
 
     it "returns similar when points have < 2 points" do
-      allow(trajectory).to receive(:points).with("garmin_1").and_return([{ "latitude" => 39.0, "longitude" => 116.0 }])
-      allow(trajectory).to receive(:points).with("strava_2").and_return([{ "latitude" => 39.0, "longitude" => 116.0 }])
+      allow(trajectory).to receive(:points).with("garmin_1").and_return([{"latitude" => 39.0, "longitude" => 116.0}])
+      allow(trajectory).to receive(:points).with("strava_2").and_return([{"latitude" => 39.0, "longitude" => 116.0}])
       expect(service.send(:classify_flag, a, b, 0.5)).to eq("similar")
     end
 
@@ -80,19 +80,19 @@ RSpec.describe Workouts::Dedup::Service do
       let(:activities) do
         base = Time.now.utc
         [
-          { run_id: "garmin_1", source: "garmin", start_date: base.iso8601,
-            distance: 5000, elapsed_time: 1800, moving_time: 1700,
-            sport_category: "run", sport_type: "road_running" },
-          { run_id: "strava_2", source: "strava", start_date: (base + 60).iso8601,
-            distance: 5100, elapsed_time: 1750, moving_time: 1680,
-            sport_category: "run", sport_type: "run" }
+          {run_id: "garmin_1", source: "garmin", start_date: base.iso8601,
+           distance: 5000, elapsed_time: 1800, moving_time: 1700,
+           sport_category: "run", sport_type: "road_running"},
+          {run_id: "strava_2", source: "strava", start_date: (base + 60).iso8601,
+           distance: 5100, elapsed_time: 1750, moving_time: 1680,
+           sport_category: "run", sport_type: "run"}
         ]
       end
 
       it "writes dedup_groups when matches found" do
         allow(trajectory).to receive(:points).and_return(
-          [{ "latitude" => 39.0, "longitude" => 116.0 }] * 5,
-          [{ "latitude" => 39.0, "longitude" => 116.0 }] * 5
+          [{"latitude" => 39.0, "longitude" => 116.0}] * 5,
+          [{"latitude" => 39.0, "longitude" => 116.0}] * 5
         )
         allow(trajectory).to receive(:containment_relation).and_return(:equivalent)
 

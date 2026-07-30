@@ -16,8 +16,8 @@ module Workouts
 
       SUPPORTED_EXTENSIONS = %w[.gpx .fit .tcx].freeze
 
-      NS_GPX = { gpx: "http://www.topografix.com/GPX/1/1" }.freeze
-      NS_TCX = { tcx: "http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2" }.freeze
+      NS_GPX = {gpx: "http://www.topografix.com/GPX/1/1"}.freeze
+      NS_TCX = {tcx: "http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2"}.freeze
 
       def initialize(config:, db:, activity_filter: nil, privacy: nil, time_budget: nil, sources: nil, sport_override: nil)
         super(config:, db:, activity_filter:, privacy:, time_budget:)
@@ -35,7 +35,7 @@ module Workouts
           next unless dir && File.directory?(dir)
 
           files = Dir.glob(File.join(dir, "*"), File::FNM_CASEFOLD)
-                     .select { |f| SUPPORTED_EXTENSIONS.include?(File.extname(f).downcase) && File.file?(f) }
+            .select { |f| SUPPORTED_EXTENSIONS.include?(File.extname(f).downcase) && File.file?(f) }
 
           total_imported += process_files(files, source)
         end
@@ -117,7 +117,7 @@ module Workouts
             std_source_dir = std_dir_for(source)
             FileUtils.mkdir_p(std_source_dir)
             std_data = l2_points.map { |pt|
-              h = { latitude: pt[0], longitude: pt[1] }
+              h = {latitude: pt[0], longitude: pt[1]}
               h[:altitude] = pt[2] if pt[2]
               h[:timestamp] = pt[3]&.iso8601 if pt[3]
               h[:heart_rate] = pt[4] if pt[4]
@@ -143,9 +143,9 @@ module Workouts
           imported += 1
         end
 
-        { activity_count: imported }
+        {activity_count: imported}
       rescue => e
-        $stderr.puts "LocalFile: error importing #{file_path}: #{e.message}"
+        warn "LocalFile: error importing #{file_path}: #{e.message}"
         nil
       end
 
@@ -170,8 +170,6 @@ module Workouts
           extract_tcx_points(content)
         when ".fit"
           extract_fit_points(file_path)
-        else
-          nil
         end
       end
 
@@ -189,7 +187,7 @@ module Workouts
           [lat, lon, ele, time, hr]
         end
       rescue => e
-        $stderr.puts "LocalFile: GPX parse error: #{e.message}"
+        warn "LocalFile: GPX parse error: #{e.message}"
         nil
       end
 
@@ -208,7 +206,7 @@ module Workouts
           [lat, lon, ele, time, hr]
         end
       rescue => e
-        $stderr.puts "LocalFile: TCX parse error: #{e.message}"
+        warn "LocalFile: TCX parse error: #{e.message}"
         nil
       end
 
@@ -219,11 +217,15 @@ module Workouts
           lon = r["positionLong"]
           next unless lat && lon
           ts = r["timestamp"]
-          time = ts.is_a?(Numeric) ? (Time.utc(1989, 12, 31) + ts) : (Time.parse(ts.to_s) rescue nil)
+          time = ts.is_a?(Numeric) ? (Time.utc(1989, 12, 31) + ts) : begin
+            Time.parse(ts.to_s)
+          rescue
+            nil
+          end
           [lat, lon, r["altitude"], time, r["heartRate"]]
         end
       rescue => e
-        $stderr.puts "LocalFile: FIT decode error: #{e.message}"
+        warn "LocalFile: FIT decode error: #{e.message}"
         nil
       end
 

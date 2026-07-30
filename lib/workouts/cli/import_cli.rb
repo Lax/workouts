@@ -8,14 +8,14 @@ module Workouts
 
     desc "import", "Import workout data from local files (apple_health, gpx, fit, tcx)"
     option :source, type: :string, aliases: "-s",
-           desc: "Import source(s) (apple_health, gpx, fit, tcx) — comma-separated"
+      desc: "Import source(s) (apple_health, gpx, fit, tcx) — comma-separated"
     option :activity, type: :array, desc: "Filter by sport type", aliases: "--act"
     option :sport, type: :string, desc: "Override sport_category for GPX files"
     def import
       sources = (options[:source] || "apple_health").split(",").map(&:strip).map(&:downcase)
       unknown = sources.reject { |s| s == "apple_health" || FILE_SOURCES.include?(s) }
       unless unknown.empty?
-        say_status :error, "Unknown import source(s): #{unknown.join(', ')}. Supported: apple_health, gpx, fit, tcx", :red
+        say_status :error, "Unknown import source(s): #{unknown.join(", ")}. Supported: apple_health, gpx, fit, tcx", :red
         return
       end
 
@@ -124,7 +124,7 @@ module Workouts
       end
 
       def run_local_files(db, filter, time_budget, sources, sport_override)
-        say_status :import, "local files (#{sources.join(', ')})", :green
+        say_status :import, "local files (#{sources.join(", ")})", :green
         adapter = Workouts::Import::LocalFile.new(
           config: {}, db:, activity_filter: filter,
           time_budget: time_budget,

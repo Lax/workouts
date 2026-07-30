@@ -73,7 +73,7 @@ module Workouts
         cur[0] = i
         (1..m).each do |j|
           tmp = cur[j]
-          cost = a[i - 1] == b[j - 1] ? 0 : 1
+          cost = (a[i - 1] == b[j - 1]) ? 0 : 1
           cur[j] = [cur[j] + 1, cur[j - 1] + 1, prev + cost].min
           prev = tmp
         end

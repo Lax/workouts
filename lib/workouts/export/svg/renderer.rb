@@ -5,13 +5,13 @@ module Workouts
     module SVG
       class Renderer
         def initialize(db:, style:, output:, year: nil, title: nil, athlete: nil,
-                       theme: nil,
-                       bg_color: nil, track_color: nil,
-                       special_color: nil, text_color: nil,
-                       special_distance: 10, special_distance2: 20,
-                       min_distance: 0, activity_filter: nil,
-                       birth: nil, summary_year: nil, github_style: "align-firstday",
-                       color_run: nil, color_ride: nil, color_walk: nil)
+          theme: nil,
+          bg_color: nil, track_color: nil,
+          special_color: nil, text_color: nil,
+          special_distance: 10, special_distance2: 20,
+          min_distance: 0, activity_filter: nil,
+          birth: nil, summary_year: nil, github_style: "align-firstday",
+          color_run: nil, color_ride: nil, color_walk: nil)
           @theme = theme || BuiltinThemes.load(nil, config: nil)
           @db = db
           @style = style
@@ -28,9 +28,9 @@ module Workouts
             text: text_color || @theme.svg[:text],
             font: @theme.svg[:font],
             empty_cell: @theme.svg[:empty_cell],
-            dim_past: @theme.svg[:dim_past],
+            dim_past: @theme.svg[:dim_past]
           }
-          @special_distance = { special_distance: special_distance, special_distance2: special_distance2 }
+          @special_distance = {special_distance: special_distance, special_distance2: special_distance2}
           @min_distance = min_distance
           @activity_filter = activity_filter
           @birth = birth
@@ -111,7 +111,6 @@ module Workouts
             drawer = YearSummaryDrawer.new(poster)
             drawer.year = @summary_year || Time.now.year
             drawer
-          else nil
           end
         end
 
@@ -120,7 +119,7 @@ module Workouts
           poster.tracks = tracks
           poster.drawer_type = drawer_type_for_style
           poster.width = 200
-          poster.height = @style == "github" ? 55 + tracks.map(&:year).uniq.size * 43 : 300
+          poster.height = (@style == "github") ? 55 + tracks.map(&:year).uniq.size * 43 : 300
           render_svg(poster, drawer, @output)
         end
 
@@ -166,7 +165,7 @@ module Workouts
           lines = []
           lines << %(<?xml version="1.0" encoding="UTF-8"?>)
           lines << %(<svg xmlns="http://www.w3.org/2000/svg" width="#{poster.width}mm" height="#{poster.height}mm" viewBox="0 0 #{poster.width} #{poster.height}">)
-          lines << tag("rect", { x: 0, y: 0, width: poster.width, height: poster.height, fill: poster.colors[:background] })
+          lines << tag("rect", {x: 0, y: 0, width: poster.width, height: poster.height, fill: poster.colors[:background]})
 
           if poster.drawer_type != "plain"
             lines << draw_header(poster)
@@ -183,7 +182,7 @@ module Workouts
         def draw_header(poster)
           font_family = @theme.svg[:font]
           style = "font-size:12px; font-family:#{font_family}; font-weight:bold;"
-          tag("text", { x: 10, y: 20, fill: poster.colors[:text], style: style }, poster.title)
+          tag("text", {x: 10, y: 20, fill: poster.colors[:text], style: style}, poster.title)
         end
 
         def draw_footer(poster)
@@ -194,19 +193,19 @@ module Workouts
           val = "font-size:9px; font-family:#{font_family}"
           sm = "font-size:3px; font-family:#{font_family}"
           h = poster.height
-          sd1 = poster.special_distance[:special_distance]
-          sd2 = poster.special_distance[:special_distance2]
+          poster.special_distance[:special_distance]
+          poster.special_distance[:special_distance2]
 
           total_len = poster.tracks.sum(&:length)
           avg_len = poster.tracks.empty? ? 0 : total_len / poster.tracks.size
           weeks = poster.tracks.map { |t| [t.year, t.date.to_date.cweek] }.uniq.size
           weeks = 1 if weeks < 1
 
-          lines << tag("text", { x: 10, y: h - 20, fill: tc, style: hdr }, "Runner")
-          lines << tag("text", { x: 10, y: h - 10, fill: tc, style: val }, poster.athlete)
+          lines << tag("text", {x: 10, y: h - 20, fill: tc, style: hdr}, "Runner")
+          lines << tag("text", {x: 10, y: h - 10, fill: tc, style: val}, poster.athlete)
 
           unless poster.drawer_type == "monthoflife"
-            lines << tag("text", { x: 65, y: h - 20, fill: tc, style: hdr }, "BREAKDOWN")
+            lines << tag("text", {x: 65, y: h - 20, fill: tc, style: hdr}, "BREAKDOWN")
             cats = %w[run ride walk]
             y = h - 17
             cats.each do |cat|
@@ -214,8 +213,8 @@ module Workouts
               next if t.empty?
               color = poster.color_by_category[cat] || poster.colors[:track]
               total = t.sum(&:length)
-              lines << tag("rect", { x: 65, y: y, width: 2.6, height: 2.6, fill: color })
-              lines << tag("text", { x: 70, y: y + 2, fill: tc, style: sm },
+              lines << tag("rect", {x: 65, y: y, width: 2.6, height: 2.6, fill: color})
+              lines << tag("text", {x: 70, y: y + 2, fill: tc, style: sm},
                 "#{cat}  #{t.size}  #{format_float(poster.m2u(total))}#{poster.u}")
               if cat == "ride"
                 cad = t.map(&:average_cadence).compact
@@ -224,18 +223,18 @@ module Workouts
                 extras << "#{format_float(cad.sum / cad.size)}rpm" if cad.any?
                 extras << "#{format_float(pow.sum / pow.size)}W" if pow.any?
                 unless extras.empty?
-                  lines << tag("text", { x: 70, y: y + 5, fill: tc, style: sm }, extras.join(" "))
+                  lines << tag("text", {x: 70, y: y + 5, fill: tc, style: sm}, extras.join(" "))
                 end
               end
-              y += cat == "ride" && t.any? { |tr| tr.average_cadence || tr.average_power } ? 6 : 3
+              y += (cat == "ride" && t.any? { |tr| tr.average_cadence || tr.average_power }) ? 6 : 3
             end
           end
 
-          lines << tag("text", { x: 120, y: h - 20, fill: tc, style: hdr }, "STATISTICS")
-          lines << tag("text", { x: 120, y: h - 15, fill: tc, style: sm }, "Number: #{poster.tracks.size}")
-          lines << tag("text", { x: 120, y: h - 10, fill: tc, style: sm }, "Weekly: #{format_float(poster.tracks.size.to_f / weeks)}")
-          lines << tag("text", { x: 141, y: h - 15, fill: tc, style: sm }, "Total: #{format_float(poster.m2u(total_len))} #{poster.u}")
-          lines << tag("text", { x: 141, y: h - 10, fill: tc, style: sm }, "Avg: #{format_float(poster.m2u(avg_len))} #{poster.u}")
+          lines << tag("text", {x: 120, y: h - 20, fill: tc, style: hdr}, "STATISTICS")
+          lines << tag("text", {x: 120, y: h - 15, fill: tc, style: sm}, "Number: #{poster.tracks.size}")
+          lines << tag("text", {x: 120, y: h - 10, fill: tc, style: sm}, "Weekly: #{format_float(poster.tracks.size.to_f / weeks)}")
+          lines << tag("text", {x: 141, y: h - 15, fill: tc, style: sm}, "Total: #{format_float(poster.m2u(total_len))} #{poster.u}")
+          lines << tag("text", {x: 141, y: h - 10, fill: tc, style: sm}, "Avg: #{format_float(poster.m2u(avg_len))} #{poster.u}")
           lines.join("\n")
         end
 

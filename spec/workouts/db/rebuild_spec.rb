@@ -38,14 +38,14 @@ RSpec.describe Workouts::DB::Rebuild do
     end
 
     it "inserts rows matching new schema columns" do
-      rows = [{ name: "a", value: 1 }, { name: "b", value: 2 }]
+      rows = [{name: "a", value: 1}, {name: "b", value: 2}]
       described_class.import_table(db, :items, rows)
       expect(db[:items].count).to eq(2)
       expect(db[:items].first[:name]).to eq("a")
     end
 
     it "filters out columns not in new schema" do
-      rows = [{ name: "a", value: 1, extra: "x" }]
+      rows = [{name: "a", value: 1, extra: "x"}]
       described_class.import_table(db, :items, rows)
       expect(db[:items].count).to eq(1)
       expect(db[:items].first.keys).not_to include(:extra)
@@ -117,7 +117,10 @@ RSpec.describe Workouts::DB::Rebuild do
     context "backup recovery on error" do
       it "restores backup when rebuild fails" do
         source = Sequel.sqlite(db_path)
-        source.create_table(:items) { Integer :id, primary_key: true; String :name }
+        source.create_table(:items) {
+          Integer :id, primary_key: true
+          String :name
+        }
         source[:items].insert(name: "safe")
         source.disconnect
 
@@ -137,7 +140,10 @@ RSpec.describe Workouts::DB::Rebuild do
       it "backs up and restores -wal and -shm files" do
         source = Sequel.sqlite(db_path)
         source.run("PRAGMA journal_mode=WAL")
-        source.create_table(:items) { Integer :id, primary_key: true; String :name }
+        source.create_table(:items) {
+          Integer :id, primary_key: true
+          String :name
+        }
         source[:items].insert(name: "wal_test")
         source.disconnect
 

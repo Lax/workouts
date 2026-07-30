@@ -4,14 +4,26 @@ RSpec.describe Workouts::Sync::Garmin do
     d.create_table(:activities) do
       Integer :id, primary_key: true
       String :run_id, null: false, unique: true
-      String :name; Float :distance; Integer :moving_time; Integer :elapsed_time
-      String :sport_category, null: false, default: "run"; String :sport_type
-      String :start_date; String :start_date_local; String :location_country
+      String :name
+      Float :distance
+      Integer :moving_time
+      Integer :elapsed_time
+      String :sport_category, null: false, default: "run"
+      String :sport_type
+      String :start_date
+      String :start_date_local
+      String :location_country
       String :summary_polyline, text: true
-      Float :average_heartrate; Float :max_heartrate
-      Float :average_cadence; Float :max_cadence; Float :average_power; Float :max_power
-      Integer :calories; Float :average_temperature
-      Float :average_speed; Float :elevation_gain
+      Float :average_heartrate
+      Float :max_heartrate
+      Float :average_cadence
+      Float :max_cadence
+      Float :average_power
+      Float :max_power
+      Integer :calories
+      Float :average_temperature
+      Float :average_speed
+      Float :elevation_gain
       String :source
       DateTime :created_at, default: Sequel::CURRENT_TIMESTAMP
       DateTime :updated_at, default: Sequel::CURRENT_TIMESTAMP
@@ -42,14 +54,26 @@ RSpec.describe Workouts::Sync::Garmin do
   end
 
   def stub_adapter(config_overrides: {})
-    config = { "email" => "test@gb.com", "password" => "pw", "token_path" => File.join(tmpdir, "garmin_tokens.json") }.merge(config_overrides)
+    config = {"email" => "test@gb.com", "password" => "pw", "token_path" => File.join(tmpdir, "garmin_tokens.json")}.merge(config_overrides)
     Class.new(described_class) do
-      def fetch_oauth_consumer; {}; end
-      def strategy_a_login; nil; end
-      def strategy_b_login; nil; end
-      def verify_access_token; true; end
+      def fetch_oauth_consumer
+        {}
+      end
+
+      def strategy_a_login
+        nil
+      end
+
+      def strategy_b_login
+        nil
+      end
+
+      def verify_access_token
+        true
+      end
+
       def api_get(path)
-        [{ "activityId" => 1, "activityType" => { "typeKey" => "running" } }] if path.include?("search/activities?start=0")
+        [{"activityId" => 1, "activityType" => {"typeKey" => "running"}}] if path.include?("search/activities?start=0")
       end
     end.new(config:, db:, activity_filter: nil)
   end
@@ -109,7 +133,7 @@ RSpec.describe Workouts::Sync::Garmin do
     end
 
     context "without cached token and without credentials" do
-      subject(:adapter) { stub_adapter(config_overrides: { "auth_seed" => "" }) }
+      subject(:adapter) { stub_adapter(config_overrides: {"auth_seed" => ""}) }
 
       it "returns false" do
         expect(adapter.authenticate).to be false
@@ -246,12 +270,12 @@ RSpec.describe Workouts::Sync::Garmin do
     end
 
     it "returns false when access_token has no refresh_token" do
-      adapter.instance_variable_set(:@access_token, { "access_token" => "x" })
+      adapter.instance_variable_set(:@access_token, {"access_token" => "x"})
       expect(adapter.send(:refresh_token)).to be false
     end
 
     it "includes Basic auth header with client_id" do
-      new_token = { "access_token" => "new_di_at", "refresh_token" => "new_di_rt", "expires_in" => 64800 }
+      new_token = {"access_token" => "new_di_at", "refresh_token" => "new_di_rt", "expires_in" => 64800}
       resp = double("resp", code: "200", body: JSON.generate(new_token))
       expect(adapter).to receive(:save_tokens)
       expect(adapter).to receive(:send_http) do |_uri, req|
@@ -275,10 +299,15 @@ RSpec.describe Workouts::Sync::Garmin do
 
   describe "#strategy_a_login" do
     let(:adapter) do
-      config = { "email" => "test@gb.com", "password" => "pw", "token_path" => File.join(tmpdir, "garmin_tokens.json") }
+      config = {"email" => "test@gb.com", "password" => "pw", "token_path" => File.join(tmpdir, "garmin_tokens.json")}
       Class.new(described_class) do
-        def fetch_oauth_consumer; {}; end
-        def strategy_b_login; nil; end
+        def fetch_oauth_consumer
+          {}
+        end
+
+        def strategy_b_login
+          nil
+        end
       end.new(config:, db:, activity_filter: nil)
     end
 
@@ -324,10 +353,15 @@ RSpec.describe Workouts::Sync::Garmin do
 
   describe "#strategy_b_login" do
     let(:adapter) do
-      config = { "email" => "test@gb.com", "password" => "pw", "token_path" => File.join(tmpdir, "garmin_tokens.json") }
+      config = {"email" => "test@gb.com", "password" => "pw", "token_path" => File.join(tmpdir, "garmin_tokens.json")}
       Class.new(described_class) do
-        def fetch_oauth_consumer; {}; end
-        def strategy_a_login; nil; end
+        def fetch_oauth_consumer
+          {}
+        end
+
+        def strategy_a_login
+          nil
+        end
       end.new(config:, db:, activity_filter: nil)
     end
 
@@ -372,7 +406,7 @@ RSpec.describe Workouts::Sync::Garmin do
 
   describe "#call" do
     context "with auth_seed set" do
-      subject(:adapter) { stub_adapter(config_overrides: { "auth_seed" => Base64.strict_encode64(JSON.generate(token_json)) }) }
+      subject(:adapter) { stub_adapter(config_overrides: {"auth_seed" => Base64.strict_encode64(JSON.generate(token_json))}) }
 
       before do
         allow(adapter).to receive(:pending_ids).and_return([{id: "1", type: "run"}])
@@ -385,7 +419,7 @@ RSpec.describe Workouts::Sync::Garmin do
     end
 
     context "without auth_seed but with cached token" do
-      subject(:adapter) { stub_adapter(config_overrides: { "auth_seed" => "" }) }
+      subject(:adapter) { stub_adapter(config_overrides: {"auth_seed" => ""}) }
 
       before do
         write_token(adapter, token_json(expires_at: Time.now.to_i + 3600))
@@ -399,7 +433,7 @@ RSpec.describe Workouts::Sync::Garmin do
     end
 
     context "without auth_seed and without cached token" do
-      subject(:adapter) { stub_adapter(config_overrides: { "auth_seed" => "" }) }
+      subject(:adapter) { stub_adapter(config_overrides: {"auth_seed" => ""}) }
 
       it "returns 0" do
         expect(adapter.call).to eq(0)
@@ -407,7 +441,7 @@ RSpec.describe Workouts::Sync::Garmin do
     end
 
     context "when authenticate fails" do
-      subject(:adapter) { stub_adapter(config_overrides: { "auth_seed" => Base64.strict_encode64(JSON.generate(token_json)) }) }
+      subject(:adapter) { stub_adapter(config_overrides: {"auth_seed" => Base64.strict_encode64(JSON.generate(token_json))}) }
 
       before do
         allow(adapter).to receive(:authenticate).and_return(false)

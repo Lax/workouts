@@ -19,9 +19,9 @@ module Workouts
         dlat = deg_to_rad(p2[0] - p1[0])
         dlon = deg_to_rad(p2[1] - p1[1])
 
-        a = Math.sin(dlat / 2) ** 2 +
-            Math.cos(lat1) * Math.cos(lat2) *
-            Math.sin(dlon / 2) ** 2
+        a = Math.sin(dlat / 2)**2 +
+          Math.cos(lat1) * Math.cos(lat2) *
+            Math.sin(dlon / 2)**2
         c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
         6371000.0 * c
       end
@@ -41,7 +41,7 @@ module Workouts
           elev1 = points[i - 1][2] || 0.0
           elev2 = points[i][2] || 0.0
           gain = elev2 - elev1
-          gain > 0 ? gain : 0.0
+          (gain > 0) ? gain : 0.0
         end
       end
 
@@ -64,7 +64,7 @@ module Workouts
         return 0 if points.length < 2
         times = points.map { |p| p[3] }.compact
         return 0 if times.length < 2
-        ((times.last - times.first).abs).round
+        (times.last - times.first).abs.round
       end
 
       def build_run_id(source_prefix, value)
@@ -102,7 +102,7 @@ module Workouts
           location_country: data[:location_country],
           summary_polyline: data[:summary_polyline],
           average_heartrate: data[:average_heartrate]&.round(1),
-          average_speed: data[:distance] && data[:moving_time].to_f.positive? ? (data[:distance].to_f / data[:moving_time]).round(2) : data[:average_speed],
+          average_speed: (data[:distance] && data[:moving_time].to_f.positive?) ? (data[:distance].to_f / data[:moving_time]).round(2) : data[:average_speed],
           elevation_gain: data[:elevation_gain]&.round(1),
           source: @source_name || data[:source]
         }

@@ -16,14 +16,26 @@ RSpec.describe Workouts::Import::AppleHealth do
     d.create_table(:activities) do
       Integer :id, primary_key: true
       String :run_id, null: false, unique: true
-      String :name; Float :distance; Integer :moving_time; Integer :elapsed_time
-      String :sport_category, null: false, default: "run"; String :sport_type
-      String :start_date; String :start_date_local; String :location_country
+      String :name
+      Float :distance
+      Integer :moving_time
+      Integer :elapsed_time
+      String :sport_category, null: false, default: "run"
+      String :sport_type
+      String :start_date
+      String :start_date_local
+      String :location_country
       String :summary_polyline, text: true
-      Float :average_heartrate; Float :max_heartrate
-      Float :average_cadence; Float :max_cadence; Float :average_power; Float :max_power
-      Integer :calories; Float :average_temperature
-      Float :average_speed; Float :elevation_gain
+      Float :average_heartrate
+      Float :max_heartrate
+      Float :average_cadence
+      Float :max_cadence
+      Float :average_power
+      Float :max_power
+      Integer :calories
+      Float :average_temperature
+      Float :average_speed
+      Float :elevation_gain
       String :duplicate_info, text: true
       String :title, text: true
       String :source
@@ -52,7 +64,7 @@ RSpec.describe Workouts::Import::AppleHealth do
     end
 
     it "returns whitelisted patterns for configured source names" do
-      a = described_class.new(config: { "skip_sources" => ["Strava", "Keep"] }, db:)
+      a = described_class.new(config: {"skip_sources" => ["Strava", "Keep"]}, db:)
       patterns = a.send(:load_skip_sources)
       expect(patterns.size).to eq(2)
       expect(patterns.first).to match("Strava")
@@ -60,12 +72,12 @@ RSpec.describe Workouts::Import::AppleHealth do
     end
 
     it "filters out non-whitelisted source names" do
-      a = described_class.new(config: { "skip_sources" => ["NonExistent"] }, db:)
+      a = described_class.new(config: {"skip_sources" => ["NonExistent"]}, db:)
       expect(a.send(:load_skip_sources)).to eq([])
     end
 
     it "handles string input (env var fallback)" do
-      a = described_class.new(config: { "skip_sources" => "Strava,Keep" }, db:)
+      a = described_class.new(config: {"skip_sources" => "Strava,Keep"}, db:)
       patterns = a.send(:load_skip_sources)
       expect(patterns.size).to eq(2)
     end
@@ -79,7 +91,7 @@ RSpec.describe Workouts::Import::AppleHealth do
     end
 
     it "matches configured sources from whitelist" do
-      a = described_class.new(config: { "skip_sources" => ["Strava"] }, db:)
+      a = described_class.new(config: {"skip_sources" => ["Strava"]}, db:)
       expect(a.send(:known_source?, "Strava")).to be true
       expect(a.send(:known_source?, "Keep")).to be false
     end
@@ -215,7 +227,7 @@ RSpec.describe Workouts::Import::AppleHealth do
         Workouts::Import::AppleHealth::HeartRateRecord.new(time: Time.parse("2023-06-15 09:30:00 +0800"), value: 158),
         Workouts::Import::AppleHealth::HeartRateRecord.new(time: Time.parse("2023-06-15 09:40:00 +0800"), value: 148),
         Workouts::Import::AppleHealth::HeartRateRecord.new(time: Time.parse("2023-06-15 10:00:00 +0800"), value: 100),
-        Workouts::Import::AppleHealth::HeartRateRecord.new(time: Time.parse("2023-06-15 10:05:00 +0800"), value: 90),
+        Workouts::Import::AppleHealth::HeartRateRecord.new(time: Time.parse("2023-06-15 10:05:00 +0800"), value: 90)
       ])
     end
 
@@ -445,7 +457,7 @@ RSpec.describe Workouts::Import::AppleHealth do
     end
 
     it "filters Strava when configured" do
-      a = described_class.new(config: { "skip_sources" => ["Strava"] }, db:)
+      a = described_class.new(config: {"skip_sources" => ["Strava"]}, db:)
       allow(a).to receive(:raw_dir).and_return(File.join(tmpdir, "raw"))
       allow(a).to receive(:std_dir).and_return(File.join(tmpdir, "std"))
       a.instance_variable_set(:@zip_path, zip_path)
@@ -485,7 +497,7 @@ RSpec.describe Workouts::Import::AppleHealth do
   describe "#elevation_gain_from_points" do
     it "sums positive elevation changes" do
       points = [
-        { ele: 5.0 }, { ele: 6.0 }, { ele: 7.0 }, { ele: 6.5 }, { ele: 8.0 }
+        {ele: 5.0}, {ele: 6.0}, {ele: 7.0}, {ele: 6.5}, {ele: 8.0}
       ]
       result = adapter.send(:elevation_gain_from_points, points)
       expect(result).to eq(3.5)
@@ -494,23 +506,23 @@ RSpec.describe Workouts::Import::AppleHealth do
 
   describe "#build_attrs" do
     let(:stats) do
-      { "HKQuantityTypeIdentifierDistanceWalkingRunning" => { "sum" => "10500", "unit" => "m" },
-        "HKQuantityTypeIdentifierActiveEnergyBurned" => { "sum" => "500", "unit" => "Cal" },
-        "HKQuantityTypeIdentifierBasalEnergyBurned" => { "sum" => "106", "unit" => "Cal" } }
+      {"HKQuantityTypeIdentifierDistanceWalkingRunning" => {"sum" => "10500", "unit" => "m"},
+       "HKQuantityTypeIdentifierActiveEnergyBurned" => {"sum" => "500", "unit" => "Cal"},
+       "HKQuantityTypeIdentifierBasalEnergyBurned" => {"sum" => "106", "unit" => "Cal"}}
     end
 
     it "includes external_id from meta" do
-      meta = { "HKExternalUUID" => "544EA64D-4645-4BBC-9147-638B642FCFE1" }
+      meta = {"HKExternalUUID" => "544EA64D-4645-4BBC-9147-638B642FCFE1"}
       attrs = adapter.send(:build_attrs, "Apple Watch", "a1b2c3", stats, meta, nil, nil,
-                           "HKWorkoutActivityTypeRunning", "2023-06-15 09:00:00 +0800",
-                           "2023-06-15 09:45:00 +0800", "45", "min")
+        "HKWorkoutActivityTypeRunning", "2023-06-15 09:00:00 +0800",
+        "2023-06-15 09:45:00 +0800", "45", "min")
       expect(attrs[:external_id]).to eq("544EA64D-4645-4BBC-9147-638B642FCFE1")
     end
 
     it "leaves external_id nil when meta has no HKExternalUUID" do
       attrs = adapter.send(:build_attrs, "Apple Watch", "a1b2c3", stats, {}, nil, nil,
-                           "HKWorkoutActivityTypeRunning", "2023-06-15 09:00:00 +0800",
-                           "2023-06-15 09:45:00 +0800", "45", "min")
+        "HKWorkoutActivityTypeRunning", "2023-06-15 09:00:00 +0800",
+        "2023-06-15 09:45:00 +0800", "45", "min")
       expect(attrs[:external_id]).to be_nil
     end
   end

@@ -81,20 +81,20 @@ RSpec.describe Workouts::Export::JSON do
       now = Time.now.utc
       db[:dedup_groups].insert(group_id: "group_a", created_at: now, updated_at: now)
       db[:dedup_group_members].multi_insert([
-        { group_id: "group_a", run_id: "member_1", source: "garmin", flag: "derived", confidence: 0.95 },
-        { group_id: "group_a", run_id: "member_2", source: "strava", flag: "derived", confidence: 0.92 },
-        { group_id: "group_a", run_id: "member_3", source: "igpsport", flag: "duplicate", confidence: 0.88 },
+        {group_id: "group_a", run_id: "member_1", source: "garmin", flag: "derived", confidence: 0.95},
+        {group_id: "group_a", run_id: "member_2", source: "strava", flag: "derived", confidence: 0.92},
+        {group_id: "group_a", run_id: "member_3", source: "igpsport", flag: "duplicate", confidence: 0.88}
       ])
       db[:activities].multi_insert([
-        { run_id: "member_1", name: "Morning Run", distance: 10000, moving_time: 3000,
-          sport_category: "run", start_date: "2024-03-01T08:00:00Z",
-          start_date_local: "2024-03-01T08:00:00Z", source: "garmin", created_at: now, updated_at: now },
-        { run_id: "member_2", name: "AM Run", distance: 10100, moving_time: 3100,
-          sport_category: "run", start_date: "2024-03-01T08:00:02Z",
-          start_date_local: "2024-03-01T08:00:02Z", source: "strava", created_at: now, updated_at: now },
-        { run_id: "member_3", name: "Garmin Sync", distance: 9900, moving_time: 3050,
-          sport_category: "run", start_date: "2024-03-01T08:00:01Z",
-          start_date_local: "2024-03-01T08:00:01Z", source: "igpsport", created_at: now, updated_at: now },
+        {run_id: "member_1", name: "Morning Run", distance: 10000, moving_time: 3000,
+         sport_category: "run", start_date: "2024-03-01T08:00:00Z",
+         start_date_local: "2024-03-01T08:00:00Z", source: "garmin", created_at: now, updated_at: now},
+        {run_id: "member_2", name: "AM Run", distance: 10100, moving_time: 3100,
+         sport_category: "run", start_date: "2024-03-01T08:00:02Z",
+         start_date_local: "2024-03-01T08:00:02Z", source: "strava", created_at: now, updated_at: now},
+        {run_id: "member_3", name: "Garmin Sync", distance: 9900, moving_time: 3050,
+         sport_category: "run", start_date: "2024-03-01T08:00:01Z",
+         start_date_local: "2024-03-01T08:00:01Z", source: "igpsport", created_at: now, updated_at: now}
       ])
     end
 
@@ -174,7 +174,7 @@ RSpec.describe Workouts::Export::JSON do
     it "writes tracks.json with run_id → polyline mapping" do
       described_class.new(db: db, output: output, tracks_output: tracks_output).call
       tracks = JSON.parse(File.read(tracks_output))
-      expect(tracks).to eq({ "track_1" => "abc123" })
+      expect(tracks).to eq({"track_1" => "abc123"})
     end
 
     it "excludes nil polyline activities from tracks.json" do
@@ -194,14 +194,14 @@ RSpec.describe Workouts::Export::JSON do
 
     describe "extract_polyline" do
       it "returns nil for Keep placeholder polyline" do
-        a = { source: "keep", summary_polyline: "placeholder_abc" }
+        a = {source: "keep", summary_polyline: "placeholder_abc"}
         stub_const("Workouts::Source::Keep::PLACEHOLDER_POLYLINE", "placeholder_abc")
         result = described_class.new(db: db, output: output).send(:extract_polyline, a)
         expect(result).to be_nil
       end
 
       it "returns polyline for non-Keep source" do
-        a = { source: "garmin", summary_polyline: "abc123" }
+        a = {source: "garmin", summary_polyline: "abc123"}
         result = described_class.new(db: db, output: output).send(:extract_polyline, a)
         expect(result).to eq("abc123")
       end

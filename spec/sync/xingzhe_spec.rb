@@ -1,6 +1,6 @@
 RSpec.describe Workouts::Sync::XingZhe do
   let(:db) { create_test_db }
-  let(:config) { { "email" => "test@xz.com", "password" => "pw" } }
+  let(:config) { {"email" => "test@xz.com", "password" => "pw"} }
   subject(:xz) { described_class.new(config:, db:, activity_filter: nil) }
   let(:tmpdir) { Dir.mktmpdir }
 
@@ -16,14 +16,26 @@ RSpec.describe Workouts::Sync::XingZhe do
     d.create_table(:activities) do
       Integer :id, primary_key: true
       String :run_id, null: false, unique: true
-      String :name; Float :distance; Integer :moving_time; Integer :elapsed_time
-      String :sport_category, null: false, default: "run"; String :sport_type
-      String :start_date; String :start_date_local; String :location_country
+      String :name
+      Float :distance
+      Integer :moving_time
+      Integer :elapsed_time
+      String :sport_category, null: false, default: "run"
+      String :sport_type
+      String :start_date
+      String :start_date_local
+      String :location_country
       String :summary_polyline, text: true
-      Float :average_heartrate; Float :max_heartrate
-      Float :average_cadence; Float :max_cadence; Float :average_power; Float :max_power
-      Integer :calories; Float :average_temperature
-      Float :average_speed; Float :elevation_gain
+      Float :average_heartrate
+      Float :max_heartrate
+      Float :average_cadence
+      Float :max_cadence
+      Float :average_power
+      Float :max_power
+      Integer :calories
+      Float :average_temperature
+      Float :average_speed
+      Float :elevation_gain
       String :source
       DateTime :created_at, default: Sequel::CURRENT_TIMESTAMP
       DateTime :updated_at, default: Sequel::CURRENT_TIMESTAMP
@@ -48,10 +60,10 @@ RSpec.describe Workouts::Sync::XingZhe do
 
     context "with activities to sync" do
       let(:activities) do
-        [{ "id" => 4001, "title" => "XZ Hike", "sport" => 2,
-           "distance" => 5000.0, "duration" => 3600,
-           "start_time" => 1700000000000, "avg_speed" => 5.0,
-           "elevation_gain" => 300.0 }]
+        [{"id" => 4001, "title" => "XZ Hike", "sport" => 2,
+          "distance" => 5000.0, "duration" => 3600,
+          "start_time" => 1700000000000, "avg_speed" => 5.0,
+          "elevation_gain" => 300.0}]
       end
 
       before do
@@ -78,11 +90,11 @@ RSpec.describe Workouts::Sync::XingZhe do
 
       context "and stream returns location data" do
         let(:stream_data) do
-          { "location" => [[116.0, 40.0], [116.002, 40.001], [116.005, 40.003]],
-            "timestamp" => [1000000.0, 1000010.0, 1000020.0],
-            "altitude" => [10.0, 11.0, 12.0],
-            "speed" => [3.0, 3.1, 3.2],
-            "distance" => [0.0, 100.0, 200.0] }
+          {"location" => [[116.0, 40.0], [116.002, 40.001], [116.005, 40.003]],
+           "timestamp" => [1000000.0, 1000010.0, 1000020.0],
+           "altitude" => [10.0, 11.0, 12.0],
+           "speed" => [3.0, 3.1, 3.2],
+           "distance" => [0.0, 100.0, 200.0]}
         end
 
         before do
@@ -118,7 +130,7 @@ RSpec.describe Workouts::Sync::XingZhe do
       context "and stream returns empty location" do
         before do
           allow(xz).to receive(:write_raw)
-          allow(xz).to receive(:fetch_stream).with("4001").and_return({ "location" => [] })
+          allow(xz).to receive(:fetch_stream).with("4001").and_return({"location" => []})
           allow(xz).to receive(:fetch_activity_detail).with("4001").and_return(nil)
         end
 
@@ -132,7 +144,7 @@ RSpec.describe Workouts::Sync::XingZhe do
       context "and stream returns single point" do
         before do
           allow(xz).to receive(:fetch_stream).with("4001")
-            .and_return({ "location" => [[116.0, 40.0]] })
+            .and_return({"location" => [[116.0, 40.0]]})
           allow(xz).to receive(:write_raw)
           allow(xz).to receive(:write_std)
           allow(xz).to receive(:fetch_activity_detail).with("4001").and_return(nil)
@@ -147,15 +159,15 @@ RSpec.describe Workouts::Sync::XingZhe do
 
       context "and stream returns single point with segments_km fallback" do
         let(:detail_data) do
-          { "segments_km" => [
-            { "latitude" => 40.0, "longitude" => 116.0 },
-            { "latitude" => 40.001, "longitude" => 116.002 },
-          ] }
+          {"segments_km" => [
+            {"latitude" => 40.0, "longitude" => 116.0},
+            {"latitude" => 40.001, "longitude" => 116.002}
+          ]}
         end
 
         before do
           allow(xz).to receive(:fetch_stream).with("4001")
-            .and_return({ "location" => [[116.0, 40.0]] })
+            .and_return({"location" => [[116.0, 40.0]]})
           allow(xz).to receive(:write_raw)
           allow(xz).to receive(:fetch_activity_detail).with("4001").and_return(detail_data)
         end
@@ -182,11 +194,11 @@ RSpec.describe Workouts::Sync::XingZhe do
 
       context "and stream fails with segments_km fallback" do
         let(:detail_data) do
-          { "segments_km" => [
-            { "latitude" => 40.0, "longitude" => 116.0 },
-            { "latitude" => 40.001, "longitude" => 116.002 },
-            { "latitude" => 40.003, "longitude" => 116.005 }
-          ] }
+          {"segments_km" => [
+            {"latitude" => 40.0, "longitude" => 116.0},
+            {"latitude" => 40.001, "longitude" => 116.002},
+            {"latitude" => 40.003, "longitude" => 116.005}
+          ]}
         end
 
         before do
@@ -251,12 +263,12 @@ RSpec.describe Workouts::Sync::XingZhe do
 
       context "when DB exists but raw file missing (missing_raw backfill)" do
         let(:stream_data) do
-          { "location" => [[116.0, 40.0], [116.002, 40.001]] }
+          {"location" => [[116.0, 40.0], [116.002, 40.001]]}
         end
 
         before do
           db[:activities].insert(run_id: "xingzhe_4001", source: "xingzhe")
-          allow(xz).to receive(:fetch_stream) { |arg| arg == "4001" ? stream_data : nil }
+          allow(xz).to receive(:fetch_stream) { |arg| (arg == "4001") ? stream_data : nil }
           allow(xz).to receive(:write_std)
         end
 
@@ -271,10 +283,10 @@ RSpec.describe Workouts::Sync::XingZhe do
     context "when time budget is expired" do
       subject(:xz) { described_class.new(config:, db:, activity_filter: nil, time_budget: 1) }
       let(:activities) do
-        [{ "id" => 4001, "title" => "XZ Hike", "sport" => 2,
-           "distance" => 5000.0, "duration" => 3600,
-           "start_time" => 1700000000000, "avg_speed" => 5.0,
-           "elevation_gain" => 300.0 }]
+        [{"id" => 4001, "title" => "XZ Hike", "sport" => 2,
+          "distance" => 5000.0, "duration" => 3600,
+          "start_time" => 1700000000000, "avg_speed" => 5.0,
+          "elevation_gain" => 300.0}]
       end
 
       before do
@@ -324,11 +336,11 @@ RSpec.describe Workouts::Sync::XingZhe do
 
   describe "#stream_to_polyline" do
     let(:raw_content) do
-      { "source" => "xingzhe", "stream" => {
+      {"source" => "xingzhe", "stream" => {
         "location" => [[116.0, 40.0], [116.002, 40.001]],
         "timestamp" => [1000000.0, 1000010.0],
         "altitude" => [10.0, 11.0]
-      } }
+      }}
     end
 
     it "reads raw file and returns encoded polyline" do
@@ -374,7 +386,7 @@ RSpec.describe Workouts::Sync::XingZhe do
   end
 
   describe "#write_raw" do
-    let(:stream) { { "location" => [[116.0, 40.0]] } }
+    let(:stream) { {"location" => [[116.0, 40.0]]} }
 
     it "writes JSON file with source and stream" do
       xz.send(:write_raw, stream, "test123")
@@ -415,10 +427,10 @@ RSpec.describe Workouts::Sync::XingZhe do
 
   describe "#process_activity" do
     let(:activity) do
-      { "id" => 5001, "title" => "XZ Run", "sport" => 1,
-        "distance" => 5000.0, "duration" => 3600,
-        "start_time" => 1_718_208_000_000, "avg_speed" => 5.0,
-        "elevation_gain" => 50.0 }
+      {"id" => 5001, "title" => "XZ Run", "sport" => 1,
+       "distance" => 5000.0, "duration" => 3600,
+       "start_time" => 1_718_208_000_000, "avg_speed" => 5.0,
+       "elevation_gain" => 50.0}
     end
 
     before do
@@ -432,7 +444,7 @@ RSpec.describe Workouts::Sync::XingZhe do
       xz.instance_variable_set(:@tz_resolver,
         Workouts::Timezone::Resolver.new({}, finder: stub_finder))
 
-      stream = { "location" => [[116.0, 40.0], [116.002, 40.001]] }
+      stream = {"location" => [[116.0, 40.0], [116.002, 40.001]]}
       allow(xz).to receive(:fetch_stream).with("5001").and_return(stream)
       allow(xz).to receive(:write_raw)
       allow(xz).to receive(:write_std)
@@ -452,10 +464,10 @@ RSpec.describe Workouts::Sync::XingZhe do
   describe "#write_std" do
     let(:pts) { [[40.0, 116.0], [40.001, 116.002]] }
     let(:stream) do
-      { "timestamp" => [1000000.0, 1000010.0],
-        "altitude" => [10.0, 11.0],
-        "speed" => [3.0, 3.1],
-        "distance" => [0.0, 100.0] }
+      {"timestamp" => [1000000.0, 1000010.0],
+       "altitude" => [10.0, 11.0],
+       "speed" => [3.0, 3.1],
+       "distance" => [0.0, 100.0]}
     end
 
     it "writes JSON array with lat/lng/alt/ts/speed/distance" do

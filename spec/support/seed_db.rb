@@ -11,7 +11,7 @@ SEED_ACTIVITIES = [
     average_power: nil, max_power: nil,
     calories: 350, average_temperature: 18,
     average_speed: 2.78, elevation_gain: 25,
-    source: "garmin",
+    source: "garmin"
   },
   {
     run_id: "strava_2", name: "Evening Ride", distance: 20_000, moving_time: 3600,
@@ -23,7 +23,7 @@ SEED_ACTIVITIES = [
     average_power: 160, max_power: 320,
     calories: 800, average_temperature: 22,
     average_speed: 5.56, elevation_gain: 120,
-    source: "strava",
+    source: "strava"
   },
   {
     run_id: "keep_3", name: "Lunch Walk", distance: 3_000, moving_time: 2400,
@@ -35,7 +35,7 @@ SEED_ACTIVITIES = [
     average_power: nil, max_power: nil,
     calories: 120, average_temperature: 15,
     average_speed: 1.25, elevation_gain: 5,
-    source: "keep",
+    source: "keep"
   },
   {
     run_id: "garmin_4", name: "Weekend Hike", distance: 12_000, moving_time: 5400,
@@ -47,8 +47,8 @@ SEED_ACTIVITIES = [
     average_power: nil, max_power: nil,
     calories: 600, average_temperature: 10,
     average_speed: 2.22, elevation_gain: 450,
-    source: "garmin",
-  },
+    source: "garmin"
+  }
 ]
 
 def create_seed_db
@@ -61,7 +61,7 @@ def create_seed_db
     db[:activities].insert(
       **attrs,
       created_at: now,
-      updated_at: now,
+      updated_at: now
     )
   end
 

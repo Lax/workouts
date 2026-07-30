@@ -53,9 +53,13 @@ module Workouts
         parts = []
 
         if (sd = attrs["start_date"] || attrs[:start_date])
-          d = Date.parse(sd.to_s) rescue nil
+          d = begin
+            Date.parse(sd.to_s)
+          rescue
+            nil
+          end
           if d
-            date_str = d.year == Date.today.year ? d.strftime("%m-%d") : d.strftime("%Y-%m-%d")
+            date_str = (d.year == Date.today.year) ? d.strftime("%m-%d") : d.strftime("%Y-%m-%d")
             parts << date_str
           end
         end
@@ -65,7 +69,7 @@ module Workouts
 
         dist = attrs["distance"] || attrs[:distance]
         if dist && dist.to_f > 0
-          parts << "#{format('%.1f', dist.to_f / 1000)}km"
+          parts << "#{format("%.1f", dist.to_f / 1000)}km"
         end
 
         source = attrs["source"] || attrs[:source] || source_label
@@ -130,7 +134,7 @@ module Workouts
 
       def progress_step(total)
         return 1 unless total && total > 0
-        [1, (1.5 * (total ** 0.4)).to_i].max
+        [1, (1.5 * (total**0.4)).to_i].max
       end
 
       def source_label

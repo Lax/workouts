@@ -50,7 +50,7 @@ module Workouts
             next if existing.include?(aid) && raw_file_exists?(aid)
             type = map_sport(act["sport"])
             next if skip_type?(type)
-            ids << { id: aid, type: type, summary: act }
+            ids << {id: aid, type: type, summary: act}
           end
           offset += limit
         end
@@ -68,9 +68,9 @@ module Workouts
         uri.query = URI.encode_www_form(params) if params
 
         req = case method
-              when :get then Net::HTTP::Get.new(uri)
-              when :post then Net::HTTP::Post.new(uri)
-              end
+        when :get then Net::HTTP::Get.new(uri)
+        when :post then Net::HTTP::Post.new(uri)
+        end
 
         headers.each { |k, v| req[k] = v }
         req.body = body if body
@@ -85,9 +85,8 @@ module Workouts
       def login
         encrypted = rsa_encrypt(@password)
         resp = http_request(:post, LOGIN_PATH,
-          body: JSON.generate({ account: @email, password: encrypted }),
-          headers: { "Content-Type" => "application/json" }
-        )
+          body: JSON.generate({account: @email, password: encrypted}),
+          headers: {"Content-Type" => "application/json"})
         return false unless resp.code.to_i == 200
 
         data = JSON.parse(resp.body)
@@ -96,7 +95,7 @@ module Workouts
         cookie = extract_cookie(resp)
         return false unless cookie
 
-        @headers = { "Cookie" => cookie, "Accept" => "application/json" }
+        @headers = {"Cookie" => cookie, "Accept" => "application/json"}
         true
       end
 
@@ -119,9 +118,8 @@ module Workouts
 
       def fetch_page(offset, limit)
         resp = http_request(:get, WORKOUTS_PATH,
-          params: { offset: offset, limit: limit },
-          headers: @headers
-        )
+          params: {offset: offset, limit: limit},
+          headers: @headers)
         return nil unless resp.code.to_i == 200
 
         JSON.parse(resp.body).dig("data", "data")
@@ -147,15 +145,19 @@ module Workouts
 
       def process_activity(act, type)
         aid = act["id"].to_s
-        start_t = Time.at(act["start_time"] / 1000.0).utc rescue nil
+        start_t = begin
+          Time.at(act["start_time"] / 1000.0).utc
+        rescue
+          nil
+        end
         return false unless start_t
 
         attrs = {
           run_id: "xingzhe_#{aid}",
           name: act["title"] || "XingZhe Activity",
           distance: act["distance"].to_f,
-          moving_time: (t = act["duration"].to_i) > 0 ? t : nil,
-          elapsed_time: t > 0 ? t : nil,
+          moving_time: ((t = act["duration"].to_i) > 0) ? t : nil,
+          elapsed_time: (t > 0) ? t : nil,
           sport_category: type,
           sport_type: act["sport"].to_s,
           start_date: start_t.iso8601,

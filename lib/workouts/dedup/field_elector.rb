@@ -55,7 +55,13 @@ module Workouts
         when :best_name
           best_name(values, sources)
         when :earliest
-          non_nil.min_by { |v| Time.parse(v.to_s) rescue Time.at(0) }
+          non_nil.min_by { |v|
+            begin
+              Time.parse(v.to_s)
+            rescue
+              Time.at(0)
+            end
+          }
         else
           non_nil.first
         end

@@ -7,7 +7,7 @@ require "json"
 require "faraday"
 
 config_path = File.expand_path("../config/config.yml", __dir__)
-raw = YAML.safe_load(File.read(config_path))
+raw = YAML.safe_load_file(config_path)
 cfg = raw.dig("sync", "igpsport")
 phone = cfg["phone"]
 password = cfg["password"]
@@ -19,9 +19,8 @@ end
 # Login
 puts "Logging in..."
 resp = Faraday.post("https://prod.zh.igpsport.com/service/auth/account/login",
-  JSON.generate({ appId: "igpsport-web", username: phone, password: password }),
-  { "Content-Type" => "application/json" }
-)
+  JSON.generate({appId: "igpsport-web", username: phone, password: password}),
+  {"Content-Type" => "application/json"})
 abort "Login failed: #{resp.status}" unless resp.status == 200
 data = JSON.parse(resp.body)
 token = data.dig("data", "access_token") || abort("No access_token in response")
@@ -35,10 +34,10 @@ puts "Wrote login_response.json"
 
 # Fetch first page of activities
 puts "Fetching activities..."
-headers = { "Authorization" => "Bearer #{token}" }
+headers = {"Authorization" => "Bearer #{token}"}
 resp = Faraday.get(
   "https://prod.zh.igpsport.com/service/web-gateway/web-analyze/activity/queryMyActivity",
-  { pageNo: 1, pageSize: 20, sort: 1, reqType: 0 },
+  {pageNo: 1, pageSize: 20, sort: 1, reqType: 0},
   headers
 )
 abort "Fetch failed: #{resp.status}" unless resp.status == 200
@@ -49,7 +48,7 @@ puts "Found #{rows.size} activities"
 # Truncate to first 3 for fixture
 truncated = rows.first(3)
 File.write(File.join(fixtures_dir, "activities_page.json"),
-  JSON.pretty_generate({ "data" => { "rows" => truncated } }))
+  JSON.pretty_generate({"data" => {"rows" => truncated}}))
 puts "Wrote activities_page.json (#{truncated.size} activities)"
 
 truncated.each do |act|

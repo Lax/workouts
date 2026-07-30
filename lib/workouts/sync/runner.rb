@@ -5,7 +5,7 @@ module Workouts
       BATCH_SIZE = 5
 
       def initialize(sources:, db:, config:, activity_filter: nil,
-                     num_workers: 3, time_budget: nil, total_timeout: nil)
+        num_workers: 3, time_budget: nil, total_timeout: nil)
         @sources = sources
         @db = db
         @config = config
@@ -61,41 +61,41 @@ module Workouts
         cfg = @config.sync_config(source)
         return false unless cfg
 
-        output_queue << { type: :banner, source:, text: "authenticating" }
+        output_queue << {type: :banner, source:, text: "authenticating"}
         adapter = build_adapter(source, cfg)
         unless adapter
-          output_queue << { type: :banner, source:, text: "no adapter" }
+          output_queue << {type: :banner, source:, text: "no adapter"}
           return false
         end
 
         unless adapter.authenticate
-          output_queue << { type: :banner, source:, text: "auth failed" }
+          output_queue << {type: :banner, source:, text: "auth failed"}
           return false
         end
 
-        output_queue << { type: :banner, source:, text: "fetching activity list" }
+        output_queue << {type: :banner, source:, text: "fetching activity list"}
         ids = adapter.pending_ids
         if ids.nil? || ids.empty?
-          output_queue << { type: :banner, source:, text: "no new activities" }
+          output_queue << {type: :banner, source:, text: "no new activities"}
           return false
         end
 
         @adapters[source] = adapter
         @pending_ids[source] = ids
-        output_queue << { type: :banner, source:, text: "#{ids.size} pending" }
+        output_queue << {type: :banner, source:, text: "#{ids.size} pending"}
         true
       end
 
       def build_adapter(source, cfg)
         klass = case source
-                when "strava" then Sync::Strava
-                when "garmin" then Sync::Garmin
-                when "garmin_cn" then Sync::GarminCN
-                when "keep" then Sync::Keep
-                when "igpsport" then Sync::IGPSPORT
-                when "xoss" then Sync::XOSS
-                when "xingzhe" then Sync::XingZhe
-                end
+        when "strava" then Sync::Strava
+        when "garmin" then Sync::Garmin
+        when "garmin_cn" then Sync::GarminCN
+        when "keep" then Sync::Keep
+        when "igpsport" then Sync::IGPSPORT
+        when "xoss" then Sync::XOSS
+        when "xingzhe" then Sync::XingZhe
+        end
         return nil unless klass
 
         klass.new(config: cfg, db: @db, activity_filter: @activity_filter)
@@ -109,7 +109,7 @@ module Workouts
           begin
             process_source(source)
           rescue => e
-            @output_queue << { type: :error, source:, message: "Worker crashed: #{e.message}" }
+            @output_queue << {type: :error, source:, message: "Worker crashed: #{e.message}"}
             @stats_lock.synchronize do
               @pending_ids.delete(source)
               @adapters.delete(source)
@@ -166,7 +166,7 @@ module Workouts
               }
             end
           rescue => e
-            @output_queue << { type: :error, source:, message: e.message }
+            @output_queue << {type: :error, source:, message: e.message}
           end
 
           break if processed >= BATCH_SIZE
@@ -179,7 +179,7 @@ module Workouts
         @stats_lock.synchronize do
           if timed_out
             remaining = @pending_ids[source]&.size.to_i
-            @output_queue << { type: :timeout, source:, remaining: }
+            @output_queue << {type: :timeout, source:, remaining:}
             @pending_ids[source]&.clear
           end
 
@@ -206,7 +206,7 @@ module Workouts
         @watchdog = Thread.new do
           sleep @total_timeout
           @stats_lock.synchronize { @shutdown = true }
-          @output_queue << { type: :total_timeout, seconds: @total_timeout }
+          @output_queue << {type: :total_timeout, seconds: @total_timeout}
           @num_workers.times { @source_queue << POISON }
         end
       end
@@ -227,9 +227,9 @@ module Workouts
           case msg[:type]
           when :banner
             text = msg[:text]
-            if text =~ /auth failed/
+            if /auth failed/.match?(text)
               ps[:auth_failed] = true
-            elsif text =~ /no new activities/
+            elsif /no new activities/.match?(text)
               ps[:up_to_date] = true
             elsif text =~ /(\d+) pending/
               ps[:total] = $1.to_i
@@ -240,10 +240,10 @@ module Workouts
             total = msg[:total] || ps[:total]
             next unless show_progress?(msg[:done], total)
             line = if msg[:info]
-                     " [#{msg[:done]}/#{total}] #{msg[:info]}"
-                   else
-                     " [#{msg[:done]}/#{total}] (skipped)"
-                   end
+              " [#{msg[:done]}/#{total}] #{msg[:info]}"
+            else
+              " [#{msg[:done]}/#{total}] (skipped)"
+            end
             $stdout.puts "  #{s.rjust(10)} |#{line}"
           when :error
             ps[:errors] = (ps[:errors] || 0) + 1
@@ -264,7 +264,7 @@ module Workouts
           elsif info[:up_to_date]
             $stdout.puts "    done: #{s}: up to date"
           elsif (cnt = info[:done]) && cnt > 0
-            label = err > 0 ? "#{cnt} synced, #{err} errors" : "#{cnt} synced"
+            label = (err > 0) ? "#{cnt} synced, #{err} errors" : "#{cnt} synced"
             $stdout.puts "    done: #{s}: #{label}"
           elsif info.key?(:done)
             $stdout.puts "    done: #{s}: 0 synced"
@@ -276,7 +276,7 @@ module Workouts
       def show_progress?(done, total)
         return true if done.nil? || done <= 3
         return true if total && (total - done) <= 5
-        step = total && total > 0 ? [1, (total / 15.0).ceil].max : 1
+        step = (total && total > 0) ? [1, (total / 15.0).ceil].max : 1
         step <= 1 || done % step == 0
       end
     end

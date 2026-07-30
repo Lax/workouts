@@ -119,8 +119,8 @@ module Workouts
         last_lng = nil
         points.each do |lat, lng|
           if last_lat.nil? ||
-             (lat - last_lat).abs >= SAMPLE_INTERVAL_DEG ||
-             (lng - last_lng).abs >= SAMPLE_INTERVAL_DEG
+              (lat - last_lat).abs >= SAMPLE_INTERVAL_DEG ||
+              (lng - last_lng).abs >= SAMPLE_INTERVAL_DEG
             samples << [lat.round(4), lng.round(4)]
             last_lat = lat
             last_lng = lng
@@ -145,7 +145,7 @@ module Workouts
         end
         key_counts.map do |key, count|
           province, city, district, township = key.split("|")
-          { province: province, city: city, district: district, township: township, count: count }
+          {province: province, city: city, district: district, township: township, count: count}
         end.sort_by { |r| -r[:count] }
       end
 
@@ -158,7 +158,7 @@ module Workouts
           province: province,
           city: pick_field(raw, :city, "city", "c", "city") { |v| valid_name?(v) },
           district: pick_field(raw, :district, "dist", "d"),
-          township: pick_field(raw, :township, "town", "t"),
+          township: pick_field(raw, :township, "town", "t")
         }
       end
 
@@ -181,7 +181,7 @@ module Workouts
       def build_summary(divisions, total_points)
         total = total_points.to_f
         division_list = divisions.map do |r|
-          h = { p: r[:province] }
+          h = {p: r[:province]}
           h[:c] = r[:city] if r[:city]
           h[:d] = r[:district] if r[:district]
           h[:t] = r[:township] if r[:township]
@@ -189,14 +189,18 @@ module Workouts
           h[:n] = r[:count]
           h
         end
-        { divisions: division_list, total_sampled: total_points, source: "amap", processed_at: Time.now.utc.iso8601 }
+        {divisions: division_list, total_sampled: total_points, source: "amap", processed_at: Time.now.utc.iso8601}
       end
 
       def lookup_point_cache(coord_key)
         return nil unless File.exist?(POINT_CACHE_FILE)
         File.open(POINT_CACHE_FILE, "r") do |f|
           f.each_line do |line|
-            entry = JSON.parse(line) rescue next
+            entry = begin
+              JSON.parse(line)
+            rescue
+              next
+            end
             return entry if entry["ck"] == coord_key
           end
         end
@@ -204,7 +208,7 @@ module Workouts
       end
 
       def save_point_cache(coord_key, result)
-        entry = { ck: coord_key, p: result[:province], source: result[:source] }
+        entry = {ck: coord_key, p: result[:province], source: result[:source]}
         entry[:city] = result[:city] if result[:city]
         entry[:dist] = result[:district] if result[:district]
         entry[:town] = result[:township] if result[:township]

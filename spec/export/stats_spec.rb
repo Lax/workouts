@@ -4,14 +4,26 @@ RSpec.describe Workouts::Export::Stats do
     d.create_table(:activities) do
       Integer :id, primary_key: true
       String :run_id, null: false, unique: true
-      String :name; Float :distance; Integer :moving_time; Integer :elapsed_time
-      String :sport_category, null: false, default: "run"; String :sport_type
-      String :start_date; String :start_date_local; String :location_country
+      String :name
+      Float :distance
+      Integer :moving_time
+      Integer :elapsed_time
+      String :sport_category, null: false, default: "run"
+      String :sport_type
+      String :start_date
+      String :start_date_local
+      String :location_country
       String :summary_polyline, text: true
-      Float :average_heartrate; Float :max_heartrate
-      Float :average_cadence; Float :max_cadence; Float :average_power; Float :max_power
-      Integer :calories; Float :average_temperature
-      Float :average_speed; Float :elevation_gain
+      Float :average_heartrate
+      Float :max_heartrate
+      Float :average_cadence
+      Float :max_cadence
+      Float :average_power
+      Float :max_power
+      Integer :calories
+      Float :average_temperature
+      Float :average_speed
+      Float :elevation_gain
       String :source
       DateTime :created_at, default: Sequel::CURRENT_TIMESTAMP
       DateTime :updated_at, default: Sequel::CURRENT_TIMESTAMP
@@ -64,8 +76,8 @@ RSpec.describe Workouts::Export::Stats do
         )
         db[:dedup_groups].insert(group_id: "group_a", created_at: now, updated_at: now)
         db[:dedup_group_members].multi_insert([
-          { group_id: "group_a", run_id: "dedup_t1", source: "garmin", flag: "derived", confidence: 0.95 },
-          { group_id: "group_a", run_id: "dedup_t2", source: "strava", flag: "derived", confidence: 0.95 },
+          {group_id: "group_a", run_id: "dedup_t1", source: "garmin", flag: "derived", confidence: 0.95},
+          {group_id: "group_a", run_id: "dedup_t2", source: "strava", flag: "derived", confidence: 0.95}
         ])
       end
 

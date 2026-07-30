@@ -1,6 +1,6 @@
 RSpec.describe Workouts::Sync::IGPSPORT do
   let(:db) { create_test_db }
-  let(:config) { { "phone" => "13800138000", "password" => "pw" } }
+  let(:config) { {"phone" => "13800138000", "password" => "pw"} }
   subject(:igp) { described_class.new(config:, db:, activity_filter: nil) }
   let(:tmpdir) { Dir.mktmpdir }
 
@@ -15,14 +15,26 @@ RSpec.describe Workouts::Sync::IGPSPORT do
     d.create_table(:activities) do
       Integer :id, primary_key: true
       String :run_id, null: false, unique: true
-      String :name; Float :distance; Integer :moving_time; Integer :elapsed_time
-      String :sport_category, null: false, default: "run"; String :sport_type
-      String :start_date; String :start_date_local; String :location_country
+      String :name
+      Float :distance
+      Integer :moving_time
+      Integer :elapsed_time
+      String :sport_category, null: false, default: "run"
+      String :sport_type
+      String :start_date
+      String :start_date_local
+      String :location_country
       String :summary_polyline, text: true
-      Float :average_heartrate; Float :max_heartrate
-      Float :average_cadence; Float :max_cadence; Float :average_power; Float :max_power
-      Integer :calories; Float :average_temperature
-      Float :average_speed; Float :elevation_gain
+      Float :average_heartrate
+      Float :max_heartrate
+      Float :average_cadence
+      Float :max_cadence
+      Float :average_power
+      Float :max_power
+      Integer :calories
+      Float :average_temperature
+      Float :average_speed
+      Float :elevation_gain
       String :source
       DateTime :created_at, default: Sequel::CURRENT_TIMESTAMP
       DateTime :updated_at, default: Sequel::CURRENT_TIMESTAMP
@@ -59,7 +71,7 @@ RSpec.describe Workouts::Sync::IGPSPORT do
           File.write("#{dir}/#{id}.fit", "")
         }
         allow(Workouts::FIT::Decoder).to receive(:decode).and_return([
-          { "positionLat" => 31.0, "positionLong" => 121.0, "timestamp" => 1149593880 }
+          {"positionLat" => 31.0, "positionLong" => 121.0, "timestamp" => 1149593880}
         ])
         allow(igp).to receive(:write_standardized_json)
         allow(igp).to receive(:report_progress)
@@ -95,7 +107,7 @@ RSpec.describe Workouts::Sync::IGPSPORT do
 
   describe "#get_download_url" do
     before do
-      resp = instance_double(Faraday::Response, status: 200, body: %<{"data":"https://example.fit"}>)
+      resp = instance_double(Faraday::Response, status: 200, body: %({"data":"https://example.fit"}))
       allow(Faraday).to receive(:get).and_return(resp)
     end
 
@@ -142,7 +154,7 @@ RSpec.describe Workouts::Sync::IGPSPORT do
     end
 
     it "passes sensor summary into attrs" do
-      sensor = { average_cadence: 78, max_cadence: 95, average_power: 180, max_power: 420, average_temperature: 24, calories: nil }
+      sensor = {average_cadence: 78, max_cadence: 95, average_power: 180, max_power: 420, average_temperature: 24, calories: nil}
       a = igp.send(:build_attrs, row, "1", nil, sensor)
       expect(a[:average_cadence]).to eq(78)
       expect(a[:max_cadence]).to eq(95)
@@ -156,9 +168,9 @@ RSpec.describe Workouts::Sync::IGPSPORT do
   describe "#compute_sensor_summary" do
     it "returns averages and maxes from decoded FIT records" do
       records = [
-        { "cadence" => 80, "power" => 200, "temperature" => 25 },
-        { "cadence" => 85, "power" => 250, "temperature" => 26 },
-        { "cadence" => 90, "power" => 300, "temperature" => 27 }
+        {"cadence" => 80, "power" => 200, "temperature" => 25},
+        {"cadence" => 85, "power" => 250, "temperature" => 26},
+        {"cadence" => 90, "power" => 300, "temperature" => 27}
       ]
       result = igp.send(:compute_sensor_summary, records)
       expect(result[:average_cadence]).to eq(85.0)
@@ -170,9 +182,9 @@ RSpec.describe Workouts::Sync::IGPSPORT do
 
     it "handles partial sensor data (some nil)" do
       records = [
-        { "cadence" => 80, "power" => nil, "temperature" => nil },
-        { "cadence" => nil, "power" => 200, "temperature" => nil },
-        { "cadence" => nil, "power" => nil, "temperature" => 25 }
+        {"cadence" => 80, "power" => nil, "temperature" => nil},
+        {"cadence" => nil, "power" => 200, "temperature" => nil},
+        {"cadence" => nil, "power" => nil, "temperature" => 25}
       ]
       result = igp.send(:compute_sensor_summary, records)
       expect(result[:average_cadence]).to eq(80.0)
@@ -187,7 +199,7 @@ RSpec.describe Workouts::Sync::IGPSPORT do
     end
 
     it "returns nil for missing sensor fields" do
-      records = [{ "positionLat" => 31.0, "positionLong" => 121.0 }]
+      records = [{"positionLat" => 31.0, "positionLong" => 121.0}]
       result = igp.send(:compute_sensor_summary, records)
       expect(result[:average_cadence]).to be_nil
       expect(result[:average_power]).to be_nil

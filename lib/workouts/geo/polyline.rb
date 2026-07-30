@@ -21,7 +21,7 @@ module Workouts
             shift += 5
           end while byte >= 0x20
 
-          dlat = (result & 1) != 0 ? ~(result >> 1) : (result >> 1)
+          dlat = ((result & 1) != 0) ? ~(result >> 1) : (result >> 1)
           lat += dlat
 
           shift = 0
@@ -33,7 +33,7 @@ module Workouts
             shift += 5
           end while byte >= 0x20
 
-          dlng = (result & 1) != 0 ? ~(result >> 1) : (result >> 1)
+          dlng = ((result & 1) != 0) ? ~(result >> 1) : (result >> 1)
           lng += dlng
 
           points << [lat * 1e-5, lng * 1e-5]
@@ -62,7 +62,7 @@ module Workouts
       end
 
       def encode_number(num)
-        num = num < 0 ? ~(num << 1) : (num << 1)
+        num = (num < 0) ? ~(num << 1) : (num << 1)
         result = ""
 
         while num >= 0x20

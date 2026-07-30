@@ -37,7 +37,7 @@ RSpec.describe Workouts::FIT::Decoder do
     end
 
     it "filters out records without position" do
-      has_all_positions = points.all? { |pt| pt["positionLat"] != nil && pt["positionLong"] != nil }
+      has_all_positions = points.all? { |pt| !pt["positionLat"].nil? && !pt["positionLong"].nil? }
       expect(has_all_positions).to be true
     end
 

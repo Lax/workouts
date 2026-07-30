@@ -8,7 +8,7 @@ module Workouts
         svg: Defaults::SVG,
         dashboard: Defaults::DASHBOARD,
         categories: Defaults::CATEGORIES,
-        map: Defaults::MAP,
+        map: Defaults::MAP
       ).freeze
 
       LIGHT = Theme.new(
@@ -22,7 +22,7 @@ module Workouts
           special2: "#FF6B6B",
           empty_cell: "#E5E5E5",
           dim_past: "#D4D4D4",
-          font: "Arial",
+          font: "Arial"
         }.freeze,
         dashboard: {
           background: "#FAFAFA",
@@ -35,14 +35,14 @@ module Workouts
           text_dim: "#94A3B8",
           text_insight: "#94A3B8",
           accent: "#4DD2FF",
-          font: "-apple-system, BlinkMacSystemFont, sans-serif",
+          font: "-apple-system, BlinkMacSystemFont, sans-serif"
         }.freeze,
         categories: Defaults::CATEGORIES,
         map: {
           tiles_dark: Defaults::MAP[:tiles_light],
           tiles_light: Defaults::MAP[:tiles_light],
-          echarts_theme: "dark",
-        }.freeze,
+          echarts_theme: "dark"
+        }.freeze
       ).freeze
 
       def self.load(name, config: nil)

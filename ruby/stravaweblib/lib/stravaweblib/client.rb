@@ -13,14 +13,14 @@ module StravaWebLib
   VALID_FORMATS = %i[original tcx gpx].freeze
   EXPORT_URLS = {
     original: "/activities/%s/export_original",
-    tcx:      "/activities/%s/export_tcx",
-    gpx:      "/activities/%s/export_gpx"
+    tcx: "/activities/%s/export_tcx",
+    gpx: "/activities/%s/export_gpx"
   }.freeze
 
   FORMAT_EXTS = {
-    "fit"  => :fit,
-    "tcx"  => :tcx,
-    "gpx"  => :gpx,
+    "fit" => :fit,
+    "tcx" => :tcx,
+    "gpx" => :gpx,
     "json" => :json
   }.freeze
 
@@ -95,8 +95,12 @@ module StravaWebLib
     def load_cookies
       return unless @cookie_path && File.exist?(@cookie_path)
       @jar.load(@cookie_path, :yaml, session: true)
-    rescue => e
-      FileUtils.rm_f(@cookie_path) rescue nil
+    rescue
+      begin
+        FileUtils.rm_f(@cookie_path)
+      rescue
+        nil
+      end
     end
 
     def save_cookies
@@ -137,7 +141,7 @@ module StravaWebLib
         raise AuthError, "JWT expired at #{Time.at(exp)} — re-run local OTP login\n#{AUTH_HELP}"
       end
 
-      domain_uri = URI(BASE_URL)
+      URI(BASE_URL)
       @jar << HTTP::Cookie.new(
         "strava_remember_id", athlete_id,
         domain: ".strava.com", path: "/", secure: true,
@@ -169,7 +173,7 @@ module StravaWebLib
       elsif (m = cd.match(/filename=([^;\s]+)/))
         m[1]
       else
-        ext = format == :original ? "dat" : format.to_s
+        ext = (format == :original) ? "dat" : format.to_s
         "#{activity_id}.#{ext}"
       end
     end

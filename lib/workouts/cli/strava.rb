@@ -24,11 +24,11 @@ module Workouts
     desc "fetch [ID ...]", "Download original files from Strava via web export"
     option :jwt, type: :string, desc: "JWT token for web auth (overrides cached session)"
     option :format, type: :string, default: "original",
-           desc: "Export format: original, tcx, or gpx"
+      desc: "Export format: original, tcx, or gpx"
     option :output, type: :string, desc: "Output directory override",
-           default: File.join("data", "raw", "strava")
+      default: File.join("data", "raw", "strava")
     option :limit, type: :numeric, default: 10,
-           desc: "Max activities per run (default: 10)"
+      desc: "Max activities per run (default: 10)"
     long_desc <<~DESC
       Download original activity files from Strava via the website export endpoint.
 
@@ -44,15 +44,15 @@ module Workouts
     def fetch(*activity_ids)
       format = options[:format].to_s.downcase
       unless VALID_FORMATS.include?(format)
-        raise ArgumentError, "unknown --format '#{format}' (valid: #{VALID_FORMATS.join(', ')})"
+        raise ArgumentError, "unknown --format '#{format}' (valid: #{VALID_FORMATS.join(", ")})"
       end
 
       config = Workouts::Config.new(options[:config])
       strava_cfg = config.sync_config("strava")
       web_cfg = strava_cfg["web_auth"] || {}
 
-      jwt        = options[:jwt]  || ENV["SYNC__STRAVA__WEB_AUTH__JWT"]  || web_cfg["jwt"]
-      auth_seed  =                  ENV["SYNC__STRAVA__WEB_AUTH__AUTH_SEED"] || web_cfg["auth_seed"]
+      jwt = options[:jwt] || ENV["SYNC__STRAVA__WEB_AUTH__JWT"] || web_cfg["jwt"]
+      auth_seed = ENV["SYNC__STRAVA__WEB_AUTH__AUTH_SEED"] || web_cfg["auth_seed"]
 
       output_dir = options[:output]
       FileUtils.mkdir_p(output_dir)
@@ -80,9 +80,9 @@ module Workouts
           return
         end
 
-        activity_ids = all_ids.reject { |id|
+        activity_ids = all_ids.reject do |id|
           Dir.glob(File.join(output_dir, "#{id}.*")).any?
-        }
+        end
 
         if activity_ids.empty?
           say "All #{all_ids.size} Strava activities already have original files.", :green
@@ -117,7 +117,7 @@ module Workouts
       fmt_sym = format.to_sym
       success = 0
       skipped = 0
-      failed  = 0
+      failed = 0
       token_errors = 0
 
       activity_ids.each do |aid|

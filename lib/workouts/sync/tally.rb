@@ -14,7 +14,7 @@ module Workouts
       def to_s
         return @count.to_s if @count > 9999
         chinese_numeral
-      rescue StandardError
+      rescue
         @count.to_s
       end
 

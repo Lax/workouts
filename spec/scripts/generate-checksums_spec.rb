@@ -18,7 +18,7 @@ RSpec.describe "scripts/generate-checksums.sh" do
     end
 
     it "generates SHA256SUMS inside the directory that passes verification" do
-      out = `bash #{script} data/raw/test 2>&1`
+      `bash #{script} data/raw/test 2>&1`
       expect($?).to be_success
       expect(File).to exist("data/raw/test/SHA256SUMS")
       system("cd data/raw/test && sha256sum -c SHA256SUMS --quiet 2>&1")
@@ -41,7 +41,7 @@ RSpec.describe "scripts/generate-checksums.sh" do
     end
 
     it "generates test.db.SHA256SUMS with matching hash" do
-      out = `bash #{script} test.db 2>&1`
+      `bash #{script} test.db 2>&1`
       expect($?).to be_success
       expect(File).to exist("test.db.SHA256SUMS")
       system("sha256sum -c test.db.SHA256SUMS --quiet 2>&1")
@@ -74,7 +74,7 @@ RSpec.describe "scripts/generate-checksums.sh" do
 
   describe "nonexistent path" do
     it "silently skips" do
-      out = `bash #{script} nonexistent 2>&1`
+      `bash #{script} nonexistent 2>&1`
       expect($?).to be_success
     end
   end

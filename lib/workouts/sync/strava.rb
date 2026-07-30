@@ -7,11 +7,10 @@ module Workouts
     class Strava < Base
       BASE_URL = "https://www.strava.com/api/v3"
 
-
       def authenticate
         return false unless @config["client_id"].to_s != "" &&
-                            @config["client_secret"].to_s != "" &&
-                            @config["refresh_token"].to_s != ""
+          @config["client_secret"].to_s != "" &&
+          @config["refresh_token"].to_s != ""
         @access_token = refresh_access_token
         @access_token ? true : false
       end
@@ -28,7 +27,7 @@ module Workouts
             next if existing.include?(act_id) && raw_file_exists?(act_id)
             type = map_sport_type(act["type"], act["sport_type"])
             next if skip_type?(type)
-            ids << { id: act_id, type: type, summary: act }
+            ids << {id: act_id, type: type, summary: act}
           end
           page += 1
         end
@@ -36,8 +35,7 @@ module Workouts
       end
 
       def process_one(pending)
-        result = sync_activity(pending[:summary], pending[:id], @access_token)
-        result
+        sync_activity(pending[:summary], pending[:id], @access_token)
       end
 
       private
@@ -81,7 +79,7 @@ module Workouts
       def fetch_activities(token, page)
         resp = Faraday.get("#{BASE_URL}/athlete/activities") do |req|
           req.headers["Authorization"] = "Bearer #{token}"
-          req.params = { page: page, per_page: 100 }
+          req.params = {page: page, per_page: 100}
         end
         return [] unless resp.success?
         JSON.parse(resp.body)
@@ -98,7 +96,7 @@ module Workouts
       def fetch_streams(act_id, token)
         resp = Faraday.get("#{BASE_URL}/activities/#{act_id}/streams") do |req|
           req.headers["Authorization"] = "Bearer #{token}"
-          req.params = { keys: "lat_lng,altitude,time,heartrate,cadence,watts,temp,velocity_smooth,distance", key_by_type: true }
+          req.params = {keys: "lat_lng,altitude,time,heartrate,cadence,watts,temp,velocity_smooth,distance", key_by_type: true}
         end
         return {} unless resp.success?
         JSON.parse(resp.body)
@@ -107,7 +105,7 @@ module Workouts
       def write_source_archive(detail, streams, act_id)
         dir = raw_dir
         FileUtils.mkdir_p(dir)
-        archive = { source: "strava", detail: detail, streams: streams }
+        archive = {source: "strava", detail: detail, streams: streams}
         tmp = File.join(dir, ".#{act_id}.json.tmp")
         final = File.join(dir, "#{act_id}.json")
         File.write(tmp, JSON.generate(archive))
@@ -131,7 +129,7 @@ module Workouts
         dist_data = streams["distance"]&.dig("data")
 
         coords.each_with_index.map do |latlng, i|
-          pt = { positionLat: latlng[0], positionLong: latlng[1] }
+          pt = {positionLat: latlng[0], positionLong: latlng[1]}
           pt[:altitude] = alt_data[i] if alt_data && i < alt_data.size
           pt[:timestamp] = time_data[i] if time_data && i < time_data.size
           pt[:heartRate] = hr_data[i] if hr_data && i < hr_data.size
@@ -154,8 +152,16 @@ module Workouts
       end
 
       def build_attrs(act, category, polyline = nil, external_id: nil)
-        start_t = Time.parse(act["start_date"]) rescue nil
-        local_t = Time.parse(act["start_date_local"]) rescue nil
+        start_t = begin
+          Time.parse(act["start_date"])
+        rescue
+          nil
+        end
+        local_t = begin
+          Time.parse(act["start_date_local"])
+        rescue
+          nil
+        end
 
         {
           run_id: "strava_#{act["id"]}",

@@ -1,13 +1,13 @@
 module Workouts
-    require_relative "cli/export"
-    require_relative "cli/db"
-    require_relative "cli/geo"
-    require_relative "cli/migrate"
-    require_relative "cli/serve"
-    require_relative "cli/sync"
-    require_relative "cli/import"
-    require_relative "cli/import_cli"
-    require_relative "cli/strava"
+  require_relative "cli/export"
+  require_relative "cli/db"
+  require_relative "cli/geo"
+  require_relative "cli/migrate"
+  require_relative "cli/serve"
+  require_relative "cli/sync"
+  require_relative "cli/import"
+  require_relative "cli/import_cli"
+  require_relative "cli/strava"
 
   class CLI < Thor
     package_name "Workouts"
@@ -89,7 +89,7 @@ module Workouts
     def parse(file)
       content = File.read(file)
       format = file.match?(/\.gpx$/i) ? :gpx : :tcx
-      parser = format == :gpx ? Parser::GPX.new(source: "file") : Parser::TCX.new(source: "file")
+      parser = (format == :gpx) ? Parser::GPX.new(source: "file") : Parser::TCX.new(source: "file")
       activities = parser.call(content)
 
       if activities.empty?
@@ -99,7 +99,7 @@ module Workouts
 
       activities.each do |act|
         say_status :activity, act[:name] || "unnamed", :green
-        say "  Sport: #{act[:sport_category]}#{act[:sport_type] ? " (#{act[:sport_type]})" : ""}"
+        say "  Sport: #{act[:sport_category]}#{" (#{act[:sport_type]})" if act[:sport_type]}"
         say "  Date:  #{act[:start_date]}"
         say "  Dist:  #{act[:distance]&.round(2)}m" if act[:distance]
         say "  Time:  #{act[:moving_time]}s" if act[:moving_time]
@@ -130,7 +130,7 @@ module Workouts
     method_option :verbose, type: :boolean, default: false, desc: "Detailed per-match output"
     def dedup
       db = connect_db
-      log_path = options[:log] == "auto" ? nil : options[:log]
+      log_path = (options[:log] == "auto") ? nil : options[:log]
       count = Workouts::Dedup::Service.new(
         db,
         incremental: options[:incremental],

@@ -19,7 +19,7 @@ module Workouts
 
         times = points.map { |p| p[3] }.compact
         start_date = times.min
-        end_date = times.max
+        times.max
 
         sport_type = Workouts::FIT::Decoder.sport(path)
 

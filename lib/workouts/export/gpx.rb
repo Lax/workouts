@@ -43,17 +43,23 @@ module Workouts
         safe_id = a[:run_id].to_s.gsub(/[^a-zA-Z0-9_-]/, "_")
         name = esc(a[:name] || "Activity")
         type = CATEGORY_MAP[a[:sport_category]] || "other"
-        start_t = (Time.parse(a[:start_date].to_s).utc.xmlschema(0) rescue "") if a[:start_date]
+        if a[:start_date]
+          start_t = begin
+            Time.parse(a[:start_date].to_s).utc.xmlschema(0)
+          rescue
+            ""
+          end
+        end
 
-        xml = +%{<?xml version="1.0" encoding="UTF-8"?>\n}
-        xml << %{<gpx version="1.1" creator="Workouts CLI"\n}
-        xml << %{  xmlns="http://www.topografix.com/GPX/1/1"\n}
-        xml << %{  xmlns:gpxtpx="http://www.garmin.com/xmlschemas/TrackPointExtension/v1">\n}
-        xml << %{<metadata>\n  <name>#{name}</name>\n  <time>#{start_t}</time>\n</metadata>\n}
-        xml << %{<trk>\n  <name>#{name}</name>\n  <type>#{type}</type>\n  <trkseg>\n}
+        xml = +%(<?xml version="1.0" encoding="UTF-8"?>\n)
+        xml << %(<gpx version="1.1" creator="Workouts CLI"\n)
+        xml << %(  xmlns="http://www.topografix.com/GPX/1/1"\n)
+        xml << %(  xmlns:gpxtpx="http://www.garmin.com/xmlschemas/TrackPointExtension/v1">\n)
+        xml << %(<metadata>\n  <name>#{name}</name>\n  <time>#{start_t}</time>\n</metadata>\n)
+        xml << %(<trk>\n  <name>#{name}</name>\n  <type>#{type}</type>\n  <trkseg>\n)
 
         points.each do |pt|
-          s = +%(  <trkpt lat="#{fmt(pt[:lat])}" lon="#{fmt(pt[:lon])}">\n)
+          s = %(  <trkpt lat="#{fmt(pt[:lat])}" lon="#{fmt(pt[:lon])}">\n)
           s << %(    <ele>#{fmt(pt[:ele])}</ele>\n) if pt[:ele]
           s << %(    <time>#{pt[:time]}</time>\n) if pt[:time]
           if pt[:hr] || pt[:cad] || pt[:watts] || pt[:temp]
@@ -70,7 +76,7 @@ module Workouts
           xml << s
         end
 
-        xml << %{</trkseg>\n</trk>\n</gpx>\n}
+        xml << %(</trkseg>\n</trk>\n</gpx>\n)
         File.write(File.join(@output, "#{safe_id}.gpx"), xml)
       end
 
@@ -83,7 +89,13 @@ module Workouts
         records = ::JSON.parse(File.read(path))
         return nil if records.empty?
 
-        start_time = Time.parse(a[:start_date].to_s) rescue nil if a[:start_date]
+        if a[:start_date]
+          start_time = begin
+            Time.parse(a[:start_date].to_s)
+          rescue
+            nil
+          end
+        end
         pts = []
         records.each do |r|
           lat = r["positionLat"] || r["latitude"]
@@ -93,23 +105,27 @@ module Workouts
           ele = r["altitude"]
           ts_raw = r["timestamp"]
           time = case ts_raw
-                 when String then Time.parse(ts_raw) rescue nil
-                 when Numeric then start_time ? start_time + ts_raw : nil
-                 end
-          hr    = r["heartRate"] || r["heartrate"]
-          cad   = r["cadence"]
+          when String then begin
+            Time.parse(ts_raw)
+          rescue
+            nil
+          end
+          when Numeric then start_time ? start_time + ts_raw : nil
+          end
+          hr = r["heartRate"] || r["heartrate"]
+          cad = r["cadence"]
           watts = r["power"] || r["watts"]
-          temp  = r["temperature"]
-          pts << { lat: lat, lon: lng, ele: ele, time: time&.utc&.xmlschema,
-                   hr: hr, cad: cad, watts: watts, temp: temp }
+          temp = r["temperature"]
+          pts << {lat: lat, lon: lng, ele: ele, time: time&.utc&.xmlschema,
+                   hr: hr, cad: cad, watts: watts, temp: temp}
         end
-        pts.size >= 2 ? pts : nil
+        (pts.size >= 2) ? pts : nil
       end
 
       def polyline_points(a)
         pts = Geo::Polyline.decode(a[:summary_polyline])
         return nil if pts.size < 2
-        pts.map { |lat, lng| { lat: lat, lon: lng } }
+        pts.map { |lat, lng| {lat: lat, lon: lng} }
       end
 
       def extract_id(run_id)

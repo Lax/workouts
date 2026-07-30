@@ -10,7 +10,7 @@ require "net/http"
 require "uri"
 
 config_path = File.expand_path("../config/config.yml", __dir__)
-raw = YAML.safe_load(File.read(config_path))
+raw = YAML.safe_load_file(config_path)
 cfg = raw.dig("sync", "keep")
 phone = cfg["phone"] || cfg["mobile"]
 password = cfg["password"]
@@ -49,7 +49,7 @@ end
 
 # Login
 puts "Logging in..."
-resp = http_post("https://api.gotokeep.com/v1.1/users/login", { mobile: phone, password: password }, headers)
+resp = http_post("https://api.gotokeep.com/v1.1/users/login", {mobile: phone, password: password}, headers)
 raise "Login failed: #{resp.code}" unless resp.code.to_i == 200
 data = JSON.parse(resp.body)
 token = data.dig("data", "token") || abort("No token in login response")
@@ -111,15 +111,17 @@ end
 
 def inflate(data)
   [-Zlib::MAX_WBITS, Zlib::MAX_WBITS, Zlib::MAX_WBITS + 16].each do |wbits|
+    inflater = Zlib::Inflate.new(wbits)
+    result = inflater.inflate(data)
     begin
-      inflater = Zlib::Inflate.new(wbits)
-      result = inflater.inflate(data)
-      inflater.finish rescue nil
-      inflater.close
-      return result
-    rescue Zlib::DataError
-      next
+      inflater.finish
+    rescue
+      nil
     end
+    inflater.close
+    return result
+  rescue Zlib::DataError
+    next
   end
   raise Zlib::DataError, "cannot inflate data"
 end

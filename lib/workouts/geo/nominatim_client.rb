@@ -22,7 +22,7 @@ module Workouts
           lon: lng,
           format: "jsonv2",
           addressdetails: 1,
-          zoom: 10,
+          zoom: 10
         )
         resp = Net::HTTP.start(uri.host, uri.port, use_ssl: true) do |http|
           req = Net::HTTP::Get.new(uri)
@@ -42,7 +42,7 @@ module Workouts
         addr = body["address"] || {}
         country = addr["country"]
         state = addr["state"]
-        { province: country, city: state, district: nil, township: nil, source: "nominatim" }
+        {province: country, city: state, district: nil, township: nil, source: "nominatim"}
       end
 
       def rate_limit

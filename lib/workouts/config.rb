@@ -5,13 +5,13 @@ module Workouts
   # Env uses __ as separator (SYNC__KEEP__PHONE) to avoid conflict with key _.
   class Config
     DEFAULTS = {
-      "database" => { "path" => "data/workouts.db" },
+      "database" => {"path" => "data/workouts.db"},
       "sync" => {},
       "export" => {
-        "json" => { "path" => "site/activities.json" },
-        "svg" => { "dir" => "site/svg" },
-        "csv" => { "path" => "site/workouts.csv" },
-        "gpx" => { "path" => "site/gpx_out" }
+        "json" => {"path" => "site/activities.json"},
+        "svg" => {"dir" => "site/svg"},
+        "csv" => {"path" => "site/workouts.csv"},
+        "gpx" => {"path" => "site/gpx_out"}
       },
       "privacy" => {
         "start_end_range" => 200
@@ -69,7 +69,7 @@ module Workouts
     end
 
     def load_file(path)
-      yaml = YAML.safe_load(File.read(path)) || {}
+      yaml = YAML.safe_load_file(path) || {}
       deep_merge!(@data, yaml)
     end
 
@@ -85,7 +85,10 @@ module Workouts
 
     def set_nested(hash, keys, value)
       last = keys.pop
-      keys.each { |k| hash[k] ||= {}; hash = hash[k] }
+      keys.each { |k|
+        hash[k] ||= {}
+        hash = hash[k]
+      }
       hash[last] = typed_value(value)
     end
 

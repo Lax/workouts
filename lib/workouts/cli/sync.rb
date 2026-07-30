@@ -4,12 +4,12 @@ module Workouts
       def sync
         db = connect_db
         sources = if options[:source]
-                    [options[:source]]
-                  else
-                    %w[igpsport keep xoss xingzhe garmin_cn garmin strava].select do |s|
-                      source_configured?(s)
-                    end
-                  end
+          [options[:source]]
+        else
+          %w[igpsport keep xoss xingzhe garmin_cn garmin strava].select do |s|
+            source_configured?(s)
+          end
+        end
 
         filter = options[:activity]&.map(&:strip)&.map(&:downcase)
 
@@ -45,7 +45,7 @@ module Workouts
       def auth(source)
         sources = %w[garmin garmin_cn xoss xingzhe]
         unless sources.include?(source)
-          say_status :error, "Supported: #{sources.join(', ')}", :red
+          say_status :error, "Supported: #{sources.join(", ")}", :red
           return
         end
 
@@ -131,17 +131,17 @@ module Workouts
         return nil if config.empty?
 
         klass = case source
-                when "strava" then Workouts::Sync::Strava
-                when "garmin" then Workouts::Sync::Garmin
-                when "garmin_cn" then Workouts::Sync::GarminCN
-                when "keep" then Workouts::Sync::Keep
-                when "igpsport" then Workouts::Sync::IGPSPORT
-                when "xoss" then Workouts::Sync::XOSS
-                when "xingzhe" then Workouts::Sync::XingZhe
-                else
-                  say_status :error, "Unknown source: #{source}", :red
-                  return nil
-                end
+        when "strava" then Workouts::Sync::Strava
+        when "garmin" then Workouts::Sync::Garmin
+        when "garmin_cn" then Workouts::Sync::GarminCN
+        when "keep" then Workouts::Sync::Keep
+        when "igpsport" then Workouts::Sync::IGPSPORT
+        when "xoss" then Workouts::Sync::XOSS
+        when "xingzhe" then Workouts::Sync::XingZhe
+        else
+          say_status :error, "Unknown source: #{source}", :red
+          return nil
+        end
 
         klass.new(config:, db:, activity_filter: filter, time_budget: workouts_config.dig("sync", "time_budget"))
       end

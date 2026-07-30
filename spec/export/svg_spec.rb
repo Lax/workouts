@@ -1,15 +1,15 @@
 RSpec.describe Workouts::Export::SVG::GithubDrawer do
   let(:colors) do
-    { background: "#222", track: "#4DD2FF", text: "#FFF", special: "#FF0",
-      font: "Arial", empty_cell: "#444", dim_past: "#555" }
+    {background: "#222", track: "#4DD2FF", text: "#FFF", special: "#FF0",
+     font: "Arial", empty_cell: "#444", dim_past: "#555"}
   end
-  let(:sd) { { special_distance: 10, special_distance2: 20 } }
+  let(:sd) { {special_distance: 10, special_distance2: 20} }
   let(:poster) { Workouts::Export::SVG::Poster.new("Test", "Test", colors, sd) }
   let(:drawer) { described_class.new(poster) }
 
   def build_track(start_date, distance: 5000, run_id: "t1", category: "run", duplicate_info: nil)
-    attrs = { run_id: run_id, distance: distance, start_date: start_date,
-              sport_category: category, moving_time: 600 }
+    attrs = {run_id: run_id, distance: distance, start_date: start_date,
+             sport_category: category, moving_time: 600}
     attrs[:duplicate_info] = duplicate_info if duplicate_info
     Workouts::Export::SVG::Track.new(attrs, colors, sd)
   end
@@ -20,7 +20,7 @@ RSpec.describe Workouts::Export::SVG::GithubDrawer do
         build_track("2024-06-15T10:00:00Z", run_id: "a", category: "run"),
         build_track("2024-06-15T14:30:00Z", run_id: "b", category: "run"),
         build_track("2024-06-15T08:00:00Z", run_id: "c", category: "walk"),
-        build_track("2024-06-16T08:00:00Z", run_id: "d", category: "ride"),
+        build_track("2024-06-16T08:00:00Z", run_id: "d", category: "ride")
       ]
       result = drawer.send(:group_by_date_and_category)
       expect(result.keys).to all(match(/^\d{4}-\d{2}-\d{2}$/))
@@ -33,8 +33,8 @@ RSpec.describe Workouts::Export::SVG::GithubDrawer do
   describe "#dominant_category" do
     it "picks category with highest distance/REFERENCE ratio" do
       grouped = {
-        "run"  => [build_track("2024-06-15T10:00:00Z", distance: 3000, category: "run")],
-        "walk" => [build_track("2024-06-15T08:00:00Z", distance: 2000, category: "walk")],
+        "run" => [build_track("2024-06-15T10:00:00Z", distance: 3000, category: "run")],
+        "walk" => [build_track("2024-06-15T08:00:00Z", distance: 2000, category: "walk")]
       }
       cat, len = drawer.send(:dominant_category, grouped)
       # walk 2km / 5 = 0.4, run 3km / 10 = 0.3 → walk wins
@@ -45,7 +45,7 @@ RSpec.describe Workouts::Export::SVG::GithubDrawer do
     it "prefers ride over walk when ride is proportionally more significant" do
       grouped = {
         "ride" => [build_track("2024-06-15T10:00:00Z", distance: 15_000, category: "ride")],
-        "walk" => [build_track("2024-06-15T08:00:00Z", distance: 3_000, category: "walk")],
+        "walk" => [build_track("2024-06-15T08:00:00Z", distance: 3_000, category: "walk")]
       }
       cat, _len = drawer.send(:dominant_category, grouped)
       # ride 15km / 20 = 0.75, walk 3km / 5 = 0.6 → ride wins
@@ -59,7 +59,7 @@ RSpec.describe Workouts::Export::SVG::GithubDrawer do
         build_track("2024-06-15T10:00:00Z", distance: 5000, category: "run"),
         build_track("2024-06-15T14:00:00Z", distance: 3000, category: "run"),
         build_track("2024-06-16T08:00:00Z", distance: 2000, category: "run"),
-        build_track("2024-06-15T08:00:00Z", distance: 4000, category: "walk"),
+        build_track("2024-06-15T08:00:00Z", distance: 4000, category: "walk")
       ]
       grouped = drawer.send(:group_by_date_and_category)
       maxes = drawer.send(:compute_per_category_max, grouped)
@@ -71,7 +71,7 @@ RSpec.describe Workouts::Export::SVG::GithubDrawer do
   describe "#draw" do
     it "includes CSS class per dominant category" do
       poster.tracks = [
-        build_track("2024-06-15T10:00:00Z", distance: 8000, category: "run"),
+        build_track("2024-06-15T10:00:00Z", distance: 8000, category: "run")
       ]
       poster.width = 200
       poster.height = 100
@@ -82,7 +82,7 @@ RSpec.describe Workouts::Export::SVG::GithubDrawer do
     it "includes non-default fills for days with activity" do
       poster.tracks = [
         build_track("2024-06-15T10:00:00Z", distance: 8000, category: "run"),
-        build_track("2024-07-20T08:00:00Z", distance: 5000, category: "walk"),
+        build_track("2024-07-20T08:00:00Z", distance: 5000, category: "walk")
       ]
       poster.width = 200
       poster.height = 100
@@ -108,7 +108,7 @@ RSpec.describe Workouts::Export::SVG::GithubDrawer do
     it "uses newline separator for multiple tracks" do
       poster.tracks = [
         build_track("2024-06-15T10:00:00Z", distance: 5000, category: "ride", run_id: "a"),
-        build_track("2024-06-15T14:00:00Z", distance: 3000, category: "walk", run_id: "b"),
+        build_track("2024-06-15T14:00:00Z", distance: 3000, category: "walk", run_id: "b")
       ]
       grouped = drawer.send(:group_by_date_and_category)
       title = drawer.send(:build_day_title, "2024-06-15", grouped["2024-06-15"])
@@ -135,14 +135,14 @@ end
 
 RSpec.describe Workouts::Export::SVG::Track do
   let(:colors) do
-    { background: "#222", track: "#4DD2FF", text: "#FFF", special: "#FF0",
-      font: "Arial", empty_cell: "#444", dim_past: "#555" }
+    {background: "#222", track: "#4DD2FF", text: "#FFF", special: "#FF0",
+     font: "Arial", empty_cell: "#444", dim_past: "#555"}
   end
-  let(:sd) { { special_distance: 10, special_distance2: 20 } }
+  let(:sd) { {special_distance: 10, special_distance2: 20} }
 
   def build_track(start_date, distance: 5000, run_id: "t1", category: "run", duplicate_info: nil)
-    attrs = { run_id: run_id, distance: distance, start_date: start_date,
-              sport_category: category, moving_time: 600 }
+    attrs = {run_id: run_id, distance: distance, start_date: start_date,
+             sport_category: category, moving_time: 600}
     attrs[:duplicate_info] = duplicate_info if duplicate_info
     Workouts::Export::SVG::Track.new(attrs, colors, sd)
   end
@@ -188,14 +188,26 @@ RSpec.describe Workouts::Export::SVG::Renderer do
     d.create_table(:activities) do
       Integer :id, primary_key: true
       String :run_id, null: false, unique: true
-      String :name; Float :distance; Integer :moving_time; Integer :elapsed_time
-      String :sport_category, null: false, default: "run"; String :sport_type
-      String :start_date; String :start_date_local; String :location_country
+      String :name
+      Float :distance
+      Integer :moving_time
+      Integer :elapsed_time
+      String :sport_category, null: false, default: "run"
+      String :sport_type
+      String :start_date
+      String :start_date_local
+      String :location_country
       String :summary_polyline, text: true
-      Float :average_heartrate; Float :max_heartrate
-      Float :average_cadence; Float :max_cadence; Float :average_power; Float :max_power
-      Integer :calories; Float :average_temperature
-      Float :average_speed; Float :elevation_gain
+      Float :average_heartrate
+      Float :max_heartrate
+      Float :average_cadence
+      Float :max_cadence
+      Float :average_power
+      Float :max_power
+      Integer :calories
+      Float :average_temperature
+      Float :average_speed
+      Float :elevation_gain
       String :source
       DateTime :created_at, default: Sequel::CURRENT_TIMESTAMP
       DateTime :updated_at, default: Sequel::CURRENT_TIMESTAMP
@@ -237,7 +249,9 @@ RSpec.describe Workouts::Export::SVG::Renderer do
   it "returns 0 for empty DB" do
     empty_db = Sequel.sqlite
     empty_db.create_table(:activities) do
-      primary_key :id; String :run_id; String :start_date
+      primary_key :id
+      String :run_id
+      String :start_date
       String :sport_category
     end
     r = described_class.new(db: empty_db, style: "github", output: output)

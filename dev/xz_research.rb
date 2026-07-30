@@ -2,8 +2,8 @@ require "bundler/setup"
 require "workouts"
 
 IDS = {
-  trail: { id: 55976106, name: "2018-11-03 越野", pts: 1166 },
-  ride:  { id: 56279644, name: "2018-11-30 骑行", pts: 5157 },
+  trail: {id: 55976106, name: "2018-11-03 越野", pts: 1166},
+  ride: {id: 56279644, name: "2018-11-30 骑行", pts: 5157}
 }
 
 cfg = Workouts::Config.new.dig("sync", "xingzhe")

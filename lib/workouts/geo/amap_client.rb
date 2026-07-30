@@ -22,7 +22,7 @@ module Workouts
           location: "#{lng},#{lat}",
           output: "JSON",
           radius: 1000,
-          extensions: "all",
+          extensions: "all"
         )
         resp = Net::HTTP.get_response(uri)
         body = JSON.parse(resp.body)
@@ -37,10 +37,10 @@ module Workouts
       def parse_response(body)
         comp = body.dig("regeocode", "addressComponent") || {}
         province = comp["province"].to_s.empty? ? nil : comp["province"]
-        city = comp["city"].to_s.empty? || comp["city"] == comp["province"] ? nil : comp["city"]
+        city = (comp["city"].to_s.empty? || comp["city"] == comp["province"]) ? nil : comp["city"]
         district = comp["district"].to_s.empty? ? nil : comp["district"]
         township = comp["township"].to_s.empty? ? nil : comp["township"]
-        { province: province, city: city, district: district, township: township, source: "amap" }
+        {province: province, city: city, district: district, township: township, source: "amap"}
       end
 
       def rate_limit

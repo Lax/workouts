@@ -4,14 +4,26 @@ RSpec.describe Workouts::Migrate::IGPSportToGarmin do
     d.create_table(:activities) do
       Integer :id, primary_key: true
       String :run_id, null: false, unique: true
-      String :name; Float :distance; Integer :moving_time; Integer :elapsed_time
-      String :sport_category, null: false, default: "run"; String :sport_type
-      String :start_date; String :start_date_local; String :location_country
+      String :name
+      Float :distance
+      Integer :moving_time
+      Integer :elapsed_time
+      String :sport_category, null: false, default: "run"
+      String :sport_type
+      String :start_date
+      String :start_date_local
+      String :location_country
       String :summary_polyline, text: true
-      Float :average_heartrate; Float :max_heartrate
-      Float :average_cadence; Float :max_cadence; Float :average_power; Float :max_power
-      Integer :calories; Float :average_temperature
-      Float :average_speed; Float :elevation_gain
+      Float :average_heartrate
+      Float :max_heartrate
+      Float :average_cadence
+      Float :max_cadence
+      Float :average_power
+      Float :max_power
+      Integer :calories
+      Float :average_temperature
+      Float :average_speed
+      Float :elevation_gain
       String :source
       DateTime :created_at, default: Sequel::CURRENT_TIMESTAMP
       DateTime :updated_at, default: Sequel::CURRENT_TIMESTAMP
@@ -111,7 +123,7 @@ RSpec.describe Workouts::Migrate::IGPSportToGarmin do
     end
 
     it "saves and loads upload map" do
-      map = { "uploads" => { "igpsport_12345" => { "garmin_activity_id" => "987" } } }
+      map = {"uploads" => {"igpsport_12345" => {"garmin_activity_id" => "987"}}}
       migrator.send(:save_upload_map, map)
       loaded = migrator.send(:load_upload_map)
       expect(loaded["uploads"]["igpsport_12345"]["garmin_activity_id"]).to eq("987")
@@ -121,7 +133,7 @@ RSpec.describe Workouts::Migrate::IGPSportToGarmin do
       insert_igpsport_activity
       FileUtils.mkdir_p(map_dir)
       File.write(map_path, JSON.generate({
-        "uploads" => { "igpsport_12345" => { "garmin_activity_id" => "987" } }
+        "uploads" => {"igpsport_12345" => {"garmin_activity_id" => "987"}}
       }))
       allow(migrator).to receive(:authenticate).and_call_original
       expect(migrator.call).to eq(0)
@@ -138,7 +150,7 @@ RSpec.describe Workouts::Migrate::IGPSportToGarmin do
 
     it "returns nil when no match" do
       activities = [
-        { "activityName" => "Morning Run", "activityId" => 33333 }
+        {"activityName" => "Morning Run", "activityId" => 33333}
       ]
       result = migrator.send(:find_name_suffix_match, activities)
       expect(result).to be_nil
@@ -183,8 +195,8 @@ RSpec.describe Workouts::Migrate::IGPSportToGarmin do
 
   describe "#build_gpx" do
     let(:act) do
-      { run_id: "igpsport_12345", name: "Test Ride", start_date: "2025-06-01 08:00:00",
-        sport_category: "ride" }
+      {run_id: "igpsport_12345", name: "Test Ride", start_date: "2025-06-01 08:00:00",
+       sport_category: "ride"}
     end
     let(:l2) { JSON.parse(load_fixture("igpsport/sample_l2.json")) }
 
@@ -229,7 +241,7 @@ RSpec.describe Workouts::Migrate::IGPSportToGarmin do
     end
 
     it "filters out nil lat/lng points" do
-      bad_l2 = l2.dup << { "altitude" => 10 }
+      bad_l2 = l2.dup << {"altitude" => 10}
       xml = migrator.send(:build_gpx, act, bad_l2)
       doc = Nokogiri::XML(xml)
       trkpts = doc.xpath("//xmlns:trkpt")

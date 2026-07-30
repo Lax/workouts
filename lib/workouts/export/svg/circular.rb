@@ -48,9 +48,8 @@ module Workouts
 
           font_family = poster.colors[:font]
           yr_style = "dominant-baseline:central;font-size:#{min_size * 4.0 / 80.0}px;font-family:#{font_family};"
-          mo_style = "font-size:#{min_size * 3.0 / 80.0}px;font-family:#{font_family};"
 
-          lines << tag("text", { x: center[0], y: center[1], fill: poster.colors[:text], "text-anchor" => "middle", "alignment-baseline" => "middle", style: yr_style }, year.to_s)
+          lines << tag("text", {:x => center[0], :y => center[1], :fill => poster.colors[:text], "text-anchor" => "middle", "alignment-baseline" => "middle", :style => yr_style}, year.to_s)
 
           df = 360.0 / (Date.leap?(year) ? 366 : 365)
           day_num = 0
@@ -69,12 +68,12 @@ module Workouts
               r3 = outer_radius + 2
 
               sin_a1, cos_a1 = Math.sin(a1), Math.cos(a1)
-              sin_a3, cos_a3 = Math.sin(a3), Math.cos(a3)
+              _, _ = Math.sin(a3), Math.cos(a3)
 
               lines << tag("line", {
-                x1: center[0] + r1 * sin_a1, y1: center[1] - r1 * cos_a1,
-                x2: center[0] + r2 * sin_a1, y2: center[1] - r2 * cos_a1,
-                stroke: poster.colors[:text], "stroke-width" => 0.3
+                :x1 => center[0] + r1 * sin_a1, :y1 => center[1] - r1 * cos_a1,
+                :x2 => center[0] + r2 * sin_a1, :y2 => center[1] - r2 * cos_a1,
+                :stroke => poster.colors[:text], "stroke-width" => 0.3
               })
 
               mid_a = (a1 + a3) / 2
@@ -82,8 +81,8 @@ module Workouts
               mid_x = center[0] + mid_r * Math.sin(mid_a)
               mid_y = center[1] - mid_r * Math.cos(mid_a)
               lines << tag("text", {
-                x: mid_x, y: mid_y,
-                fill: poster.colors[:text],
+                :x => mid_x, :y => mid_y,
+                :fill => poster.colors[:text],
                 "text-anchor" => "middle",
                 "font-size" => "#{min_size * 3.0 / 80.0}px",
                 "font-family" => poster.colors[:font]
@@ -107,7 +106,7 @@ module Workouts
               d += "l #{(r1c - r2c) * sin_a2},#{(r2c - r1c) * cos_a2}"
 
               dist_km = poster.m2u(total_len)
-              title = "#{date_key} #{format('%.1f', dist_km)} #{poster.u}"
+              title = "#{date_key} #{format("%.1f", dist_km)} #{poster.u}"
               lines << %(<g><title>#{escape(title)}</title><path d="#{d}" fill="#{color}" stroke="none" /></g>)
             end
 

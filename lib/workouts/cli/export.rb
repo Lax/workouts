@@ -43,18 +43,18 @@ module Workouts
     option :year, type: :string, desc: "Filter by year (YYYY or 'all')"
     option :title, type: :string, desc: "Poster title"
     option :athlete, type: :string, desc: "Athlete name"
-     option :bg_color, type: :string, desc: "Background color (--bg-color)"
-     option :track_color, type: :string, desc: "Activity color (--track-color)"
-     option :special_color, type: :string, desc: "Special activity color (--special-color)"
-     option :text_color, type: :string, desc: "Text color (--text-color)"
+    option :bg_color, type: :string, desc: "Background color (--bg-color)"
+    option :track_color, type: :string, desc: "Activity color (--track-color)"
+    option :special_color, type: :string, desc: "Special activity color (--special-color)"
+    option :text_color, type: :string, desc: "Text color (--text-color)"
     option :special_distance, type: :numeric, desc: "Special distance 1 in km (--special-distance)", default: 10
     option :special_distance2, type: :numeric, desc: "Special distance 2 in km (--special-distance2)", default: 20
     option :min_distance, type: :numeric, desc: "Minimum distance in km (--min-distance)", default: 0
     option :birth, type: :string, desc: "Birth date (YYYY-MM) for month-of-life style"
     option :summary_year, type: :numeric, desc: "Year for summary style (--summary-year)"
-      option :color_run, type: :string, desc: "Color for run activities (--color-run)"
-      option :color_ride, type: :string, desc: "Color for ride activities (--color-ride)"
-      option :color_walk, type: :string, desc: "Color for walk activities (--color-walk)"
+    option :color_run, type: :string, desc: "Color for run activities (--color-run)"
+    option :color_ride, type: :string, desc: "Color for ride activities (--color-ride)"
+    option :color_walk, type: :string, desc: "Color for walk activities (--color-walk)"
     option :theme, type: :string, desc: "Theme name (dark/light)", default: "dark"
     def svg
       config = Workouts::Config.new
@@ -64,7 +64,7 @@ module Workouts
 
       style = options[:style]
       unless Workouts::Export::SVG::STYLES.include?(style)
-        say_status :error, "Unknown style: #{style}. Available: #{Workouts::Export::SVG::STYLES.join(', ')}", :red
+        say_status :error, "Unknown style: #{style}. Available: #{Workouts::Export::SVG::STYLES.join(", ")}", :red
         return
       end
 

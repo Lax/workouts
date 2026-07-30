@@ -25,14 +25,14 @@ module Workouts
       private
 
       def empty_stats
-        { summary: {}, monthly: [], yearly: [], streaks: {}, activity_types: [] }
+        {summary: {}, monthly: [], yearly: [], streaks: {}, activity_types: []}
       end
 
       def compute_summary(rows)
         total_dist = 0.0
         total_time = 0
         total_elev = 0.0
-        breakdown = Hash.new { |h, k| h[k] = { count: 0, distance_km: 0.0, moving_time_h: 0.0 } }
+        breakdown = Hash.new { |h, k| h[k] = {count: 0, distance_km: 0.0, moving_time_h: 0.0} }
 
         rows.each do |r|
           cat = r[:sport_category] || "other"
@@ -50,13 +50,13 @@ module Workouts
         end
 
         cadences = rows.map { |r| r[:average_cadence] }.compact
-        powers   = rows.map { |r| r[:average_power] }.compact
+        powers = rows.map { |r| r[:average_power] }.compact
 
         grouped_run_ids = if @db.table_exists?(:dedup_group_members)
-                            @db[:dedup_group_members].select_map(:run_id)
-                          else
-                            []
-                          end
+          @db[:dedup_group_members].select_map(:run_id)
+        else
+          []
+        end
         unique = rows.reject { |a| grouped_run_ids.include?(a[:run_id]) }
         unique_count = unique.size + (@db.table_exists?(:dedup_groups) ? @db[:dedup_groups].count : 0)
 
@@ -69,17 +69,19 @@ module Workouts
           avg_cadence: cadences.any? ? (cadences.sum / cadences.size).round(1) : nil,
           avg_power: powers.any? ? (powers.sum / powers.size).round(1) : nil,
           sport_breakdown: breakdown.sort_by { |_, v| -v[:count] }.map { |cat, v|
-            { category: cat, count: v[:count], distance_km: v[:distance_km].round(1),
-              moving_time_h: v[:moving_time_h].round(1) }
+            {category: cat, count: v[:count], distance_km: v[:distance_km].round(1),
+             moving_time_h: v[:moving_time_h].round(1)}
           }
         }
       end
 
       def compute_monthly(rows)
-        monthly = Hash.new { |h, k| h[k] = { count: 0, distance_km: 0.0, moving_time_h: 0.0,
-                                             total_hr: 0.0, hr_count: 0, total_elev: 0.0,
-                                             total_cadence: 0.0, cadence_count: 0,
-                                             total_power: 0.0, power_count: 0 } }
+        monthly = Hash.new { |h, k|
+          h[k] = {count: 0, distance_km: 0.0, moving_time_h: 0.0,
+                                   total_hr: 0.0, hr_count: 0, total_elev: 0.0,
+                                   total_cadence: 0.0, cadence_count: 0,
+                                   total_power: 0.0, power_count: 0}
+        }
 
         rows.each do |r|
           next unless r[:start_date_local] || r[:start_date]
@@ -111,7 +113,7 @@ module Workouts
         end
 
         monthly.sort.map { |ym, v|
-          pace = v[:moving_time_h] > 0 && v[:distance_km] > 0 ?
+          pace = (v[:moving_time_h] > 0 && v[:distance_km] > 0) ?
             format_pace(v[:moving_time_h] * 3600 / v[:distance_km]) : nil
           {
             year: ym[0..3].to_i,
@@ -120,9 +122,9 @@ module Workouts
             distance_km: v[:distance_km].round(1),
             moving_time_h: v[:moving_time_h].round(1),
             avg_pace: pace,
-            avg_hr: v[:hr_count] > 0 ? (v[:total_hr] / v[:hr_count]).round(0) : nil,
-            avg_cadence: v[:cadence_count] > 0 ? (v[:total_cadence] / v[:cadence_count]).round(0) : nil,
-            avg_power: v[:power_count] > 0 ? (v[:total_power] / v[:power_count]).round(0) : nil,
+            avg_hr: (v[:hr_count] > 0) ? (v[:total_hr] / v[:hr_count]).round(0) : nil,
+            avg_cadence: (v[:cadence_count] > 0) ? (v[:total_cadence] / v[:cadence_count]).round(0) : nil,
+            avg_power: (v[:power_count] > 0) ? (v[:total_power] / v[:power_count]).round(0) : nil,
             elevation_gain_m: v[:total_elev].round(0)
           }
         }
@@ -142,9 +144,9 @@ module Workouts
 
           streak = calculate_streak(acts)
 
-          { year: year, count: acts.size, distance_km: total_dist.round(1),
-            moving_time_h: (total_time / 3600.0).round(1),
-            longest_km: longest.round(1), streak: streak }
+          {year: year, count: acts.size, distance_km: total_dist.round(1),
+           moving_time_h: (total_time / 3600.0).round(1),
+           longest_km: longest.round(1), streak: streak}
         }
       end
 
@@ -158,7 +160,7 @@ module Workouts
           end
         }.uniq.sort
 
-        return { current: 0, all_time: 0, year_max: {} } if dates.empty?
+        return {current: 0, all_time: 0, year_max: {}} if dates.empty?
 
         max_streak = 1
         current_streak = 1
@@ -174,18 +176,18 @@ module Workouts
 
         today = Date.today
         current = if dates.last == today || dates.last == today - 1
-                    streak = 1
-                    j = dates.length - 2
-                    while j >= 0 && (dates[j + 1] - dates[j]).to_i == 1
-                      streak += 1
-                      j -= 1
-                    end
-                    streak
-                  else
-                    0
-                  end
+          streak = 1
+          j = dates.length - 2
+          while j >= 0 && (dates[j + 1] - dates[j]).to_i == 1
+            streak += 1
+            j -= 1
+          end
+          streak
+        else
+          0
+        end
 
-        { current: current, all_time: max_streak }
+        {current: current, all_time: max_streak}
       end
 
       def distinct_categories(rows)
@@ -195,7 +197,7 @@ module Workouts
       def format_pace(sec_per_km)
         min = (sec_per_km / 60).to_i
         sec = sec_per_km.to_i % 60
-        "#{min}'#{format('%02d', sec)}\""
+        "#{min}'#{format("%02d", sec)}\""
       end
 
       def calculate_streak(rows)

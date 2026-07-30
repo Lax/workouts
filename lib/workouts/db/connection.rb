@@ -12,9 +12,7 @@ module Workouts
         run_migrations
       end
 
-      def db
-        @db
-      end
+      attr_reader :db
 
       private
 

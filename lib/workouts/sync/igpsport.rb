@@ -42,7 +42,7 @@ module Workouts
             next if existing.include?(ride_id) && raw_file_exists?(ride_id)
             type = map_sport(act["exerciseType"])
             next if skip_type?(type)
-            ids << { id: ride_id, type: type, summary: act }
+            ids << {id: ride_id, type: type, summary: act}
           end
           page += 1
         end
@@ -57,14 +57,13 @@ module Workouts
 
       def login
         resp = Faraday.post(LOGIN_URL,
-          JSON.generate({ appId: "igpsport-web", username: @phone, password: @password }),
-          { "Content-Type" => "application/json" }
-        )
+          JSON.generate({appId: "igpsport-web", username: @phone, password: @password}),
+          {"Content-Type" => "application/json"})
         return false unless resp.status == 200
         data = JSON.parse(resp.body)
         @token = data.dig("data", "access_token")
         return false unless @token
-        @auth_headers = { "Authorization" => "Bearer #{@token}" }
+        @auth_headers = {"Authorization" => "Bearer #{@token}"}
         true
       end
 
@@ -143,9 +142,8 @@ module Workouts
 
       def fetch_page(page)
         resp = Faraday.get(QUERY_URL,
-          { pageNo: page, pageSize: 20, sort: 1, reqType: 0 },
-          @auth_headers
-        )
+          {pageNo: page, pageSize: 20, sort: 1, reqType: 0},
+          @auth_headers)
         return nil unless resp.status == 200
         JSON.parse(resp.body).dig("data", "rows")
       end
@@ -162,8 +160,8 @@ module Workouts
           run_id: "igpsport_#{ride_id}",
           name: act["title"] || "iGPSPORT Activity",
           distance: distance,
-          moving_time: moving_time > 0 ? moving_time : nil,
-          elapsed_time: moving_time > 0 ? moving_time : nil,
+          moving_time: (moving_time > 0) ? moving_time : nil,
+          elapsed_time: (moving_time > 0) ? moving_time : nil,
           sport_category: type,
           sport_type: EXERCISE_MAP[act["exerciseType"]] || "ride",
           start_date: start_t.iso8601,
@@ -177,7 +175,7 @@ module Workouts
           max_power: sensor[:max_power],
           calories: sensor[:calories],
           average_temperature: sensor[:average_temperature],
-          average_speed: avg_speed > 0 ? avg_speed : nil,
+          average_speed: (avg_speed > 0) ? avg_speed : nil,
           elevation_gain: act["totalAscent"].to_f.nonzero?,
           summary_polyline: polyline,
           source: "igpsport"

@@ -47,7 +47,7 @@ module Workouts
 
             append_info(a[:run_id], b[:source], b[:run_id], score, flag)
             append_info(b[:run_id], a[:source], a[:run_id], score, flag)
-            @matched_pairs << { a: a, b: b, score: score, flag: flag }
+            @matched_pairs << {a: a, b: b, score: score, flag: flag}
             matched += 1
           end
         end
@@ -70,8 +70,8 @@ module Workouts
             matches: @matched_pairs.map.with_index do |mp, idx|
               {
                 id: idx + 1,
-                a: { run_id: mp[:a][:run_id], source: mp[:a][:source] },
-                b: { run_id: mp[:b][:run_id], source: mp[:b][:source] },
+                a: {run_id: mp[:a][:run_id], source: mp[:a][:source]},
+                b: {run_id: mp[:b][:run_id], source: mp[:b][:source]},
                 confidence: mp[:score],
                 flag: mp[:flag]
               }
@@ -104,7 +104,7 @@ module Workouts
         duration = [activity[:elapsed_time].to_i, activity[:moving_time].to_i].max
         duration = 3600 if duration <= 0
         start_t = parse_time(activity[:start_date])
-        { start: start_t, end: start_t + duration }
+        {start: start_t, end: start_t + duration}
       end
 
       def classify_flag(a, b, score)
@@ -132,8 +132,8 @@ module Workouts
       def append_info(run_id, source, matched_run_id, score, flag)
         return unless flag
 
-        entry = { "source" => source, "run_id" => matched_run_id,
-                  "confidence" => score, "flag" => flag }
+        entry = {"source" => source, "run_id" => matched_run_id,
+                 "confidence" => score, "flag" => flag}
         @updates[run_id] ||= []
         existing = @updates[run_id].find { |e| e["run_id"] == matched_run_id }
         if existing
@@ -182,11 +182,11 @@ module Workouts
           group_id: group_id, created_at: now, updated_at: now
         )
 
-        best = Hash.new { |h, k| h[k] = { confidence: 0.0, flag: nil } }
+        best = Hash.new { |h, k| h[k] = {confidence: 0.0, flag: nil} }
         @matched_pairs.each do |mp|
           [mp[:a], mp[:b]].each do |act|
             if mp[:score] > best[act[:run_id]][:confidence]
-              best[act[:run_id]] = { confidence: mp[:score], flag: mp[:flag] }
+              best[act[:run_id]] = {confidence: mp[:score], flag: mp[:flag]}
             end
           end
         end

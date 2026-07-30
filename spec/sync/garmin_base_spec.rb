@@ -4,14 +4,26 @@ RSpec.describe Workouts::Sync::GarminBase do
     d.create_table(:activities) do
       Integer :id, primary_key: true
       String :run_id, null: false, unique: true
-      String :name; Float :distance; Integer :moving_time; Integer :elapsed_time
-      String :sport_category, null: false, default: "run"; String :sport_type
-      String :start_date; String :start_date_local; String :location_country
+      String :name
+      Float :distance
+      Integer :moving_time
+      Integer :elapsed_time
+      String :sport_category, null: false, default: "run"
+      String :sport_type
+      String :start_date
+      String :start_date_local
+      String :location_country
       String :summary_polyline, text: true
-      Float :average_heartrate; Float :max_heartrate
-      Float :average_cadence; Float :max_cadence; Float :average_power; Float :max_power
-      Integer :calories; Float :average_temperature
-      Float :average_speed; Float :elevation_gain
+      Float :average_heartrate
+      Float :max_heartrate
+      Float :average_cadence
+      Float :max_cadence
+      Float :average_power
+      Float :max_power
+      Integer :calories
+      Float :average_temperature
+      Float :average_speed
+      Float :elevation_gain
       String :source
       DateTime :created_at, default: Sequel::CURRENT_TIMESTAMP
       DateTime :updated_at, default: Sequel::CURRENT_TIMESTAMP
@@ -20,12 +32,23 @@ RSpec.describe Workouts::Sync::GarminBase do
   end
 
   def stub_adapter(config_overrides: {})
-    config = { "email" => "test@gb.com", "password" => "pw" }.merge(config_overrides)
+    config = {"email" => "test@gb.com", "password" => "pw"}.merge(config_overrides)
     Class.new(described_class) do
-      def fetch_oauth_consumer; {}; end
-      def sso_login; "test_ticket"; end
-      def fetch_oauth1_token(...); OpenStruct.new(oauth_token: "new_o1", oauth_token_secret: "new_o1s", mfa_token: nil, domain: @domain); end
-      def exchange_oauth2; {"access_token" => "new_at", "refresh_token" => "new_rt", "expires_in" => 21600, "expires_at" => Time.now.to_i + 21600, "refresh_token_expires_in" => 7776000, "refresh_token_expires_at" => Time.now.to_i + 7776000}; end
+      def fetch_oauth_consumer
+        {}
+      end
+
+      def sso_login
+        "test_ticket"
+      end
+
+      def fetch_oauth1_token(...)
+        OpenStruct.new(oauth_token: "new_o1", oauth_token_secret: "new_o1s", mfa_token: nil, domain: @domain)
+      end
+
+      def exchange_oauth2
+        {"access_token" => "new_at", "refresh_token" => "new_rt", "expires_in" => 21600, "expires_at" => Time.now.to_i + 21600, "refresh_token_expires_in" => 7776000, "refresh_token_expires_at" => Time.now.to_i + 7776000}
+      end
     end.new(config:, db:, activity_filter: nil)
   end
 
@@ -164,19 +187,19 @@ RSpec.describe Workouts::Sync::GarminBase do
   describe "#build_attrs" do
     subject(:adapter) { stub_adapter }
     let(:detail) do
-      { "activityName" => "Morning Ride",
-        "activityTypeDTO" => { "typeKey" => "cycling" },
-        "locationName" => "Shanghai",
-        "summaryDTO" => {
-          "distance" => 30000, "movingDuration" => 5400,
-          "elapsedDuration" => 6000,
-          "startTimeGMT" => "2025-06-01 01:00:00",
-          "averageHR" => 148, "maxHR" => 175,
-          "avgCadence" => 82, "maxCadence" => 105,
-          "avgPower" => 195, "maxPower" => 520,
-          "calories" => 750, "avgTemperature" => 26,
-          "averageSpeed" => 5.56, "elevationGain" => 350
-        } }
+      {"activityName" => "Morning Ride",
+       "activityTypeDTO" => {"typeKey" => "cycling"},
+       "locationName" => "Shanghai",
+       "summaryDTO" => {
+         "distance" => 30000, "movingDuration" => 5400,
+         "elapsedDuration" => 6000,
+         "startTimeGMT" => "2025-06-01 01:00:00",
+         "averageHR" => 148, "maxHR" => 175,
+         "avgCadence" => 82, "maxCadence" => 105,
+         "avgPower" => 195, "maxPower" => 520,
+         "calories" => 750, "avgTemperature" => 26,
+         "averageSpeed" => 5.56, "elevationGain" => 350
+       }}
     end
 
     it "maps sensor fields from summaryDTO" do
@@ -192,7 +215,7 @@ RSpec.describe Workouts::Sync::GarminBase do
     end
 
     it "leaves sensor fields nil when summaryDTO missing them" do
-      bare = { "summaryDTO" => { "distance" => 5000 } }
+      bare = {"summaryDTO" => {"distance" => 5000}}
       attrs = adapter.send(:build_attrs, bare, "2002", "run")
       expect(attrs[:max_heartrate]).to be_nil
       expect(attrs[:average_cadence]).to be_nil
@@ -205,20 +228,20 @@ RSpec.describe Workouts::Sync::GarminBase do
     subject(:adapter) { stub_adapter }
 
     it "build_attrs handles polyline as Array" do
-      detail = { "activityName" => "Test", "summaryDTO" => { "distance" => 5000 } }
+      detail = {"activityName" => "Test", "summaryDTO" => {"distance" => 5000}}
       expect { adapter.send(:build_attrs, detail, "1001", "run") }.not_to raise_error
     end
 
     it "build_attrs extracts sport_type from Hash activityTypeDTO" do
-      detail = { "activityName" => "Test",
-                 "activityTypeDTO" => { "typeKey" => "running" },
-                 "summaryDTO" => { "distance" => 5000 } }
+      detail = {"activityName" => "Test",
+                "activityTypeDTO" => {"typeKey" => "running"},
+                "summaryDTO" => {"distance" => 5000}}
       attrs = adapter.send(:build_attrs, detail, "1001", "run")
       expect(attrs[:sport_type]).to eq("running")
     end
 
     it "build_attrs handles missing summaryDTO gracefully" do
-      detail = { "activityName" => "Test" }
+      detail = {"activityName" => "Test"}
       expect { adapter.send(:build_attrs, detail, "1001", "run") }.not_to raise_error
     end
   end
@@ -243,7 +266,7 @@ RSpec.describe Workouts::Sync::GarminBase do
     after { FileUtils.rm_rf(tmpdir) }
 
     it "resolves local time from L2 file coordinates" do
-      l2 = [{ "positionLat" => 31.23, "positionLong" => 121.47, "timestamp" => "2025-06-01T01:00:00Z" }]
+      l2 = [{"positionLat" => 31.23, "positionLong" => 121.47, "timestamp" => "2025-06-01T01:00:00Z"}]
       File.write(File.join(std_dir, "#{activity_id}.json"), JSON.generate(l2))
 
       start_utc = Time.parse("2025-06-01T01:00:00Z")
@@ -266,7 +289,7 @@ RSpec.describe Workouts::Sync::GarminBase do
     end
 
     it "does not modify start_date (remains UTC with Z)" do
-      l2 = [{ "positionLat" => 31.23, "positionLong" => 121.47 }]
+      l2 = [{"positionLat" => 31.23, "positionLong" => 121.47}]
       File.write(File.join(std_dir, "#{activity_id}.json"), JSON.generate(l2))
 
       start_utc = Time.parse("2025-06-01T01:00:00Z")
@@ -284,12 +307,12 @@ RSpec.describe Workouts::Sync::GarminBase do
     end
 
     it "returns true when expires_at is in the future" do
-      adapter.instance_variable_set(:@access_token, { "expires_at" => Time.now.to_i + 3600 })
+      adapter.instance_variable_set(:@access_token, {"expires_at" => Time.now.to_i + 3600})
       expect(adapter.send(:access_token_valid?)).to be true
     end
 
     it "returns false when expires_at is in the past" do
-      adapter.instance_variable_set(:@access_token, { "expires_at" => Time.now.to_i - 60 })
+      adapter.instance_variable_set(:@access_token, {"expires_at" => Time.now.to_i - 60})
       expect(adapter.send(:access_token_valid?)).to be false
     end
 

@@ -11,4 +11,5 @@ group :development do
   gem "pry"
   gem "mini_racer"
   gem "webrick"
+  gem "standard", "~> 1.0"
 end

@@ -115,7 +115,11 @@ module Workouts
         results
       ensure
         zip&.close
-        io&.close rescue nil
+        begin
+          io&.close
+        rescue
+          nil
+        end
       end
 
       def process_one(pending)
@@ -163,7 +167,7 @@ module Workouts
                 break
               end
             rescue => e
-              $stderr.puts "AppleHealth: GPX extract error for #{run_id}: #{e.message}"
+              warn "AppleHealth: GPX extract error for #{run_id}: #{e.message}"
             ensure
               zip&.close
             end
@@ -174,7 +178,7 @@ module Workouts
           if l2_points&.any?
             FileUtils.mkdir_p(std_dir)
             std_data = l2_points.map { |pt|
-              h = { latitude: pt[:lat], longitude: pt[:lng] }
+              h = {latitude: pt[:lat], longitude: pt[:lng]}
               h[:altitude] = pt[:ele] if pt[:ele]
               h[:timestamp] = pt[:time] if pt[:time]
               h[:speed] = pt[:speed] if pt[:speed]
@@ -193,8 +197,8 @@ module Workouts
 
         title = build_title(workout_type, start_date)
         attrs = build_attrs(source_name, run_id, stats, meta, polyline, elevation_gain,
-                            workout_type, start_date, end_date, duration, duration_unit,
-                            hr_avg, hr_max)
+          workout_type, start_date, end_date, duration, duration_unit,
+          hr_avg, hr_max)
         attrs[:title] = title
 
         # Resolve timezone from GPS when HKTimeZone metadata is missing
@@ -254,14 +258,26 @@ module Workouts
       def parse_hr_line(line)
         m = line.match(/startDate="([^"]+)".*?value="(\d+)"/)
         return nil unless m
-        time = Time.parse(m[1]) rescue nil
+        time = begin
+          Time.parse(m[1])
+        rescue
+          nil
+        end
         return nil unless time
         HeartRateRecord.new(time: time, value: m[2].to_i)
       end
 
       def correlate_heart_rate(start_date_str, end_date_str)
-        start_t = Time.parse(start_date_str) rescue nil
-        end_t = Time.parse(end_date_str) rescue nil
+        start_t = begin
+          Time.parse(start_date_str)
+        rescue
+          nil
+        end
+        end_t = begin
+          Time.parse(end_date_str)
+        rescue
+          nil
+        end
         return [nil, nil] unless start_t && end_t
 
         padding = 30
@@ -366,16 +382,32 @@ module Workouts
         return if paths.empty?
 
         @route_index << {
-          route_start: (Time.parse(start_date) rescue nil),
-          route_end: (Time.parse(end_date) rescue nil),
+          route_start: begin
+            Time.parse(start_date)
+          rescue
+            nil
+          end,
+          route_end: begin
+            Time.parse(end_date)
+          rescue
+            nil
+          end,
           route_paths: paths
         }
       end
 
       def match_routes_by_time(workout_start, workout_end)
         return [] unless @route_index&.any? && workout_start && workout_end
-        ws = Time.parse(workout_start) rescue nil
-        we = Time.parse(workout_end) rescue nil
+        ws = begin
+          Time.parse(workout_start)
+        rescue
+          nil
+        end
+        we = begin
+          Time.parse(workout_end)
+        rescue
+          nil
+        end
         return [] unless ws && we
 
         window_start = ws - 300
@@ -394,7 +426,7 @@ module Workouts
           sum = stat["sum"]
           unit = stat["unit"]
           next unless type && sum
-          stats[type] = { "sum" => sum, "unit" => unit }
+          stats[type] = {"sum" => sum, "unit" => unit}
         end
         stats
       end
@@ -427,18 +459,18 @@ module Workouts
           ext = pt.at_xpath("extensions")
           speed = ext&.at_xpath("speed")&.text&.to_f
           speed = nil if speed && speed < MIN_GPX_SPEED
-          { lat: lat, lng: lng, ele: ele, time: time_str, speed: speed }
+          {lat: lat, lng: lng, ele: ele, time: time_str, speed: speed}
         end
       rescue => e
-        $stderr.puts "AppleHealth: GPX parse error for #{file_path}: #{e.message}"
+        warn "AppleHealth: GPX parse error for #{file_path}: #{e.message}"
         nil
       end
 
       def build_attrs(_source_name, run_id, stats, meta, polyline, elevation_gain,
-                      workout_type, start_date, end_date, duration, duration_unit,
-                      hr_avg = nil, hr_max = nil)
+        workout_type, start_date, end_date, duration, duration_unit,
+        hr_avg = nil, hr_max = nil)
         distance = nil
-        calories = nil
+        nil
 
         cals_sum = 0.0
         stats.each do |type_str, data|
@@ -448,15 +480,15 @@ module Workouts
             cals_sum += data["sum"].to_f
           end
         end
-        calories = cals_sum > 0 ? cals_sum.round : nil
+        calories = (cals_sum > 0) ? cals_sum.round : nil
 
         moving_time = parse_duration(duration, duration_unit)
         elapsed_time = compute_elapsed(start_date, end_date) || moving_time
         avg_speed = if distance && moving_time&.positive?
-                      (distance.to_f / moving_time).round(2)
-                    end
+          (distance.to_f / moving_time).round(2)
+        end
 
-        attrs = {
+        {
           run_id: "apple_health_#{run_id}",
           name: display_name(workout_type, start_date),
           distance: distance,
@@ -476,21 +508,31 @@ module Workouts
           source: "apple_health",
           external_id: meta["HKExternalUUID"]
         }
-
-        attrs
       end
 
       def format_datetime(str, utc: true)
         return nil unless str
-        t = Time.parse(str) rescue nil
+        t = begin
+          Time.parse(str)
+        rescue
+          nil
+        end
         return str unless t
         utc ? t.utc.iso8601 : t.iso8601
       end
 
       def compute_elapsed(start_str, end_str)
         return nil unless start_str && end_str
-        s = Time.parse(start_str).utc rescue nil
-        e = Time.parse(end_str).utc rescue nil
+        s = begin
+          Time.parse(start_str).utc
+        rescue
+          nil
+        end
+        e = begin
+          Time.parse(end_str).utc
+        rescue
+          nil
+        end
         return nil unless s && e
         (e - s).round
       end
@@ -522,7 +564,7 @@ module Workouts
         return nil unless m
         num = m[1].to_f
         unit = m[2].downcase
-        if unit.start_with?("degf") || unit.start_with?("°f")
+        if unit.start_with?("degf", "°f")
           ((num - 32) * 5.0 / 9.0).round(1)
         else
           num.round(1)
@@ -544,7 +586,11 @@ module Workouts
       end
 
       def normalize_date(date_str)
-        t = Time.parse(date_str) rescue nil
+        t = begin
+          Time.parse(date_str)
+        rescue
+          nil
+        end
         return date_str unless t
         t.utc.strftime("%Y-%m-%dT%H:%M:%SZ")
       end

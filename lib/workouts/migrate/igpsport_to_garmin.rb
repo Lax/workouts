@@ -59,7 +59,7 @@ module Workouts
               "matched_by" => "name_suffix"
             }
             save_upload_map(upload_map)
-            puts "  #{run_id}: matched existing Garmin activity #{match['activityId']} (L2)"
+            puts "  #{run_id}: matched existing Garmin activity #{match["activityId"]} (L2)"
             next
           end
 
@@ -68,7 +68,7 @@ module Workouts
             upload_map["uploads"][run_id] = result
             save_upload_map(upload_map)
             @count += 1
-            puts "  #{run_id}: uploaded OK → Garmin ID #{result['garmin_activity_id']}"
+            puts "  #{run_id}: uploaded OK → Garmin ID #{result["garmin_activity_id"]}"
           else
             puts "  #{run_id}: upload failed"
           end
@@ -128,12 +128,11 @@ module Workouts
       end
 
       def multipart_post(url, file_path, content_type, filename)
-        resp = Faraday.post(url) do |req|
+        Faraday.post(url) do |req|
           req.headers["Authorization"] = "Bearer #{@access_token}"
           req.headers["User-Agent"] = "GCM-iOS-5.22.1.4"
           req.body = Faraday::UploadIO.new(file_path, content_type, filename)
         end
-        resp
       end
 
       def parse_upload_response(resp)
@@ -224,9 +223,9 @@ module Workouts
 
         builder = Nokogiri::XML::Builder.new(encoding: "UTF-8") do |xml|
           xml.gpx(
-            version: "1.1",
-            creator: "Workouts CLI",
-            xmlns: "http://www.topografix.com/GPX/1/1",
+            :version => "1.1",
+            :creator => "Workouts CLI",
+            :xmlns => "http://www.topografix.com/GPX/1/1",
             "xmlns:gpxtpx" => "http://www.garmin.com/xmlschemas/TrackPointExtension/v1"
           ) do
             xml.metadata do
@@ -250,11 +249,15 @@ module Workouts
 
                   ts_raw = pt["timestamp"]
                   time_val = case ts_raw
-                             when String then ts_raw
-                             when Numeric
-                               fit_epoch = Time.new(1989, 12, 31, 0, 0, 0, "+00:00").to_i
-                               Time.at(fit_epoch + ts_raw).utc.xmlschema rescue nil
-                             end
+                  when String then ts_raw
+                  when Numeric
+                    fit_epoch = Time.new(1989, 12, 31, 0, 0, 0, "+00:00").to_i
+                    begin
+                      Time.at(fit_epoch + ts_raw).utc.xmlschema
+                    rescue
+                      nil
+                    end
+                  end
 
                   xml.trkpt(lat: fmt_coord(lat), lon: fmt_coord(lng)) do
                     xml.ele pt["altitude"] if pt["altitude"]
@@ -307,11 +310,11 @@ module Workouts
 
       def load_upload_map
         path = upload_map_path
-        return { "uploads" => {} } unless File.exist?(path)
+        return {"uploads" => {}} unless File.exist?(path)
 
         JSON.parse(File.read(path))
       rescue JSON::ParserError
-        { "uploads" => {} }
+        {"uploads" => {}}
       end
 
       def save_upload_map(map)
@@ -326,7 +329,11 @@ module Workouts
 
       def format_time(t_str)
         return nil unless t_str
-        Time.parse(t_str).utc.xmlschema rescue nil
+        begin
+          Time.parse(t_str).utc.xmlschema
+        rescue
+          nil
+        end
       end
 
       def esc(s)

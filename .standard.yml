@@ -1,0 +1,3 @@
+# Standard Ruby — zero-config linter/formatter
+# Run: bundle exec standardrb
+# Fix: bundle exec standardrb --fix

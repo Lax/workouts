@@ -7,7 +7,7 @@ module Workouts
         sources = (options[:source] || "apple_health").split(",").map(&:strip).map(&:downcase)
         unknown = sources.reject { |s| s == "apple_health" || FILE_SOURCES.include?(s) }
         unless unknown.empty?
-          say_status :error, "Unknown import source(s): #{unknown.join(', ')}. Supported: apple_health, gpx, fit, tcx", :red
+          say_status :error, "Unknown import source(s): #{unknown.join(", ")}. Supported: apple_health, gpx, fit, tcx", :red
           return
         end
 
@@ -65,7 +65,7 @@ module Workouts
       def import_local_files(db, filter, time_budget, sources)
         sport_override = options[:sport]
 
-        say_status :import, "local files (#{sources.join(', ')})", :green
+        say_status :import, "local files (#{sources.join(", ")})", :green
         adapter = Workouts::Import::LocalFile.new(
           config: {}, db:, activity_filter: filter,
           time_budget: time_budget,

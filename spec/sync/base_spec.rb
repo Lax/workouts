@@ -1,5 +1,7 @@
 class TestSyncAdapter < Workouts::Sync::Base
-  def call; 0; end
+  def call
+    0
+  end
 end
 
 RSpec.describe Workouts::Sync::Base do

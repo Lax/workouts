@@ -52,10 +52,10 @@ module Workouts
 
         def escape(str)
           str.to_s
-             .gsub("&", "&amp;")
-             .gsub("<", "&lt;")
-             .gsub(">", "&gt;")
-             .gsub('"', "&quot;")
+            .gsub("&", "&amp;")
+            .gsub("<", "&lt;")
+            .gsub(">", "&gt;")
+            .gsub('"', "&quot;")
         end
       end
     end

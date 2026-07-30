@@ -3,7 +3,7 @@ require "time"
 module Workouts
   module Parser
     class TCX < Base
-      NS = { tcx: "http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2" }.freeze
+      NS = {tcx: "http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2"}.freeze
 
       def call(input)
         doc = input.is_a?(String) ? Nokogiri::XML(input) : input
@@ -20,8 +20,6 @@ module Workouts
         sport = act["Sport"]
         laps = act.xpath("tcx:Lap", NS)
         return nil if laps.empty?
-
-        all_points = []
         lap_data = laps.map { |lap| parse_lap(lap) }.compact
         return nil if lap_data.empty?
 
@@ -34,7 +32,7 @@ module Workouts
 
         times = all_points.map { |p| p[3] }.compact
         start_date = times.min
-        end_date = times.max
+        times.max
 
         data = {
           run_id: build_run_id("tcx", start_date&.strftime("%Y%m%dT%H%M%S") || SecureRandom.hex(4)),
@@ -62,8 +60,8 @@ module Workouts
 
         distance = lap.at_xpath("tcx:DistanceMeters", NS)&.text&.to_f
         total_time = lap.at_xpath("tcx:TotalTimeSeconds", NS)&.text&.to_f
-        max_speed = lap.at_xpath("tcx:MaximumSpeed", NS)&.text&.to_f
-        calories = lap.at_xpath("tcx:Calories", NS)&.text&.to_f
+        lap.at_xpath("tcx:MaximumSpeed", NS)&.text&.to_f
+        lap.at_xpath("tcx:Calories", NS)&.text&.to_f
 
         avg_hr_node = lap.at_xpath("tcx:AverageHeartRateBpm/tcx:Value", NS)
         avg_hr = avg_hr_node&.text&.to_f
@@ -78,7 +76,7 @@ module Workouts
         {
           distance: distance,
           elapsed_time: total_time&.round,
-          moving_time: moving_time > 0 ? moving_time : (total_time&.round || 0),
+          moving_time: (moving_time > 0) ? moving_time : (total_time&.round || 0),
           avg_hr: avg_hr,
           elevation_gain: elev_gain,
           points: points

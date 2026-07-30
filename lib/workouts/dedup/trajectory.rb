@@ -1,5 +1,3 @@
-require "set"
-
 module Workouts
   module Dedup
     class Trajectory
@@ -20,8 +18,8 @@ module Workouts
         pts_b = cached_points(run_id_b)
         return nil unless pts_a && pts_b && pts_a.size >= 2 && pts_b.size >= 2
 
-        shorter = pts_a.size <= pts_b.size ? pts_a : pts_b
-        longer = pts_a.size > pts_b.size ? pts_a : pts_b
+        shorter = (pts_a.size <= pts_b.size) ? pts_a : pts_b
+        longer = (pts_a.size > pts_b.size) ? pts_a : pts_b
 
         sampled = shorter.each_slice(SAMPLE_RATE).map(&:first)
         matches = sampled.count { |pt| near(pt, longer) }
@@ -194,10 +192,10 @@ module Workouts
         r = 6_371_000
         dlat = (lat2 - lat1) * Math::PI / 180
         dlon = (lon2 - lon1) * Math::PI / 180
-        a = Math.sin(dlat / 2) ** 2 +
-            Math.cos(lat1 * Math::PI / 180) *
+        a = Math.sin(dlat / 2)**2 +
+          Math.cos(lat1 * Math::PI / 180) *
             Math.cos(lat2 * Math::PI / 180) *
-            Math.sin(dlon / 2) ** 2
+            Math.sin(dlon / 2)**2
         c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
         r * c
       end

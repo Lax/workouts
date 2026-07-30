@@ -111,7 +111,7 @@ module Workouts
             type = map_type(act["activityType"])
             next if skip_type?(type)
             next if existing.include?(act_id) && raw_file_exists?(act_id)
-            ids << { id: act_id, type: type }
+            ids << {id: act_id, type: type}
           end
           start += limit
         end
@@ -193,8 +193,8 @@ module Workouts
         path = "config/config.yml"
         return unless File.exist?(path)
 
-        cfg = YAML.safe_load(File.read(path)) || {}
-        source = @domain == "garmin.cn" ? "garmin_cn" : "garmin"
+        cfg = YAML.safe_load_file(path) || {}
+        source = (@domain == "garmin.cn") ? "garmin_cn" : "garmin"
         cfg["sync"] ||= {}
         cfg["sync"][source] ||= {}
         cfg["sync"][source]["secret"] = @generated_secret
@@ -242,10 +242,10 @@ module Workouts
         jar = cookie_jar
         sso_base = "https://sso.#{@domain}"
 
-        sso_get(sso_base, "/mobile/sso/en/sign-in", { clientId: CLIENT_ID }, jar)
+        sso_get(sso_base, "/mobile/sso/en/sign-in", {clientId: CLIENT_ID}, jar)
 
         service_url = "https://mobile.integration.#{@domain}/gcm/android"
-        login_params = { clientId: CLIENT_ID, locale: "en-US", service: service_url }
+        login_params = {clientId: CLIENT_ID, locale: "en-US", service: service_url}
         login_body = JSON.generate(
           username: @email, password: @password,
           rememberMe: false, captchaToken: ""
@@ -360,7 +360,7 @@ module Workouts
         req = Net::HTTP::Post.new(URI(url))
         req["User-Agent"] = "com.garmin.android.apps.connectmobile"
         req["Content-Type"] = "application/x-www-form-urlencoded"
-        body_params = { audience: "GARMIN_CONNECT_MOBILE_ANDROID_DI" }
+        body_params = {audience: "GARMIN_CONNECT_MOBILE_ANDROID_DI"}
         body_params[:mfa_token] = @oauth1_token.mfa_token if @oauth1_token.mfa_token
         req.body = URI.encode_www_form(body_params)
         oauth_consumer.sign!(req, token)
@@ -421,7 +421,7 @@ module Workouts
           return resp unless resp.code.to_i == 429 && retries < max_retries
 
           retries += 1
-          sleep(base_delay * (2 ** retries))
+          sleep(base_delay * (2**retries))
         end
       end
 
@@ -434,14 +434,18 @@ module Workouts
       # Resolve local time from GPS data. Tries L2 file first,
       # then polyline, then falls back to config default timezone.
       def resolve_local_time(start_utc, activity_id, polyline = nil)
-        lat = lng = nil
+        nil
 
         # Try L2 file first
         lat, lng = first_gps_from_l2(activity_id)
 
         # Fallback: polyline
         if lat.nil? && polyline
-          decoded = Workouts::Geo::Polyline.decode(polyline) rescue nil
+          decoded = begin
+            Workouts::Geo::Polyline.decode(polyline)
+          rescue
+            nil
+          end
           if decoded && decoded.any?
             lat, lng = decoded.first
           end

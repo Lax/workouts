@@ -73,7 +73,7 @@ module Workouts
             has_existing = existing.include?(run_id)
             has_raw = raw_file_exists?(keep_id)
             next if has_existing && has_raw
-            ids << { id: cid, keep_id: keep_id, sport: sport, has_raw: has_raw }
+            ids << {id: cid, keep_id: keep_id, sport: sport, has_raw: has_raw}
           end
         end
         ids
@@ -113,7 +113,7 @@ module Workouts
       end
 
       def login
-        resp = http_post(LOGIN_URL, { mobile: @phone, password: @password }, @headers)
+        resp = http_post(LOGIN_URL, {mobile: @phone, password: @password}, @headers)
         return nil unless resp.code.to_i == 200
 
         data = JSON.parse(resp.body)
@@ -128,8 +128,8 @@ module Workouts
 
       def sync_sport_type(sport)
         pending_ids.select { |p| p[:sport] == sport }
-                   .filter_map { |p| process_one(p) }
-                   .size
+          .filter_map { |p| process_one(p) }
+          .size
       end
 
       def existing_run_ids
@@ -141,7 +141,7 @@ module Workouts
         last_date = 0
 
         loop do
-          url = STATS_URL % { sport: sport, last_date: last_date }
+          url = STATS_URL % {sport: sport, last_date: last_date}
           resp = @session ? http_get(url, @headers) : nil
           break unless resp&.code&.to_i == 200
 
@@ -169,7 +169,7 @@ module Workouts
       end
 
       def sync_single_run_with_raw(compound_id, sport)
-        url = LOG_URL % { sport: sport, run_id: compound_id }
+        url = LOG_URL % {sport: sport, run_id: compound_id}
         resp = http_get(url, @headers)
         return false unless resp.code.to_i == 200
 
@@ -205,7 +205,7 @@ module Workouts
 
         if raw["heartRates"]&.any?
           vals = raw["heartRates"].map { |h| h["value"] }.compact
-          run_data["heartRate"] = { "averageHeartRate" => vals.sum / vals.size } if vals.any?
+          run_data["heartRate"] = {"averageHeartRate" => vals.sum / vals.size} if vals.any?
         end
 
         attrs = build_activity_from_wgs(run_data, wgs)
@@ -219,10 +219,12 @@ module Workouts
         std_path = File.join(std_dir, "#{keep_id}.json")
         if File.exist?(std_path)
           pts = JSON.parse(File.read(std_path))
-          pts.map { |pt| [pt["latitude"], pt["longitude"], pt["altitude"],
-                          pt["timestamp"] ? Time.parse(pt["timestamp"]) : nil, pt["heartrate"]] }
+          pts.map { |pt|
+            [pt["latitude"], pt["longitude"], pt["altitude"],
+              pt["timestamp"] ? Time.parse(pt["timestamp"]) : nil, pt["heartrate"]]
+          }
         else
-          payload = { geo_points: raw["geoPoints"], hr_data: raw["heartRates"] }
+          payload = {geo_points: raw["geoPoints"], hr_data: raw["heartRates"]}
           run_data = raw["meta"]
           compute_wgs_points(payload, run_data)
         end
@@ -316,7 +318,7 @@ module Workouts
           location_country: run_data["region"],
           summary_polyline: polyline_str,
           average_heartrate: avg_hr&.round(1),
-          average_speed: computed_distance && moving_time&.positive? ? (computed_distance.to_f / moving_time).round(2) : nil,
+          average_speed: (computed_distance && moving_time&.positive?) ? (computed_distance.to_f / moving_time).round(2) : nil,
           elevation_gain: total_elevation&.round(1),
           source: "keep"
         }
@@ -346,8 +348,8 @@ module Workouts
 
       def write_standardized_json(wgs_points, payload, run_data, keep_id)
         geo_points = payload[:geo_points] || []
-        hr_data = payload[:hr_data]
-        start_time = run_data["startTime"]
+        payload[:hr_data]
+        run_data["startTime"]
 
         extended = wgs_points.each_with_index.map do |pt, i|
           orig = geo_points[i] || {}
@@ -395,7 +397,7 @@ module Workouts
         decrypted = aes_decrypt(raw)
         decompressed = zlib_inflate(decrypted)
         JSON.parse(decompressed)
-      rescue StandardError
+      rescue
         nil
       end
 
@@ -404,7 +406,7 @@ module Workouts
         raw = Base64.decode64(hr_data)
         decompressed = zlib_inflate(raw)
         JSON.parse(decompressed)
-      rescue StandardError
+      rescue
         nil
       end
 
@@ -418,15 +420,17 @@ module Workouts
 
       def zlib_inflate(data)
         [-Zlib::MAX_WBITS, Zlib::MAX_WBITS, Zlib::MAX_WBITS + 16].each do |wbits|
+          inflater = Zlib::Inflate.new(wbits)
+          result = inflater.inflate(data)
           begin
-            inflater = Zlib::Inflate.new(wbits)
-            result = inflater.inflate(data)
-            inflater.finish rescue nil
-            inflater.close
-            return result
-          rescue Zlib::DataError
-            next
+            inflater.finish
+          rescue
+            nil
           end
+          inflater.close
+          return result
+        rescue Zlib::DataError
+          next
         end
         raise Zlib::DataError, "cannot inflate data"
       end
@@ -483,9 +487,9 @@ module Workouts
         dlat = (p2[0] - p1[0]) * Math::PI / 180.0
         dlon = (p2[1] - p1[1]) * Math::PI / 180.0
 
-        a = Math.sin(dlat / 2) ** 2 +
-            Math.cos(lat1) * Math.cos(lat2) *
-            Math.sin(dlon / 2) ** 2
+        a = Math.sin(dlat / 2)**2 +
+          Math.cos(lat1) * Math.cos(lat2) *
+            Math.sin(dlon / 2)**2
         c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
         6371000.0 * c
       end

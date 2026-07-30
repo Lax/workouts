@@ -1,7 +1,7 @@
 RSpec.describe Workouts::Timezone::Resolver do
   subject(:resolver) { described_class.new(config) }
 
-  let(:config) { { "system" => { "timezone" => "Asia/Shanghai" } } }
+  let(:config) { {"system" => {"timezone" => "Asia/Shanghai"}} }
 
   describe "#resolve" do
     context "with valid GPS coordinates on land" do
@@ -43,7 +43,7 @@ RSpec.describe Workouts::Timezone::Resolver do
     end
 
     context "with custom default" do
-      let(:config) { { "system" => { "timezone" => "America/Chicago" } } }
+      let(:config) { {"system" => {"timezone" => "America/Chicago"}} }
 
       it "uses the configured default" do
         expect(resolver.resolve(nil, nil)).to eq("America/Chicago")
@@ -51,7 +51,7 @@ RSpec.describe Workouts::Timezone::Resolver do
     end
 
     context "when config has no timezone key" do
-      let(:config) { { "system" => {} } }
+      let(:config) { {"system" => {}} }
 
       it "falls back to Asia/Shanghai" do
         expect(resolver.resolve(nil, nil)).to eq("Asia/Shanghai")

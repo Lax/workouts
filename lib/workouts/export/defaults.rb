@@ -10,7 +10,7 @@ module Workouts
         special2: "#FFFF00",
         empty_cell: "#444444",
         dim_past: "#555555",
-        font: "Arial",
+        font: "Arial"
       }.freeze
 
       DASHBOARD = {
@@ -24,20 +24,20 @@ module Workouts
         text_dim: "#666",
         text_insight: "#aaa",
         accent: "#4DD2FF",
-        font: "-apple-system, BlinkMacSystemFont, sans-serif",
+        font: "-apple-system, BlinkMacSystemFont, sans-serif"
       }.freeze
 
       CATEGORIES = {
-        "run"  => "#4DD2FF",
+        "run" => "#4DD2FF",
         "walk" => "#4ECDC4",
         "ride" => "#FF6B6B",
-        "hike" => "#FFD93D",
+        "hike" => "#FFD93D"
       }.freeze
 
       MAP = {
         tiles_dark: "https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png",
         tiles_light: "https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png",
-        echarts_theme: "dark",
+        echarts_theme: "dark"
       }.freeze
     end
   end

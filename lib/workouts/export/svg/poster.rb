@@ -4,14 +4,14 @@ module Workouts
       class Poster
         REFERENCE_DISTANCES = {
           "walk" => 5_000,
-          "run"  => 10_000,
+          "run" => 10_000,
           "ride" => 20_000,
-          "hike" => 10_000,
+          "hike" => 10_000
         }.freeze
 
         attr_accessor :title, :athlete, :tracks, :colors, :special_distance,
-                      :width, :height, :drawer_type, :github_style,
-                      :color_by_category, :per_category_max
+          :width, :height, :drawer_type, :github_style,
+          :color_by_category, :per_category_max
 
         def initialize(title, athlete, colors, special_distance)
           @title = title

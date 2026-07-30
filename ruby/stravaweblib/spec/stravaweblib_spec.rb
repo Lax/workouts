@@ -5,7 +5,7 @@ require "base64"
 require "json"
 
 def jwt_payload(sub:, exp: nil)
-  data = { "sub" => sub }
+  data = {"sub" => sub}
   data["exp"] = exp if exp
   header = Base64.urlsafe_encode64('{"alg":"HS256"}').delete("=")
   payload = Base64.urlsafe_encode64(JSON.generate(data)).delete("=")
@@ -24,7 +24,7 @@ RSpec.describe StravaWebLib::Client do
   end
 
   def stub_me_redirect(session = session_double)
-    resp = double("response", status: 302, headers: { "location" => "/12345" })
+    resp = double("response", status: 302, headers: {"location" => "/12345"})
     allow(session).to receive(:get).with("/me").and_return(resp)
     resp
   end
@@ -96,7 +96,10 @@ RSpec.describe StravaWebLib::Client do
   end
 
   describe "#initialize — auth_seed" do
-    before { stub_session; stub_me_redirect }
+    before {
+      stub_session
+      stub_me_redirect
+    }
 
     it "decodes Base64-encoded JWT" do
       seed = Base64.strict_encode64(VALID_JWT)
@@ -191,7 +194,7 @@ RSpec.describe StravaWebLib::Client do
 
     def stub_export(session_double, path, status: 200, body: "data", cd: 'attachment; filename="activity.fit"')
       resp = double("response", success?: status < 400, status: status, body: body,
-                     headers: { "Content-Disposition" => cd })
+        headers: {"Content-Disposition" => cd})
       allow(session_double).to receive(:get).with(path).and_return(resp)
       resp
     end
@@ -247,19 +250,19 @@ RSpec.describe StravaWebLib::Client do
 
     it "extracts standard quoted filename" do
       cd = 'attachment; filename="morning_run.fit"'
-      resp = double("response", headers: { "Content-Disposition" => cd })
+      resp = double("response", headers: {"Content-Disposition" => cd})
       expect(client.send(:extract_filename, resp, 123, :original)).to eq("morning_run.fit")
     end
 
     it "extracts RFC 5987 encoded filename" do
-      cd = 'attachment; filename*=UTF-8\'\'activity%20name.fit'
-      resp = double("response", headers: { "Content-Disposition" => cd })
+      cd = "attachment; filename*=UTF-8''activity%20name.fit"
+      resp = double("response", headers: {"Content-Disposition" => cd})
       expect(client.send(:extract_filename, resp, 123, :original)).to eq("activity name.fit")
     end
 
     it "extracts bare filename" do
       cd = "attachment; filename=data.fit"
-      resp = double("response", headers: { "Content-Disposition" => cd })
+      resp = double("response", headers: {"Content-Disposition" => cd})
       expect(client.send(:extract_filename, resp, 123, :original)).to eq("data.fit")
     end
 

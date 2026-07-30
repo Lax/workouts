@@ -5,10 +5,13 @@ require "optparse"
 require "sequel"
 require "time"
 
-options = { db: "data/workouts.db" }
+options = {db: "data/workouts.db"}
 OptionParser.new do |opts|
   opts.on("--db PATH", "Database path (default: data/workouts.db)") { |v| options[:db] = v }
-  opts.on("-h", "--help", "Print help") { puts opts; exit }
+  opts.on("-h", "--help", "Print help") {
+    puts opts
+    exit
+  }
 end.parse!
 
 db = Sequel.sqlite(options[:db])
@@ -20,7 +23,7 @@ puts "CROSS-SOURCE DUPLICATE QUANTIFICATION REPORT"
 puts "Generated: #{Time.now.utc.iso8601}"
 puts "Database: #{options[:db]}"
 puts "Activities (dist>100m): #{activities.size}"
-puts "Sources: #{sources.join(', ')}"
+puts "Sources: #{sources.join(", ")}"
 puts "=" * 60
 
 # Section 1: Overlap Matrix
@@ -28,7 +31,13 @@ puts "\n1. OVERLAP MATRIX (same date + time<5s + dist<1%)"
 puts "   Diagonal = total per source, off-diagonal = precision duplicate pairs"
 puts ""
 
-by_date = activities.group_by { |a| Time.parse(a[:start_date]).to_date rescue nil }
+by_date = activities.group_by { |a|
+  begin
+    Time.parse(a[:start_date]).to_date
+  rescue
+    nil
+  end
+}
 by_date.delete(nil)
 
 source_total = Hash.new(0)
@@ -41,8 +50,16 @@ by_date.each_value do |day_acts|
       b = day_acts[j]
       next if a[:source] == b[:source]
 
-      t_a = Time.parse(a[:start_date]) rescue nil
-      t_b = Time.parse(b[:start_date]) rescue nil
+      t_a = begin
+        Time.parse(a[:start_date])
+      rescue
+        nil
+      end
+      t_b = begin
+        Time.parse(b[:start_date])
+      rescue
+        nil
+      end
       next unless t_a && t_b
       next unless (t_a - t_b).abs < 5
 
@@ -60,7 +77,7 @@ header = sources.map { |s| s[0..5].ljust(6) }.join(" ")
 puts " " * 8 + header
 sources.each do |s|
   row = sources.map do |s2|
-    val = s == s2 ? source_total[s] : matrix[s][s2]
+    val = (s == s2) ? source_total[s] : matrix[s][s2]
     val.to_s.ljust(6)
   end.join(" ")
   puts "#{s.ljust(8)}#{row}"
@@ -72,7 +89,7 @@ puts "   % of activities with non-null values"
 puts ""
 
 fields = %i[average_heartrate average_power average_cadence average_temperature elevation_gain]
-puts "Source        #{fields.map { |f| f.to_s[0..11].ljust(12) }.join(' ')}"
+puts "Source        #{fields.map { |f| f.to_s[0..11].ljust(12) }.join(" ")}"
 sources.each do |src|
   src_acts = activities.select { |a| a[:source] == src }
   next if src_acts.empty?

@@ -70,7 +70,7 @@ module Workouts
           start_date_local: a[:start_date_local],
           location_country: a[:location_country],
           summary_polyline: tracks ? nil : polyline,
-          average_heartrate: a[:average_heartrate] && a[:average_heartrate] != 0 ? a[:average_heartrate] : nil,
+          average_heartrate: (a[:average_heartrate] && a[:average_heartrate] != 0) ? a[:average_heartrate] : nil,
           max_heartrate: a[:max_heartrate],
           average_cadence: a[:average_cadence],
           max_cadence: a[:max_cadence],
@@ -80,7 +80,7 @@ module Workouts
           average_temperature: a[:average_temperature],
           average_speed: a[:average_speed],
           elevation_gain: a[:elevation_gain],
-          source: a[:source],
+          source: a[:source]
         }
         if a[:divisions]
           base[:divisions] = ::JSON.parse(a[:divisions])
@@ -123,7 +123,7 @@ module Workouts
         composite[:type] = composite[:sport_category]
         composite[:dedup_group] = group_id
         composite[:member_sources] = members.map do |m|
-          { source: m[:source], run_id: m[:run_id], flag: m[:flag], confidence: m[:confidence] }
+          {source: m[:source], run_id: m[:run_id], flag: m[:flag], confidence: m[:confidence]}
         end
 
         composite

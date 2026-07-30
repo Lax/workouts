@@ -93,7 +93,7 @@ RSpec.describe "Keep decryption pipeline" do
     let(:geo_points) { JSON.parse(File.read(File.join(fixtures, "geo_plain.json"))) }
 
     let(:payload) do
-      { geo_points: geo_points, hr_data: nil }
+      {geo_points: geo_points, hr_data: nil}
     end
 
     it "returns an array" do
@@ -143,7 +143,7 @@ RSpec.describe "Keep decryption pipeline" do
     let(:run_data) { JSON.parse(File.read(File.join(fixtures, "run_data.json"))) }
     let(:geo_points) { JSON.parse(File.read(File.join(fixtures, "geo_plain.json"))) }
     let(:wgs_points) do
-      payload = { geo_points: geo_points, hr_data: nil }
+      payload = {geo_points: geo_points, hr_data: nil}
       keep.send(:compute_wgs_points, payload, run_data)
     end
 

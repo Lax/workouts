@@ -16,7 +16,7 @@ module Workouts
         token_hash = adapter.instance_variable_get(:@access_token) || {}
         domain = adapter.instance_variable_get(:@domain) || default_domain
 
-        { access_token: token_hash["access_token"], domain: domain }
+        {access_token: token_hash["access_token"], domain: domain}
       end
       private_class_method :authenticate_with
     end

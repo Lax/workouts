@@ -1,6 +1,6 @@
 RSpec.describe Workouts::Sync::Keep do
   let(:db) { create_test_db }
-  let(:config) { { "phone" => "13800138000", "password" => "test-pw" } }
+  let(:config) { {"phone" => "13800138000", "password" => "test-pw"} }
   subject(:keep) { described_class.new(config:, db:, time_budget: nil) }
   let(:compound_id) { "userhash_9223370458896850307_rn" }
   let(:tmpdir) { Dir.mktmpdir }
@@ -54,7 +54,7 @@ RSpec.describe Workouts::Sync::Keep do
   end
 
   def login_ok
-    http_response("200", %<{"data":{"token":"test-token"}}>)
+    http_response("200", %({"data":{"token":"test-token"}}))
   end
 
   def login_fail
@@ -62,22 +62,22 @@ RSpec.describe Workouts::Sync::Keep do
   end
 
   def stats_response(*compound_ids)
-    logs = compound_ids.map { |cid| { "stats" => { "id" => cid, "isDoubtful" => false } } }
+    logs = compound_ids.map { |cid| {"stats" => {"id" => cid, "isDoubtful" => false}} }
     http_response("200", JSON.generate({
-      "data" => { "records" => [{ "logs" => logs }], "lastTimestamp" => 0 }
+      "data" => {"records" => [{"logs" => logs}], "lastTimestamp" => 0}
     }))
   end
 
   def empty_stats
     http_response("200", JSON.generate({
-      "data" => { "records" => [], "lastTimestamp" => nil }
+      "data" => {"records" => [], "lastTimestamp" => nil}
     }))
   end
 
   def log_response
     run_data = JSON.parse(File.read("spec/fixtures/keep/run_data.json"))
     run_data["geoPoints"] = File.read("spec/fixtures/keep/encrypted_geo.txt")
-    http_response("200", JSON.generate({ "data" => run_data }))
+    http_response("200", JSON.generate({"data" => run_data}))
   end
 
   def log_fail

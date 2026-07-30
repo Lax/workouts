@@ -6,7 +6,12 @@ require "json"
 RSpec.describe "Export pipeline: seed DB → JSON/Stats → Svelte" do
   let(:db) { create_seed_db }
 
-  around { |ex| Dir.mktmpdir { |dir| @tmpdir = dir; ex.run } }
+  around { |ex|
+    Dir.mktmpdir { |dir|
+      @tmpdir = dir
+      ex.run
+    }
+  }
   attr_reader :tmpdir
 
   describe "Export::JSON" do

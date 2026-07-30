@@ -59,7 +59,7 @@ module Workouts
             next if existing.include?(act_id) && raw_file_exists?(act_id)
             type = map_sport(act["sport"])
             next if skip_type?(type)
-            ids << { id: act_id, type: type, summary: act }
+            ids << {id: act_id, type: type, summary: act}
           end
           offset += limit
         end
@@ -73,7 +73,11 @@ module Workouts
       private
 
       def error_message(body)
-        data = JSON.parse(body) rescue {}
+        data = begin
+          JSON.parse(body)
+        rescue
+          {}
+        end
         msg = data["msg"].to_s.strip
         detail = data.dig("data", "non_field_errors") || data.dig("data", "detail")
         parts = [msg, detail].compact.reject(&:empty?)
@@ -87,19 +91,19 @@ module Workouts
         uri.query = URI.encode_www_form(params) if params
 
         req = case method
-              when :get then Net::HTTP::Get.new(uri)
-              when :post then Net::HTTP::Post.new(uri)
-              end
+        when :get then Net::HTTP::Get.new(uri)
+        when :post then Net::HTTP::Post.new(uri)
+        end
 
         headers.each { |k, v| req[k] = v }
         req.body = body if body
 
         proxy = proxy_uri
         http = if proxy
-                 Net::HTTP.new(uri.host, uri.port, proxy.host, proxy.port, proxy.user, proxy.password)
-               else
-                 Net::HTTP.new(uri.host, uri.port)
-               end
+          Net::HTTP.new(uri.host, uri.port, proxy.host, proxy.port, proxy.user, proxy.password)
+        else
+          Net::HTTP.new(uri.host, uri.port)
+        end
         http.use_ssl = true
         http.open_timeout = 30
         http.read_timeout = 60
@@ -114,9 +118,8 @@ module Workouts
       def login
         retries ||= 0
         resp = http_request(:post, LOGIN_PATH,
-          body: JSON.generate({ email: @email, password: @password }),
-          headers: { "Content-Type" => "application/json", "Origin" => "xoss" }
-        )
+          body: JSON.generate({email: @email, password: @password}),
+          headers: {"Content-Type" => "application/json", "Origin" => "xoss"})
         unless resp.code.to_i == 200
           warn "XOSS: login HTTP #{resp.code}: #{error_message(resp.body)}"
           return false
@@ -135,7 +138,7 @@ module Workouts
           return false
         end
 
-        @auth_headers = { "Authorization" => "Bearer #{@access_token}", "Origin" => "xoss" }
+        @auth_headers = {"Authorization" => "Bearer #{@access_token}", "Origin" => "xoss"}
         save_tokens
         true
       rescue Net::OpenTimeout, Net::ReadTimeout => e
@@ -146,9 +149,7 @@ module Workouts
         raise SyncError, "XOSS login timeout: #{e.message}"
       end
 
-      def token_path
-        @token_path
-      end
+      attr_reader :token_path
 
       def load_tokens
         return false unless File.exist?(token_path)
@@ -157,7 +158,7 @@ module Workouts
         @access_token = data["access"]
         @refresh_token = data["refresh"]
         @expires_at = data["expires_at"]
-        @auth_headers = { "Authorization" => "Bearer #{@access_token}", "Origin" => "xoss" } if @access_token
+        @auth_headers = {"Authorization" => "Bearer #{@access_token}", "Origin" => "xoss"} if @access_token
         true
       rescue => e
         warn "XOSS: failed to load cached tokens: #{e.message}"
@@ -194,9 +195,8 @@ module Workouts
 
         retries ||= 0
         resp = http_request(:post, REFRESH_PATH,
-          body: JSON.generate({ refresh: @refresh_token }),
-          headers: { "Content-Type" => "application/json", "Origin" => "xoss" }
-        )
+          body: JSON.generate({refresh: @refresh_token}),
+          headers: {"Content-Type" => "application/json", "Origin" => "xoss"})
         unless resp.code.to_i == 200
           warn "XOSS: token refresh HTTP #{resp.code}: #{error_message(resp.body)}"
           remove_stale_tokens
@@ -215,7 +215,7 @@ module Workouts
         return false unless @access_token
 
         @expires_at = Time.now.to_i + ACCESS_TOKEN_TTL
-        @auth_headers = { "Authorization" => "Bearer #{@access_token}", "Origin" => "xoss" }
+        @auth_headers = {"Authorization" => "Bearer #{@access_token}", "Origin" => "xoss"}
         save_tokens
         true
       rescue Net::OpenTimeout, Net::ReadTimeout => e
@@ -237,9 +237,8 @@ module Workouts
       def fetch_page(offset, limit)
         retries ||= 0
         resp = http_request(:get, ACTIVITIES_PATH,
-          params: { offset: offset, limit: limit },
-          headers: @auth_headers
-        )
+          params: {offset: offset, limit: limit},
+          headers: @auth_headers)
         return nil unless resp.code.to_i == 200
 
         JSON.parse(resp.body).dig("data", "results")
@@ -250,7 +249,8 @@ module Workouts
         end
         raise SyncError, "XOSS fetch timeout: #{e.message}"
       rescue JSON::ParserError
-        if (retries ||= 0; (retries += 1) <= 2)
+        if retries ||= 0
+          retries += 1
           sleep 2
           retry
         end
@@ -280,19 +280,23 @@ module Workouts
         act_id = act["id"].to_s
         type = map_sport(act["sport"])
 
-        start_t = Time.at(act["start_timestamp"]).utc rescue nil
+        start_t = begin
+          Time.at(act["start_timestamp"]).utc
+        rescue
+          nil
+        end
         return false unless start_t
 
         distance = act["distance"].to_f
         moving_time = act["duration"].to_i
-        avg_speed = distance > 0 && moving_time > 0 ? (distance / moving_time).round(2) : nil
+        avg_speed = (distance > 0 && moving_time > 0) ? (distance / moving_time).round(2) : nil
 
         attrs = {
           run_id: "xoss_#{act_id}",
           name: act["title"] || "XOSS Activity",
           distance: distance,
-          moving_time: moving_time > 0 ? moving_time : nil,
-          elapsed_time: moving_time > 0 ? moving_time : nil,
+          moving_time: (moving_time > 0) ? moving_time : nil,
+          elapsed_time: (moving_time > 0) ? moving_time : nil,
           sport_category: type,
           sport_type: act["sub_sport"].to_s,
           start_date: start_t.iso8601,

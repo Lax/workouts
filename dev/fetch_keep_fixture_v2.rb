@@ -10,7 +10,7 @@ require "net/http"
 require "uri"
 
 config_path = File.expand_path("../config/config.yml", __dir__)
-raw = YAML.safe_load(File.read(config_path))
+raw = YAML.safe_load_file(config_path)
 cfg = raw.dig("sync", "keep")
 phone = cfg["phone"] || cfg["mobile"]
 password = cfg["password"]
@@ -54,15 +54,17 @@ end
 
 def inflate(data)
   [-Zlib::MAX_WBITS, Zlib::MAX_WBITS, Zlib::MAX_WBITS + 16].each do |wbits|
+    inflater = Zlib::Inflate.new(wbits)
+    result = inflater.inflate(data)
     begin
-      inflater = Zlib::Inflate.new(wbits)
-      result = inflater.inflate(data)
-      inflater.finish rescue nil
-      inflater.close
-      return result
-    rescue Zlib::DataError
-      next
+      inflater.finish
+    rescue
+      nil
     end
+    inflater.close
+    return result
+  rescue Zlib::DataError
+    next
   end
   raise Zlib::DataError, "cannot inflate data"
 end
@@ -88,7 +90,7 @@ headers = {
   "User-Agent" => "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:78.0) Gecko/20100101 Firefox/78.0",
   "Content-Type" => "application/x-www-form-urlencoded;charset=utf-8"
 }
-resp = http_post("https://api.gotokeep.com/v1.1/users/login", { mobile: phone, password: password }, headers)
+resp = http_post("https://api.gotokeep.com/v1.1/users/login", {mobile: phone, password: password}, headers)
 raise "Login failed: #{resp.code}" unless resp.code.to_i == 200
 data = JSON.parse(resp.body)
 token = data.dig("data", "token") || abort("No token")
@@ -98,8 +100,8 @@ puts "Login OK"
 # Candidate numeric IDs with HR data (from DB query)
 # Distance, HR, Date
 candidates = [
-  { id: "9223370454411659807", dist: 25024, hr: 76,  date: "2020-02-23", sport: "running" },
-  { id: "9223370458896850307", dist: 18809, hr: 158, date: "2020-01-02", sport: "running" },
+  {id: "9223370454411659807", dist: 25024, hr: 76, date: "2020-02-23", sport: "running"},
+  {id: "9223370458896850307", dist: 18809, hr: 158, date: "2020-01-02", sport: "running"}
 ]
 
 fixtures_dir = File.expand_path("../spec/fixtures/keep", __dir__)

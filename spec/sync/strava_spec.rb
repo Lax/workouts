@@ -1,6 +1,6 @@
 RSpec.describe Workouts::Sync::Strava do
   let(:db) { create_test_db }
-  let(:config) { { "client_id" => "x", "client_secret" => "y", "refresh_token" => "z" } }
+  let(:config) { {"client_id" => "x", "client_secret" => "y", "refresh_token" => "z"} }
   subject(:strava) { described_class.new(config:, db:, activity_filter: nil) }
   let(:tmpdir) { Dir.mktmpdir }
 
@@ -16,14 +16,26 @@ RSpec.describe Workouts::Sync::Strava do
     d.create_table(:activities) do
       Integer :id, primary_key: true
       String :run_id, null: false, unique: true
-      String :name; Float :distance; Integer :moving_time; Integer :elapsed_time
-      String :sport_category, null: false, default: "run"; String :sport_type
-      String :start_date; String :start_date_local; String :location_country
+      String :name
+      Float :distance
+      Integer :moving_time
+      Integer :elapsed_time
+      String :sport_category, null: false, default: "run"
+      String :sport_type
+      String :start_date
+      String :start_date_local
+      String :location_country
       String :summary_polyline, text: true
-      Float :average_heartrate; Float :max_heartrate
-      Float :average_cadence; Float :max_cadence; Float :average_power; Float :max_power
-      Integer :calories; Float :average_temperature
-      Float :average_speed; Float :elevation_gain
+      Float :average_heartrate
+      Float :max_heartrate
+      Float :average_cadence
+      Float :max_cadence
+      Float :average_power
+      Float :max_power
+      Integer :calories
+      Float :average_temperature
+      Float :average_speed
+      Float :elevation_gain
       String :duplicate_info, text: true
       String :source
       String :external_id
@@ -50,13 +62,13 @@ RSpec.describe Workouts::Sync::Strava do
 
     context "with activities to sync" do
       let(:activity) do
-        { "id" => 1001, "name" => "Run", "distance" => 5000.0,
-          "moving_time" => 1800, "elapsed_time" => 2000,
-          "type" => "Run", "start_date" => "2025-01-01T10:00:00Z",
-          "start_date_local" => "2025-01-01T18:00:00Z",
-          "map" => { "summary_polyline" => "abc" },
-          "average_heartrate" => 150, "average_speed" => 2.78,
-          "total_elevation_gain" => 50.0, "sport_type" => nil }
+        {"id" => 1001, "name" => "Run", "distance" => 5000.0,
+         "moving_time" => 1800, "elapsed_time" => 2000,
+         "type" => "Run", "start_date" => "2025-01-01T10:00:00Z",
+         "start_date_local" => "2025-01-01T18:00:00Z",
+         "map" => {"summary_polyline" => "abc"},
+         "average_heartrate" => 150, "average_speed" => 2.78,
+         "total_elevation_gain" => 50.0, "sport_type" => nil}
       end
 
       before do
@@ -117,16 +129,16 @@ RSpec.describe Workouts::Sync::Strava do
       expect(attrs[:external_id]).to be_nil
     end
     let(:act) do
-      { "id" => 2002, "name" => "Afternoon Ride", "distance" => 20000.0,
-        "moving_time" => 3600, "elapsed_time" => 4000,
-        "type" => "Ride", "sport_type" => "eBikeRide",
-        "start_date" => "2025-06-01T08:00:00Z",
-        "start_date_local" => "2025-06-01T16:00:00Z",
-        "map" => { "summary_polyline" => "xyz" },
-        "average_heartrate" => 145, "max_heartrate" => 172,
-        "average_cadence" => 85, "average_watts" => 210,
-        "max_watts" => 450, "calories" => 680,
-        "average_temp" => 28, "total_elevation_gain" => 200.0 }
+      {"id" => 2002, "name" => "Afternoon Ride", "distance" => 20000.0,
+       "moving_time" => 3600, "elapsed_time" => 4000,
+       "type" => "Ride", "sport_type" => "eBikeRide",
+       "start_date" => "2025-06-01T08:00:00Z",
+       "start_date_local" => "2025-06-01T16:00:00Z",
+       "map" => {"summary_polyline" => "xyz"},
+       "average_heartrate" => 145, "max_heartrate" => 172,
+       "average_cadence" => 85, "average_watts" => 210,
+       "max_watts" => 450, "calories" => 680,
+       "average_temp" => 28, "total_elevation_gain" => 200.0}
     end
     it "sets run_id" do
       expect(attrs[:run_id]).to eq("strava_2002")
@@ -152,7 +164,7 @@ RSpec.describe Workouts::Sync::Strava do
     end
 
     it "leaves sensor fields nil when absent from API" do
-      minimal = { "id" => 3003, "type" => "Run" }
+      minimal = {"id" => 3003, "type" => "Run"}
       result = strava.send(:build_attrs, minimal, "run")
       expect(result[:average_heartrate]).to be_nil
       expect(result[:max_heartrate]).to be_nil
@@ -190,7 +202,7 @@ RSpec.describe Workouts::Sync::Strava do
     end
 
     it "includes altitude when available" do
-      has_alt = l2.any? { |pt| pt[:altitude] != nil }
+      has_alt = l2.any? { |pt| !pt[:altitude].nil? }
       expect(has_alt).to be true
     end
 

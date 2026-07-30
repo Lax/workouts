@@ -6,15 +6,15 @@ require "json"
 require "faraday"
 
 config_path = File.expand_path("../config/config.yml", __dir__)
-raw = YAML.safe_load(File.read(config_path))
+raw = YAML.safe_load_file(config_path)
 cfg = raw.dig("sync", "strava")
 abort "Strava credentials not found" unless cfg["client_id"] && cfg["client_secret"] && cfg["refresh_token"]
 
 # Refresh token
 puts "Refreshing token..."
 resp = Faraday.post("https://www.strava.com/oauth/token") do |r|
-  r.body = { client_id: cfg["client_id"], client_secret: cfg["client_secret"],
-             refresh_token: cfg["refresh_token"], grant_type: "refresh_token" }
+  r.body = {client_id: cfg["client_id"], client_secret: cfg["client_secret"],
+             refresh_token: cfg["refresh_token"], grant_type: "refresh_token"}
 end
 abort "Token refresh failed: #{resp.status}" unless resp.success?
 token = JSON.parse(resp.body)["access_token"]
@@ -47,7 +47,7 @@ activity_ids.each do |id|
   stream_keys = %w[lat_lng altitude time heartrate cadence watts temp velocity_smooth]
   resp = Faraday.get("https://www.strava.com/api/v3/activities/#{id}/streams") do |r|
     r.headers["Authorization"] = "Bearer #{token}"
-    r.params = { keys: stream_keys.join(","), key_by_type: true }
+    r.params = {keys: stream_keys.join(","), key_by_type: true}
   end
   if resp.success?
     streams = JSON.parse(resp.body)

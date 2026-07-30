@@ -3,11 +3,19 @@ module Workouts
     module SVG
       class Track
         attr_reader :date, :year, :length, :effective_length, :polyline,
-                    :sport_category, :sport_type, :moving_time, :duplicate_info,
-                    :average_cadence, :average_power, :max_heartrate
+          :sport_category, :sport_type, :moving_time, :duplicate_info,
+          :average_cadence, :average_power, :max_heartrate
 
         def initialize(activity, colors, special_distance)
-          @date = Time.parse(activity[:start_date_local]) rescue Time.parse(activity[:start_date]) rescue Time.now
+          begin
+            @date = begin
+              Time.parse(activity[:start_date_local])
+            rescue
+              Time.parse(activity[:start_date])
+            end
+          rescue
+            Time.now
+          end
           @year = @date.year
           @length = activity[:distance] || 0
           @polyline = activity[:summary_polyline]
@@ -19,8 +27,8 @@ module Workouts
           @special_distance = special_distance
           @duplicate_info = activity[:duplicate_info] ? ::JSON.parse(activity[:duplicate_info]) : []
           @average_cadence = activity[:average_cadence]
-          @average_power   = activity[:average_power]
-          @max_heartrate   = activity[:max_heartrate]
+          @average_power = activity[:average_power]
+          @max_heartrate = activity[:max_heartrate]
           @effective_length = compute_effective_length
         end
 
@@ -62,7 +70,7 @@ module Workouts
           return nil if points.nil? || points.empty?
           lats = points.map(&:first)
           lngs = points.map(&:last)
-          { min_lat: lats.min, max_lat: lats.max, min_lng: lngs.min, max_lng: lngs.max }
+          {min_lat: lats.min, max_lat: lats.max, min_lng: lngs.min, max_lng: lngs.max}
         end
 
         def start_time_local
@@ -80,7 +88,7 @@ module Workouts
               return 0.0
             elsif d["flag"] == "overlap"
               excess = @length - pd
-              return excess > 0 ? excess : 0.0
+              return (excess > 0) ? excess : 0.0
             end
           end
           @length

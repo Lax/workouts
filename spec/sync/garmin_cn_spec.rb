@@ -4,14 +4,26 @@ RSpec.describe Workouts::Sync::GarminCN do
     d.create_table(:activities) do
       Integer :id, primary_key: true
       String :run_id, null: false, unique: true
-      String :name; Float :distance; Integer :moving_time; Integer :elapsed_time
-      String :sport_category, null: false, default: "run"; String :sport_type
-      String :start_date; String :start_date_local; String :location_country
+      String :name
+      Float :distance
+      Integer :moving_time
+      Integer :elapsed_time
+      String :sport_category, null: false, default: "run"
+      String :sport_type
+      String :start_date
+      String :start_date_local
+      String :location_country
       String :summary_polyline, text: true
-      Float :average_heartrate; Float :max_heartrate
-      Float :average_cadence; Float :max_cadence; Float :average_power; Float :max_power
-      Integer :calories; Float :average_temperature
-      Float :average_speed; Float :elevation_gain
+      Float :average_heartrate
+      Float :max_heartrate
+      Float :average_cadence
+      Float :max_cadence
+      Float :average_power
+      Float :max_power
+      Integer :calories
+      Float :average_temperature
+      Float :average_speed
+      Float :elevation_gain
       String :source
       DateTime :created_at, default: Sequel::CURRENT_TIMESTAMP
       DateTime :updated_at, default: Sequel::CURRENT_TIMESTAMP
@@ -20,12 +32,23 @@ RSpec.describe Workouts::Sync::GarminCN do
   end
 
   def stub_adapter(config_overrides: {})
-    config = { "email" => "test@gb.com", "password" => "pw" }.merge(config_overrides)
+    config = {"email" => "test@gb.com", "password" => "pw"}.merge(config_overrides)
     Class.new(described_class) do
-      def fetch_oauth_consumer; {}; end
-      def sso_login; "test_ticket"; end
-      def fetch_oauth1_token(...); OpenStruct.new(oauth_token: "new_o1", oauth_token_secret: "new_o1s", mfa_token: nil, domain: @domain); end
-      def exchange_oauth2; {"access_token" => "new_at", "refresh_token" => "new_rt", "expires_in" => 21600, "expires_at" => Time.now.to_i + 21600, "refresh_token_expires_in" => 7776000, "refresh_token_expires_at" => Time.now.to_i + 7776000}; end
+      def fetch_oauth_consumer
+        {}
+      end
+
+      def sso_login
+        "test_ticket"
+      end
+
+      def fetch_oauth1_token(...)
+        OpenStruct.new(oauth_token: "new_o1", oauth_token_secret: "new_o1s", mfa_token: nil, domain: @domain)
+      end
+
+      def exchange_oauth2
+        {"access_token" => "new_at", "refresh_token" => "new_rt", "expires_in" => 21600, "expires_at" => Time.now.to_i + 21600, "refresh_token_expires_in" => 7776000, "refresh_token_expires_at" => Time.now.to_i + 7776000}
+      end
     end.new(config:, db:, activity_filter: nil)
   end
 
@@ -52,7 +75,7 @@ RSpec.describe Workouts::Sync::GarminCN do
 
   describe "#authenticate" do
     context "with valid secret (OAuth2 not expired)" do
-      subject(:adapter) { stub_adapter(config_overrides: { "secret" => build_secret(expires_at: Time.now.to_i + 3600) }) }
+      subject(:adapter) { stub_adapter(config_overrides: {"secret" => build_secret(expires_at: Time.now.to_i + 3600)}) }
 
       before { allow(adapter).to receive(:load_tokens).and_return(false) }
 
@@ -68,7 +91,7 @@ RSpec.describe Workouts::Sync::GarminCN do
     end
 
     context "with secret but OAuth2 expired (valid OAuth1)" do
-      subject(:adapter) { stub_adapter(config_overrides: { "secret" => build_secret(expires_at: Time.now.to_i - 3600) }) }
+      subject(:adapter) { stub_adapter(config_overrides: {"secret" => build_secret(expires_at: Time.now.to_i - 3600)}) }
 
       before { allow(adapter).to receive(:load_tokens).and_return(false) }
 
@@ -84,7 +107,7 @@ RSpec.describe Workouts::Sync::GarminCN do
     end
 
     context "with secret but OAuth1 refresh fails" do
-      subject(:adapter) { stub_adapter(config_overrides: { "secret" => build_secret(expires_at: Time.now.to_i - 3600) }) }
+      subject(:adapter) { stub_adapter(config_overrides: {"secret" => build_secret(expires_at: Time.now.to_i - 3600)}) }
 
       before do
         allow(adapter).to receive(:refresh_oauth2_via_oauth1).and_raise(Workouts::AuthError, "refresh failed")
@@ -114,8 +137,8 @@ RSpec.describe Workouts::Sync::GarminCN do
         allow(adapter).to receive(:save_tokens)
 
         stale = JSON.generate({
-          "oauth1" => { "oauth_token" => "stale_ot", "oauth_token_secret" => "stale_ots", "mfa_token" => nil, "domain" => "garmin.cn" },
-          "oauth2" => { "access_token" => "stale_at", "expires_at" => Time.now.to_i - 3600 }
+          "oauth1" => {"oauth_token" => "stale_ot", "oauth_token_secret" => "stale_ots", "mfa_token" => nil, "domain" => "garmin.cn"},
+          "oauth2" => {"access_token" => "stale_at", "expires_at" => Time.now.to_i - 3600}
         })
         File.write(adapter.send(:token_path), stale)
       end
@@ -165,7 +188,7 @@ RSpec.describe Workouts::Sync::GarminCN do
     end
 
     context "without any credentials" do
-      subject(:adapter) { stub_adapter(config_overrides: { "email" => "", "password" => "" }) }
+      subject(:adapter) { stub_adapter(config_overrides: {"email" => "", "password" => ""}) }
 
       before { allow(adapter).to receive(:load_tokens).and_return(false) }
 
@@ -196,7 +219,7 @@ RSpec.describe Workouts::Sync::GarminCN do
 
   describe "#call" do
     context "with secret only (no email)" do
-      subject(:adapter) { stub_adapter(config_overrides: { "email" => "", "password" => "", "secret" => build_secret }) }
+      subject(:adapter) { stub_adapter(config_overrides: {"email" => "", "password" => "", "secret" => build_secret}) }
 
       it "calls authenticate and pending_ids + process_one" do
         expect(adapter).to receive(:authenticate).and_return(true)
@@ -207,7 +230,7 @@ RSpec.describe Workouts::Sync::GarminCN do
     end
 
     context "without email and without secret" do
-      subject(:adapter) { stub_adapter(config_overrides: { "email" => "", "password" => "" }) }
+      subject(:adapter) { stub_adapter(config_overrides: {"email" => "", "password" => ""}) }
 
       it "returns 0 without calling authenticate" do
         expect(adapter).not_to receive(:authenticate)

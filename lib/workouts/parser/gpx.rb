@@ -3,7 +3,7 @@ require "time"
 module Workouts
   module Parser
     class GPX < Base
-      NS = { gpx: "http://www.topografix.com/GPX/1/1" }.freeze
+      NS = {gpx: "http://www.topografix.com/GPX/1/1"}.freeze
 
       def call(input)
         doc = input.is_a?(String) ? Nokogiri::XML(input) : input
@@ -27,7 +27,7 @@ module Workouts
 
         times = points.map { |p| p[3] }.compact
         start_date = times.min
-        end_date = times.max
+        times.max
 
         data = {
           run_id: build_run_id("gpx", start_date&.strftime("%Y%m%dT%H%M%S") || SecureRandom.hex(4)),

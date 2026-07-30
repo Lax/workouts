@@ -1,7 +1,7 @@
 RSpec.describe Workouts::Sync::XOSS do
   let(:db) { create_test_db }
   let(:token_path) { File.join(Dir.mktmpdir, "xoss_tokens.json") }
-  let(:config) { { "email" => "test@xoss.com", "password" => "pw", "token_path" => token_path } }
+  let(:config) { {"email" => "test@xoss.com", "password" => "pw", "token_path" => token_path} }
   subject(:xoss) { described_class.new(config:, db:, activity_filter: nil) }
 
   # Load fixtures once
@@ -16,14 +16,26 @@ RSpec.describe Workouts::Sync::XOSS do
     d.create_table(:activities) do
       Integer :id, primary_key: true
       String :run_id, null: false, unique: true
-      String :name; Float :distance; Integer :moving_time; Integer :elapsed_time
-      String :sport_category, null: false, default: "run"; String :sport_type
-      String :start_date; String :start_date_local; String :location_country
+      String :name
+      Float :distance
+      Integer :moving_time
+      Integer :elapsed_time
+      String :sport_category, null: false, default: "run"
+      String :sport_type
+      String :start_date
+      String :start_date_local
+      String :location_country
       String :summary_polyline, text: true
-      Float :average_heartrate; Float :max_heartrate
-      Float :average_cadence; Float :max_cadence; Float :average_power; Float :max_power
-      Integer :calories; Float :average_temperature
-      Float :average_speed; Float :elevation_gain
+      Float :average_heartrate
+      Float :max_heartrate
+      Float :average_cadence
+      Float :max_cadence
+      Float :average_power
+      Float :max_power
+      Integer :calories
+      Float :average_temperature
+      Float :average_speed
+      Float :elevation_gain
       String :source
       DateTime :created_at, default: Sequel::CURRENT_TIMESTAMP
       DateTime :updated_at, default: Sequel::CURRENT_TIMESTAMP
@@ -44,7 +56,7 @@ RSpec.describe Workouts::Sync::XOSS do
         # First call (offset=1) returns fixture, subsequent calls return empty
         @_call_count ||= 0
         @_call_count += 1
-        @_call_count == 1 ? list_resp : empty_resp
+        (@_call_count == 1) ? list_resp : empty_resp
       end
     end
   end
@@ -150,7 +162,7 @@ RSpec.describe Workouts::Sync::XOSS do
 
   describe "#resolve_local_time" do
     before do
-      xoss.instance_variable_set(:@auth_headers, { "Authorization" => "Bearer test" })
+      xoss.instance_variable_set(:@auth_headers, {"Authorization" => "Bearer test"})
     end
 
     it "returns local time with offset when GPS points available" do
@@ -160,7 +172,7 @@ RSpec.describe Workouts::Sync::XOSS do
         Workouts::Timezone::Resolver.new({}, finder: stub_finder))
 
       start_utc = Time.parse("2025-10-31T06:29:33Z")
-      wgs = [{ "positionLat" => 36.76, "positionLong" => 117.0 }]
+      wgs = [{"positionLat" => 36.76, "positionLong" => 117.0}]
       result = xoss.send(:resolve_local_time, start_utc, wgs)
       expect(result).to eq("2025-10-31T14:29:33+08:00")
     end
@@ -182,7 +194,7 @@ RSpec.describe Workouts::Sync::XOSS do
     let(:activity) { activity_list_response.dig("data", "results", 0) }
 
     before do
-      xoss.instance_variable_set(:@auth_headers, { "Authorization" => "Bearer test" })
+      xoss.instance_variable_set(:@auth_headers, {"Authorization" => "Bearer test"})
     end
 
     it "downloads and decodes FIT, writes std, produces polyline" do
@@ -301,8 +313,8 @@ RSpec.describe Workouts::Sync::XOSS do
 
     it "handles partial sensor data" do
       records = [
-        { "temperature" => 20, "cadence" => nil, "heart_rate" => nil },
-        { "temperature" => nil, "cadence" => 85, "heart_rate" => 155 }
+        {"temperature" => 20, "cadence" => nil, "heart_rate" => nil},
+        {"temperature" => nil, "cadence" => 85, "heart_rate" => 155}
       ]
       result = xoss.send(:compute_sensor_summary, records)
       expect(result[:average_temperature]).to eq(20.0)

@@ -7,7 +7,7 @@ module Workouts
     class ReverseGeocode
       CHINA_BBOX = {
         min_lng: 73, max_lng: 135,
-        min_lat: 18, max_lat: 54,
+        min_lat: 18, max_lat: 54
       }.freeze
 
       def initialize(amap_key: nil)
@@ -31,13 +31,13 @@ module Workouts
         gcj_lat, gcj_lng = CoordTransform.wgs84_to_gcj02(lat, lng)
         @amap.reverse_geocode(gcj_lat, gcj_lng)
       rescue => e
-        { province: nil, city: nil, district: nil, township: nil, source: "error", error: e.message }
+        {province: nil, city: nil, district: nil, township: nil, source: "error", error: e.message}
       end
 
       def lookup_intl(lat, lng)
         @nominatim.reverse_geocode(lat, lng)
       rescue => e
-        { province: nil, city: nil, district: nil, township: nil, source: "error", error: e.message }
+        {province: nil, city: nil, district: nil, township: nil, source: "error", error: e.message}
       end
     end
   end

@@ -1,14 +1,14 @@
 Gem::Specification.new do |s|
-  s.name        = "workouts-cli"
-  s.version     = "0.1.0"
-  s.summary     = "Workouts — Yet Another Training Aggregator"
+  s.name = "workouts-cli"
+  s.version = "0.1.0"
+  s.summary = "Workouts — Yet Another Training Aggregator"
   s.description = "Sync workout data from Strava, Garmin, Keep, iGPSPORT, XOSS and more. Generate JSON and SVG posters."
-  s.authors     = ["Lax"]
-  s.homepage    = "https://github.com/lax/workouts"
-  s.license     = "MIT"
+  s.authors = ["Lax"]
+  s.homepage = "https://github.com/lax/workouts"
+  s.license = "MIT"
 
-  s.files       = Dir["lib/**/*", "db/**/*", "config/**/*"]
-  s.bindir      = "exe"
+  s.files = Dir["lib/**/*", "db/**/*", "config/**/*"]
+  s.bindir = "exe"
   s.executables = ["workouts"]
 
   s.required_ruby_version = ">= 3.4"
