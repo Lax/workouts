@@ -125,7 +125,7 @@ module Workouts
       token_errors = 0
 
       activity_ids.each do |aid|
-        existing = Dir.glob(File.join(output_dir, "#{aid}.*")).first
+        existing = Dir.glob(File.join(output_dir, "#{aid}.{fit,gpx,tcx,json,dat}")).first
 
         if existing
           if validate_existing_file(existing)
