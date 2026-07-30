@@ -13,6 +13,10 @@ module Workouts
           #   client_id: ""
           #   client_secret: ""
           #   refresh_token: ""
+          #   web_auth:
+          #     jwt: "eyJ..."              # strava_remember_token from browser DevTools
+          #     # auth_seed: "<base64>"    # Base64(jwt) for GitHub Secret SYNC_STRAVA_WEB_AUTH_SEED
+          #   # Docs: docs/strava-web-auth.md
 
           # --- Garmin International (garmin.com) ---
           # DI OAuth2 flow. Run ./scripts/garmin_auth_local.sh for MFA login.

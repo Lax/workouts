@@ -29,6 +29,13 @@ runs:
         key: tokens-v1-xoss-auth-${{ github.run_id }}
         restore-keys: tokens-v1-xoss-auth-
 
+    - id: restore-strava-web
+      uses: actions/cache/restore@v6.1.0
+      with:
+        path: data/cache/strava_session.yml
+        key: tokens-v1-strava-web-auth-${{ github.run_id }}
+        restore-keys: tokens-v1-strava-web-auth-
+
     - id: check-restored
       shell: bash
       run: |
@@ -38,6 +45,8 @@ runs:
         elif [ "${{ steps.restore-garmin-intl-auth.outputs.cache-hit }}" = "true" ]; then
           hit=true
         elif [ "${{ steps.restore-xoss.outputs.cache-hit }}" = "true" ]; then
+          hit=true
+        elif [ "${{ steps.restore-strava-web.outputs.cache-hit }}" = "true" ]; then
           hit=true
         fi
         echo "restored=$hit" >> $GITHUB_OUTPUT

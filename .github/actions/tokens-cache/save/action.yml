@@ -17,6 +17,13 @@ runs:
         path: data/auth/garmin_garmin_cn_tokens.json
         key: tokens-v1-garmin_cn-auth-${{ github.run_id }}
 
+    - name: Save Strava web session
+      uses: actions/cache/save@v6.1.0
+      if: always()
+      with:
+        path: data/cache/strava_session.yml
+        key: tokens-v1-strava-web-auth-${{ github.run_id }}
+
     - name: Save XOSS tokens (auth-only)
       uses: actions/cache/save@v6.1.0
       if: always()

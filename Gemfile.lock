@@ -40,6 +40,13 @@ PATH
       webrick (~> 1.8)
       zlib (~> 3.0)
 
+PATH
+  remote: ruby/stravaweblib
+  specs:
+    stravaweblib (0.1.0)
+      faraday (~> 2.0)
+      faraday-cookie_jar (~> 0.0)
+
 GEM
   remote: https://rubygems.org/
   specs:
@@ -174,6 +181,7 @@ DEPENDENCIES
   pry
   rake (~> 13.0)
   rspec (~> 3.12)
+  stravaweblib!
   webrick
   workouts-cli!
 
