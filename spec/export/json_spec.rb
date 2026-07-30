@@ -131,4 +131,80 @@ RSpec.describe Workouts::Export::JSON do
       expect(solo).not_to have_key("member_sources")
     end
   end
+
+  describe "tracks_output" do
+    let(:tracks_output) { "/tmp/test_tracks.json" }
+
+    before do
+      now = Time.now.utc
+      db[:activities].insert(
+        run_id: "track_1", name: "Tracked Run", distance: 10000,
+        moving_time: 3600, sport_category: "run",
+        start_date: "2024-02-01T00:00:00Z", start_date_local: "2024-02-01T00:00:00Z",
+        source: "garmin", summary_polyline: "abc123", created_at: now, updated_at: now
+      )
+      db[:activities].insert(
+        run_id: "track_2", name: "No GPS Workout", distance: 0,
+        moving_time: 1800, sport_category: "workout",
+        start_date: "2024-02-02T00:00:00Z", start_date_local: "2024-02-02T00:00:00Z",
+        source: "garmin", summary_polyline: nil, created_at: now, updated_at: now
+      )
+    end
+
+    after do
+      File.delete(tracks_output) if File.exist?(tracks_output)
+    end
+
+    it "omits summary_polyline from main JSON when tracks_output is set" do
+      described_class.new(db: db, output: output, tracks_output: tracks_output).call
+      data = JSON.parse(File.read(output))
+      tracked = data.find { |x| x["run_id"] == "track_1" }
+      expect(tracked["summary_polyline"]).to be_nil
+      no_gps = data.find { |x| x["run_id"] == "track_2" }
+      expect(no_gps["summary_polyline"]).to be_nil
+    end
+
+    it "keeps summary_polyline in main JSON when tracks_output is not set" do
+      described_class.new(db: db, output: output).call
+      data = JSON.parse(File.read(output))
+      tracked = data.find { |x| x["run_id"] == "track_1" }
+      expect(tracked["summary_polyline"]).to eq("abc123")
+    end
+
+    it "writes tracks.json with run_id → polyline mapping" do
+      described_class.new(db: db, output: output, tracks_output: tracks_output).call
+      tracks = JSON.parse(File.read(tracks_output))
+      expect(tracks).to eq({ "track_1" => "abc123" })
+    end
+
+    it "excludes nil polyline activities from tracks.json" do
+      described_class.new(db: db, output: output, tracks_output: tracks_output).call
+      tracks = JSON.parse(File.read(tracks_output))
+      expect(tracks.keys).to contain_exactly("track_1")
+    end
+
+    it "still includes non-polyline fields in main JSON" do
+      described_class.new(db: db, output: output, tracks_output: tracks_output).call
+      data = JSON.parse(File.read(output))
+      tracked = data.find { |x| x["run_id"] == "track_1" }
+      expect(tracked["distance"]).to eq(10000)
+      expect(tracked["name"]).to eq("Tracked Run")
+      expect(tracked["type"]).to eq("run")
+    end
+
+    describe "extract_polyline" do
+      it "returns nil for Keep placeholder polyline" do
+        a = { source: "keep", summary_polyline: "placeholder_abc" }
+        stub_const("Workouts::Source::Keep::PLACEHOLDER_POLYLINE", "placeholder_abc")
+        result = described_class.new(db: db, output: output).send(:extract_polyline, a)
+        expect(result).to be_nil
+      end
+
+      it "returns polyline for non-Keep source" do
+        a = { source: "garmin", summary_polyline: "abc123" }
+        result = described_class.new(db: db, output: output).send(:extract_polyline, a)
+        expect(result).to eq("abc123")
+      end
+    end
+  end
 end

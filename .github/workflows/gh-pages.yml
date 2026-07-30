@@ -69,7 +69,7 @@ jobs:
         run: mkdir -p site/svg
 
       - name: Export JSON
-        run: bundle exec exe/workouts export json --output site/activities.json
+        run: bundle exec exe/workouts export json --output site/activities.json --tracks-output site/tracks.json
 
       - name: Export SVG
         run: bundle exec exe/workouts export svg --style github --title "Workouts" --output site/svg/github.svg

@@ -3,10 +3,11 @@ require "json"
 module Workouts
   module Export
     class JSON
-      def initialize(db:, output:, activity_filter: nil)
+      def initialize(db:, output:, activity_filter: nil, tracks_output: nil)
         @db = db
         @output = output
         @activity_filter = activity_filter
+        @tracks_output = tracks_output
       end
 
       def call
@@ -22,23 +23,42 @@ module Workouts
         # Cache group members by group_id
         group_members_cache = {}
 
+        tracks = @tracks_output ? {} : nil
+
         formatted = activities.map do |a|
           gid = run_id_to_group[a[:run_id]]
           if gid
             group_members_cache[gid] ||= @db[:dedup_group_members].where(group_id: gid).all
-            composite_activity(a, gid, group_members_cache[gid])
+            composite_activity(a, gid, group_members_cache[gid], tracks)
           else
-            format_activity(a)
+            format_activity(a, tracks)
           end
         end
 
         File.write(@output, ::JSON.pretty_generate(formatted))
+
+        if @tracks_output
+          File.write(@tracks_output, ::JSON.generate(tracks))
+        end
+
         formatted.size
       end
 
       private
 
-      def format_activity(a)
+      def extract_polyline(a)
+        if a[:source] == "keep" && a[:summary_polyline] == Workouts::Source::Keep::PLACEHOLDER_POLYLINE
+          return nil
+        end
+        a[:summary_polyline]
+      end
+
+      def format_activity(a, tracks = nil)
+        polyline = extract_polyline(a)
+        if tracks && polyline
+          tracks[a[:run_id]] = polyline
+        end
+
         base = {
           run_id: a[:run_id],
           name: a[:name],
@@ -49,8 +69,7 @@ module Workouts
           start_date: a[:start_date],
           start_date_local: a[:start_date_local],
           location_country: a[:location_country],
-          summary_polyline: a[:source] == "keep" && a[:summary_polyline] == Workouts::Source::Keep::PLACEHOLDER_POLYLINE ?
-            nil : a[:summary_polyline],
+          summary_polyline: tracks ? nil : polyline,
           average_heartrate: a[:average_heartrate] && a[:average_heartrate] != 0 ? a[:average_heartrate] : nil,
           max_heartrate: a[:max_heartrate],
           average_cadence: a[:average_cadence],
@@ -69,7 +88,7 @@ module Workouts
         base
       end
 
-      def composite_activity(activity, group_id, members)
+      def composite_activity(activity, group_id, members, tracks = nil)
         run_ids = members.map { |m| m[:run_id] }
         group_activities = @db[:activities].where(run_id: run_ids).all
 
@@ -93,6 +112,13 @@ module Workouts
         if composite[:distance].to_f > 0 && composite[:moving_time].to_f > 0
           composite[:average_speed] = composite[:distance] / composite[:moving_time]
         end
+
+        # Polyline handling for composite: elect best polyline, write to tracks if needed
+        polyline = composite[:summary_polyline]
+        if tracks && polyline
+          tracks[activity[:run_id]] = polyline
+        end
+        composite[:summary_polyline] = tracks ? nil : polyline
 
         composite[:type] = composite[:sport_category]
         composite[:dedup_group] = group_id
