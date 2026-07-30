@@ -153,8 +153,9 @@ module Workouts
             next
           end
 
-          temp_path = File.join(cache_dir, result.filename)
-          final_path = File.join(output_dir, result.filename)
+          ext = result.format.to_s
+          final_path = File.join(output_dir, "#{aid}.#{ext}")
+          temp_path = File.join(cache_dir, "#{aid}.#{ext}")
 
           File.write(temp_path, result.content, mode: "wb")
           FileUtils.mv(temp_path, final_path)
