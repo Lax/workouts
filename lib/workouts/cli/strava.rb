@@ -81,7 +81,11 @@ module Workouts
         end
 
         activity_ids = all_ids.reject do |id|
-          Dir.glob(File.join(output_dir, "#{id}.*")).any?
+          File.exist?(File.join(output_dir, "#{id}.fit")) ||
+            File.exist?(File.join(output_dir, "#{id}.gpx")) ||
+            File.exist?(File.join(output_dir, "#{id}.tcx")) ||
+            File.exist?(File.join(output_dir, "#{id}.json")) ||
+            File.exist?(File.join(output_dir, "#{id}.dat"))
         end
 
         if activity_ids.empty?

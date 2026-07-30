@@ -98,7 +98,7 @@ RSpec.describe Workouts::Sync::Strava do
 
       it "writes L1 raw file" do
         strava.call
-        path = File.join(tmpdir, "raw", "1001.json")
+        path = File.join(tmpdir, "raw", "1001.api.json")
         expect(File.exist?(path)).to be true
         content = JSON.parse(File.read(path))
         expect(content).to have_key("detail")
