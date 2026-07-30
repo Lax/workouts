@@ -8,11 +8,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: _/_/strava
+          fetch-depth: 0
 
-      - name: Checkout archive branch
+      - name: Verify files
         run: |
-          git fetch origin _/_/strava
-          git checkout _/_/strava
+          ls data/raw/strava/*.api.json | head -5
+          echo "raw files: $(ls data/raw/strava/*.api.json | wc -l)"
+          echo "std files: $(ls data/std/strava/*.json | wc -l)"
 
       - name: Save migrated files to cache
         uses: actions/cache/save@v4
