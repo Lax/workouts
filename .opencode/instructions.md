@@ -55,6 +55,19 @@ No unsolicited files or actions.
 | Config | `.opencode/*`, `.github/*`, `config/*`, `Dockerfile`, `*.yml` | yes |
 | Code | `lib/*`, `spec/*`, `packages/*`, `exe/*`, `assets/*` | no |
 
+## External Repos
+
+**Do NOT modify files in other project repositories without explicit permission.**
+
+For changes needed in external repos:
+1. File a **GitHub Issue** on that repo (use `gh issue create`)
+2. Include: what needs to change, why, and the exact code modifications
+3. Reference the issue URL in any related commits
+4. Do NOT create Pull Requests
+
+Changes to this project's own files (`lib/`, `spec/`, `config/`,
+`.github/workflows/`, `docs/`, `ruby/stravaweblib/`) are unaffected.
+
 ## Ambiguity Rule
 
 Model defaults to resolving fuzzy references to the most literally similar value.
