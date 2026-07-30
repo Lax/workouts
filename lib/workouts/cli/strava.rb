@@ -85,8 +85,7 @@ module Workouts
             File.exist?(File.join(output_dir, "#{id}.gpx")) ||
             File.exist?(File.join(output_dir, "#{id}.tcx")) ||
             File.exist?(File.join(output_dir, "#{id}.json")) ||
-            File.exist?(File.join(output_dir, "#{id}.dat")) ||
-            File.exist?(File.join(output_dir, "#{id}.api.json"))
+            File.exist?(File.join(output_dir, "#{id}.dat"))
         end
 
         if activity_ids.empty?
