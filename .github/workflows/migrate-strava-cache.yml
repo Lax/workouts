@@ -10,15 +10,15 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: _/_/strava
-          fetch-depth: 0
 
       - name: Verify files
         run: |
-          ls data/raw/strava/*.api.json | head -5
-          echo "raw files: $(ls data/raw/strava/*.api.json | wc -l)"
-          echo "std files: $(ls data/std/strava/*.json | wc -l)"
+          echo "raw api.json count: $(ls data/raw/strava/*.api.json 2>/dev/null | wc -l)"
+          echo "raw fit count: $(ls data/raw/strava/*.fit 2>/dev/null | wc -l)"
+          echo "std count: $(ls data/std/strava/*.json 2>/dev/null | wc -l)"
+          exit 0
 
-      - name: Save migrated files to cache
+      - name: Save cache
         uses: actions/cache/save@v4
         with:
           path: |
