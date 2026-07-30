@@ -38,7 +38,7 @@ Dashboard 当前是 Ruby 字符串模板内嵌 ~350 行 vanilla JS + ~170 行 CS
 
 - 数据是 CLI 每日同步生成的静态 JSON
 - Dashboard 一次性加载全部数据，不需要分页/筛选后端
-- SPA 直接 `fetch('activities.json')`
+- SPA 直接 `fetch('activities.json')`（摘要）+ `fetch('tracks.json')`（polyline 映射，延迟加载）
 
 ## Why SVG moves to frontend
 

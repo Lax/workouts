@@ -9,7 +9,7 @@
 | L1 | Source Archive | API data, minimal decode, no field loss | Sync | .fit / .raw.json | data/raw/{source}/ |
 | L2 | Standardized | WGS-84 + unified schema, all fields preserved | Sync | .json | data/std/{source}/ |
 | L3 | Summary DB | polyline + stats (distance/time/HR/cadence/power/temp) | Sync | SQLite | data/workouts.db |
-| L4 | Build Artifacts | JSON/CSV/SVG/HTML export | Build | .json / .svg / .csv / .html | site/ |
+| L4 | Build Artifacts | activities.json (summary) + tracks.json (polyline map) + stats.json + SVG/CSV/HTML | Build | .json / .svg / .csv / .html | site/ |
 | L5 | Deploy | website + GPX track download | Deploy | HTML/CSS/SVG/JS / .gpx | Pages URL / gpx_out/ |
 
 ## Dependencies

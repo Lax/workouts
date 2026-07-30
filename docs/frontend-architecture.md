@@ -121,9 +121,10 @@ packages/
     vite.config.ts            # Vite + React + Tailwind plugins
     index.html                # root entry
     src/ main.tsx             # reads config → createApp()
-    public/
-      activities.json         # dev fixture data
-      stats.json
+     public/
+       activities.json         # dev fixture data (summary, no polyline)
+       tracks.json             # dev fixture data (run_id → polyline map)
+       stats.json
 ```
 
 ## 5. Plugin System
@@ -349,6 +350,7 @@ interface WorkoutsConfig {
   "theme": "simple",
   "data": {
     "activities": "site/activities.json",
+    "tracks": "site/tracks.json",
     "stats": "site/stats.json"
   }
 }
@@ -371,6 +373,7 @@ interface WorkoutsConfig {
   },
   "data": {
     "activities": { "type": "url", "path": "https://cdn.example.com/activities.json", "optional": false },
+    "tracks": { "type": "url", "path": "https://cdn.example.com/tracks.json", "optional": true },
     "stats": { "type": "url", "path": "https://cdn.example.com/stats.json", "optional": true }
   },
   "entries": {
@@ -385,7 +388,7 @@ interface WorkoutsConfig {
 ```json
 {
   "theme": "simple",
-  "data": { "activities": "site/activities.json" }
+  "data": { "activities": "site/activities.json", "tracks": "site/tracks.json" }
 }
 ```
 
@@ -406,7 +409,10 @@ hooks.fire('beforeDataLoad')
   └→ plugin-data-source 监听, 无操作
 
 data layer:
-  plugin-data-source.fetch(sources) → { activities: [...], stats: {...} }
+  Phase 1 (eager): plugin-data-source.fetch([activities, stats]) → Promise.all parallel fetch
+                    → activities summary renders list + stats immediately
+  Phase 2 (lazy):  plugin-data-source.fetchTracks(tracks.json) → { run_id: polyline } map
+                    → tracks merged into activities → map polylines render progressively
   plugin-data-source.normalize(raw) → Activity[] (normalize legacy fields)
   hooks.fire('afterDataLoad', data)
 
@@ -430,12 +436,14 @@ Done by `@workouts/plugin-data-source`, run once at load time:
 function normalizeActivity(raw: unknown): Activity {
   return {
     ...raw,
-    // Legacy field migration
     sport_category: raw.sport_category || raw.type || 'other',
+    // Polyline is null in activities.json; merged from tracks.json in Phase 2
     summary_polyline: raw.summary_polyline || raw.polyline || null,
   } as Activity
 }
 ```
+
+Polyline merging happens in the theme Layout's `useEffect`: `a.summary_polyline || tracks[a.run_id] || null`. This two-pass approach keeps the initial load lightweight (~80KB summary vs ~3MB with polylines) while still enabling full GPS map rendering.
 
 The `Activity` interface is defined in `@workouts/shared` and shared across all packages. No normalization logic exists outside `plugin-data-source`.
 
@@ -445,7 +453,7 @@ Three layers, separated by volatility and scope:
 
 | Layer | Scope | Volatility | Tool | Example |
 |---|---|---|---|---|
-| App-level | All plugins/themes | Immutable after load | React Context | activities[], stats, config |
+| App-level | All plugins/themes | Two-phase: summary first, tracks merged later | React Context | activities[], stats, config |
 | Theme UI | Single theme | Frequent changes | Zustand | selectedYear, filters, drawerOpen |
 | Component-local | Single component | Transient | useState | input focus, open/close animation |
 
@@ -678,6 +686,10 @@ An inline `<script>` in the HTML `<head>` prevents flash of wrong theme (FOUC):
 ```
 
 Theme switching follows system preference by default, overridden by manual toggle which persists to `localStorage`.
+
+### 11.1 Preload Optimization
+
+The HTML template includes `<link rel="preload" href="activities.json" as="fetch">` to begin downloading summary data before JavaScript initializes. This eliminates the fetch-from-JS waterfall for the critical data file, reducing first-contentful-paint by 200–500ms.
 
 ## 12. Testing
 

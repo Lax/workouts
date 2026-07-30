@@ -41,7 +41,8 @@ You are an export specialist for the Workouts CLI.
 - Tooltips show: `Duplicate of {source} ({run_id}) — confidence: {n}%`
 
 ## Key defaults
-- Output paths in config: JSON → `build/activities.json`, SVG → `build/svg/`, CSV → `build/workouts.csv`
+- Output paths in config: JSON → `build/activities.json` + `build/tracks.json` (polyline map), SVG → `build/svg/`, CSV → `build/workouts.csv`
+- `export json --tracks-output <path>` splits polyline into separate file for deferred frontend loading
 - Privacy: strips 200m from start/end by default (configurable via `privacy.start_end_range`)
 - Sport categories: run/ride/hike/walk/swim/ski/workout/other
 

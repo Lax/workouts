@@ -426,7 +426,7 @@ exe/workouts parse activity.fit --save
 
 | 格式 | 默认路径 |
 |---|---|
-| JSON | `site/activities.json` |
+| JSON | `site/activities.json`（摘要）+ `site/tracks.json`（polyline 映射，可选） |
 | CSV | `site/workouts.csv` |
 | SVG | `site/svg/` |
 | Stats | `site/stats.json` |

@@ -49,6 +49,7 @@ interface ThemePackage {
   "displayName": "Overview",
   "data": {
     "activities": { "source": "activities.json", "optional": false },
+    "tracks": { "source": "tracks.json", "optional": true },
     "stats": { "source": "stats.json", "optional": true }
   },
   "config": {
@@ -341,6 +342,10 @@ export interface ThemePackage {
     "activities": {
       "source": "activities.json",
       "optional": false
+    },
+    "tracks": {
+      "source": "tracks.json",
+      "optional": true
     },
     "stats": {
       "source": "stats.json",

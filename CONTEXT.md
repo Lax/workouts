@@ -17,7 +17,7 @@
 | `sync [--source S] [--act TYPE]` | 同步所有配置源（`--source` 指定单一源，`--act` 按运动类型过滤） |
 | `dedup` | 全源重跑去重匹配（覆盖已有 duplicate_info） |
 | `auth <garmin\|garmin_cn>` | 交互式 Garmin SSO 登录 |
-| `export json [--output]` | 导出 JSON |
+| `export json [--output] [--tracks-output]` | 导出 JSON（`--tracks-output` 将 polyline 拆分到独立文件，用于前端延迟加载） |
 | `export csv [--output]` | 导出 CSV |
 | `export svg --style <style>` | 生成 SVG 海报（5 种风格）。参考：[flopp/GpxTrackPoster](https://github.com/flopp/GpxTrackPoster) |
 | `export stats [--output]` | 导出统计摘要 |
@@ -465,7 +465,7 @@ build job (needs: sync):
   1. checkout + setup Ruby + setup Node
   2. download DB artifact
   3. create site/ dir
-  4. export json → site/activities.json
+   4. export json → site/activities.json + tracks.json
   5. export svg → site/svg/github.svg
   6. validate SVG
   7. export stats → site/stats.json
@@ -544,7 +544,7 @@ packages/
   theme-overview/     # 完整仪表盘（地图/抽屉/详情/图表）
   web/                # Vite 入口 — 主力前端
     scripts/
-      template.html        # HTML 模板（含 FOUC 脚本）
+       template.html        # HTML 模板（FOUC 脚本 + `<link rel="preload">` 预加载 activities.json/stats.json）
       generate-entries.mjs # 根据 config.json 生成多页 HTML + entry shim
       generate-fixtures.mjs
       generate-real-fixtures.mjs
@@ -555,7 +555,7 @@ packages/
         index.tsx           # overview 主题入口 shim
         hello.tsx           # hello-world 主题入口 shim
       json.d.ts             # JSON 模块类型声明
-    public/                 # 静态文件：activities.json, stats.json
+     public/                 # 静态文件：activities.json, tracks.json, stats.json
     tests/
       compute.test.ts       # plugin-data-source 纯函数测试
       registry.test.ts      # core registry 测试
@@ -574,25 +574,33 @@ Ruby export (JSON) → packages/web/public/ (dev)
                     → site/ (prod via gh-pages.yml)
                               ↓
                     bootstrap(config, { theme })
-                             注册插件 + 渲染骨架
+                              注册插件 + 渲染骨架
                               ↓
                     theme.Layout → useActivities() (@workouts/plugin-data-source)
                               ↓
-                    data.ts → fetch(config.data.urls) → normalizeAll()
+           ┌──────────────────┴──────────────────┐
+           ↓                                      ↓
+   Phase 1 (eager):                         Phase 2 (lazy):
+   fetchData(activities.json + stats.json)  fetchTracks(tracks.json)
+   → 列表 + 统计立即渲染                      → polyline 注入 map 渲染
                               ↓
-                    { activities, stats } → 组件层
+                    { activities, tracks, stats } → 组件层
                               ↓
                     组件：MapView / Drawer / ChartOverlay / DetailPanel
 
                     [远期目标] 数据流通过 HookSystem (beforeDataLoad / afterDataLoad) 编排
 ```
 
+activities.json 不含 `summary_polyline`（约 80KB / 1000 活动），tracks.json 包含 `{ run_id: polyline }` 映射（约 2-4MB），前端两阶段加载：摘要优先 → 轨迹渐进。
+
+HTML `<link rel="preload">` 预加载 activities.json/stats.json，消除 JS 初始化 → fetch 串行延迟。`fetchData` 内部使用 `Promise.all` 并行获取多个数据源。`useActivities` hook 返回 `{ activities, tracks, tracksLoading, loading, error }`，Layout 层在 `useEffect` 中合并 `tracks → activities` 后同步到 store。
+
 ### 字段名约定
 
 | 前端优先字段 | Ruby 导出字段 | 说明 |
 |---|---|---|
 | `sport_category` | `type` | App 层归一化：`a.type && !a.sport_category` → copy |
-| `summary_polyline` | `summary_polyline` | — |
+| `summary_polyline` | `summary_polyline` | 两阶段加载：activities.json 中为 null，tracks.json 中按 run_id 索引 |
 | `sport_type` | `sport_type` | JSON 导出旧版本写 `subtype`，前端无消费 |
 
 ### 层级 (z-index)

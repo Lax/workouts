@@ -44,9 +44,11 @@
 **Actor:** 浏览器用户
 
 **流程：**
-1. 加载 `activities.json` + `stats.json`
+1. 加载 `activities.json`（摘要，无 polyline）+ `stats.json`（并行）
 2. 归一化字段名（`type` → `sport_category`，`polyline` → `summary_polyline`）
-3. 渲染地图路线 + 抽屉列表 + 统计面板
+3. 即刻渲染抽屉列表 + 统计面板
+4. 后台加载 `tracks.json`（`{ run_id: polyline }` 映射）
+5. 合并 tracks → activities，渐进渲染地图路线
 
 **预期：** 无 JS 错误，零等待，交互流畅。
 
