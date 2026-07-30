@@ -9,11 +9,7 @@ export interface DataResult {
 
 export type TracksMap = Record<string, string>
 
-async function fetchOne(
-  key: string,
-  source: string,
-  optional: boolean,
-): Promise<{ key: string; data: unknown; error?: string }> {
+async function fetchOne(key: string, source: string, optional: boolean): Promise<{ key: string; data: unknown; error?: string }> {
   try {
     const res = await fetch(source)
     if (!res.ok) throw new Error(`HTTP ${res.status}`)
@@ -30,9 +26,7 @@ export async function fetchData(
   dataConfig: Record<string, { source: string; optional?: boolean }>,
 ): Promise<{ activities: Activity[]; error?: string }> {
   const entries = Object.entries(dataConfig)
-  const results = await Promise.all(
-    entries.map(([key, { source, optional }]) => fetchOne(key, source, !!optional)),
-  )
+  const results = await Promise.all(entries.map(([key, { source, optional }]) => fetchOne(key, source, !!optional)))
 
   const dataMap: Record<string, unknown> = {}
   let error: string | undefined

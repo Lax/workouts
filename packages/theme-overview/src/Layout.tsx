@@ -45,10 +45,12 @@ export function OverviewLayout() {
 
   useEffect(() => {
     if (tracks) {
-      setActivities(activities.map((a) => ({
-        ...a,
-        summary_polyline: a.summary_polyline || tracks[a.run_id] || null,
-      })))
+      setActivities(
+        activities.map((a) => ({
+          ...a,
+          summary_polyline: a.summary_polyline || tracks[a.run_id] || null,
+        })),
+      )
     } else {
       setActivities(activities)
     }

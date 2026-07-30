@@ -53,8 +53,8 @@ vi.mock('leaflet', () => ({
   },
 }))
 
-import { OverviewLayout } from '@workouts/theme-overview'
 import { useActivities } from '@workouts/plugin-data-source'
+import { OverviewLayout } from '@workouts/theme-overview'
 
 const mockUseActivities = useActivities as ReturnType<typeof vi.fn>
 
