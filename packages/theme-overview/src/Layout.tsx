@@ -11,7 +11,7 @@ import './overview.css'
 const ChartOverlay = lazy(() => import('./components/ChartOverlay'))
 
 export function OverviewLayout() {
-  const { activities, loading: _loading, error: _error } = useActivities()
+  const { activities, tracks, loading, error: _error } = useActivities()
   const { config } = useTheme()
   const siteConfig = config?.site as Record<string, unknown> | undefined
 
@@ -44,8 +44,15 @@ export function OverviewLayout() {
   }, [])
 
   useEffect(() => {
-    setActivities(activities)
-  }, [activities, setActivities])
+    if (tracks) {
+      setActivities(activities.map((a) => ({
+        ...a,
+        summary_polyline: a.summary_polyline || tracks[a.run_id] || null,
+      })))
+    } else {
+      setActivities(activities)
+    }
+  }, [activities, tracks, setActivities])
 
   return (
     <>
@@ -61,6 +68,12 @@ export function OverviewLayout() {
         onActivityClick={openDetail}
         onActivityHover={setMapHoveredId}
       />
+
+      {loading && (
+        <div className="loading-overlay">
+          <span className="loading-pulse">Loading...</span>
+        </div>
+      )}
 
       <div className="map-overlays">
         <div className="ol-tl">

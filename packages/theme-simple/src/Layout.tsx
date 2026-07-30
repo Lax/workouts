@@ -37,7 +37,7 @@ function formatInfoMessage(
 }
 
 export function SimpleLayout() {
-  const { activities, loading } = useActivities()
+  const { activities, tracks, loading } = useActivities()
   const { config } = useTheme()
   const siteConfig = config?.site as Record<string, unknown> | undefined
 
@@ -101,8 +101,15 @@ export function SimpleLayout() {
   }, [selectedActivity])
 
   useEffect(() => {
-    setActivities(activities)
-  }, [activities, setActivities])
+    if (tracks) {
+      setActivities(activities.map((a) => ({
+        ...a,
+        summary_polyline: a.summary_polyline || tracks[a.run_id] || null,
+      })))
+    } else {
+      setActivities(activities)
+    }
+  }, [activities, tracks, setActivities])
 
   useEffect(() => {
     function onHashChange() {
