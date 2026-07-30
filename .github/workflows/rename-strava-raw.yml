@@ -34,6 +34,12 @@ jobs:
           key: raw-std-v1-strava-${{ github.run_id }}
           restore-keys: raw-std-v1-strava-
 
+      - name: Clean up temp files
+        run: |
+          rm -f data/raw/strava/.*.tmp 2>/dev/null
+          find data/raw/strava -name '*.tmp' -type f -delete 2>/dev/null || true
+          echo "Temp files cleaned."
+
       - name: Rename .json → .api.json
         id: rename
         run: |
@@ -71,6 +77,9 @@ jobs:
         env:
           BRANCH: _/_/strava
         run: |
+          rm -f data/raw/strava/.*.tmp 2>/dev/null
+          find data/raw/strava -name '*.tmp' -type f -delete 2>/dev/null || true
+          git add data/raw/strava/
           git diff --cached --quiet && { echo "no changes"; exit 0; }
           git -c user.name=workouts-bot -c user.email=bot@workouts \
             commit -m "chore(strava): rename API raw files .json → .api.json (${{ steps.rename.outputs.count }} files)"
