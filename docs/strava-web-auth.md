@@ -30,6 +30,18 @@ This requires a `strava_remember_token` JWT cookie from a browser session.
 The JWT `exp` claim typically grants **~30 days**. The cookie `Max-Age` is 365 days
 but the server enforces the JWT expiry. Re-login is needed monthly.
 
+## File layout
+
+```
+data/raw/strava/<id>.json          # API sync response (L1 raw)
+data/raw/strava/<id>/xxx.fit       # web fetch original file, server filename
+data/raw/strava/SHA256SUMS         # checksums (includes subdirectories)
+```
+
+Web-fetched original files are archived under `<id>/` using the server filename.
+The subdirectory structure keeps them separate from the API sync archive and
+allows multiple formats per activity.
+
 ## Configuration
 
 ### Local (config.yml)

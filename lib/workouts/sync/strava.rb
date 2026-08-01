@@ -106,8 +106,8 @@ module Workouts
         dir = raw_dir
         FileUtils.mkdir_p(dir)
         archive = {source: "strava", detail: detail, streams: streams}
-        tmp = File.join(dir, ".#{act_id}.api.json.tmp")
-        final = File.join(dir, "#{act_id}.api.json")
+        tmp = File.join(dir, ".#{act_id}.json.tmp")
+        final = File.join(dir, "#{act_id}.json")
         File.write(tmp, JSON.generate(archive))
         File.rename(tmp, final)
       end
@@ -195,11 +195,7 @@ module Workouts
       end
 
       def raw_path(platform_id)
-        File.join(raw_dir, "#{platform_id}.api.json")
-      end
-
-      def raw_file_exists?(platform_id)
-        super || File.exist?(File.join(raw_dir, "#{platform_id}.json"))
+        File.join(raw_dir, "#{platform_id}.json")
       end
 
       def existing_run_ids

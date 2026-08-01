@@ -81,11 +81,7 @@ module Workouts
         end
 
         activity_ids = all_ids.reject do |id|
-          File.exist?(File.join(output_dir, "#{id}.fit")) ||
-            File.exist?(File.join(output_dir, "#{id}.gpx")) ||
-            File.exist?(File.join(output_dir, "#{id}.tcx")) ||
-            File.exist?(File.join(output_dir, "#{id}.json")) ||
-            File.exist?(File.join(output_dir, "#{id}.dat"))
+          Dir.glob(File.join(output_dir, id, "*")).any?
         end
 
         if activity_ids.empty?
@@ -125,7 +121,7 @@ module Workouts
       token_errors = 0
 
       activity_ids.each do |aid|
-        existing = Dir.glob(File.join(output_dir, "#{aid}.{fit,gpx,tcx,json,dat}")).first
+        existing = Dir.glob(File.join(output_dir, aid, "*")).first
 
         if existing
           if validate_existing_file(existing)
@@ -153,8 +149,9 @@ module Workouts
             next
           end
 
+          final_path = File.join(output_dir, aid, result.filename)
+          FileUtils.mkdir_p(File.dirname(final_path))
           ext = result.format.to_s
-          final_path = File.join(output_dir, "#{aid}.#{ext}")
           temp_path = File.join(cache_dir, "#{aid}.#{ext}")
 
           File.write(temp_path, result.content, mode: "wb")

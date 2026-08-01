@@ -41,6 +41,6 @@ L1 -> L2 -> L3 -> L4 (build job)
 |---|---|---|---|---|
 | iGPSPORT | {id}.fit | std/igpsport/{id}.json | done | completed |
 | Keep | data/raw/keep/{id}.json (transitional) | std/keep/{id}.json | done | transitional |
-| Strava | {id}.api.json | std/strava/{id}.json | done | completed |
+| Strava | {id}.json + {id}/ (web 原始文件，服务器原名) | std/strava/{id}.json | done | completed |
 | XingZhe | {id}.json | std/xingzhe/{id}.json | done | completed |
 | Future sources | required | required | required | mandatory |
