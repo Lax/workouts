@@ -120,14 +120,6 @@ jobs:
           strava-client-secret: ${{ secrets.SYNC_STRAVA_CLIENT_SECRET }}
           strava-refresh-token: ${{ secrets.SYNC_STRAVA_REFRESH_TOKEN }}
 
-      - name: Fetch Strava original files
-        continue-on-error: true
-        timeout-minutes: 10
-        shell: bash
-        env:
-          SYNC__STRAVA__WEB_AUTH__AUTH_SEED: ${{ secrets.SYNC_STRAVA_WEB_AUTH_SEED }}
-        run: bundle exec workouts strava fetch --db data/workouts.db --limit 10
-
       - name: Regenerate data checksums
         shell: bash
         run: |
