@@ -180,7 +180,9 @@ jobs:
             mkdir -p data/db
             cp -p data/workouts.db data/db/
             for ext in -wal -shm; do
-              [ -f "data/workouts.db${ext}" ] && cp -p "data/workouts.db${ext}" data/db/
+              if [ -f "data/workouts.db${ext}" ]; then
+                cp -p "data/workouts.db${ext}" data/db/
+              fi
             done
           fi
 
