@@ -173,6 +173,22 @@ jobs:
           commit-author-name: workouts-bot
           commit-author-email: bot@workouts
 
+      - name: Copy DB to new path
+        shell: bash
+        run: |
+          if [ -f data/workouts.db ]; then
+            mkdir -p data/db
+            cp -p data/workouts.db data/db/
+            for ext in -wal -shm; do
+              [ -f "data/workouts.db${ext}" ] && cp -p "data/workouts.db${ext}" data/db/
+            done
+          fi
+
+      - name: Seed new DB cache
+        uses: git-fit-actions/db-store/cache/save@v1
+        with:
+          database-path: data/db/workouts.db
+
       # ── Data save (per-source, conditional on commit mode) ──
       - uses: ./.github/actions/data-store/save
         id: data-save

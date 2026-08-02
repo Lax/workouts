@@ -8,6 +8,7 @@ data/svg/
 data/raw/
 data/std/
 data/cache/
+data/db/
 data/*.checksum
 build/
 target/
