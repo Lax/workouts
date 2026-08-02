@@ -1,9 +1,9 @@
 GIT
   remote: https://github.com/Lax/git-fit.git
-  revision: eda132f2c679c8f7a4249960377a73a522bea868
+  revision: 163dd964006edd3b77233953416e340e43cb4f36
   glob: ruby/*.gemspec
   specs:
-    git-fit (0.9.1)
+    git-fit (0.9.9)
       faraday (~> 2.0)
       http-cookie (~> 1.0)
       mini_racer (~> 0.12)
@@ -78,7 +78,7 @@ GEM
     http-cookie (1.1.6)
       domain_name (~> 0.5)
     io-console (0.8.2)
-    json (2.21.1)
+    json (2.21.2)
     language_server-protocol (3.17.0.6)
     libv8-node (24.12.0.1)
     libv8-node (24.12.0.1-aarch64-linux)
@@ -172,7 +172,7 @@ GEM
       rubocop-ast (>= 1.47.1, < 2.0)
     ruby-progressbar (1.13.0)
     rubyzip (2.4.1)
-    sequel (5.106.0)
+    sequel (5.107.0)
       bigdecimal
     snaky_hash (2.0.7)
       hashie (>= 0.1.0, < 6)
@@ -205,7 +205,7 @@ GEM
       unicode-emoji (~> 4.1)
     unicode-emoji (4.2.0)
     uri (1.1.1)
-    version_gem (1.1.14)
+    version_gem (1.1.15)
     webrick (1.9.2)
     zlib (3.2.3)
 
