@@ -56,41 +56,41 @@ jobs:
       - name: Detect commit mode
         id: mode
         run: |
-          echo "shall_commit_db=${{ vars.GIT_FIT_SHALL_COMMIT_DB == 'true' && 'true' || 'false' }}" >> $GITHUB_OUTPUT
           echo "shall_commit_data=${{ vars.GIT_FIT_SHALL_COMMIT_DATA == 'true' && 'true' || 'false' }}" >> $GITHUB_OUTPUT
 
       # ── DB restore (git-fit db-store) ──
-      - uses: ./.github/actions/db-store/restore
-        id: db-restore
-        with:
-          path: data/workouts.db
-          key-prefix: workouts-db
-          shall-commit-db: ${{ steps.mode.outputs.shall_commit_db }}
-          git-branch: _/workouts-db
-
-      - uses: git-fit-actions/db-store/cache/restore@v1
+      - name: '[db] Restore cache'
+        uses: git-fit-actions/db-store/cache/restore@v1
         with:
           database-path: data/db/workouts.db
 
-      - name: Fallback DB restore from archive branch
+      - name: '[db] Restore from archive branch'
+        id: db-archive-restore
         shell: bash
         run: |
-          if [ ! -s data/workouts.db ]; then
+          if [ ! -s data/db/workouts.db ]; then
             echo "Cache miss — falling back to archive branch"
-            git fetch origin _/workouts-db
-            if git archive --format=tar origin/_/workouts-db \
-                 data/workouts.db data/workouts.db.SHA256SUMS 2>/dev/null | tar xf -; then
-              echo "Restored DB from archive branch: $(stat -c%s data/workouts.db 2>/dev/null || echo 0) bytes"
+            git fetch origin _/db/workouts-db || true
+            if git archive --format=tar origin/_/db/workouts-db \
+                 data/db/workouts.db data/db/workouts.db.SHA256SUMS 2>/dev/null | tar xf -; then
+              bytes=$(stat -c%s data/db/workouts.db 2>/dev/null || echo 0)
+              echo "restored=$bytes" >> $GITHUB_OUTPUT
+              echo "Restored DB from archive branch: $bytes bytes"
             else
               echo "SHA256SUMS not in archive — restoring DB only"
-              git archive --format=tar origin/_/workouts-db \
-                 data/workouts.db 2>/dev/null | tar xf - || true
-              if [ -f data/workouts.db ] && [ -s data/workouts.db ]; then
-                echo "Restored DB from archive branch: $(stat -c%s data/workouts.db 2>/dev/null || echo 0) bytes"
+              git archive --format=tar origin/_/db/workouts-db \
+                 data/db/workouts.db 2>/dev/null | tar xf - || true
+              if [ -f data/db/workouts.db ] && [ -s data/db/workouts.db ]; then
+                bytes=$(stat -c%s data/db/workouts.db 2>/dev/null || echo 0)
+                echo "restored=$bytes" >> $GITHUB_OUTPUT
+                echo "Restored DB from archive branch: $bytes bytes"
               else
+                echo "restored=0" >> $GITHUB_OUTPUT
                 echo "Archive branch restore failed — DB will be created fresh by sync"
               fi
             fi
+          else
+            echo "restored=0" >> $GITHUB_OUTPUT
           fi
 
       - name: Import Apple Health
@@ -148,19 +148,22 @@ jobs:
           detect-strategy: proportional
           detect-time: 300
 
-      - name: Checkpoint SQLite WAL
+      - name: '[db] Checkpoint SQLite WAL'
+        id: db-checkpoint
         if: always()
         shell: bash
         env:
           DB_PATH: ${{ vars.GIT_FIT_DATABASE_PATH }}
         run: |
           if [ -f "$DB_PATH" ]; then
-            bundle exec ruby -e '
+            bytes=$(bundle exec ruby -e '
               require "sequel"
               db = Sequel.sqlite(ENV.fetch("DB_PATH"))
               db.run("PRAGMA wal_checkpoint(TRUNCATE)")
-              puts "WAL checkpoint: #{File.size(ENV.fetch("DB_PATH"))} bytes"
-            '
+              print File.size(ENV.fetch("DB_PATH"))
+            ')
+            echo "db_size=$bytes" >> $GITHUB_OUTPUT
+            echo "WAL checkpoint: $bytes bytes"
           fi
 
       - name: Manage sync cron
@@ -170,36 +173,23 @@ jobs:
           db-path: ${{ vars.GIT_FIT_DATABASE_PATH }}
 
       # ── DB save (git-fit db-store) ──
-      - name: Copy DB to legacy path
-        shell: bash
-        env:
-          DB_PATH: ${{ vars.GIT_FIT_DATABASE_PATH }}
-        run: |
-          LEGACY_DIR="$(dirname "data/workouts.db")"
-          if [ -f "$DB_PATH" ]; then
-            mkdir -p "$LEGACY_DIR"
-            cp -p "$DB_PATH" "$LEGACY_DIR/"
-            for ext in -wal -shm; do
-              if [ -f "${DB_PATH}${ext}" ]; then
-                cp -p "${DB_PATH}${ext}" "$LEGACY_DIR/"
-              fi
-            done
-          fi
-
-      - uses: ./.github/actions/db-store/save
+      - name: '[db] Save cache'
         id: db-save
-        with:
-          path: data/workouts.db
-          key-prefix: workouts-db
-          shall-commit-db: ${{ steps.mode.outputs.shall_commit_db }}
-          git-branch: _/workouts-db
-          commit-author-name: workouts-bot
-          commit-author-email: bot@workouts
-
-      - name: Seed new DB cache
         uses: git-fit-actions/db-store/cache/save@v1
         with:
           database-path: data/db/workouts.db
+
+      - name: Write DB summary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "### DB sync result"
+            echo "- DB path: ${{ vars.GIT_FIT_DATABASE_PATH }}"
+            echo "- DB changed: ${{ steps.db-save.outputs.changed }}"
+            echo "- DB size: ${{ steps.db-checkpoint.outputs.db_size }} bytes"
+            echo "- Archive restore: ${{ steps.db-archive-restore.outputs.restored }} bytes"
+          } >> "$GITHUB_STEP_SUMMARY"
 
       # ── Data save (per-source, conditional on commit mode) ──
       - uses: ./.github/actions/data-store/save
@@ -229,14 +219,14 @@ jobs:
 
       - name: Upload DB artifact
         uses: actions/upload-artifact@v4
-        if: steps.db-save.outputs.db-changed == 'true' || steps.data-save.outputs.any_changed == 'true'
+        if: steps.db-save.outputs.changed == 'true' || steps.data-save.outputs.any_changed == 'true'
         with:
           name: workouts-db
           path: data/db/workouts.db
           retention-days: 1
 
       - name: Trigger gh-pages deploy
-        if: steps.db-save.outputs.db-changed == 'true' || steps.data-save.outputs.any_changed == 'true'
+        if: steps.db-save.outputs.changed == 'true' || steps.data-save.outputs.any_changed == 'true'
         run: |
           gh workflow run gh-pages.yml --ref main \
             -f artifact-run-id=${{ github.run_id }}

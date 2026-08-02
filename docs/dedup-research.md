@@ -398,8 +398,8 @@ for src in garmin keep strava igpsport xoss xingzhe garmin_cn; do
 done
 
 # DB 快照
-git checkout origin/_/workouts-db -- data/workouts.db
-cp data/workouts.db data/workouts.archive.db  # 备份后恢复当前 DB
+git checkout origin/_/db/workouts-db -- data/db/workouts.db
+cp data/db/workouts.db data/workouts.archive.db  # 备份后恢复当前 DB
 ```
 
 各分支 std 目录已包含标准化 GPS 点阵，可直接用于 Trajectory 对比分析。

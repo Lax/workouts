@@ -5,7 +5,7 @@ description: Save DB to cache and/or git with SHA256SUMS, skip if unchanged
 inputs:
   path:
     required: false
-    default: data/workouts.db
+    default: data/db/workouts.db
   key-prefix:
     required: false
     default: db

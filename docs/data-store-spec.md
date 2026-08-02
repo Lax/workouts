@@ -41,7 +41,7 @@ Step 4/5/8: restore from git        → 权威覆盖
 |------|------|-------------|-----------|---------|
 | `git-flat` | Data in checkout，直接 commit 到 main | checkout（no-op） | `git add + commit` 到 main | 本地开发 / self-hosted runner |
 | `git-combined` | 单 git 分支存全部数据 | cache → `data/_/_` branch | `data/_/_` branch + cache | 少量数据，单分支管理 |
-| `git-by-source` | 每 source 独立 git 分支 | cache → `_/_/<src>` + `_/workouts-db` | 同上分支 + cache | 大体积数据，独立历史 |
+| `git-by-source` | 每 source 独立 git 分支 | cache → `_/_/<src>` + `_/db/workouts-db` | 同上分支 + cache | 大体积数据，独立历史 |
 | `actions-combined` | 单 GH Actions cache key | Combined cache | Combined cache | 小体积，快速 |
 | `actions-by-source` | 每 source 独立 cache key | Per-source cache + DB cache | Per-source cache + DB cache | 大体积，增量缓存 |
 
@@ -55,7 +55,7 @@ Step 4/5/8: restore from git        → 权威覆盖
 | 1 | Config: determine DATA_STORE=mode | ✓ | ✓ | ✓ | ✓ | ✓ |
 | 2 | Restore DB from cache | — | — | ✓ | — | ✓ |
 | 3 | Restore combined (raw+std+DB) cache | — | ✓ | — | ✓ | — |
-| 4 | Restore DB from git `_/workouts-db` | — | — | ✓ | — | — |
+| 4 | Restore DB from git `_/db/workouts-db` | — | — | ✓ | — | — |
 | 5 | Restore combined git `data/_/_` | — | ✓ | — | — | — |
 | 6 | Import Apple Health + GPX/FIT/TCX | ✓ | ✓ | ✓ | ✓ | ✓ |
 | 7 | Restore per-source caches (raw+std) | — | — | ✓ | — | ✓ |
@@ -79,7 +79,7 @@ Step 4/5/8: restore from git        → 权威覆盖
 
 | Step | Operation | `git-flat` | `git-combined` | `git-by-source` | `actions-combined` | `actions-by-source` |
 |------|-----------|:---:|:---:|:---:|:---:|:---:|
-| 20 | Save DB git `_/workouts-db` | — | — | ✓ | — | — |
+| 20 | Save DB git `_/db/workouts-db` | — | — | ✓ | — | — |
 | 21 | Save per-source git branches | — | — | ✓ | — | — |
 | 22 | Save combined git `data/_/_` | — | ✓ | — | — | — |
 | 23 | Save flat git (commit to main) | ✓ | — | — | — | — |
@@ -117,7 +117,7 @@ setup:
 restore DB (两层: cache → git 覆盖):
    2  Restore DB from cache                   if mode needs DB (*)
    3  Restore combined (raw+std+DB) cache     if mode==git-combined || actions-combined
-   4  Restore DB from git (_/workouts-db)     if mode==git-by-source          (权威覆盖)
+   4  Restore DB from git (_/db/workouts-db)     if mode==git-by-source          (权威覆盖)
    5  Restore combined git (data/_/_)         if mode==git-combined           (权威覆盖)
 
 import:
@@ -143,7 +143,7 @@ cron:
   18  Commit cron change                      if schedule && changed
 
 save git (按 mode 分支):
-  20  Save DB to _/workouts-db                if mode==git-by-source
+  20  Save DB to _/db/workouts-db                if mode==git-by-source
   21  Save per-source git branches            if mode==git-by-source
   22  Save combined git (data/_/_)            if mode==git-combined
   23  Save flat git (commit to main)          if mode==git-flat
@@ -167,7 +167,7 @@ output:
 
 ### 现状
 
-`data-store/restore` 中 `git-by-source` 模式走 `actions/cache/restore` 还原 DB（行 32-37），不是从 git。这与 `_/workouts-db` 分支不一致。
+`data-store/restore` 中 `git-by-source` 模式走 `actions/cache/restore` 还原 DB（行 32-37），不是从 git。这与 `_/db/workouts-db` 分支不一致。
 
 ### 变更
 
@@ -176,7 +176,7 @@ output:
 | 旧 | `actions/cache/restore`（仅 cache，无 git） | `actions/cache/save`（仅 cache fallback） |
 | 新 | cache（step 2）+ git 权威覆盖（step 4） | git（step 20）+ cache（step 24）双层 |
 
-与 `archive.yml` 中的 `archive-db` job 使用同一分支 `_/workouts-db`，存档和同步共享同一存储位置。
+与 `archive.yml` 中的 `archive-db` job 使用同一分支 `_/db/workouts-db`，存档和同步共享同一存储位置。
 
 ### 实现方式
 
@@ -184,18 +184,18 @@ DB 的 git restore/save 复用现有 `scripts/data-store-git-save.sh`，该脚�
 
 Restore 步骤 4 的内联 bash：
 ```bash
-if git ls-remote --exit-code origin refs/heads/_/workouts-db >/dev/null 2>&1; then
-  git fetch origin _/workouts-db
+if git ls-remote --exit-code origin refs/heads/_/db/workouts-db >/dev/null 2>&1; then
+  git fetch origin _/db/workouts-db
   mkdir -p data
-  git archive --format=tar origin/_/workouts-db \
-    data/workouts.db 2>/dev/null | tar xf - || true
+  git archive --format=tar origin/_/db/workouts-db \
+    data/db/workouts.db 2>/dev/null | tar xf - || true
 fi
 ```
 
 Save 步骤 20：
 ```bash
-bash scripts/data-store-git-save.sh _/workouts-db \
-  "data/workouts.db data/workouts.db.checksum"
+bash scripts/data-store-git-save.sh _/db/workouts-db \
+  "data/db/workouts.db data/db/workouts.db.checksum"
 ```
 
 ## Composite Actions 拆分

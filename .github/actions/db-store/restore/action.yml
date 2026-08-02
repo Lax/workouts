@@ -5,7 +5,7 @@ description: Restore DB from cache and/or git with SHA256SUMS verification
 inputs:
   path:
     required: false
-    default: data/workouts.db
+    default: data/db/workouts.db
   key-prefix:
     required: false
     default: db

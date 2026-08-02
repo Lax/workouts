@@ -63,7 +63,7 @@ Only schedule events update cron; workflow_dispatch never modifies it.
 data/raw/{garmin,garmin_cn,igpsport,keep,strava,xingzhe,xoss}/
 data/std/{garmin,garmin_cn,igpsport,keep,strava,xingzhe,xoss}/
 data/cache/  ← Garmin token files
-data/workouts.db
+data/db/workouts.db
 ```
 
 ## Error conventions

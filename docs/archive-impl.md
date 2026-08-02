@@ -10,9 +10,9 @@
 ## 分支命名
 
 `_/_/<source>` — 如 `_/_/xoss`、`_/_/igpsport`
-`_/workouts-db` — DB 单文件归档
+`_/db/workouts-db` — DB 单文件归档
 
-命名含 `/`，git/GitHub 均支持，UI 显示为 `data/ → _/ → xoss` 文件夹层级。`_/workouts-db` 显示为 `_ / workouts-db`，单深度区别于 per-source 双深度。
+命名含 `/`，git/GitHub 均支持，UI 显示为 `data/ → _/ → xoss` 文件夹层级。`_/db/workouts-db` 显示为 `_ / workouts-db`，单深度区别于 per-source 双深度。
 
 ## 流程
 
@@ -32,12 +32,12 @@ Step 4: git add -f -A（含所有变动，包括删除）
 
 ### archive-db 简化流程
 
-`archive-db` job 独立于 matrix，处理 `data/workouts.db` 单文件归档到 `_/workouts-db` 分支：
+`archive-db` job 独立于 matrix，处理 `data/db/workouts.db` 单文件归档到 `_/db/workouts-db` 分支：
 
 ```
-Step 0-2: 同上（checkout main → 创建/切换 _/workouts-db）
-Step 3: cache restore data/workouts.db（key: workouts-db-v1-*）
-Step 4: git add -f -A data/workouts.db → diff --cached --quiet? skip : commit + push
+Step 0-2: 同上（checkout main → 创建/切换 _/db/workouts-db）
+Step 3: cache restore data/db/workouts.db（key: GitFit-db-v0-*）
+Step 4: git add -f -A data/db/workouts.db → diff --cached --quiet? skip : commit + push
 ```
 
 单文件无需 rename 检测和删除排除。`git write-tree` + `diff-tree` 步骤省略。
@@ -118,7 +118,7 @@ jobs:
 | push 失败不重试 | 网络 / PAT 过期等极端情况 | 下次运行自动 catch up |
 | 极小概率 rename 误判 | `-M50%` 阈值设置 | 低相似度改名视为 D+A，旧文件保留、新文件新增 |
 | archive 永远不删除 | 纯删除被 `reset HEAD` 排除 | 源站已删的活动，archive 中仍保留历史快照 |
-| `_/workouts-db` 二进制增长 | `workouts.db` ~2.8MB，每周全量 blob commit | 每年 ~145MB，对 git 可接受 |
+| `_/db/workouts-db` 二进制增长 | `workouts.db` ~2.8MB，每周全量 blob commit | 每年 ~145MB，对 git 可接受 |
 
 ## 实现记录
 
@@ -143,7 +143,7 @@ jobs:
 | `data/_/xingzhe` | 66 | 成功 |
 | `data/_/garmin_cn` | 2 | 成功 |
 | `data/_/xoss` | 0 | 无 cache 数据，正确 skip |
-| `_/workouts-db` | 1 (DB) | 待验证 |
+| `_/db/workouts-db` | 1 (DB) | 待验证 |
 
 ### 对抗审查最终结论
 
