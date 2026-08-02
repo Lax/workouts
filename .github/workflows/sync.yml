@@ -68,6 +68,10 @@ jobs:
           shall-commit-db: ${{ steps.mode.outputs.shall_commit_db }}
           git-branch: _/workouts-db
 
+      - uses: git-fit-actions/db-store/cache/restore@v1
+        with:
+          database-path: data/db/workouts.db
+
       - name: Fallback DB restore from archive branch
         shell: bash
         run: |
