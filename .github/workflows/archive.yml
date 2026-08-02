@@ -107,8 +107,6 @@ jobs:
         with:
           ruby-version: '3.4'
           bundler-cache: true
-        env:
-          BUNDLE_GITHUB__COM: ${{ github.repository_owner }}:${{ secrets.WORKOUTS_SYNC_PAT }}
 
       - name: Compute DB schema hash
         id: schema

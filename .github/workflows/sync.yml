@@ -41,8 +41,6 @@ jobs:
         with:
           ruby-version: '3.4'
           bundler-cache: true
-        env:
-          BUNDLE_GITHUB__COM: lax:${{ secrets.WORKOUTS_SYNC_PAT }}
 
       - uses: actions/setup-python@v5
         if: vars.RUNNER_LABEL != 'self-hosted'

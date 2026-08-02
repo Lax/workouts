@@ -2,7 +2,7 @@ source "https://rubygems.org"
 
 gemspec
 
-gem "git-fit", github: "Lax/git-fit", glob: "ruby/*.gemspec"
+gem "git-fit", "~> 0.9"
 gem "stravaweblib", path: "ruby/stravaweblib"
 
 group :development do
