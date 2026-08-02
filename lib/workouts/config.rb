@@ -5,7 +5,7 @@ module Workouts
   # Env uses __ as separator (SYNC__KEEP__PHONE) to avoid conflict with key _.
   class Config
     DEFAULTS = {
-      "database" => {"path" => "data/workouts.db"},
+      "database" => {"path" => "data/db/workouts.db"},
       "sync" => {},
       "export" => {
         "json" => {"path" => "site/activities.json"},
@@ -56,7 +56,7 @@ module Workouts
     end
 
     def db_path
-      @data.dig("database", "path") || "data/workouts.db"
+      @data.dig("database", "path") || "data/db/workouts.db"
     end
 
     private

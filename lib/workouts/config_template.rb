@@ -4,7 +4,7 @@ module Workouts
       <<~YAML
         ---
         database:
-          path: data/workouts.db
+          path: data/db/workouts.db
 
         sync:
           # time_budget: 300            # Max seconds per sync run (optional, env: SYNC__TIME_BUDGET)

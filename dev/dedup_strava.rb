@@ -5,7 +5,7 @@ require "workouts"
 require "json"
 require "time"
 
-db = Sequel.sqlite("data/workouts.db")
+db = Sequel.sqlite(ENV.fetch("GIT_FIT_DATABASE_PATH", "data/db/workouts.db"))
 DUPLICATE_SOURCES = %w[keep xingzhe xoss igpsport garmin garmin_cn].freeze
 
 strava = db[:activities].where(source: "strava").all

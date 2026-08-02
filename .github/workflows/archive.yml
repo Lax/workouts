@@ -101,23 +101,6 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Setup Ruby
-        if: vars.RUNNER_LABEL != 'self-hosted'
-        uses: ruby/setup-ruby@v1
-        with:
-          ruby-version: '3.4'
-          bundler-cache: true
-
-      - name: Compute DB schema hash
-        id: schema
-        shell: bash
-        run: |
-          if bundle exec git fit db schema --hash >/dev/null 2>&1; then
-            echo "schema_hash=$(bundle exec git fit db schema --hash)" >> $GITHUB_OUTPUT
-          else
-            echo "schema_hash=" >> $GITHUB_OUTPUT
-          fi
-
       - name: Configure git auth
         run: |
           git config --add http.https://github.com/.extraheader \
@@ -126,7 +109,7 @@ jobs:
 
       - name: Ensure branch exists
         env:
-          BRANCH: _/workouts-db
+          BRANCH: _/db/workouts-db
         run: |
           if git ls-remote --exit-code --heads origin "refs/heads/$BRANCH" 2>/dev/null; then
             echo "branch exists"
@@ -139,24 +122,22 @@ jobs:
 
       - name: Checkout archive branch
         env:
-          BRANCH: _/workouts-db
+          BRANCH: _/db/workouts-db
         run: |
           git fetch origin "$BRANCH"
           git checkout "$BRANCH"
 
       - name: Restore DB from cache
-        uses: actions/cache/restore@v4
+        uses: git-fit-actions/db-store/cache/restore@v1
         with:
-          path: data/workouts.db
-          key: workouts-db-v1-${{ steps.schema.outputs.schema_hash }}-${{ github.run_id }}
-          restore-keys: workouts-db-v1-
+          database-path: data/db/workouts.db
 
       - name: Commit & push
         env:
-          BRANCH: _/workouts-db
+          BRANCH: _/db/workouts-db
         run: |
           set -euo pipefail
-          git add -f -A "data/workouts.db" 2>/dev/null || true
+          git add -f -A "data/db/" 2>/dev/null || true
           git diff --cached --quiet && echo "no changes" && exit 0
           git -c user.name=workouts-bot -c user.email=bot@workouts \
             commit -m "archive(db): $(date +%Y-%m-%d)"

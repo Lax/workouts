@@ -21,7 +21,7 @@ inputs:
   db-path:
     description: SQLite database path
     required: false
-    default: data/workouts.db
+    default: data/db/workouts.db
   detect-limit:
     description: Max activities to process
     required: false

@@ -1,6 +1,6 @@
 ---
 database:
-  path: data/workouts.db
+  path: data/db/workouts.db
 
 sync:
   # time_budget: 300            # 单次同步最大秒数 (可选, env: SYNC__TIME_BUDGET)

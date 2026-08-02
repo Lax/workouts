@@ -64,7 +64,7 @@ inputs:
   db-path:
     description: SQLite database path
     required: false
-    default: data/workouts.db
+    default: data/db/workouts.db
 
 runs:
   using: composite

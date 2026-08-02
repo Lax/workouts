@@ -5,9 +5,10 @@ require "optparse"
 require "sequel"
 require "time"
 
-options = {db: "data/workouts.db"}
+default_db = ENV.fetch("GIT_FIT_DATABASE_PATH", "data/db/workouts.db")
+options = {db: default_db}
 OptionParser.new do |opts|
-  opts.on("--db PATH", "Database path (default: data/workouts.db)") { |v| options[:db] = v }
+  opts.on("--db PATH", "Database path (default: $GIT_FIT_DATABASE_PATH or #{default_db})") { |v| options[:db] = v }
   opts.on("-h", "--help", "Print help") {
     puts opts
     exit

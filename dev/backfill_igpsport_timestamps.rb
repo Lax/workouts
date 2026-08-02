@@ -3,7 +3,7 @@ require_relative "../lib/workouts"
 require "sequel"
 
 FIT_EPOCH = Time.new(1989, 12, 31, 0, 0, 0, "+00:00").to_i
-db = Sequel.sqlite("data/workouts.db")
+db = Sequel.sqlite(ENV.fetch("GIT_FIT_DATABASE_PATH", "data/db/workouts.db"))
 count = 0
 errors = 0
 

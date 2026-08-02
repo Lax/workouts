@@ -23,7 +23,7 @@ inputs:
   db-path:
     description: SQLite database path
     required: false
-    default: data/workouts.db
+    default: data/db/workouts.db
   git-configured:
     description: Whether git push auth is configured
     required: true

@@ -128,7 +128,7 @@ jobs:
         shell: bash
         env:
           SYNC__STRAVA__WEB_AUTH__AUTH_SEED: ${{ secrets.SYNC_STRAVA_WEB_AUTH_SEED }}
-        run: bundle exec workouts strava fetch --db data/workouts.db --limit 10
+        run: bundle exec workouts strava fetch --db ${{ vars.GIT_FIT_DATABASE_PATH }} --limit 10
 
       - name: Regenerate data checksums
         shell: bash
@@ -142,7 +142,7 @@ jobs:
         with:
           geo-cache-dir: data/cache
           amap-key: ${{ secrets.AMAP_API_KEY }}
-          db-path: data/workouts.db
+          db-path: ${{ vars.GIT_FIT_DATABASE_PATH }}
           detect-limit: 200
           detect-batch: 20
           detect-strategy: proportional
@@ -151,13 +151,15 @@ jobs:
       - name: Checkpoint SQLite WAL
         if: always()
         shell: bash
+        env:
+          DB_PATH: ${{ vars.GIT_FIT_DATABASE_PATH }}
         run: |
-          if [ -f data/workouts.db ]; then
+          if [ -f "$DB_PATH" ]; then
             bundle exec ruby -e '
               require "sequel"
-              db = Sequel.sqlite("data/workouts.db")
+              db = Sequel.sqlite(ENV.fetch("DB_PATH"))
               db.run("PRAGMA wal_checkpoint(TRUNCATE)")
-              puts "WAL checkpoint: #{File.size("data/workouts.db")} bytes"
+              puts "WAL checkpoint: #{File.size(ENV.fetch("DB_PATH"))} bytes"
             '
           fi
 
@@ -165,8 +167,25 @@ jobs:
         uses: ./.github/actions/cron-manager
         with:
           git-configured: ${{ steps.git-setup.outputs.configured }}
+          db-path: ${{ vars.GIT_FIT_DATABASE_PATH }}
 
       # ── DB save (git-fit db-store) ──
+      - name: Copy DB to legacy path
+        shell: bash
+        env:
+          DB_PATH: ${{ vars.GIT_FIT_DATABASE_PATH }}
+        run: |
+          LEGACY_DIR="$(dirname "data/workouts.db")"
+          if [ -f "$DB_PATH" ]; then
+            mkdir -p "$LEGACY_DIR"
+            cp -p "$DB_PATH" "$LEGACY_DIR/"
+            for ext in -wal -shm; do
+              if [ -f "${DB_PATH}${ext}" ]; then
+                cp -p "${DB_PATH}${ext}" "$LEGACY_DIR/"
+              fi
+            done
+          fi
+
       - uses: ./.github/actions/db-store/save
         id: db-save
         with:
@@ -176,19 +195,6 @@ jobs:
           git-branch: _/workouts-db
           commit-author-name: workouts-bot
           commit-author-email: bot@workouts
-
-      - name: Copy DB to new path
-        shell: bash
-        run: |
-          if [ -f data/workouts.db ]; then
-            mkdir -p data/db
-            cp -p data/workouts.db data/db/
-            for ext in -wal -shm; do
-              if [ -f "data/workouts.db${ext}" ]; then
-                cp -p "data/workouts.db${ext}" data/db/
-              fi
-            done
-          fi
 
       - name: Seed new DB cache
         uses: git-fit-actions/db-store/cache/save@v1
@@ -226,7 +232,7 @@ jobs:
         if: steps.db-save.outputs.db-changed == 'true' || steps.data-save.outputs.any_changed == 'true'
         with:
           name: workouts-db
-          path: data/workouts.db
+          path: data/db/workouts.db
           retention-days: 1
 
       - name: Trigger gh-pages deploy

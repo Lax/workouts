@@ -24,7 +24,7 @@ RSpec.describe Workouts::Config do
 
   it "loads defaults" do
     config = Workouts::Config.new
-    expect(config.db_path).to eq("data/workouts.db")
+    expect(config.db_path).to eq("data/db/workouts.db")
     expect(config.privacy_config["start_end_range"]).to eq(200)
   end
 
