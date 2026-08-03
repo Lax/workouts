@@ -144,7 +144,6 @@ module Workouts
 
           unless valid_format?(result.content, result.format, fmt_sym)
             warn_html_error(result.content, aid)
-            token_errors += 1
             failed += 1
             next
           end
@@ -186,7 +185,7 @@ module Workouts
     def valid_format?(content, format, requested_fmt)
       case format
       when :fit
-        content.start_with?("\x0E\x10".b)
+        content[0, 64].include?(".FIT".b) || content.start_with?("\x0E\x10".b)
       when :tcx
         content.include?("TrainingCenterDatabase".b)
       when :gpx
