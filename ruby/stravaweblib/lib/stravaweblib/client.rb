@@ -66,7 +66,8 @@ module StravaWebLib
       resp = build_session.get(path)
 
       unless resp.success?
-        raise ExportError, "HTTP #{resp.status} for activity #{activity_id}"
+        klass = (resp.status == 404) ? NotFoundError : ExportError
+        raise klass, "HTTP #{resp.status} for activity #{activity_id}"
       end
 
       filename = extract_filename(resp, activity_id, format)
@@ -137,7 +138,7 @@ module StravaWebLib
       raise AuthError, "JWT missing 'sub' claim" if athlete_id.empty?
 
       exp = data["exp"]
-      if exp && exp.is_a?(Numeric) && Time.at(exp) < Time.now
+      if exp&.is_a?(Numeric) && Time.at(exp) < Time.now
         raise AuthError, "JWT expired at #{Time.at(exp)} — re-run local OTP login\n#{AUTH_HELP}"
       end
 

@@ -232,12 +232,20 @@ RSpec.describe StravaWebLib::Client do
       expect { client.export(1, format: :csv) }.to raise_error(ArgumentError, /unknown format/)
     end
 
-    it "raises ExportError on HTTP failure" do
+    it "raises NotFoundError on HTTP 404" do
       session = client.send(:build_session)
       stub_export(session, "/activities/1/export_original", status: 404)
       allow(client).to receive(:build_session).and_return(session)
 
-      expect { client.export(1) }.to raise_error(StravaWebLib::ExportError, /HTTP 404/)
+      expect { client.export(1) }.to raise_error(StravaWebLib::NotFoundError, /HTTP 404/)
+    end
+
+    it "raises ExportError on non-404 HTTP failure" do
+      session = client.send(:build_session)
+      stub_export(session, "/activities/1/export_original", status: 500)
+      allow(client).to receive(:build_session).and_return(session)
+
+      expect { client.export(1) }.to raise_error(StravaWebLib::ExportError, /HTTP 500/)
     end
   end
 

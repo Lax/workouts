@@ -19,4 +19,26 @@ RSpec.describe Workouts::StravaCLI do
       expect { cli.send(:warn_html_error, binary, "789") }.to output(/789/).to_stdout
     end
   end
+
+  describe "#fetch — 404 handling" do
+    it "skips 404 activities with yellow message instead of failing" do
+      client = instance_double(StravaWebLib::Client)
+      allow(StravaWebLib::Client).to receive(:new).and_return(client)
+      allow(client).to receive(:persist_cookies!)
+      allow(client).to receive(:export).with("123", format: :original).and_raise(StravaWebLib::NotFoundError, "HTTP 404 for activity 123")
+
+      tmpdir = Dir.mktmpdir
+      cli_with_opts = described_class.new(
+        [],
+        jwt: "fake-jwt",
+        format: "original",
+        output: File.join(tmpdir, "raw"),
+        db: "/dev/null"
+      )
+
+      expect { cli_with_opts.fetch("123") }.to output(/skip 123: no original file on Strava \(HTTP 404\)/).to_stdout
+    ensure
+      FileUtils.rm_rf(tmpdir) if tmpdir
+    end
+  end
 end
