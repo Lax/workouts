@@ -25,3 +25,4 @@
 | Strava OAuth 交互式授权（`auth strava`本地HTTP） | ✅ 已完成（lib/workouts/auth/strava.rb）|
 | FIT 解析 pipeline（mini_racer + @garmin/fitsdk） | ✅ 已完成（lib/workouts/fit/decoder.rb）|
 | Garmin DI OAuth2 认证（Playwright + curl_cffi 降级链，session cookie 365d 持久化） | ✅ 已完成（lib/workouts/sync/garmin.rb）|
+| CI 移除 python 死步骤（setup-python + pip install curl_cffi） | ✅ 已完成（.github/workflows/sync.yml）|

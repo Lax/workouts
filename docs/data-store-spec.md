@@ -51,7 +51,7 @@ Step 4/5/8: restore from git        → 权威覆盖
 
 | Step | Operation | `git-flat` | `git-combined` | `git-by-source` | `actions-combined` | `actions-by-source` |
 |------|-----------|:---:|:---:|:---:|:---:|:---:|
-| 0 | Setup: git auth, ruby, python, node | ✓ | ✓ | ✓ | ✓ | ✓ |
+| 0 | Setup: git auth, ruby, node | ✓ | ✓ | ✓ | ✓ | ✓ |
 | 1 | Config: determine DATA_STORE=mode | ✓ | ✓ | ✓ | ✓ | ✓ |
 | 2 | Restore DB from cache | — | — | ✓ | — | ✓ |
 | 3 | Restore combined (raw+std+DB) cache | — | ✓ | — | ✓ | — |
@@ -111,7 +111,7 @@ git-flat:       git save (23) only                        → 无需 cache（che
 
 ```
 setup:
-   0  git auth, ruby, python, node
+   0  git auth, ruby, node
    1  DATA_STORE=mode 判断
 
 restore DB (两层: cache → git 覆盖):
