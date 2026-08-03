@@ -59,6 +59,10 @@ runs:
         key: raw-std-v1-strava-${{ github.run_id }}
         restore-keys: raw-std-v1-strava-
 
+    - uses: git-fit-actions/data-store/cache/restore@v1
+      with:
+        source: strava
+
     - name: Generate SHA256SUMS files
       shell: bash
       run: |
