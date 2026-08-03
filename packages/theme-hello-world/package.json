@@ -12,8 +12,7 @@
     "react": "^19.0.0"
   },
   "devDependencies": {
-    "react": "^19.0.0",
-    "@workouts/core": "*"
+    "react": "^19.0.0"
   },
   "dependencies": {
     "@workouts/core": "*"

@@ -10,13 +10,11 @@
   },
   "peerDependencies": {
     "react": "^19.0.0",
-    "echarts": "^5.0.0"
+    "echarts": "^6.0.0"
   },
   "devDependencies": {
     "react": "^19.0.0",
-    "echarts": "^6.1.0",
-    "@workouts/core": "*",
-    "@workouts/shared": "*"
+    "echarts": "^6.1.0"
   },
   "dependencies": {
     "@workouts/core": "*",
