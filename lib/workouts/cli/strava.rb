@@ -158,6 +158,9 @@ module Workouts
           FileUtils.mv(temp_path, final_path)
           say "ok #{aid}  #{result.filename} (#{result.format})", :green
           success += 1
+        rescue StravaWebLib::NotFoundError => e
+          say "skip #{aid}: no original file on Strava (HTTP 404)", :yellow
+          skipped += 1
         rescue StravaWebLib::ExportError => e
           msg = e.message
           if msg.include?("HTTP 401") || msg.include?("HTTP 403")
@@ -203,7 +206,8 @@ module Workouts
       if head.include?("<html") || head.include?("<!DOCTYPE")
         say "error #{aid}: Strava returned HTML (likely rate-limit or auth page) — #{content.length} bytes", :red
       else
-        say "error #{aid}: unexpected content format — #{content[0, 80].b}", :red
+        sample = content[0, 80].force_encoding("UTF-8").scrub("?")
+        say "error #{aid}: unexpected content format — #{sample}", :red
       end
     end
 
