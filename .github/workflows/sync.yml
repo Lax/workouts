@@ -119,6 +119,11 @@ jobs:
           SYNC__STRAVA__WEB_AUTH__AUTH_SEED: ${{ secrets.SYNC_STRAVA_WEB_AUTH_SEED }}
         run: bundle exec workouts strava fetch --db ${{ vars.GIT_FIT_DATABASE_PATH }} --limit 10
 
+      - name: Save — strava (git-fit data-store)
+        uses: git-fit-actions/data-store/cache/save@v1
+        with:
+          source: strava
+
       - name: Regenerate data checksums
         shell: bash
         run: |

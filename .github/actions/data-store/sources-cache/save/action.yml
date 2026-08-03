@@ -94,12 +94,6 @@ runs:
           data/std/strava/
         key: raw-std-v1-strava-${{ github.run_id }}
 
-    - name: Save — strava (git-fit data-store)
-      if: steps.detect.outputs.changed_strava == 'true'
-      uses: git-fit-actions/data-store/cache/save@v1
-      with:
-        source: strava
-
     - name: Source cache summary
       if: always()
       shell: bash
