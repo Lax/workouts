@@ -145,6 +145,7 @@ runs:
 
         size=$(stat -c%s "$AH_DIR/export.zip" 2>/dev/null \
           || stat -f%z "$AH_DIR/export.zip" 2>/dev/null)
+        echo "size=$size" >> $GITHUB_OUTPUT
         echo "[download] Downloaded ${size} bytes" >&2
 
         file "$AH_DIR/export.zip" | grep -qi "Zip archive" || {
@@ -164,6 +165,7 @@ runs:
         bundle exec git fit import apple_health
 
     - name: Store state
+      id: store
       if: steps.import.conclusion == 'success'
       shell: bash
       env:
@@ -175,10 +177,53 @@ runs:
         bash scripts/generate-checksums.sh "$AH_DIR/export.zip"
 
         echo "[store] Saving state to branch..." >&2
-        bash scripts/append-to-branch.sh "$AH_BRANCH" \
-          "$AH_DIR/export.zip.SHA256SUMS"
+        push_output=$(bash scripts/append-to-branch.sh "$AH_BRANCH" \
+          "$AH_DIR/export.zip.SHA256SUMS" 2>&1)
+        echo "$push_output" >&2
+        if echo "$push_output" | grep -q "Pushed to"; then
+          echo "pushed=pushed" >> $GITHUB_OUTPUT
+        else
+          echo "pushed=noop" >> $GITHUB_OUTPUT
+        fi
 
         git fetch origin "+refs/heads/$AH_BRANCH:refs/remotes/$AH_REMOTE"
         git log --format=%H -1 "$AH_REMOTE" -- "$AH_DIR/export.zip" \
           > "$AH_DIR/.modified-at"
         echo "[store] .modified-at updated" >&2
+
+    - name: Write summary
+      if: always()
+      shell: bash
+      env:
+        AH_DIR: ${{ inputs.dir }}
+        AH_REMOTE: ${{ inputs.remote }}
+      run: |
+        pre_skip="${{ steps.preflight.outputs.skip }}"
+        det_skip="${{ steps.detect.outputs.skip }}"
+        det_reason="${{ steps.detect.outputs.reason }}"
+        modified="${{ steps.preflight.outputs.modified_sha }}"
+        cached="$(cat "$AH_DIR/.modified-at" 2>/dev/null || echo '')"
+        size="${{ steps.download.outputs.size }}"
+        pushed="${{ steps.store.outputs.pushed }}"
+
+        if [ "$pre_skip" = "true" ]; then
+          status="skipped (preflight: ${det_reason:-unknown})"
+        elif [ "$det_skip" = "true" ]; then
+          status="skipped (${det_reason})"
+        elif [ "${{ steps.import.conclusion }}" = "success" ]; then
+          status="imported"
+        elif [ "${{ steps.download.conclusion }}" = "failure" ]; then
+          status="download failed"
+        elif [ "${{ steps.download.conclusion }}" = "skipped" ]; then
+          status="not run"
+        else
+          status="failed"
+        fi
+
+        {
+          echo "### Apple Health import"
+          echo "- Status: $status"
+          echo "- export.zip: ${modified:0:7} (last import: ${cached:0:7})"
+          if [ -n "$size" ]; then echo "- Download: $size bytes"; fi
+          if [ -n "$pushed" ]; then echo "- Store state: $pushed"; fi
+        } >> "$GITHUB_STEP_SUMMARY"
