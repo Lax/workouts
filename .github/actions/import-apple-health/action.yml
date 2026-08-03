@@ -154,6 +154,7 @@ runs:
         echo "[download] Validation passed" >&2
 
     - name: Import
+      id: import
       if: steps.download.conclusion == 'success'
       shell: bash
       env:
