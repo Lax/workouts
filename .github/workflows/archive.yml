@@ -54,7 +54,7 @@ jobs:
           git checkout "$BRANCH"
 
       - name: Restore ${{ matrix.source }} cache
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6.1.0
         with:
           path: |
             data/raw/${{ matrix.source }}/

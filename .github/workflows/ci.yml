@@ -67,7 +67,7 @@ jobs:
       # ── Playwright browser cache (GitHub runner) ──
       - id: playwright-cache
         if: vars.RUNNER_LABEL != 'self-hosted'
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6.1.0
         with:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ hashFiles('packages/web/package.json') }}
@@ -77,7 +77,7 @@ jobs:
         run: npx playwright install --with-deps chromium
         working-directory: packages/web
 
-      - uses: actions/cache/save@v4
+      - uses: actions/cache/save@v6.1.0
         if: steps.playwright-cache.outputs.cache-hit != 'true' && vars.RUNNER_LABEL != 'self-hosted'
         with:
           path: ~/.cache/ms-playwright

@@ -3,7 +3,7 @@ description: Restore per-source raw/std caches from GH Actions cache
 runs:
   using: composite
   steps:
-    - uses: actions/cache/restore@v4
+    - uses: actions/cache/restore@v6.1.0
       with:
         path: |
           data/raw/keep/
@@ -11,7 +11,7 @@ runs:
         key: raw-std-v1-keep-${{ github.run_id }}
         restore-keys: raw-std-v1-keep-
 
-    - uses: actions/cache/restore@v4
+    - uses: actions/cache/restore@v6.1.0
       with:
         path: |
           data/raw/igpsport/
@@ -19,7 +19,7 @@ runs:
         key: raw-std-v1-igpsport-${{ github.run_id }}
         restore-keys: raw-std-v1-igpsport-
 
-    - uses: actions/cache/restore@v4
+    - uses: actions/cache/restore@v6.1.0
       with:
         path: |
           data/raw/xoss/
@@ -27,7 +27,7 @@ runs:
         key: raw-std-v1-xoss-${{ github.run_id }}
         restore-keys: raw-std-v1-xoss-
 
-    - uses: actions/cache/restore@v4
+    - uses: actions/cache/restore@v6.1.0
       with:
         path: |
           data/raw/xingzhe/
@@ -35,7 +35,7 @@ runs:
         key: raw-std-v1-xingzhe-${{ github.run_id }}
         restore-keys: raw-std-v1-xingzhe-
 
-    - uses: actions/cache/restore@v4
+    - uses: actions/cache/restore@v6.1.0
       with:
         path: |
           data/raw/garmin/
@@ -43,7 +43,7 @@ runs:
         key: raw-std-v1-garmin-${{ github.run_id }}
         restore-keys: raw-std-v1-garmin-
 
-    - uses: actions/cache/restore@v4
+    - uses: actions/cache/restore@v6.1.0
       with:
         path: |
           data/raw/garmin_cn/
@@ -51,7 +51,7 @@ runs:
         key: raw-std-v1-garmin_cn-${{ github.run_id }}
         restore-keys: raw-std-v1-garmin_cn-
 
-    - uses: actions/cache/restore@v4
+    - uses: actions/cache/restore@v6.1.0
       with:
         path: |
           data/raw/strava/
