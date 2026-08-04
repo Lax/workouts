@@ -49,8 +49,8 @@ jobs:
         uses: actions/cache/restore@v6.1.0
         with:
           path: |
-            data/raw/${{ matrix.source }}/
-            data/std/${{ matrix.source }}/
+            data/raw/${{ matrix.source }}
+            data/std/${{ matrix.source }}
           key: GitFit-data-${{ matrix.source }}-v0-cold
           restore-keys: GitFit-data-${{ matrix.source }}-v0-
 
