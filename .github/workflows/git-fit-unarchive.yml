@@ -31,20 +31,9 @@ jobs:
     permissions:
       contents: read
     steps:
-      - name: Ensure branch exists
-        env:
-          BRANCH: GitFit/data/${{ matrix.source }}
-        run: |
-          if git ls-remote --exit-code --heads origin "refs/heads/$BRANCH" >/dev/null 2>&1; then
-            echo "branch exists"
-          else
-            echo "::error::Branch '$BRANCH' does not exist"
-            exit 1
-          fi
-
       - uses: actions/checkout@v4
         with:
-          ref: ${{ env.BRANCH }}
+          ref: GitFit/data/${{ matrix.source }}
           fetch-depth: 1
           persist-credentials: false
 
@@ -54,7 +43,7 @@ jobs:
           RAW="data/raw/${{ matrix.source }}"
           STD="data/std/${{ matrix.source }}"
           if [[ ! -d "$RAW" ]] && [[ ! -d "$STD" ]]; then
-            echo "::error::No data directories for '${{ matrix.source }}' in branch '$BRANCH'"
+            echo "::error::No data directories for '${{ matrix.source }}' in branch 'GitFit/data/${{ matrix.source }}'"
             exit 1
           fi
 
@@ -74,20 +63,9 @@ jobs:
       group: workouts-db
       cancel-in-progress: false
     steps:
-      - name: Ensure branch exists
-        env:
-          BRANCH: GitFit/db
-        run: |
-          if git ls-remote --exit-code --heads origin "refs/heads/$BRANCH" >/dev/null 2>&1; then
-            echo "branch exists"
-          else
-            echo "::error::Branch '$BRANCH' does not exist"
-            exit 1
-          fi
-
       - uses: actions/checkout@v4
         with:
-          ref: ${{ env.BRANCH }}
+          ref: GitFit/db
           fetch-depth: 1
           persist-credentials: false
 
@@ -95,7 +73,7 @@ jobs:
         shell: bash
         run: |
           if [[ ! -f data/db/workouts.db ]]; then
-            echo "::error::DB file not found in branch '$BRANCH'"
+            echo "::error::DB file not found in branch 'GitFit/db'"
             exit 1
           fi
 
