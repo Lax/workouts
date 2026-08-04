@@ -33,8 +33,8 @@ jobs:
           path: |
             data/raw/${{ matrix.source }}/
             data/std/${{ matrix.source }}/
-          key: raw-std-v1-${{ matrix.source }}-${{ github.run_id }}
-          restore-keys: raw-std-v1-${{ matrix.source }}-
+          key: GitFit-data-${{ matrix.source }}-v0-cold
+          restore-keys: GitFit-data-${{ matrix.source }}-v0-
 
       - name: Commit & push
         env:

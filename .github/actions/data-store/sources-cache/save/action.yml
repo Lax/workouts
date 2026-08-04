@@ -1,98 +1,35 @@
 name: Data Store Source Save
-description: Save changed per-source raw/std caches to GH Actions cache
+description: Save per-source raw/std caches to GH Actions cache (git-fit data-store)
 runs:
   using: composite
   steps:
-    - name: Detect changed sources
-      id: detect
-      shell: bash
-      run: |
-        for src in keep igpsport xoss xingzhe garmin garmin_cn strava; do
-          changed=false
-          for dir in "data/raw/$src" "data/std/$src"; do
-            if [ -d "$dir" ]; then
-              if [ ! -f "$dir/SHA256SUMS" ]; then
-                changed=true
-              else
-                current_hash=$(sha256sum "$dir/SHA256SUMS" | cut -d' ' -f1)
-                saved_hash=$(grep " $dir$" "$RUNNER_TEMP/data-store-orig-checksums" 2>/dev/null | cut -d' ' -f1 || echo "")
-                if [ "$current_hash" != "$saved_hash" ]; then
-                  changed=true
-                fi
-              fi
-            fi
-          done
-          if [ "$changed" = "true" ]; then
-            echo "  $src: CHANGED" >&2
-            echo "changed_${src}=true"
-          else
-            echo "  $src: unchanged" >&2
-            echo "changed_${src}=false"
-          fi
-        done >> "$GITHUB_OUTPUT"
-
-    - name: Save — keep
-      uses: actions/cache/save@v6.1.0
-      if: steps.detect.outputs.changed_keep == 'true'
+    - uses: git-fit-actions/data-store/cache/save@v1
       with:
-        path: |
-          data/raw/keep/
-          data/std/keep/
-        key: raw-std-v1-keep-${{ github.run_id }}
+        source: keep
 
-    - name: Save — igpsport
-      uses: actions/cache/save@v6.1.0
-      if: steps.detect.outputs.changed_igpsport == 'true'
+    - uses: git-fit-actions/data-store/cache/save@v1
       with:
-        path: |
-          data/raw/igpsport/
-          data/std/igpsport/
-        key: raw-std-v1-igpsport-${{ github.run_id }}
+        source: igpsport
 
-    - name: Save — xoss
-      uses: actions/cache/save@v6.1.0
-      if: steps.detect.outputs.changed_xoss == 'true'
+    - uses: git-fit-actions/data-store/cache/save@v1
       with:
-        path: |
-          data/raw/xoss/
-          data/std/xoss/
-        key: raw-std-v1-xoss-${{ github.run_id }}
+        source: xoss
 
-    - name: Save — xingzhe
-      uses: actions/cache/save@v6.1.0
-      if: steps.detect.outputs.changed_xingzhe == 'true'
+    - uses: git-fit-actions/data-store/cache/save@v1
       with:
-        path: |
-          data/raw/xingzhe/
-          data/std/xingzhe/
-        key: raw-std-v1-xingzhe-${{ github.run_id }}
+        source: xingzhe
 
-    - name: Save — garmin
-      uses: actions/cache/save@v6.1.0
-      if: steps.detect.outputs.changed_garmin == 'true'
+    - uses: git-fit-actions/data-store/cache/save@v1
       with:
-        path: |
-          data/raw/garmin/
-          data/std/garmin/
-        key: raw-std-v1-garmin-${{ github.run_id }}
+        source: garmin
 
-    - name: Save — garmin_cn
-      uses: actions/cache/save@v6.1.0
-      if: steps.detect.outputs.changed_garmin_cn == 'true'
+    - uses: git-fit-actions/data-store/cache/save@v1
       with:
-        path: |
-          data/raw/garmin_cn/
-          data/std/garmin_cn/
-        key: raw-std-v1-garmin_cn-${{ github.run_id }}
+        source: garmin_cn
 
-    - name: Save — strava
-      uses: actions/cache/save@v6.1.0
-      if: steps.detect.outputs.changed_strava == 'true'
+    - uses: git-fit-actions/data-store/cache/save@v1
       with:
-        path: |
-          data/raw/strava/
-          data/std/strava/
-        key: raw-std-v1-strava-${{ github.run_id }}
+        source: strava
 
     - name: Source cache summary
       if: always()

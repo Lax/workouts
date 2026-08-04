@@ -119,40 +119,8 @@ jobs:
           SYNC__STRAVA__WEB_AUTH__AUTH_SEED: ${{ secrets.SYNC_STRAVA_WEB_AUTH_SEED }}
         run: bundle exec workouts strava fetch --db ${{ vars.GIT_FIT_DATABASE_PATH }} --limit 10
 
-      - name: Save — strava (git-fit data-store)
-        uses: git-fit-actions/data-store/cache/save@v1
-        with:
-          source: strava
-
-      - name: Save — keep (git-fit data-store)
-        uses: git-fit-actions/data-store/cache/save@v1
-        with:
-          source: keep
-
-      - name: Save — igpsport (git-fit data-store)
-        uses: git-fit-actions/data-store/cache/save@v1
-        with:
-          source: igpsport
-
-      - name: Save — xoss (git-fit data-store)
-        uses: git-fit-actions/data-store/cache/save@v1
-        with:
-          source: xoss
-
-      - name: Save — xingzhe (git-fit data-store)
-        uses: git-fit-actions/data-store/cache/save@v1
-        with:
-          source: xingzhe
-
-      - name: Save — garmin (git-fit data-store)
-        uses: git-fit-actions/data-store/cache/save@v1
-        with:
-          source: garmin
-
-      - name: Save — garmin_cn (git-fit data-store)
-        uses: git-fit-actions/data-store/cache/save@v1
-        with:
-          source: garmin_cn
+      - uses: ./.github/actions/data-store/sources-cache/save
+        if: steps.mode.outputs.shall_commit_data != 'true'
 
       - name: Regenerate data checksums
         shell: bash

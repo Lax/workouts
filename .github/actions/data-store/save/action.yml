@@ -42,9 +42,6 @@ runs:
         done >> "$GITHUB_OUTPUT"
         echo "any_changed=$any" >> $GITHUB_OUTPUT
 
-    - uses: ./.github/actions/data-store/sources-cache/save
-      if: inputs.shall-commit-data != 'true'
-
     - uses: ./.github/actions/data-store/sources-git/save
       if: inputs.shall-commit-data == 'true'
       with:
