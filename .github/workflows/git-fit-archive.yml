@@ -24,8 +24,26 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: GitFit/data/${{ matrix.source }}
+
+      - name: Ensure branch exists
+        env:
+          BRANCH: GitFit/data/${{ matrix.source }}
+        run: |
+          if git ls-remote --exit-code --heads origin "refs/heads/$BRANCH" 2>/dev/null; then
+            echo "branch exists"
+          else
+            EMPTY_TREE=$(git hash-object -t tree --stdin -w < /dev/null)
+            COMMIT=$(git -c user.name=workouts-bot -c user.email=bot@workouts \
+              commit-tree -m "chore: init archive branch $BRANCH" "$EMPTY_TREE")
+            git push origin "$COMMIT:refs/heads/$BRANCH"
+          fi
+
+      - name: Checkout archive branch
+        env:
+          BRANCH: GitFit/data/${{ matrix.source }}
+        run: |
+          git fetch origin "$BRANCH"
+          git checkout "$BRANCH"
 
       - name: Restore ${{ matrix.source }} cache
         uses: actions/cache/restore@v6.1.0

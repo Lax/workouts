@@ -12,7 +12,7 @@ runs:
       shell: bash
       run: |
         for src in keep igpsport xoss xingzhe garmin garmin_cn strava; do
-          B="_/_/$src"
+          B="GitFit/data/$src"
           git ls-remote --exit-code origin "refs/heads/$B" >/dev/null 2>&1 || continue
           git fetch origin "$B"
           mkdir -p "data/raw/$src" "data/std/$src"

@@ -482,20 +482,25 @@ deploy job (needs: build):
   3. deploy-pages@v4
 ```
 
-### archive.yml
+### git-fit-archive.yml
 
-将 GH Actions cache 中的 raw/std 数据归档到独立 git branch。
+将 GH Actions cache（GitFit-data-* key）中的 raw/std + DB 数据归档到 git-fit 分支体系。
 
 | 触发 | 操作 |
 |---|---|
-| schedule `0 6 * * 0` (每周日) | 每源 cache restore → `git add -A` → rename 检测 → 排除纯删除 → commit → push to `_/_/<source>` |
-| workflow_dispatch | 手动触发 |
+| schedule `0 4 * * 0` (每周日) | 每源 cache restore → `git add -A` → rename 检测 → 排除纯删除 → commit → push to `GitFit/data/<source>` + `GitFit/db` |
+| workflow_dispatch | 手动触发（可选单个 source） |
 
 详见 [docs/archive-impl.md](docs/archive-impl.md)。
 
 #### 归档分支
 
-`_/_/<source>` — matrix 并发，per-source orphan branch。仅含 `data/{raw,std}/<source>/`，绕过 cache 7 天 LRU，保留全部历史快照（不删除）。
+| 分支 | 内容 | 用途 |
+|---|---|---|
+| `GitFit/data/<source>` | `data/{raw,std}/<source>/` | 每源独立 orphan branch，绕过 cache 7 天 LRU，git-fit cache/restore git-archive 回退层 |
+| `GitFit/db` | `data/db/workouts.db` + WAL | DB 单文件归档，gh-pages DB 回退层 |
+
+> `_/_/<source>`（旧命名空间）已冻结保留，不再写入。
 
 ## 部署
 

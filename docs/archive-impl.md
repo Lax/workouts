@@ -9,17 +9,17 @@
 
 ## 分支命名
 
-`_/_/<source>` — 如 `_/_/xoss`、`_/_/igpsport`
-`_/db/workouts-db` — DB 单文件归档
+`GitFit/data/<source>` — 如 `GitFit/data/xoss`、`GitFit/data/igpsport`
+`GitFit/db` — DB 单文件归档
 
-命名含 `/`，git/GitHub 均支持，UI 显示为 `data/ → _/ → xoss` 文件夹层级。`_/db/workouts-db` 显示为 `_ / workouts-db`，单深度区别于 per-source 双深度。
+命名含 `/`，git/GitHub 均支持，UI 显示为 `GitFit / data / xoss` 文件夹层级。`GitFit/db` 显示为 `GitFit / db`，单深度区别于 per-source 双深度。
 
 ## 流程
 
 ```
-Step 0: checkout main + 配置 PAT extraheader（用于后续 git push）
+Step 0: checkout main（GITHUB_TOKEN，无需 PAT）
 Step 1: ls-remote → 分支不存在则 plumbing 创建空 commit + push
-Step 2: git fetch + checkout _/_/$SRC
+Step 2: git fetch + checkout GitFit/data/$SRC
         （此后 index 只含 archive 文件，与 main 隔离）
 Step 3: cache restore → 覆盖 disk（写入新文件、覆盖已有、不删旧文件）
 Step 4: git add -f -A（含所有变动，包括删除）
@@ -32,15 +32,15 @@ Step 4: git add -f -A（含所有变动，包括删除）
 
 ### archive-db 简化流程
 
-`archive-db` job 独立于 matrix，处理 `data/db/workouts.db` 单文件归档到 `_/db/workouts-db` 分支：
+`archive-db` job 独立于 matrix，处理 `data/db/workouts.db` 单文件归档到 `GitFit/db` 分支：
 
 ```
-Step 0-2: 同上（checkout main → 创建/切换 _/db/workouts-db）
-Step 3: cache restore data/db/workouts.db（key: GitFit-db-v0-*）
+Step 0-2: 同上（checkout main → 创建/切换 GitFit/db）
+Step 3: cache restore via git-fit-actions/db-store/cache/restore@v1（key: GitFit-db-v0-*）
 Step 4: git add -f -A data/db/workouts.db → diff --cached --quiet? skip : commit + push
 ```
 
-单文件无需 rename 检测和删除排除。`git write-tree` + `diff-tree` 步骤省略。
+单文件无需 rename 检测和删除排除。`git write-tree` + `git diff-tree` 步骤省略。
 
 ## 机制详解
 
@@ -62,7 +62,7 @@ git push origin "$COMMIT:refs/heads/$BRANCH"
 
 ### Step 2 — checkout 的 index 隔离
 
-`git checkout _/_/xoss` 后，index 和 worktree 只含 archive branch 的跟踪文件（`data/raw/xoss/`、`data/std/xoss/`）。main 的文件完全不被纳入。
+`git checkout GitFit/data/xoss` 后，index 和 worktree 只含 archive branch 的跟踪文件（`data/raw/xoss/`、`data/std/xoss/`）。main 的文件完全不被纳入。
 
 ### Step 4 — rename 保护 + 删除排除
 
@@ -91,7 +91,7 @@ jobs:
 ## 文件结构
 
 ```
-.github/workflows/archive.yml   # 归档 workflow（含 archive + archive-db 两个 job）
+.github/workflows/git-fit-archive.yml   # git-fit 归档 workflow（含 archive + archive-db 两个 job）
 ```
 
 全部逻辑内联在 workflow 中，不拆分脚本文件。
@@ -118,7 +118,7 @@ jobs:
 | push 失败不重试 | 网络 / PAT 过期等极端情况 | 下次运行自动 catch up |
 | 极小概率 rename 误判 | `-M50%` 阈值设置 | 低相似度改名视为 D+A，旧文件保留、新文件新增 |
 | archive 永远不删除 | 纯删除被 `reset HEAD` 排除 | 源站已删的活动，archive 中仍保留历史快照 |
-| `_/db/workouts-db` 二进制增长 | `workouts.db` ~2.8MB，每周全量 blob commit | 每年 ~145MB，对 git 可接受 |
+| `GitFit/db` 二进制增长 | `workouts.db` ~2.8MB，每周全量 blob commit | 每年 ~145MB，对 git 可接受 |
 
 ## 实现记录
 
@@ -136,14 +136,14 @@ jobs:
 
 | 分支 | 文件数 | 状态 |
 |---|---|---|
-| `data/_/keep` | 1738 | 成功 |
-| `data/_/igpsport` | 170 | 成功 |
-| `data/_/garmin` | 74 | 成功 |
-| `data/_/strava` | ~70 | 成功 |
-| `data/_/xingzhe` | 66 | 成功 |
-| `data/_/garmin_cn` | 2 | 成功 |
-| `data/_/xoss` | 0 | 无 cache 数据，正确 skip |
-| `_/db/workouts-db` | 1 (DB) | 待验证 |
+| `GitFit/data/keep` | 1738 | 成功 |
+| `GitFit/data/igpsport` | 170 | 成功 |
+| `GitFit/data/garmin` | 74 | 成功 |
+| `GitFit/data/strava` | ~70 | 成功 |
+| `GitFit/data/xingzhe` | 66 | 成功 |
+| `GitFit/data/garmin_cn` | 2 | 成功 |
+| `GitFit/data/xoss` | 0 | 无 cache 数据，正确 skip |
+| `GitFit/db` | 1 (DB) | 已由 git-fit-archive.yml archive-db job 处理 |
 
 ### 对抗审查最终结论
 

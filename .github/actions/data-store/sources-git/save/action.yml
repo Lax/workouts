@@ -30,7 +30,7 @@ runs:
             fi
           done
           if [ "$changed" = "true" ]; then
-            bash scripts/data-store-git-save.sh "_/_/$src" \
+            bash scripts/data-store-git-save.sh "GitFit/data/$src" \
               "data/raw/$src data/std/$src"
           fi
         done

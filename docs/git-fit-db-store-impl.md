@@ -417,7 +417,7 @@ gh-pages.yml 原使用 bare `actions/cache/restore` 恢复 DB，仅依赖 cache�
 ```
 优先级（高→低）:
   1. actions/download-artifact@v4   ← 仅 manual dispatch 且有 artifact-run-id 时
-  2. git archive origin/_/workouts-db   ← shall-commit-db: true 时启用
+  2. git archive origin/GitFit/db   ← shall-commit-db: true 时启用
   3. actions/cache/restore@v4 (schema key)   ← db-store 内建
   4. actions/cache/restore@v4 (prefix fallback)   ← db-store 内建
 ```
@@ -430,7 +430,7 @@ gh-pages.yml 原使用 bare `actions/cache/restore` 恢复 DB，仅依赖 cache�
     key-prefix: workouts-db
     db-schema-hash: ${{ hashFiles('db/migrations/*.rb') }}
     shall-commit-db: true
-    git-branch: _/workouts-db
+    git-branch: GitFit/db   # 迁移后（当前 gh-pages.yml 已用 git-fit-actions/db-store，此段为旧版 db-store 快照）
 ```
 
 **变更原因：** 当 cache 过期且 archive 尚未运行时，gh-pages 可能拿到空 DB。git branch 恢复层确保至少有一个 sync 完成后的 DB 可用。
@@ -466,7 +466,7 @@ fi
 
 ## 9. 跨 workflow 并发控制：`workouts-db` concurrency group
 
-**问题：** `sync.yml`（via db-store/save）和 `archive.yml`（archive-db job）均向 `_/workouts-db` branch 写入，无协调机制。并发 push 可能触发 non-fast-forward  rejection。
+**问题：** `sync.yml`（via db-store/save）和 `git-fit-archive.yml`（archive-db job）均向 `GitFit/db` branch 写入，无协调机制。并发 push 可能触发 non-fast-forward  rejection。
 
 **修复：** 两 job 共享 concurrency group `workouts-db`：
 
@@ -476,7 +476,7 @@ concurrency:
   group: workouts-db
   cancel-in-progress: false
 
-# archive.yml archive-db job
+# git-fit-archive.yml archive-db job
 concurrency:
   group: workouts-db
   cancel-in-progress: false
@@ -507,7 +507,7 @@ concurrency:
 | `.github/actions/data-store/sources-cache/save/action.yml` | committed（`fc8750c`） | sha256sum subshell 隔离修复 |
 | `.github/actions/data-store/sources-git/save/action.yml` | committed（`fc8750c`） | sha256sum subshell 隔离修复 |
 | `.github/workflows/sync.yml` | committed（`fc8750c` + `aa09a0d`） | concurrency group，db-changed refs，commit-author passthrough，移除 stray `shall-commit-db` |
-| `.github/workflows/archive.yml` | committed（`aa09a0d`） | archive-db concurrency group 改为 `workouts-db` |
+| `.github/workflows/git-fit-archive.yml` | committed（`aa09a0d` 引入，后经多次演化） | archive-db concurrency group 改为 `workouts-db`；迁移至 GitFit/data/<source> + GitFit/db 分支体系 |
 | `.github/workflows/gh-pages.yml` | committed（`aa09a0d`） | bare `actions/cache/restore` → `db-store/restore` + git branch fallback |
 
 > **设计决策：为何不动态生成？** GitHub Actions 的 `uses:` 在 workflow parse time 解析，运行时无法创建并使用 composite action。因此 `.github/actions/db-store/` 必须作为静态文件提交到仓库。与现有 `data-store/`、`tokens-cache/` 模式一致。git-fit 升级后需重新运行 `install actions` 并 commit 更新后的文件。
@@ -537,7 +537,7 @@ aa09a0d  fix: add cross-workflow concurrency for _/workouts-db + gh-pages git re
 - 3 个 data-store save action sha256sum subshell 隔离修复
 
 **aa09a0d 包含：**
-- sync.yml + archive.yml: concurrency group `workouts-db`
+- sync.yml + git-fit-archive.yml: concurrency group `workouts-db`
 - gh-pages.yml: bare `actions/cache/restore` → `db-store/restore` + git branch fallback
 
 ---
@@ -556,7 +556,7 @@ aa09a0d  fix: add cross-workflow concurrency for _/workouts-db + gh-pages git re
 | 8 | sync.yml 中 `db-changed` 引用正确 | ✅ L257, L264 |
 | 9 | sync.yml 中 `commit-author-name/email` 传入 db-store/save | ✅ L218-219 |
 | 10 | gh-pages.yml 使用 `db-store/restore` + `shall-commit-db: true` | ✅ L49-55 |
-| 11 | archive.yml archive-db concurrency group = `workouts-db` | ✅ L92 |
+| 11 | git-fit-archive.yml archive-db concurrency group = `workouts-db` | ✅ L71 |
 | 12 | data-store/save 无 `shall-commit-db` 传入（GHA warning 修复） | ✅ 已移除 |
 
 ---
@@ -565,7 +565,7 @@ aa09a0d  fix: add cross-workflow concurrency for _/workouts-db + gh-pages git re
 
 | 风险 | 概率 | 影响 | 缓解 |
 |---|---|---|---|
-| `_/_/<source>` 分支并发写入冲突 | 中 | archive  weekly job 与 sync data-store/save 同时 push，non-fast-forward rejection | 目前 archive 每周日 06:00 触发，sync 每 2 天触发，冲突窗口小。如需消除，可对 per-source branches 增加 concurrency group |
+| `GitFit/data/<source>` 分支并发写入冲突 | 低 | git-fit-archive weekly job 与 sync data-store/save（commit 模式）同时 push，non-fast-forward rejection | 目前 git-fit-archive 每周日 04:00 触发，sync 每 2 天触发，冲突窗口小。如需消除，可对 per-source branches 增加 concurrency group |
 | db-store/save 的 `commit-tree` push 到 git-branch 失败 | 低 | DB branch 未保存，artifact 仍可用 | `build` job 从 artifact 下载 DB，不依赖 branch |
 | `shall-commit-db` 语义歧义导致误用 | 低 | restore 中 `true` 意为"从 git 恢复"而非"提交到 git" | 已向 git-fit 提交 Issue #10；当前 gh-pages.yml 传入 `true` 语义正确 |
 | cache key 不一致导致 cache miss | 极低 | 首次 sync 无 cache | keys 已验证等价；cache miss 只影响首次 restore |
