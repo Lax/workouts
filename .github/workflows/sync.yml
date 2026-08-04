@@ -59,15 +59,15 @@ jobs:
         run: |
           if [ ! -s data/db/workouts.db ]; then
             echo "Cache miss — falling back to archive branch"
-            git fetch origin _/db/workouts-db || true
-            if git archive --format=tar origin/_/db/workouts-db \
+            git fetch origin GitFit/db || true
+            if git archive --format=tar origin/GitFit/db \
                  data/db/workouts.db data/db/workouts.db.SHA256SUMS 2>/dev/null | tar xf -; then
               bytes=$(stat -c%s data/db/workouts.db 2>/dev/null || echo 0)
               echo "restored=$bytes" >> $GITHUB_OUTPUT
               echo "Restored DB from archive branch: $bytes bytes"
             else
               echo "SHA256SUMS not in archive — restoring DB only"
-              git archive --format=tar origin/_/db/workouts-db \
+              git archive --format=tar origin/GitFit/db \
                  data/db/workouts.db 2>/dev/null | tar xf - || true
               if [ -f data/db/workouts.db ] && [ -s data/db/workouts.db ]; then
                 bytes=$(stat -c%s data/db/workouts.db 2>/dev/null || echo 0)

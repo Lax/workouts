@@ -1,0 +1,139 @@
+name: "[GitFit] Archive Data & Cache"
+
+on:
+  schedule:
+    - cron: '0 4 * * 0'
+  workflow_dispatch:
+    inputs:
+      source:
+        description: 'Single source to archive (empty = all)'
+        required: false
+        type: string
+
+jobs:
+  archive:
+    concurrency:
+      group: archive-${{ matrix.source }}
+      cancel-in-progress: false
+    strategy:
+      fail-fast: false
+      matrix:
+        source: ${{ fromJson(github.event_name == 'workflow_dispatch' && inputs.source != '' && format('["{0}"]', inputs.source) || '["strava"]') }}
+    runs-on: ${{ vars.RUNNER_LABEL || 'ubuntu-latest' }}
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Configure git auth
+        run: |
+          git config --add http.https://github.com/.extraheader \
+            "AUTHORIZATION: basic $(printf '%s:' \
+              "${{ secrets.WORKOUTS_SYNC_PAT }}" | base64 -w0)"
+
+      - name: Ensure branch exists
+        env:
+          BRANCH: GitFit/data/${{ matrix.source }}
+        run: |
+          if git ls-remote --exit-code --heads origin "refs/heads/$BRANCH" 2>/dev/null; then
+            echo "branch exists"
+          else
+            EMPTY_TREE=$(git hash-object -t tree --stdin -w < /dev/null)
+            COMMIT=$(git -c user.name=workouts-bot -c user.email=bot@workouts \
+              commit-tree -m "chore: init archive branch $BRANCH" "$EMPTY_TREE")
+            git push origin "$COMMIT:refs/heads/$BRANCH"
+          fi
+
+      - name: Checkout archive branch
+        env:
+          BRANCH: GitFit/data/${{ matrix.source }}
+        run: |
+          git fetch origin "$BRANCH"
+          git checkout "$BRANCH"
+
+      - uses: git-fit-actions/data-store/cache/restore@v1
+        with:
+          source: ${{ matrix.source }}
+
+      - name: Commit & push
+        env:
+          SRC: ${{ matrix.source }}
+          BRANCH: GitFit/data/${{ matrix.source }}
+        run: |
+          set -euo pipefail
+
+          git add -f -A "data/raw/$SRC/" "data/std/$SRC/" 2>/dev/null || true
+
+          TREE=$(git write-tree)
+          PURE_DEL=$(git diff-tree -r --diff-filter=D --name-only -M50% \
+            HEAD "$TREE" 2>/dev/null || true)
+
+          if [ -n "$PURE_DEL" ]; then
+            echo "Pure deletes (unstage):"
+            echo "$PURE_DEL" | while IFS= read -r f; do
+              echo "  $f"
+              git reset HEAD -- "$f" 2>/dev/null || true
+            done
+          fi
+
+          git diff --cached --quiet && echo "no changes" && exit 0
+
+          git -c user.name=workouts-bot -c user.email=bot@workouts \
+            commit -m "archive($SRC): $(date +%Y-%m-%d)"
+          git push origin "HEAD:$BRANCH"
+
+  archive-db:
+    runs-on: ${{ vars.RUNNER_LABEL || 'ubuntu-latest' }}
+    permissions:
+      contents: write
+    concurrency:
+      group: workouts-db
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Configure git auth
+        run: |
+          git config --add http.https://github.com/.extraheader \
+            "AUTHORIZATION: basic $(printf '%s:' \
+              "${{ secrets.WORKOUTS_SYNC_PAT }}" | base64 -w0)"
+
+      - name: Ensure branch exists
+        env:
+          BRANCH: GitFit/db
+        run: |
+          if git ls-remote --exit-code --heads origin "refs/heads/$BRANCH" 2>/dev/null; then
+            echo "branch exists"
+          else
+            EMPTY_TREE=$(git hash-object -t tree --stdin -w < /dev/null)
+            COMMIT=$(git -c user.name=workouts-bot -c user.email=bot@workouts \
+              commit-tree -m "chore: init archive branch $BRANCH" "$EMPTY_TREE")
+            git push origin "$COMMIT:refs/heads/$BRANCH"
+          fi
+
+      - name: Checkout archive branch
+        env:
+          BRANCH: GitFit/db
+        run: |
+          git fetch origin "$BRANCH"
+          git checkout "$BRANCH"
+
+      - name: Restore DB from cache
+        uses: git-fit-actions/db-store/cache/restore@v1
+        with:
+          database-path: data/db/workouts.db
+
+      - name: Commit & push
+        env:
+          BRANCH: GitFit/db
+        run: |
+          set -euo pipefail
+          git add -f -A "data/db/" 2>/dev/null || true
+          git diff --cached --quiet && echo "no changes" && exit 0
+          git -c user.name=workouts-bot -c user.email=bot@workouts \
+            commit -m "archive(db): $(date +%Y-%m-%d)"
+          git push origin "HEAD:$BRANCH"
