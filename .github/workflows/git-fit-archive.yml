@@ -51,7 +51,10 @@ jobs:
           path: |
             data/raw/${{ matrix.source }}
             data/std/${{ matrix.source }}
-          key: GitFit-data-${{ matrix.source }}-v0-cold
+          # exact key: sentinel — never written; forces prefix fallback to most recent cache.
+          key: GitFit-data-${{ matrix.source }}-v0-sentinel
+          # prefix match: hits the most recently created cache (including -v0-snapshot from unarchive).
+          # Both prefix and sentinel share -v0- prefix; unarchive writes -v0-snapshot under same prefix.
           restore-keys: GitFit-data-${{ matrix.source }}-v0-
 
       - name: Commit & push

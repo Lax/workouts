@@ -54,7 +54,11 @@ jobs:
           path: |
             data/raw/${{ matrix.source }}
             data/std/${{ matrix.source }}
-          key: GitFit-data-${{ matrix.source }}-v0-cold
+          # Recovery snapshot written by unarchive (git → cache).
+          # This is real readable content; subsequent workflow restores hit it via the -v0- prefix.
+          # It must NOT collide with the sentinel exact key (-v0-sentinel) used by restore,
+          # otherwise restore would exact-hit this snapshot and permanently shadow newer -v0-{run} caches (F1).
+          key: GitFit-data-${{ matrix.source }}-v0-snapshot
 
   unarchive-db:
     if: ${{ inputs.source == 'db' || inputs.source == '' }}
@@ -86,4 +90,7 @@ jobs:
             data/db/workouts.db.SHA256SUMS
             data/db/workouts.db-wal
             data/db/workouts.db-shm
-          key: GitFit-db-v0-cold
+          # Recovery snapshot written by unarchive (git → cache).
+          # Same sentinel/snapshot discipline as data above: real readable content under -v0- prefix,
+          # never collide with the sentinel exact key used by db-store/cache/restore (F1).
+          key: GitFit-db-v0-snapshot
