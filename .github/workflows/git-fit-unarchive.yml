@@ -4,10 +4,9 @@ on:
   workflow_dispatch:
     inputs:
       source:
-        description: 'Source to unarchive (db, keep, igpsport, xoss, xingzhe, garmin, garmin_cn, strava, all)'
+        description: 'Source to unarchive (empty = all sources)'
         required: false
         type: choice
-        default: all
         options:
           - db
           - keep
@@ -17,7 +16,6 @@ on:
           - garmin
           - garmin_cn
           - strava
-          - all
 
 jobs:
   unarchive-data:
@@ -28,13 +26,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        source: ${{ fromJson(
-          (github.event_name == 'workflow_dispatch' && inputs.source == 'all') &&
-          '["keep","igpsport","xoss","xingzhe","garmin","garmin_cn","strava"]' ||
-          (github.event_name == 'workflow_dispatch' && inputs.source != '') &&
-          format('["{0}"]', inputs.source) ||
-          '["keep","igpsport","xoss","xingzhe","garmin","garmin_cn","strava"]'
-        ) }}
+        source: ${{ fromJson(github.event_name == 'workflow_dispatch' && inputs.source != '' && format('["{0}"]', inputs.source) || '["keep","igpsport","xoss","xingzhe","garmin","garmin_cn","strava"]') }}
     runs-on: ${{ vars.RUNNER_LABEL || 'ubuntu-latest' }}
     permissions:
       contents: read
@@ -74,7 +66,7 @@ jobs:
           key: GitFit-data-${{ matrix.source }}-v0-cold
 
   unarchive-db:
-    if: ${{ inputs.source == 'db' || inputs.source == 'all' || inputs.source == '' }}
+    if: ${{ inputs.source == 'db' || inputs.source == '' }}
     runs-on: ${{ vars.RUNNER_LABEL || 'ubuntu-latest' }}
     permissions:
       contents: read
