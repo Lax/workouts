@@ -412,6 +412,8 @@ mhash = inputs.db-schema-hash (非空则 "workouts-db-v1-abc123-{run_id}"，空�
 
 ## 7. gh-pages workflow: db-store/restore 集成
 
+> **2026-08 变更：** `shall-commit-db` / `shall-commit-data` 机制已移除。sync 纯 cache-only，DB 由 `git-fit-actions/db-store/cache/restore@v1` 管理，git 备份由 `git-fit-archive.yml` archive-db job 周归档到 `GitFit/db`。本节保留旧版 db-store 集成记录作为历史参考。
+
 gh-pages.yml 原使用 bare `actions/cache/restore` 恢复 DB，仅依赖 cache（7 天 TTL）。已替换为 `db-store/restore`，提供分层恢复：
 
 ```
@@ -466,7 +468,9 @@ fi
 
 ## 9. 跨 workflow 并发控制：`workouts-db` concurrency group
 
-**问题：** `sync.yml`（via db-store/save）和 `git-fit-archive.yml`（archive-db job）均向 `GitFit/db` branch 写入，无协调机制。并发 push 可能触发 non-fast-forward  rejection。
+> **2026-08 变更：** `archive.yml` 已删除，DB 归档由 `git-fit-archive.yml` archive-db job 负责，写入 `GitFit/db`。sync 的 `db-store/cache/save`（cache-only）与 archive-db job 共享 concurrency group。
+
+**问题（旧）：** `sync.yml`（via db-store/save）和 `archive.yml`（archive-db job）均向 `_/workouts-db` branch 写入，无协调机制。并发 push 可能触发 non-fast-forward  rejection。
 
 **修复：** 两 job 共享 concurrency group `workouts-db`：
 
@@ -486,13 +490,15 @@ concurrency:
 
 ---
 
-## 10. 待跟进：`shall-commit-db` 语义歧义
+## 10. 待跟进：`shall-commit-db` 语义歧义（已废弃）
+
+> **2026-08：** shall-commit-db/shall-commit-data 机制已移除，本节记录的问题已无实际影响。保留作为历史参考。
 
 已向 `Lax/git-fit` 提交 issue：https://github.com/Lax/git-fit/issues/10
 
 `shall-commit-db` 在 `db-store/save` 中语义正确（是否提交到 git），但在 `db-store/restore` 中语义相反（是否从 git 恢复）。建议 rename 为 `use-git-branch` 并走 deprecation 路径。
 
-当前 workouts 项目中，`shall-commit-db: true` 传入 `db-store/restore` 的语义是"从 git branch 恢复"，需留意上游修复后的迁移。
+> **当前（2026-08 后）：** shall-commit 机制已移除，sync 纯 cache-only，不再使用 `shall-commit-db`。
 
 ---
 

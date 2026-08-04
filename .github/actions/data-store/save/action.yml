@@ -1,12 +1,5 @@
 name: Data Store Save
 description: Save data to configured store backend
-inputs:
-  shall-commit-data:
-    required: false
-    default: 'false'
-  git-configured:
-    required: false
-    default: 'false'
 outputs:
   any_changed:
     description: Whether any data changed
@@ -41,19 +34,3 @@ runs:
           fi
         done >> "$GITHUB_OUTPUT"
         echo "any_changed=$any" >> $GITHUB_OUTPUT
-
-    - uses: ./.github/actions/data-store/sources-git/save
-      if: inputs.shall-commit-data == 'true'
-      with:
-        shall-commit-data: ${{ inputs.shall-commit-data }}
-        git-configured: ${{ inputs.git-configured }}
-
-    - name: Commit data
-      if: inputs.shall-commit-data == 'true' && inputs.git-configured == 'true' && steps.detect.outputs.any_changed == 'true'
-      shell: bash
-      run: |
-        git diff --cached --quiet && exit 0
-        git -c user.name=workouts-bot -c user.email=bot@workouts \
-          commit -m "store(sync): $(date -u +%Y%m%d-%H%M%S)"
-        git pull --rebase
-        git push

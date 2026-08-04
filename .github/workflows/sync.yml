@@ -42,11 +42,6 @@ jobs:
           ruby-version: '3.4'
           bundler-cache: true
 
-      - name: Detect commit mode
-        id: mode
-        run: |
-          echo "shall_commit_data=${{ vars.GIT_FIT_SHALL_COMMIT_DATA == 'true' && 'true' || 'false' }}" >> $GITHUB_OUTPUT
-
       # ── DB restore (git-fit db-store) ──
       - name: '[db] Restore cache'
         uses: git-fit-actions/db-store/cache/restore@v1
@@ -87,10 +82,8 @@ jobs:
         with:
           git-configured: ${{ steps.git-setup.outputs.configured }}
 
-      # ── Data restore (conditional on commit mode) ──
+      # ── Data restore ──
       - uses: ./.github/actions/data-store/restore
-        with:
-          shall-commit-data: ${{ steps.mode.outputs.shall_commit_data }}
 
       - name: Sync activities
         uses: ./.github/actions/sync-activities
@@ -120,7 +113,6 @@ jobs:
         run: bundle exec workouts strava fetch --db ${{ vars.GIT_FIT_DATABASE_PATH }} --limit 10
 
       - uses: ./.github/actions/data-store/sources-cache/save
-        if: steps.mode.outputs.shall_commit_data != 'true'
 
       - name: Regenerate data checksums
         shell: bash
@@ -183,31 +175,9 @@ jobs:
             echo "- Archive restore: ${{ steps.db-archive-restore.outputs.restored }} bytes"
           } >> "$GITHUB_STEP_SUMMARY"
 
-      # ── Data save (per-source, conditional on commit mode) ──
+      # ── Data save ──
       - uses: ./.github/actions/data-store/save
         id: data-save
-        with:
-          shall-commit-data: ${{ steps.mode.outputs.shall_commit_data }}
-          git-configured: ${{ steps.git-setup.outputs.configured }}
-
-      # ── Git add + unified commit (for commit mode) ──
-      - name: Stage data sources
-        if: steps.mode.outputs.shall_commit_data == 'true' && steps.data-save.outputs.any_changed == 'true'
-        shell: bash
-        run: |
-          for src in keep igpsport xoss xingzhe garmin garmin_cn strava; do
-            git add -f "data/raw/$src/" "data/std/$src/"
-          done
-
-      - name: Commit data changes
-        if: steps.mode.outputs.shall_commit_data == 'true' && steps.data-save.outputs.any_changed == 'true'
-        shell: bash
-        run: |
-          git diff --cached --quiet && exit 0
-          git -c user.name=workouts-bot -c user.email=bot@workouts \
-            commit -m "store(sync): $(date -u +%Y%m%d-%H%M%S)"
-          git pull --rebase
-          git push
 
       - name: Upload DB artifact
         uses: actions/upload-artifact@v4

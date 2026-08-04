@@ -1,19 +1,9 @@
 name: Data Store Restore
 description: Restore data from configured store backend
-inputs:
-  shall-commit-data:
-    required: false
-    default: 'false'
 runs:
   using: composite
   steps:
     - uses: ./.github/actions/data-store/sources-cache/restore
-      if: inputs.shall-commit-data != 'true'
-
-    - uses: ./.github/actions/data-store/sources-git/restore
-      if: inputs.shall-commit-data == 'true'
-      with:
-        shall-commit-data: ${{ inputs.shall-commit-data }}
 
     - name: Generate SHA256SUMS files
       shell: bash
