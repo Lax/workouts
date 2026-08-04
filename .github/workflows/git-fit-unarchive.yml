@@ -1,4 +1,4 @@
-name: "[GitFit] Unarchive Data -> Cache"
+name: "[GitFit] Unarchive Data Git -> Cache"
 
 on:
   workflow_dispatch:
