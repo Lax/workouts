@@ -28,23 +28,17 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        source: ${{ fromJson(steps.matrix.outputs.sources) }}
+        source: ${{ fromJson(
+          (github.event_name == 'workflow_dispatch' && inputs.source == 'all') &&
+          '["keep","igpsport","xoss","xingzhe","garmin","garmin_cn","strava"]' ||
+          (github.event_name == 'workflow_dispatch' && inputs.source != '') &&
+          format('["{0}"]', inputs.source) ||
+          '["keep","igpsport","xoss","xingzhe","garmin","garmin_cn","strava"]'
+        ) }}
     runs-on: ${{ vars.RUNNER_LABEL || 'ubuntu-latest' }}
     permissions:
       contents: read
     steps:
-      - name: Set matrix sources
-        id: matrix
-        shell: bash
-        run: |
-          if [[ "${{ inputs.source }}" == "all" ]]; then
-            echo "sources=[\"keep\",\"igpsport\",\"xoss\",\"xingzhe\",\"garmin\",\"garmin_cn\",\"strava\"]" >> "$GITHUB_OUTPUT"
-          elif [[ -n "${{ inputs.source }}" ]]; then
-            echo "sources=[\"${{ inputs.source }}\"]" >> "$GITHUB_OUTPUT"
-          else
-            echo "sources=[\"keep\",\"igpsport\",\"xoss\",\"xingzhe\",\"garmin\",\"garmin_cn\",\"strava\"]" >> "$GITHUB_OUTPUT"
-          fi
-
       - name: Ensure branch exists
         env:
           BRANCH: GitFit/data/${{ matrix.source }}
