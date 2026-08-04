@@ -1,4 +1,4 @@
-name: "[GitFit] Archive Data Git <- Cache"
+name: "[GitFit] Archive Data Cache -> Git"
 
 on:
   schedule:
