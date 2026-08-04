@@ -3,61 +3,29 @@ description: Restore per-source raw/std caches from GH Actions cache
 runs:
   using: composite
   steps:
-    - uses: actions/cache/restore@v6.1.0
+    - uses: git-fit-actions/data-store/cache/restore@v1
       with:
-        path: |
-          data/raw/keep/
-          data/std/keep/
-        key: raw-std-v1-keep-${{ github.run_id }}
-        restore-keys: raw-std-v1-keep-
+        source: keep
 
-    - uses: actions/cache/restore@v6.1.0
+    - uses: git-fit-actions/data-store/cache/restore@v1
       with:
-        path: |
-          data/raw/igpsport/
-          data/std/igpsport/
-        key: raw-std-v1-igpsport-${{ github.run_id }}
-        restore-keys: raw-std-v1-igpsport-
+        source: igpsport
 
-    - uses: actions/cache/restore@v6.1.0
+    - uses: git-fit-actions/data-store/cache/restore@v1
       with:
-        path: |
-          data/raw/xoss/
-          data/std/xoss/
-        key: raw-std-v1-xoss-${{ github.run_id }}
-        restore-keys: raw-std-v1-xoss-
+        source: xoss
 
-    - uses: actions/cache/restore@v6.1.0
+    - uses: git-fit-actions/data-store/cache/restore@v1
       with:
-        path: |
-          data/raw/xingzhe/
-          data/std/xingzhe/
-        key: raw-std-v1-xingzhe-${{ github.run_id }}
-        restore-keys: raw-std-v1-xingzhe-
+        source: xingzhe
 
-    - uses: actions/cache/restore@v6.1.0
+    - uses: git-fit-actions/data-store/cache/restore@v1
       with:
-        path: |
-          data/raw/garmin/
-          data/std/garmin/
-        key: raw-std-v1-garmin-${{ github.run_id }}
-        restore-keys: raw-std-v1-garmin-
+        source: garmin
 
-    - uses: actions/cache/restore@v6.1.0
+    - uses: git-fit-actions/data-store/cache/restore@v1
       with:
-        path: |
-          data/raw/garmin_cn/
-          data/std/garmin_cn/
-        key: raw-std-v1-garmin_cn-${{ github.run_id }}
-        restore-keys: raw-std-v1-garmin_cn-
-
-    - uses: actions/cache/restore@v6.1.0
-      with:
-        path: |
-          data/raw/strava/
-          data/std/strava/
-        key: raw-std-v1-strava-${{ github.run_id }}
-        restore-keys: raw-std-v1-strava-
+        source: garmin_cn
 
     - uses: git-fit-actions/data-store/cache/restore@v1
       with:
