@@ -25,37 +25,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          persist-credentials: false
+          ref: GitFit/data/${{ matrix.source }}
 
-      - name: Configure git auth
-        run: |
-          git config --add http.https://github.com/.extraheader \
-            "AUTHORIZATION: basic $(printf '%s:' \
-              "${{ secrets.WORKOUTS_SYNC_PAT }}" | base64 -w0)"
-
-      - name: Ensure branch exists
-        env:
-          BRANCH: GitFit/data/${{ matrix.source }}
-        run: |
-          if git ls-remote --exit-code --heads origin "refs/heads/$BRANCH" 2>/dev/null; then
-            echo "branch exists"
-          else
-            EMPTY_TREE=$(git hash-object -t tree --stdin -w < /dev/null)
-            COMMIT=$(git -c user.name=workouts-bot -c user.email=bot@workouts \
-              commit-tree -m "chore: init archive branch $BRANCH" "$EMPTY_TREE")
-            git push origin "$COMMIT:refs/heads/$BRANCH"
-          fi
-
-      - name: Checkout archive branch
-        env:
-          BRANCH: GitFit/data/${{ matrix.source }}
-        run: |
-          git fetch origin "$BRANCH"
-          git checkout "$BRANCH"
-
-      - uses: git-fit-actions/data-store/cache/restore@v1
+      - name: Restore ${{ matrix.source }} cache
+        uses: actions/cache/restore@v6.1.0
         with:
-          source: ${{ matrix.source }}
+          path: |
+            data/raw/${{ matrix.source }}/
+            data/std/${{ matrix.source }}/
+          key: raw-std-v1-${{ matrix.source }}-${{ github.run_id }}
+          restore-keys: raw-std-v1-${{ matrix.source }}-
 
       - name: Commit & push
         env:
@@ -94,33 +73,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          persist-credentials: false
-
-      - name: Configure git auth
-        run: |
-          git config --add http.https://github.com/.extraheader \
-            "AUTHORIZATION: basic $(printf '%s:' \
-              "${{ secrets.WORKOUTS_SYNC_PAT }}" | base64 -w0)"
-
-      - name: Ensure branch exists
-        env:
-          BRANCH: GitFit/db
-        run: |
-          if git ls-remote --exit-code --heads origin "refs/heads/$BRANCH" 2>/dev/null; then
-            echo "branch exists"
-          else
-            EMPTY_TREE=$(git hash-object -t tree --stdin -w < /dev/null)
-            COMMIT=$(git -c user.name=workouts-bot -c user.email=bot@workouts \
-              commit-tree -m "chore: init archive branch $BRANCH" "$EMPTY_TREE")
-            git push origin "$COMMIT:refs/heads/$BRANCH"
-          fi
-
-      - name: Checkout archive branch
-        env:
-          BRANCH: GitFit/db
-        run: |
-          git fetch origin "$BRANCH"
-          git checkout "$BRANCH"
+          ref: GitFit/db
 
       - name: Restore DB from cache
         uses: git-fit-actions/db-store/cache/restore@v1
