@@ -18,23 +18,6 @@ jobs:
       actions: write
     steps:
       - uses: actions/checkout@v6
-        with:
-          persist-credentials: false
-
-      - name: Configure git
-        id: git-setup
-        env:
-          WORKOUTS_SYNC_PAT: ${{ secrets.WORKOUTS_SYNC_PAT }}
-        run: |
-          if [ -z "$WORKOUTS_SYNC_PAT" ]; then
-            echo "configured=false" >> $GITHUB_OUTPUT
-            exit 0
-          fi
-          git config user.name "workouts-bot"
-          git config user.email "bot@workouts"
-          git config --add http.https://github.com/.extraheader \
-            "AUTHORIZATION: basic $(printf '%s:' "$WORKOUTS_SYNC_PAT" | base64 -w0)"
-          echo "configured=true" >> $GITHUB_OUTPUT
 
       - uses: ruby/setup-ruby@v1
         if: vars.RUNNER_LABEL != 'self-hosted'
@@ -80,7 +63,7 @@ jobs:
       - name: Import Apple Health
         uses: ./.github/actions/import-apple-health
         with:
-          git-configured: ${{ steps.git-setup.outputs.configured }}
+          git-configured: 'true'
 
       # ── Data restore ──
       - uses: git-fit-actions/data-store/cache/restore@v2
@@ -148,18 +131,19 @@ jobs:
             echo "WAL checkpoint: $bytes bytes"
           fi
 
-      - name: Manage sync cron
-        uses: ./.github/actions/cron-manager
-        with:
-          git-configured: ${{ steps.git-setup.outputs.configured }}
-          db-path: ${{ vars.GIT_FIT_DATABASE_PATH }}
-
       # ── DB save (git-fit db-store) ──
       - name: '[db] Save cache'
         id: db-save
         uses: git-fit-actions/db-store/cache/save@v1
         with:
           database-path: data/db/workouts.db
+
+      - name: Trigger sync scheduler
+        if: github.event_name == 'schedule'
+        run: |
+          gh workflow run sync-scheduler.yml --ref main -f commit=true
+        env:
+          GH_TOKEN: ${{ github.token }}
 
       - name: Write DB summary
         if: always()
