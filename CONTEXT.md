@@ -119,7 +119,7 @@ data/import/{gpx,fit,tcx}/ → Import::LocalFile → data/raw/{source}/ (L1)
 | 超时采用旗标机制 | `@timed_out` 设后不再 pop 新源，但当前 batch 完整收尾。不强制退出，数据一致 |
 | DedupService 独立于 adapter | 所有 source 完成后统一触发，不再绑定 Strava 内部 `recheck_duplicates`。双向写入，含轨迹对比 |
 | temp→rename 原子写入 raw 文件 | 崩溃恢复时 `raw_file_exists?` 不误判 |
-| Per-source 独立 GH Cache | 每源独立 cache key（`GitFit-data-{source}-v0-{run_id}`），通过 `scripts/generate-checksums.sh` 计算 SHA256SUMS 检测变化，仅变动的源写 cache。通过 `.github/actions/data-store/restore` + `data-store/save` 封装（save 聚合输出 `any_changed` + 变动/未变动源名到 step summary）。数据目录示例: `data/raw/{garmin,garmin_cn,igpsport,...}/`, `data/std/{...}/` |
+| Per-source 独立 GH Cache | 每源独立 cache key（`GitFit-data-{source}-v0-{run_id}`），通过 `scripts/generate-checksums.sh` 计算 SHA256SUMS 检测变化，仅变动的源写 cache。通过 `git-fit-actions/data-store/cache/{restore,save}@v2` 直连（`sources` 多源循环；save 输出 `changed`/`changed_sources`/`unchanged_sources`/`save_errors` 到 step summary）。数据目录示例: `data/raw/{garmin,garmin_cn,igpsport,...}/`, `data/std/{...}/` |
 | 导出默认路径 `data/` → `site/` | 源数据与生成制品分离，gitignored |
 | `mini_racer` + `@garmin/fitsdk` 解析 FIT | V8 引擎在 Ruby 进程中执行 JS SDK，纯 gem 依赖，无需外部运行时 |
 | local_file 适配器单类处理三种格式 | GPX/FIT/TCX 共享相同的文件扫描、L1/L2写入、DB upsert 逻辑，仅解析器不同。单类避免三份重复代码 |
@@ -456,12 +456,12 @@ sync job (runs-on: ${{ vars.RUNNER_LABEL || 'ubuntu-latest' }}):
   3. restore DB cache
   4. record DB digest
   5. restore Garmin token caches
-   6. restore per-source caches (data-store/restore)
+   6. restore per-source caches (cache/restore@v2)
   7. workouts sync (受 SYNC__TIME_BUDGET 限制)
   8. 读 N → 算 f → 可能改 cron
   9. check DB changed
   10. save DB cache + Garmin token caches
-   11. save per-source caches (data-store/save)
+    11. save per-source caches (cache/save@v2)
   12. upload DB artifact (for build job)
 
 build job (needs: sync):

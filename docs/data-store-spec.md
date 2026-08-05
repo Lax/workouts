@@ -4,7 +4,7 @@
 
 ## 概述
 
-规范 sync.yml 中数据 restore/save 的步骤顺序、cache 容错逻辑。当前 sync 纯 cache-only（`data-store/restore` + `data-store/save` + `git-fit-actions/db-store/cache/*`），git 备份由 `git-fit-archive.yml` 周归档承担。git-* 模式（`git-flat`/`git-combined`/`git-by-source`）已移除。
+规范 sync.yml 中数据 restore/save 的步骤顺序、cache 容错逻辑。当前 sync 纯 cache-only（`git-fit-actions/data-store/cache/{restore,save}@v2` + `git-fit-actions/db-store/cache/*`），git 备份由 `git-fit-archive.yml` 周归档承担。git-* 模式（`git-flat`/`git-combined`/`git-by-source`）已移除。
 
 ## 设计规则
 
@@ -174,9 +174,9 @@ bash scripts/data-store-git-save.sh GitFit/db \
   "data/db/workouts.db data/db/workouts.db.checksum"
 ```
 
-## Composite Actions 拆分
+## 外部 v2 Actions 直连
 
-当前 `data-store/restore`（每源 restore + SHA256SUMS 生成）和 `data-store/save`（每源 save + `any_changed`/`changed_sources`/`unchanged_sources` 聚合输出）composite action 封装 restore/save 逻辑。shall-commit 移除后 `sources-git/restore`、`sources-git/save` 已删除；`data-store/sources-cache/*` 已上提为 `data-store/{restore,save}`（2026-08）。
+当前 sync.yml 直连 `git-fit-actions/data-store/cache/{restore,save}@v2`（node24 action，`sources` 多源循环输入，save 内置 SHA256SUMS 生成与 `changed`/`changed_sources`/`unchanged_sources`/`save_errors` 输出）。本地 `data-store/{restore,save}` composite wrapper 已移除（2026-08）；`data-store/sources-cache/*` 上提历史见 `Lax/git-fit#52`。
 
 每个步骤的条件由上表矩阵决定，不再经过 composite action 路由。
 
