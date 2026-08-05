@@ -60,6 +60,7 @@ RSpec.describe "cron management split" do
     it "configures git with bare PAT extraheader" do
       git_step = scheduler_steps.find { |s| s["name"] == "Configure git" }
       expect(git_step).not_to be_nil
+      expect(git_step["if"]).to eq("${{ inputs.commit == 'true' }}")
       expect(git_step["env"]).to have_key("WORKOUTS_SYNC_PAT")
       expect(git_step["run"]).to include("printf '%s:'")
       expect(git_step["run"]).to include("base64 -w0")
@@ -77,12 +78,12 @@ RSpec.describe "cron management split" do
       expect(perms).to eq("contents" => "write")
     end
 
-    it "skips commit steps when commit input is false" do
+    it "gates commit steps on commit input and git configuration" do
       update_step = scheduler_steps.find { |s| s["name"] == "Update sync.yml cron" }
       expect(update_step["if"]).to eq("${{ inputs.commit == 'true' }}")
 
       commit_step = scheduler_steps.find { |s| s["uses"]&.include?("git-auto-commit-action") }
-      expect(commit_step["if"]).to eq("${{ inputs.commit == 'true' }}")
+      expect(commit_step["if"]).to eq("${{ inputs.commit == 'true' && steps.git-setup.outputs.configured == 'true' }}")
     end
 
     it "restores DB cache before reading/computing the interval" do
