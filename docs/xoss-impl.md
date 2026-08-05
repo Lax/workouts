@@ -26,7 +26,7 @@ workouts sync --source xoss --act ride   # Sync only ride activities
 | `spec/fixtures/xoss/activity_list_error.json` | Activity list: invalid access token |
 | `spec/fixtures/xoss/fit_sample.56751769.fit` | Real FIT file (268 GPS points) |
 | `.github/workflows/sync.yml` | CI: token cache restore/save |
-| `.github/actions/data-store/sources-cache/*/action.yml` | CI: raw/std cache per source |
+| `.github/actions/data-store/{restore,save}/action.yml` | CI: raw/std cache per source |
 
 ## API Discovery
 

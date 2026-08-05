@@ -4,7 +4,7 @@
 
 ## 概述
 
-规范 sync.yml 中数据 restore/save 的步骤顺序、cache 容错逻辑。当前 sync 纯 cache-only（`sources-cache/restore` + `sources-cache/save` + `git-fit-actions/db-store/cache/*`），git 备份由 `git-fit-archive.yml` 周归档承担。git-* 模式（`git-flat`/`git-combined`/`git-by-source`）已移除。
+规范 sync.yml 中数据 restore/save 的步骤顺序、cache 容错逻辑。当前 sync 纯 cache-only（`data-store/restore` + `data-store/save` + `git-fit-actions/db-store/cache/*`），git 备份由 `git-fit-archive.yml` 周归档承担。git-* 模式（`git-flat`/`git-combined`/`git-by-source`）已移除。
 
 ## 设计规则
 
@@ -176,7 +176,7 @@ bash scripts/data-store-git-save.sh GitFit/db \
 
 ## Composite Actions 拆分
 
-当前 `data-store/restore` 和 `data-store/save`、`sources-cache/restore`、`sources-cache/save` 等 composite action 封装 restore/save 逻辑。shall-commit 移除后 `sources-git/restore`、`sources-git/save` 已删除。
+当前 `data-store/restore`（每源 restore + SHA256SUMS 生成）和 `data-store/save`（每源 save + `any_changed`/`changed_sources`/`unchanged_sources` 聚合输出）composite action 封装 restore/save 逻辑。shall-commit 移除后 `sources-git/restore`、`sources-git/save` 已删除；`data-store/sources-cache/*` 已上提为 `data-store/{restore,save}`（2026-08）。
 
 每个步骤的条件由上表矩阵决定，不再经过 composite action 路由。
 

@@ -1,27 +1,41 @@
-name: Data Store Restore
-description: Restore data from configured store backend
+name: Data Store Source Restore
+description: Restore per-source raw/std caches from GH Actions cache
 runs:
   using: composite
   steps:
-    - uses: ./.github/actions/data-store/sources-cache/restore
+    - uses: git-fit-actions/data-store/cache/restore@v1
+      with:
+        source: keep
+
+    - uses: git-fit-actions/data-store/cache/restore@v1
+      with:
+        source: igpsport
+
+    - uses: git-fit-actions/data-store/cache/restore@v1
+      with:
+        source: xoss
+
+    - uses: git-fit-actions/data-store/cache/restore@v1
+      with:
+        source: xingzhe
+
+    - uses: git-fit-actions/data-store/cache/restore@v1
+      with:
+        source: garmin
+
+    - uses: git-fit-actions/data-store/cache/restore@v1
+      with:
+        source: garmin_cn
+
+    - uses: git-fit-actions/data-store/cache/restore@v1
+      with:
+        source: strava
 
     - name: Generate SHA256SUMS files
       shell: bash
       run: |
         for src in keep igpsport xoss xingzhe garmin garmin_cn strava; do
-          bash scripts/generate-checksums.sh "data/raw/$src" "data/std/$src"
-        done
-
-    - name: Save original data checksums
-      shell: bash
-      run: |
-        mkdir -p "$RUNNER_TEMP"
-        echo "# data-store original checksums" > "$RUNNER_TEMP/data-store-orig-checksums"
-        for src in keep igpsport xoss xingzhe garmin garmin_cn strava; do
-          for dir in "data/raw/$src" "data/std/$src"; do
-            if [ -f "$dir/SHA256SUMS" ]; then
-              hash=$(sha256sum "$dir/SHA256SUMS" | cut -d' ' -f1)
-              echo "$hash $dir" >> "$RUNNER_TEMP/data-store-orig-checksums"
-            fi
-          done
+          bash scripts/generate-checksums.sh \
+            "data/raw/$src" "data/std/$src"
+          echo "  $src: done" >&2
         done

@@ -112,14 +112,8 @@ jobs:
           SYNC__STRAVA__WEB_AUTH__AUTH_SEED: ${{ secrets.SYNC_STRAVA_WEB_AUTH_SEED }}
         run: bundle exec workouts strava fetch --db ${{ vars.GIT_FIT_DATABASE_PATH }} --limit 10
 
-      - uses: ./.github/actions/data-store/sources-cache/save
-
-      - name: Regenerate data checksums
-        shell: bash
-        run: |
-          for src in keep igpsport xoss xingzhe garmin garmin_cn strava; do
-            bash scripts/generate-checksums.sh "data/raw/$src" "data/std/$src"
-          done
+      - id: data-save
+        uses: ./.github/actions/data-store/save
 
       - name: Parse Geo Regions
         uses: ./.github/actions/parse-geo-regions
@@ -173,11 +167,9 @@ jobs:
             echo "- DB changed: ${{ steps.db-save.outputs.changed }}"
             echo "- DB size: ${{ steps.db-checkpoint.outputs.db_size }} bytes"
             echo "- Archive restore: ${{ steps.db-archive-restore.outputs.restored }} bytes"
+            echo "- Data changed sources: ${{ steps.data-save.outputs.changed_sources }}"
+            echo "- Data unchanged sources: ${{ steps.data-save.outputs.unchanged_sources }}"
           } >> "$GITHUB_STEP_SUMMARY"
-
-      # ── Data save ──
-      - uses: ./.github/actions/data-store/save
-        id: data-save
 
       - name: Upload DB artifact
         uses: actions/upload-artifact@v6
