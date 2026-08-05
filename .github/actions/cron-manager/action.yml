@@ -34,7 +34,7 @@ runs:
     - name: Read current cron interval
       id: read
       shell: bash
-      run: echo "N=$(grep -oP '/\\K\\d+(?= \\* \\*)' '${{ inputs.workflow-file }}' | head -1)" >> $GITHUB_OUTPUT
+      run: echo "N=$(grep -oP '/\K\d+(?= \* \*)' '${{ inputs.workflow-file }}' | head -1)" >> $GITHUB_OUTPUT
 
     - name: Compute new interval
       id: compute
