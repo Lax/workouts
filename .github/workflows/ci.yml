@@ -16,9 +16,8 @@ jobs:
         uses: raven-actions/actionlint@v2
         with:
           # shellcheck off: repo scripts are not shellcheck-clean (SC2086 style).
-          # Ignore empty-string option lint: unarchive uses '' as the "all sources" choice.
+          # Empty-option lint ignored via .github/actionlint.yml.
           shellcheck: false
-          flags: -ignore 'string should not be empty'
 
   ruby-test:
     runs-on: ${{ vars.RUNNER_LABEL || 'ubuntu-latest' }}

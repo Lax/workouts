@@ -1,0 +1,5 @@
+paths:
+  .github/workflows/git-fit-unarchive.yml:
+    ignore:
+      # '' choice option is a valid "empty = all sources" value.
+      - 'string should not be empty'
