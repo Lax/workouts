@@ -108,7 +108,7 @@ jobs:
 
           if [ "$COMMIT" = "true" ] && [ "$GIT_CONFIGURED" = "true" ]; then
             git -c user.name=workouts-bot -c user.email=bot@workouts \
-              commit -m "chore: sync interval N=$NEW_N" "$WORKFLOW_FILE"
+              commit -m "chore: sync interval N=$NEW_N ［skip ci］" "$WORKFLOW_FILE"
             git pull --rebase
             git push
           fi
