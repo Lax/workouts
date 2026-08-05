@@ -85,10 +85,12 @@ RSpec.describe "cron management split" do
       expect(names).not_to include("Manage sync cron")
     end
 
-    it "conditionally triggers sync-scheduler on schedule events" do
+    it "conditionally triggers sync-scheduler on data change (aligned with gh-pages)" do
       trigger = sync_steps.find { |s| s["name"] == "Trigger sync scheduler" }
       expect(trigger).not_to be_nil
-      expect(trigger["if"]).to eq("github.event_name == 'schedule'")
+      expect(trigger["if"]).to eq(
+        "steps.db-save.outputs.changed == 'true' || steps.data-save.outputs.changed == 'true'"
+      )
       expect(trigger["run"]).to include("sync-scheduler.yml")
       expect(trigger["run"]).to include("-f commit=true")
     end
