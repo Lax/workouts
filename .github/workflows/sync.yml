@@ -17,7 +17,7 @@ jobs:
       contents: write
       actions: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           persist-credentials: false
 
@@ -180,7 +180,7 @@ jobs:
         id: data-save
 
       - name: Upload DB artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         if: steps.db-save.outputs.changed == 'true' || steps.data-save.outputs.any_changed == 'true'
         with:
           name: workouts-db
