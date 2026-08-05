@@ -15,7 +15,6 @@
 | Import (Apple Health / GPX/FIT/TCX) | DB | 先 restore DB（步骤 2/3/4/5）→ 再 import（步骤 6） |
 | Sync (Keep / Garmin / ……) | DB + per-source raw/std + tokens | import 后补充 per-source（步骤 7/8），sync 前 restore tokens（步骤 10） |
 | Geo region detection | geo cache | sync 后 restore geo cache（步骤 13） |
-| Cron update | workflow 写权限 | 无需数据依赖 |
 
 ### 规则二：cache restore + archive fallback
 
@@ -116,23 +115,24 @@ tokens:
    8  Save tokens cache                       always()
 
 geo:
-   9  Restore geo cache                       always
-  10  Geo region detection                    always
-
-cron:
-  11  Read current N                          always
-  12  Calculate new N                         always
-  13  Update sync.yml                         if schedule
-  14  Commit cron change                      if schedule && changed
+    9  Restore geo cache                       always
+   10  Geo region detection                    always
 
 save cache:
-  15  Save DB cache                           if step 1 执行过
-  16  Save per-source caches                  if step 2 执行过
-  17  Save combined cache                     if step 3 执行过
+   11  Save DB cache                           if step 1 执行过
+   12  Save per-source caches                  if step 2 执行过
+   13  Save combined cache                     if step 3 执行过
 
 output:
-  18  Upload DB artifact                      if data changed
-  19  Trigger gh-pages deploy                 if data changed
+   14  Upload DB artifact                      if data changed
+   15  Trigger gh-pages deploy                 if data changed
+
+cron (now in sync-scheduler.yml):
+   16  Trigger sync-scheduler (schedule only)  if schedule event
+   17  Read current N                          always
+   18  Calculate new N                         always
+   19  Update sync.yml                         if commit=true
+   20  Commit cron change                      if commit=true && changed
 ```
 
 ## git-by-source DB 处理（已废弃）

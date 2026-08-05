@@ -108,6 +108,7 @@ data/import/{gpx,fit,tcx}/ → Import::LocalFile → data/raw/{source}/ (L1)
 |---|---|
 | 默认使用系统代理（`HTTP_PROXY`/`HTTPS_PROXY`） | 不再强制绕过代理，XOSS/XingZhe 可通过代理访问中国境内服务 |
 | 内联 deploy job 而非 reusable workflow | 调用 `uses:` 在该仓库导致 `startup_failure` |
+| cron 管理拆为独立 `sync-scheduler.yml` | 唯一写 `.github/workflows/*.yml` 的工作流，集中持有 `WORKOUTS_SYNC_PAT`（workflows:write）。sync.yml 不再需要 PAT，import-apple-health push 改用默认 GITHUB_TOKEN |
 | `__` 分隔 env var | 避免与 `garmin_cn` 等 key 中的 `_` 冲突 |
 | 保留 `upload-artifact` | Pages 部署稳定后再移除 |
 | Keep 用摘要数据 | Keep API 不提供 FIT，iGPSPORT 使用 mini_racer + @garmin/fitsdk 解析 FIT |
@@ -417,7 +418,8 @@ Secrets 名用单 `_`（`SYNC_KEEP_PHONE`），Workflow env 块映射为 `SYNC__
 ## 自适应同步周期
 
 ```
-workflow: 每日触发 (cron: 0 2 */N * *)
+sync.yml:       schedule (cron: 0 2 */N * *, 0 14 */N * *)
+sync-scheduler: workflow_dispatch (由 sync.yml 条件触发)
 
 f = 最新活动距今天数
 
@@ -425,7 +427,8 @@ f < N    → N = max(1, N-1)    → 加速
 f > 2N+1 → N = min(7, N+1)    → 减速
 其余     → N 不变
 
-仅 schedule 事件写回 cron，workflow_dispatch 不改
+仅 schedule 事件触发 sync-scheduler 并传 commit=true 写回 cron，
+sync.yml 本身不再直接 commit workflow 文件。
 ```
 
 ---
@@ -443,9 +446,17 @@ f > 2N+1 → N = min(7, N+1)    → 减速
 
 | 触发 | 操作 |
 |---|---|
-| schedule `*/N` (自适应) | 同步 + 构建 + 部署 Pages |
-| workflow_dispatch | 手动触发，不改 cron |
+| schedule `*/N` (自适应) | 同步 + 缓存 + 触发 sync-scheduler / gh-pages |
+| workflow_dispatch | 手动触发同步，不改 cron |
 | `vars.RUNNER_LABEL` | 控制 runner 类型。默认 `ubuntu-latest`；设 `self-hosted` 切本地 |
+
+### sync-scheduler.yml
+
+| 触发 | 操作 |
+|---|---|
+| workflow_dispatch（sync.yml `gh workflow run`） | 读 N → 算 f → sed 改 sync.yml cron → commit+push（commit=true 时） |
+
+sync-scheduler 是唯一写 `.github/workflows/*.yml` 的工作流，因此唯一持有 `WORKOUTS_SYNC_PAT`（workflows:write）。sync.yml 已移除 PAT，import-apple-health 的 `_/import/apple_health` 分支 push 改用默认 GITHUB_TOKEN。
 
 ### jobs
 
@@ -457,12 +468,13 @@ sync job (runs-on: ${{ vars.RUNNER_LABEL || 'ubuntu-latest' }}):
   4. record DB digest
   5. restore Garmin token caches
    6. restore per-source caches (cache/restore@v2)
-  7. workouts sync (受 SYNC__TIME_BUDGET 限制)
-  8. 读 N → 算 f → 可能改 cron
-  9. check DB changed
+7. workouts sync (受 SYNC__TIME_BUDGET 限制)
+   8. 读 N → 算 f → 可能改 cron
+   9. check DB changed
   10. save DB cache + Garmin token caches
     11. save per-source caches (cache/save@v2)
   12. upload DB artifact (for build job)
+  13. schedule 事件触发 sync-scheduler.yml (commit=true)
 
 build job (needs: sync):
   1. checkout + setup Ruby + setup Node
@@ -480,6 +492,18 @@ deploy job (needs: build):
   1. download build artifact
   2. upload-pages-artifact from ./build
   3. deploy-pages@v4
+```
+
+### sync-scheduler.yml
+
+```
+manage job (runs-on: ${{ vars.RUNNER_LABEL || 'ubuntu-latest' }}):
+  1. checkout (PAT read via extraheader, persist-credentials: false)
+  2. setup Ruby + bundle (if: vars.RUNNER_LABEL != 'self-hosted')
+  3. restore DB cache (db-store/cache/restore@v1)
+  4. Read current cron interval N (grep sync.yml)
+  5. Compute new interval (Sequel → f → adjust N)
+  6. sed sync.yml + commit+push (only if commit=true && PAT configured)
 ```
 
 ### git-fit-archive.yml

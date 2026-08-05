@@ -505,7 +505,7 @@ docker compose run --rm workouts export json
   确认 Settings → Pages → Source 选了 "GitHub Actions"（不是 "Deploy from a branch"），且 workflow 的 build 和 deploy job 都已成功。
 
 **WORKOUTS_SYNC_PAT 需要什么权限**
-  勾选 `repo`（全部）。workflow 用它来更新自动同步频率和归档数据。
+  勾选 `repo`（全部）。workflow 仅在 `sync-scheduler.yml`（自适应 cron 调整）中使用它来修改 `.github/workflows/sync.yml`。
 
 **SQLite gem 编译失败**
   `apt install libsqlite3-dev`（Ubuntu/Debian）或 `brew install sqlite3`（macOS）。

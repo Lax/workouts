@@ -56,16 +56,15 @@ Fine-grained PAT 即使有 `workflows: write` permission，当其被 `x-access-t
 `persist-credentials: false` 阻止 extraheader 写入 + 手动写入裸 PAT extraheader（不含 `x-access-token:` 前缀）
 
 ```yaml
-- uses: actions/checkout@v4
+# sync-scheduler.yml (唯一写 workflow 文件的工作流)
+- uses: actions/checkout@v6
   with:
     persist-credentials: false
 
 # ... 中间步骤 ...
 
-- name: Update cron (schedule only)
-  if: github.event_name == 'schedule'
+- name: Configure git
   env:
-    NEW_N: ${{ steps.decide.outputs.new_n }}
     WORKOUTS_SYNC_PAT: ${{ secrets.WORKOUTS_SYNC_PAT }}
   run: |
     # persist-credentials: false → no extraheader written.
@@ -73,14 +72,19 @@ Fine-grained PAT 即使有 `workflows: write` permission，当其被 `x-access-t
     # so server routes as PAT, not GitHub App.
     git config --add http.https://github.com/.extraheader \
       "AUTHORIZATION: basic $(printf '%s:' "$WORKOUTS_SYNC_PAT" | base64 -w0)"
-    git add .github/workflows/sync.yml
-    git diff --cached --quiet || \
-      git commit -m "chore: sync interval N=$NEW_N"
+
+- name: Update and commit cron
+  run: |
+    sed -i "s|/\([0-9]\) \* \*|/${NEW_N} * *|" .github/workflows/sync.yml
+    git -c user.name=workouts-bot -c user.email=bot@workouts \
+      commit -m "chore: sync interval N=$NEW_N" .github/workflows/sync.yml
     git pull --rebase
     git push
 ```
 
 **优点：** `ps` 不可见、一步到位、安全。短板也已补齐。
+
+> **2026-08 更新：** cron 管理已拆分为独立 `sync-scheduler.yml` 工作流（参考 gh-pages 条件触发模式），PAT 仅在此处使用。sync.yml 中 import-apple-health 对 `_/import/apple_health` 分支的 push 改用默认 GITHUB_TOKEN（无 workflows 写权限）。
 
 ### 全部 4 种方案
 
