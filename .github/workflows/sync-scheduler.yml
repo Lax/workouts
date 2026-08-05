@@ -1,10 +1,14 @@
 name: Sync Scheduler
 
 # Adjusts sync.yml adaptive cron interval based on DB freshness.
-# Triggered conditionally by sync.yml on schedule events (gh-pages pattern).
+# Triggered by sync.yml on data/DB change (gh-pages pattern), or by its own
+# daily schedule as a fallback for the deceleration branch (f > 2N+1) which
+# only fires when data is stale (i.e. no data change to trigger it).
 # workflow_dispatch: manual run; commit defaults to false (does not write cron).
 
 on:
+  schedule:
+    - cron: '0 3 * * 0'
   workflow_dispatch:
     inputs:
       commit:
@@ -73,7 +77,7 @@ jobs:
           ' >> $GITHUB_OUTPUT
 
       - name: Update sync.yml cron
-        if: ${{ inputs.commit == 'true' }}
+        if: ${{ github.event_name == 'schedule' || inputs.commit == 'true' }}
         shell: bash
         env:
           NEW_N: ${{ steps.compute.outputs.new_n }}
@@ -81,7 +85,7 @@ jobs:
           sed -i "s|/\([0-9]\) \* \*|/${NEW_N} * *|" .github/workflows/sync.yml
 
       - name: Configure git
-        if: ${{ inputs.commit == 'true' }}
+        if: ${{ github.event_name == 'schedule' || inputs.commit == 'true' }}
         id: git-setup
         env:
           WORKOUTS_SYNC_PAT: ${{ secrets.WORKOUTS_SYNC_PAT }}
@@ -96,7 +100,7 @@ jobs:
 
       - name: Commit cron change
         uses: stefanzweifel/git-auto-commit-action@v7
-        if: ${{ inputs.commit == 'true' && steps.git-setup.outputs.configured == 'true' }}
+        if: ${{ (github.event_name == 'schedule' || inputs.commit == 'true') && steps.git-setup.outputs.configured == 'true' }}
         with:
           commit_message: 'chore: sync interval N=${{ steps.compute.outputs.new_n }} [skip ci]'
           commit_user_name: 'workouts-bot'

@@ -128,11 +128,12 @@ output:
    15  Trigger gh-pages deploy                 if data changed
 
 cron (now in sync-scheduler.yml):
-   16  Trigger sync-scheduler (schedule only)  if schedule event
+   16  Trigger sync-scheduler (data/DB change) if db/data changed
    17  Read current N                          always
    18  Calculate new N                         always
-   19  Update sync.yml                         if commit=true
-   20  Commit cron change                      if commit=true && changed
+   19  Update sync.yml                         if schedule 或 commit=true
+   20  Commit cron change                      if (schedule 或 commit=true) && configured
+   --  保底 schedule (0 3 * * 0 每周日)       覆盖减速分支（数据不更新时 f 增长）
 ```
 
 ## git-by-source DB 处理（已废弃）

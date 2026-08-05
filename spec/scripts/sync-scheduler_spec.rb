@@ -38,12 +38,16 @@ RSpec.describe "cron management split" do
   end
 
   describe "sync-scheduler.yml structure" do
-    it "triggers on workflow_dispatch with a commit choice input" do
+    it "triggers on workflow_dispatch with a commit choice input and a 7-day schedule fallback" do
       on_key = scheduler_yaml.key?(true) ? scheduler_yaml[true] : scheduler_yaml["on"]
       inputs = on_key.dig("workflow_dispatch", "inputs")
       expect(inputs).to have_key("commit")
       expect(inputs.dig("commit", "type")).to eq("choice")
       expect(inputs.dig("commit", "default")).to eq("false")
+
+      schedule = on_key.dig("schedule")
+      expect(schedule).not_to be_nil
+      expect(schedule.map { |s| s["cron"] }).to include("0 3 * * 0")
     end
 
     it "serializes against the sync job via workouts-db concurrency group" do
@@ -60,7 +64,7 @@ RSpec.describe "cron management split" do
     it "configures git with bare PAT extraheader" do
       git_step = scheduler_steps.find { |s| s["name"] == "Configure git" }
       expect(git_step).not_to be_nil
-      expect(git_step["if"]).to eq("${{ inputs.commit == 'true' }}")
+      expect(git_step["if"]).to eq("${{ github.event_name == 'schedule' || inputs.commit == 'true' }}")
       expect(git_step["env"]).to have_key("WORKOUTS_SYNC_PAT")
       expect(git_step["run"]).to include("printf '%s:'")
       expect(git_step["run"]).to include("base64 -w0")
@@ -78,12 +82,12 @@ RSpec.describe "cron management split" do
       expect(perms).to eq("contents" => "write")
     end
 
-    it "gates commit steps on commit input and git configuration" do
+    it "gates commit steps on schedule/commit input and git configuration" do
       update_step = scheduler_steps.find { |s| s["name"] == "Update sync.yml cron" }
-      expect(update_step["if"]).to eq("${{ inputs.commit == 'true' }}")
+      expect(update_step["if"]).to eq("${{ github.event_name == 'schedule' || inputs.commit == 'true' }}")
 
       commit_step = scheduler_steps.find { |s| s["uses"]&.include?("git-auto-commit-action") }
-      expect(commit_step["if"]).to eq("${{ inputs.commit == 'true' && steps.git-setup.outputs.configured == 'true' }}")
+      expect(commit_step["if"]).to eq("${{ (github.event_name == 'schedule' || inputs.commit == 'true') && steps.git-setup.outputs.configured == 'true' }}")
     end
 
     it "restores DB cache before reading/computing the interval" do
@@ -107,11 +111,11 @@ RSpec.describe "cron management split" do
       expect(names).not_to include("Manage sync cron")
     end
 
-    it "conditionally triggers sync-scheduler on schedule events" do
+    it "conditionally triggers sync-scheduler on data/DB change" do
       steps = sync_yaml.dig("jobs", "sync", "steps")
       trigger = steps.find { |s| s["name"] == "Trigger sync scheduler" }
       expect(trigger).not_to be_nil
-      expect(trigger["if"]).to eq("github.event_name == 'schedule'")
+      expect(trigger["if"]).to eq("steps.db-save.outputs.changed == 'true' || steps.data-save.outputs.changed == 'true'")
       expect(trigger["run"]).to include("sync-scheduler.yml")
       expect(trigger["run"]).to include("-f commit=true")
     end

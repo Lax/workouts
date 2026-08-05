@@ -420,7 +420,8 @@ Secrets 名用单 `_`（`SYNC_KEEP_PHONE`），Workflow env 块映射为 `SYNC__
 
 ```
 sync.yml:       schedule (cron: 0 2 */N * *, 0 14 */N * *)
-sync-scheduler: workflow_dispatch (由 sync.yml 条件触发)
+sync-scheduler: workflow_dispatch (sync.yml 数据/DB 变更时触发, commit=true)
+                schedule (0 3 * * 0 每周日保底, 覆盖减速分支)
 
 f = 最新活动距今天数
 
@@ -428,8 +429,9 @@ f < N    → N = max(1, N-1)    → 加速
 f > 2N+1 → N = min(7, N+1)    → 减速
 其余     → N 不变
 
-仅 schedule 事件触发 sync-scheduler 并传 commit=true 写回 cron，
-sync.yml 本身不再直接 commit workflow 文件。
+加速分支依赖数据更新（数据变更触发 sync-scheduler）；减速分支只在
+数据不更新时发生（f 增长），由 sync-scheduler 自带的每周日 schedule
+保底触发。手动 workflow_dispatch 默认 commit=false 不写回。
 ```
 
 ---
@@ -447,7 +449,7 @@ sync.yml 本身不再直接 commit workflow 文件。
 
 | 触发 | 操作 |
 |---|---|
-| schedule `*/N` (自适应) | 同步 + 缓存 + 触发 sync-scheduler / gh-pages |
+| schedule `*/N` (自适应) | 同步 + 缓存 + 数据变更时触发 sync-scheduler / gh-pages |
 | workflow_dispatch | 手动触发同步，不改 cron |
 | `vars.RUNNER_LABEL` | 控制 runner 类型。默认 `ubuntu-latest`；设 `self-hosted` 切本地 |
 
@@ -455,7 +457,9 @@ sync.yml 本身不再直接 commit workflow 文件。
 
 | 触发 | 操作 |
 |---|---|
-| workflow_dispatch（sync.yml `gh workflow run`） | 读 N → 算 f → sed 改 sync.yml cron → commit+push（commit=true 时） |
+| workflow_dispatch（sync.yml `gh workflow run`，数据/DB 变更时） | 读 N → 算 f → sed 改 sync.yml cron → commit+push（commit=true 时） |
+| schedule `0 3 * * 0`（每周日，保底） | 同上。覆盖减速分支（f > 2N+1 需在数据不更新时触发） |
+| workflow_dispatch（手动） | 读 N → 算 f，默认不写回（commit=false） |
 
 sync-scheduler 是唯一写 `.github/workflows/*.yml` 的工作流，因此唯一持有 `WORKOUTS_SYNC_PAT`（workflows:write）。sync.yml 已移除 PAT，import-apple-health 的 `_/import/apple_health` 分支 push 改用默认 GITHUB_TOKEN。
 
@@ -463,19 +467,21 @@ sync-scheduler 是唯一写 `.github/workflows/*.yml` 的工作流，因此唯�
 
 ```
 sync job (runs-on: ${{ vars.RUNNER_LABEL || 'ubuntu-latest' }}):
-  1. checkout
+  1. checkout (默认 GITHUB_TOKEN)
   2. setup Ruby + bundle (if: vars.RUNNER_LABEL != 'self-hosted')
-  3. restore DB cache
-  4. record DB digest
-  5. restore Garmin token caches
-   6. restore per-source caches (cache/restore@v2)
-7. workouts sync (受 SYNC__TIME_BUDGET 限制)
-   8. 读 N → 算 f → 可能改 cron
-   9. check DB changed
-  10. save DB cache + Garmin token caches
-    11. save per-source caches (cache/save@v2)
-  12. upload DB artifact (for build job)
-  13. schedule 事件触发 sync-scheduler.yml (commit=true)
+  3. restore DB cache (db-store/cache/restore@v1)
+  4. restore DB from archive branch (GitFit/db, cache miss 回退)
+  5. Import Apple Health (git-configured: 'true', GITHUB_TOKEN push)
+  6. restore per-source caches (data-store/cache/restore@v2)
+  7. workouts sync (受 SYNC__TIME_BUDGET 限制)
+  8. Fetch Strava original files (strava fetch, continue-on-error)
+  9. save per-source caches (data-store/cache/save@v2)
+  10. Parse Geo Regions (detect-limit 200)
+  11. [db] Checkpoint SQLite WAL
+  12. save DB cache (db-store/cache/save@v1)
+  13. 数据/DB 变更时触发 sync-scheduler.yml (commit=true)
+  14. Write DB summary / upload DB artifact
+  15. 数据/DB 变更时触发 gh-pages deploy
 
 build job (needs: sync):
   1. checkout + setup Ruby + setup Node
@@ -499,12 +505,15 @@ deploy job (needs: build):
 
 ```
 manage job (runs-on: ${{ vars.RUNNER_LABEL || 'ubuntu-latest' }}):
-  1. checkout (PAT read via extraheader, persist-credentials: false)
+  1. checkout (persist-credentials: false)
   2. setup Ruby + bundle (if: vars.RUNNER_LABEL != 'self-hosted')
   3. restore DB cache (db-store/cache/restore@v1)
   4. Read current cron interval N (grep sync.yml)
   5. Compute new interval (Sequel → f → adjust N)
-  6. sed sync.yml + commit+push (only if commit=true && PAT configured)
+  6. sed sync.yml (if schedule 或 commit=true)
+  7. Configure git (bare PAT extraheader, if schedule 或 commit=true)
+  8. Commit cron change (git-auto-commit-action, [skip ci],
+     if (schedule 或 commit=true) && configured=true)
 ```
 
 ### git-fit-archive.yml
