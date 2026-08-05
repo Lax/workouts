@@ -67,11 +67,11 @@ runs:
       id: manage
       shell: bash
       env:
+        CURRENT_N: ${{ steps.read.outputs.N || inputs.default-n }}
         NEW_N: ${{ steps.compute.outputs.new_n }}
         WORKFLOW_FILE: ${{ inputs.workflow-file }}
         GIT_CONFIGURED: ${{ inputs.git-configured }}
       run: |
-        CURRENT_N=$(grep -oP '/\K\d+(?= \* \*)' "$WORKFLOW_FILE" | head -1)
         if [ "$CURRENT_N" = "$NEW_N" ]; then
           echo "changed=false" >> $GITHUB_OUTPUT
           echo "new_n=$NEW_N" >> $GITHUB_OUTPUT
