@@ -109,7 +109,7 @@ data/import/{gpx,fit,tcx}/ → Import::LocalFile → data/raw/{source}/ (L1)
 | 默认使用系统代理（`HTTP_PROXY`/`HTTPS_PROXY`） | 不再强制绕过代理，XOSS/XingZhe 可通过代理访问中国境内服务 |
 | 内联 deploy job 而非 reusable workflow | 调用 `uses:` 在该仓库导致 `startup_failure` |
 | cron 管理拆为独立 `sync-scheduler.yml` | 唯一写 `.github/workflows/*.yml` 的工作流，集中持有 `WORKOUTS_SYNC_PAT`（workflows:write）。sync.yml 不再需要 PAT，import-apple-health push 改用默认 GITHUB_TOKEN |
-| sync-scheduler 用 PAT token 直传 checkout + git-auto-commit-action | `actions/checkout@v6` 将 token 包装为 `x-access-token:PAT`，服务器判定为 GitHub App，走 workflow `permissions:` 检查。PAT 自带 `repo` 权限含 workflows:write，YAML `permissions: workflows: write` 满足检查。commit/push 交给 `stefanzweifel/git-auto-commit-action@v7`，复用 checkout 凭据，免去手动 extraheader |
+| sync-scheduler 用 persist-credentials:false + bare PAT extraheader + git-auto-commit-action | 不能将 PAT 传给 `actions/checkout`（会被包装为 `x-access-token:` → GitHub App 路由）。`workflows: write` 不是 `permissions:` 块的有效值，无法通过 YAML 声明。改用 `persist-credentials: false` + 手动写入裸 PAT extraheader（不含 `x-access-token:` 前缀），服务器路由为 PAT，token 自带 `repo` 权限含 workflows:write。commit/push 交给 `stefanzweifel/git-auto-commit-action@v7`，复用 bare PAT extraheader 凭据 |
 | `__` 分隔 env var | 避免与 `garmin_cn` 等 key 中的 `_` 冲突 |
 | 保留 `upload-artifact` | Pages 部署稳定后再移除 |
 | Keep 用摘要数据 | Keep API 不提供 FIT，iGPSPORT 使用 mini_racer + @garmin/fitsdk 解析 FIT |

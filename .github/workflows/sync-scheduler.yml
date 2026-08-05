@@ -24,11 +24,25 @@ jobs:
       cancel-in-progress: false
     permissions:
       contents: write
-      workflows: write
     steps:
       - uses: actions/checkout@v6
         with:
-          token: ${{ secrets.WORKOUTS_SYNC_PAT }}
+          persist-credentials: false
+
+      - name: Configure git
+        id: git-setup
+        env:
+          WORKOUTS_SYNC_PAT: ${{ secrets.WORKOUTS_SYNC_PAT }}
+        run: |
+          if [ -z "$WORKOUTS_SYNC_PAT" ]; then
+            echo "configured=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          git config user.name "workouts-bot"
+          git config user.email "bot@workouts"
+          git config --add http.https://github.com/.extraheader \
+            "AUTHORIZATION: basic $(printf '%s:' "$WORKOUTS_SYNC_PAT" | base64 -w0)"
+          echo "configured=true" >> $GITHUB_OUTPUT
 
       - uses: ruby/setup-ruby@v1
         if: vars.RUNNER_LABEL != 'self-hosted'

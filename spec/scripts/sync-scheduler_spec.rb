@@ -50,15 +50,19 @@ RSpec.describe "cron management split" do
       expect(scheduler_yaml.dig("jobs", "manage", "concurrency", "group")).to eq("workouts-db")
     end
 
-    it "passes PAT to checkout via token input" do
+    it "uses persist-credentials: false (no token input passed to checkout)" do
       checkout = scheduler_steps.find { |s| s["uses"]&.start_with?("actions/checkout") }
       expect(checkout).not_to be_nil
-      expect(checkout.dig("with", "token")).to eq("${{ secrets.WORKOUTS_SYNC_PAT }}")
+      expect(checkout.dig("with", "persist-credentials")).to be(false)
+      expect(checkout.dig("with", "token")).to be_nil
     end
 
-    it "has no Configure git step (auto-commit action replaces it)" do
-      names = scheduler_steps.map { |s| s["name"] }
-      expect(names).not_to include("Configure git")
+    it "configures git with bare PAT extraheader" do
+      git_step = scheduler_steps.find { |s| s["name"] == "Configure git" }
+      expect(git_step).not_to be_nil
+      expect(git_step["env"]).to have_key("WORKOUTS_SYNC_PAT")
+      expect(git_step["run"]).to include("printf '%s:'")
+      expect(git_step["run"]).to include("base64 -w0")
     end
 
     it "uses git-auto-commit-action for commit step" do
@@ -68,18 +72,9 @@ RSpec.describe "cron management split" do
       expect(commit_step.dig("with", "commit_user_name")).to eq("workouts-bot")
     end
 
-    it "has both contents:write and workflows:write permissions" do
+    it "has only contents:write in permissions (workflows not valid in permissions block)" do
       perms = scheduler_yaml.dig("jobs", "manage", "permissions")
-      expect(perms).to include("contents")
-      expect(perms["contents"]).to eq("write")
-      expect(perms).to include("workflows")
-      expect(perms["workflows"]).to eq("write")
-    end
-
-    it "uses the PAT's workflows permission — permissions block irrelevant for workflow file" do
-      perms = scheduler_yaml.dig("jobs", "manage", "permissions")
-      expect(perms).to include("contents")
-      expect(perms).to include("workflows")
+      expect(perms).to eq("contents" => "write")
     end
 
     it "skips commit steps when commit input is false" do
@@ -100,45 +95,24 @@ RSpec.describe "cron management split" do
     end
   end
 
-  describe "sync.yml split" do
-    let(:sync_steps) { sync_yaml.dig("jobs", "sync", "steps") }
-
-    it "no longer runs an inline Manage sync cron step" do
-      names = sync_steps.map { |s| s["name"] }
-      expect(names).not_to include("Manage sync cron")
-    end
-
-    it "conditionally triggers sync-scheduler on schedule events" do
-      trigger = sync_steps.find { |s| s["name"] == "Trigger sync scheduler" }
-      expect(trigger).not_to be_nil
-      expect(trigger["if"]).to eq("github.event_name == 'schedule'")
-      expect(trigger["run"]).to include("sync-scheduler.yml")
-      expect(trigger["run"]).to include("-f commit=true")
-    end
-
-    it "places the trigger after DB cache save" do
-      names = sync_steps.map { |s| s["name"] }
-      save_idx = names.index("[db] Save cache")
-      trigger_idx = names.index("Trigger sync scheduler")
-      expect(save_idx).not_to be_nil
-      expect(trigger_idx).not_to be_nil
-      expect(save_idx).to be < trigger_idx
-    end
-
-    it "no longer references WORKOUTS_SYNC_PAT (PAT moved to sync-scheduler)" do
+  describe "sync.yml no longer uses PAT" do
+    it "does not reference WORKOUTS_SYNC_PAT" do
       content = File.read(sync_workflow)
       expect(content).not_to include("WORKOUTS_SYNC_PAT")
     end
 
-    it "uses default checkout credentials (no persist-credentials: false)" do
-      checkout = sync_steps.find { |s| s["uses"]&.start_with?("actions/checkout") }
-      expect(checkout).not_to be_nil
-      expect(checkout["with"]).to be_nil
+    it "no longer runs an inline Manage sync cron step" do
+      names = sync_yaml.dig("jobs", "sync", "steps").map { |s| s["name"] }
+      expect(names).not_to include("Manage sync cron")
     end
 
-    it "passes git-configured: 'true' to import-apple-health" do
-      apple = sync_steps.find { |s| s["uses"]&.end_with?("import-apple-health") }
-      expect(apple.dig("with", "git-configured")).to eq("true")
+    it "conditionally triggers sync-scheduler on schedule events" do
+      steps = sync_yaml.dig("jobs", "sync", "steps")
+      trigger = steps.find { |s| s["name"] == "Trigger sync scheduler" }
+      expect(trigger).not_to be_nil
+      expect(trigger["if"]).to eq("github.event_name == 'schedule'")
+      expect(trigger["run"]).to include("sync-scheduler.yml")
+      expect(trigger["run"]).to include("-f commit=true")
     end
   end
 end

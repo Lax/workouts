@@ -139,7 +139,7 @@ jobs:
           database-path: data/db/workouts.db
 
       - name: Trigger sync scheduler
-        if: steps.db-save.outputs.changed == 'true' || steps.data-save.outputs.changed == 'true'
+        if: github.event_name == 'schedule'
         run: |
           gh workflow run sync-scheduler.yml --ref main -f commit=true
         env:
