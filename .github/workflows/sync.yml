@@ -83,7 +83,9 @@ jobs:
           git-configured: ${{ steps.git-setup.outputs.configured }}
 
       # ── Data restore ──
-      - uses: ./.github/actions/data-store/restore
+      - uses: git-fit-actions/data-store/cache/restore@v2
+        with:
+          sources: keep,igpsport,xoss,xingzhe,garmin,garmin_cn,strava
 
       - name: Sync activities
         uses: ./.github/actions/sync-activities
@@ -113,7 +115,9 @@ jobs:
         run: bundle exec workouts strava fetch --db ${{ vars.GIT_FIT_DATABASE_PATH }} --limit 10
 
       - id: data-save
-        uses: ./.github/actions/data-store/save
+        uses: git-fit-actions/data-store/cache/save@v2
+        with:
+          sources: keep,igpsport,xoss,xingzhe,garmin,garmin_cn,strava
 
       - name: Parse Geo Regions
         uses: ./.github/actions/parse-geo-regions
@@ -169,18 +173,19 @@ jobs:
             echo "- Archive restore: ${{ steps.db-archive-restore.outputs.restored }} bytes"
             echo "- Data changed sources: ${{ steps.data-save.outputs.changed_sources }}"
             echo "- Data unchanged sources: ${{ steps.data-save.outputs.unchanged_sources }}"
+            echo "- Data save errors: ${{ steps.data-save.outputs.save_errors }}"
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload DB artifact
         uses: actions/upload-artifact@v6
-        if: steps.db-save.outputs.changed == 'true' || steps.data-save.outputs.any_changed == 'true'
+        if: steps.db-save.outputs.changed == 'true' || steps.data-save.outputs.changed == 'true'
         with:
           name: workouts-db
           path: data/db/workouts.db
           retention-days: 1
 
       - name: Trigger gh-pages deploy
-        if: steps.db-save.outputs.changed == 'true' || steps.data-save.outputs.any_changed == 'true'
+        if: steps.db-save.outputs.changed == 'true' || steps.data-save.outputs.changed == 'true'
         run: |
           gh workflow run gh-pages.yml --ref main \
             -f artifact-run-id=${{ github.run_id }}
