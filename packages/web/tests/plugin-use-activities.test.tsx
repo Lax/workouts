@@ -62,11 +62,19 @@ describe('useActivities', () => {
       status: 200,
       json: async () => activitiesJson,
     } as unknown as Response)
+    vi.spyOn(window, 'prompt').mockReturnValue(null)
+    vi.stubGlobal('localStorage', {
+      getItem: vi.fn(() => undefined),
+      setItem: vi.fn(),
+      removeItem: vi.fn(),
+      clear: vi.fn(),
+    })
     lastResult = null
   })
 
   afterEach(() => {
     vi.restoreAllMocks()
+    vi.unstubAllGlobals()
     act(() => root.unmount())
     document.body.removeChild(container)
   })
@@ -155,5 +163,80 @@ describe('useActivities', () => {
     expect(lastResult!.error).toContain('Server error')
     expect(lastResult!.activities).toEqual([])
     expect(lastResult!.loading).toBe(false)
+  })
+
+  it('prompts for a data URL and renders from it when local JSON is missing', async () => {
+    vi.spyOn(window, 'prompt').mockReturnValue('https://data.example/workouts')
+    globalThis.fetch = vi.fn((input: unknown) => {
+      const url = String(input)
+      if (url.startsWith('https://data.example/workouts/')) {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: async () => activitiesJson,
+        } as unknown as Response)
+      }
+      return Promise.reject(new Error('Server error'))
+    })
+
+    await act(async () => {
+      root.render(
+        <ThemeProvider data={{ activities: [], stats: null }} config={makeConfig()} registry={{ register: vi.fn(), get: vi.fn() }}>
+          <CaptureHook />
+        </ThemeProvider>,
+      )
+    })
+
+    expect(window.prompt).toHaveBeenCalledTimes(1)
+    expect(lastResult!.activities).toHaveLength(1)
+    expect(lastResult!.error).toBeUndefined()
+    expect(lastResult!.loading).toBe(false)
+    expect(localStorage.setItem).toHaveBeenCalledWith('git-fit-data-url', 'https://data.example/workouts')
+  })
+
+  it('keeps error state when the prompt is cancelled', async () => {
+    globalThis.fetch = vi.fn().mockRejectedValue(new Error('Server error'))
+
+    await act(async () => {
+      root.render(
+        <ThemeProvider data={{ activities: [], stats: null }} config={makeConfig()} registry={{ register: vi.fn(), get: vi.fn() }}>
+          <CaptureHook />
+        </ThemeProvider>,
+      )
+    })
+
+    expect(window.prompt).toHaveBeenCalledTimes(1)
+    expect(lastResult!.error).toContain('Server error')
+    expect(lastResult!.activities).toEqual([])
+    expect(localStorage.setItem).not.toHaveBeenCalled()
+  })
+
+  it('alerts and keeps error state when the entered URL is invalid', async () => {
+    const alertSpy = vi.spyOn(window, 'alert')
+    vi.spyOn(window, 'prompt').mockReturnValue('https://invalid.example')
+    globalThis.fetch = vi.fn((input: unknown) => {
+      const url = String(input)
+      if (url.startsWith('https://invalid.example/')) {
+        return Promise.resolve({
+          ok: false,
+          status: 404,
+          json: async () => ({}),
+        } as unknown as Response)
+      }
+      return Promise.reject(new Error('Server error'))
+    })
+
+    await act(async () => {
+      root.render(
+        <ThemeProvider data={{ activities: [], stats: null }} config={makeConfig()} registry={{ register: vi.fn(), get: vi.fn() }}>
+          <CaptureHook />
+        </ThemeProvider>,
+      )
+    })
+
+    expect(window.prompt).toHaveBeenCalledTimes(1)
+    expect(alertSpy).toHaveBeenCalledWith('Invalid data URL: https://invalid.example')
+    expect(lastResult!.error).toContain('Server error')
+    expect(localStorage.setItem).not.toHaveBeenCalled()
   })
 })

@@ -1,4 +1,4 @@
-import { fetchData, fetchTracks } from '@workouts/plugin-data-source'
+import { fetchData, fetchTracks, probeDataUrl, resolveDataUrl } from '@workouts/plugin-data-source'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 describe('fetchTracks', () => {
@@ -45,9 +45,32 @@ describe('fetchTracks', () => {
   })
 })
 
+describe('resolveDataUrl', () => {
+  it('returns source unchanged when baseUrl is empty', () => {
+    expect(resolveDataUrl('activities.json', '')).toBe('activities.json')
+  })
+
+  it('joins baseUrl with trailing slash', () => {
+    expect(resolveDataUrl('activities.json', 'https://data.example/workouts/')).toBe('https://data.example/workouts/activities.json')
+  })
+
+  it('joins baseUrl without trailing slash', () => {
+    expect(resolveDataUrl('activities.json', 'https://data.example/workouts')).toBe('https://data.example/workouts/activities.json')
+  })
+
+  it('leaves absolute source unchanged', () => {
+    expect(resolveDataUrl('https://other.example/tracks.json', 'https://data.example/workouts')).toBe('https://other.example/tracks.json')
+  })
+
+  it('leaves protocol-relative source unchanged', () => {
+    expect(resolveDataUrl('//cdn.example/tracks.json', 'https://data.example/workouts')).toBe('//cdn.example/tracks.json')
+  })
+})
+
 describe('fetchData', () => {
   afterEach(() => {
     vi.restoreAllMocks()
+    vi.unstubAllEnvs()
   })
 
   const activitiesJson = [{ run_id: 'a1', type: 'run', distance: 5000, moving_time: 1800 }]
@@ -103,5 +126,100 @@ describe('fetchData', () => {
 
     expect(result.activities).toHaveLength(1)
     expect(result.error).toBeUndefined()
+  })
+
+  it('prefixes sources with GIT_FIT_DATA_URL when set', async () => {
+    vi.stubEnv('GIT_FIT_DATA_URL', 'https://data.example/workouts')
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => [],
+    } as unknown as Response)
+
+    const config = {
+      activities: { source: 'activities.json', optional: false },
+      tracks: { source: 'tracks.json', optional: true },
+    }
+    await fetchData(config)
+
+    expect(vi.mocked(fetch)).toHaveBeenCalledWith('https://data.example/workouts/activities.json')
+  })
+
+  it('leaves absolute sources unchanged when GIT_FIT_DATA_URL is set', async () => {
+    vi.stubEnv('GIT_FIT_DATA_URL', 'https://data.example/workouts')
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => [],
+    } as unknown as Response)
+
+    const config = {
+      activities: { source: 'https://other.example/activities.json', optional: false },
+    }
+    await fetchData(config)
+
+    expect(vi.mocked(fetch)).toHaveBeenCalledWith('https://other.example/activities.json')
+  })
+
+  it('prefers the explicit baseUrl argument over GIT_FIT_DATA_URL', async () => {
+    vi.stubEnv('GIT_FIT_DATA_URL', 'https://env.example/data/')
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => [],
+    } as unknown as Response)
+
+    const config = {
+      activities: { source: 'activities.json', optional: false },
+      tracks: { source: 'tracks.json', optional: true },
+    }
+    await fetchData(config, 'https://data.example/workouts')
+
+    expect(vi.mocked(fetch)).toHaveBeenCalledWith('https://data.example/workouts/activities.json')
+    expect(vi.mocked(fetch)).not.toHaveBeenCalledWith('https://env.example/data/activities.json')
+  })
+})
+
+describe('probeDataUrl', () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('returns true when the first mandatory source loads', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => [],
+    } as unknown as Response)
+
+    const config = { activities: { source: 'activities.json', optional: false } }
+    await expect(probeDataUrl(config, 'https://data.example/workouts')).resolves.toBe(true)
+    expect(vi.mocked(fetch)).toHaveBeenCalledWith('https://data.example/workouts/activities.json')
+  })
+
+  it('returns false when the source responds 404', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 404,
+      json: async () => ({}),
+    } as unknown as Response)
+
+    const config = { activities: { source: 'activities.json', optional: false } }
+    await expect(probeDataUrl(config, 'https://data.example/workouts')).resolves.toBe(false)
+  })
+
+  it('returns false when the fetch throws', async () => {
+    globalThis.fetch = vi.fn().mockRejectedValue(new Error('Network down'))
+
+    const config = { activities: { source: 'activities.json', optional: false } }
+    await expect(probeDataUrl(config, 'https://data.example/workouts')).resolves.toBe(false)
+  })
+
+  it('returns false without fetching when no mandatory source exists', async () => {
+    globalThis.fetch = vi.fn()
+
+    const config = { stats: { source: 'stats.json', optional: true } }
+    await expect(probeDataUrl(config, 'https://data.example/workouts')).resolves.toBe(false)
+    expect(vi.mocked(fetch)).not.toHaveBeenCalled()
   })
 })

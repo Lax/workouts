@@ -9,7 +9,7 @@ export {
   detectLocation,
 } from './compute'
 export type { TracksMap } from './data'
-export { fetchData, fetchTracks } from './data'
+export { fetchData, fetchTracks, getDataBaseUrl, probeDataUrl, resolveDataUrl } from './data'
 export { default } from './plugin'
 export type { CityStat, DerivedData, FilterOptions, LocationSummary, PeriodStat, ProvinceStat, SortField, TypeStat } from './types'
 export type { ActivitiesResult } from './useActivities'

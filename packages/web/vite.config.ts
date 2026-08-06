@@ -25,6 +25,7 @@ function collectVersionsPlugin(): import('vite').Plugin {
 
 export default defineConfig({
   plugins: [collectVersionsPlugin(), react()],
+  envPrefix: ['VITE_', 'GIT_FIT_'],
   base: '',
   build: {
     outDir: 'dist',
