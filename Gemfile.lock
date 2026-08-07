@@ -46,7 +46,7 @@ GEM
       multipart-post (~> 2.0)
     faraday-net_http (3.4.4)
       net-http (~> 0.5)
-    git-fit (0.10.1)
+    git-fit (0.10.3)
       csv (~> 3.0)
       faraday (~> 2.0)
       http-cookie (~> 1.0)
@@ -185,7 +185,7 @@ GEM
     standard-performance (1.9.0)
       lint_roller (~> 1.1)
       rubocop-performance (~> 1.26.0)
-    stravaweb (0.0.1)
+    stravaweb (0.0.2)
       base64
       faraday (~> 2.0)
       faraday-cookie_jar (~> 0.0)
@@ -235,7 +235,7 @@ CHECKSUMS
   faraday-cookie_jar (0.0.8) sha256=0140605823f8cc63c7028fccee486aaed8e54835c360cffc1f7c8c07c4299dbb
   faraday-multipart (1.2.0) sha256=7d89a949693714176f612323ca13746a2ded204031a6ba528adee788694ef757
   faraday-net_http (3.4.4) sha256=0e78af151747ed1b00f33e25973b4bc220d7f16c00c39676817c8b12331eb588
-  git-fit (0.10.1) sha256=2c31885babc374fe70e66fb19deabd9038eec4b455bba0bdfa2927e5fe88592c
+  git-fit (0.10.3) sha256=4c36d198f1a3e8e2e5d75d65becfaa4382cb8b081403d40b3a49016abdfb86c0
   hashie (5.1.0) sha256=c266471896f323c446ea8207f8ffac985d2718df0a0ba98651a3057096ca3870
   http-cookie (1.1.6) sha256=ba4b82be64de61dc281243dac70e3c382c45142f20268ed9276a3670c93feaa9
   io-console (0.8.2) sha256=d6e3ae7a7cc7574f4b8893b4fca2162e57a825b223a177b7afa236c5ef9814cc
@@ -298,7 +298,7 @@ CHECKSUMS
   standard (1.56.0) sha256=ae2af4d9669589162ac69ed5ef59dcf9f346d4afc81f7e62b84339310dfcb787
   standard-custom (1.0.2) sha256=424adc84179a074f1a2a309bb9cf7cd6bfdb2b6541f20c6bf9436c0ba22a652b
   standard-performance (1.9.0) sha256=49483d31be448292951d80e5e67cdcb576c2502103c7b40aec6f1b6e9c88e3f2
-  stravaweb (0.0.1) sha256=49f6c48df678198e35e551c43e4a498c1b75a5b148fe421db6a335d412a7fa6d
+  stravaweb (0.0.2) sha256=44f430d104477719362e017325ba6bb7cf3904186c292bbc368bdb8489ef2729
   thor (1.5.0) sha256=e3a9e55fe857e44859ce104a84675ab6e8cd59c650a49106a05f55f136425e73
   timezone_finder (1.5.7) sha256=04f5ed185289b9dc38669fdfdb4ba039a05cfcab2f87b6c573b78736de2bd745
   tzinfo (2.0.6) sha256=8daf828cc77bcf7d63b0e3bdb6caa47e2272dcfaf4fbfe46f8c3a9df087a829b

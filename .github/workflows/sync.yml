@@ -94,6 +94,7 @@ jobs:
         env:
           GIT_FIT_STRAVA_WEB_AUTH_AUTH_SEED: ${{ secrets.SYNC_STRAVA_WEB_AUTH_SEED }}
           GIT_FIT_DATABASE_PATH: ${{ vars.GIT_FIT_DATABASE_PATH }}
+          GIT_FIT_SYSTEM_TIMEZONE: ${{ vars.GIT_FIT_SYSTEM_TIMEZONE || 'Asia/Shanghai' }}
         run: bundle exec git fit strava fetch --limit 10
 
       - id: data-save
