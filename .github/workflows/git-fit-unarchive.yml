@@ -58,7 +58,9 @@ jobs:
           # This is real readable content; subsequent workflow restores hit it via the -v0- prefix.
           # It must NOT collide with the sentinel exact key (-v0-sentinel) used by restore,
           # otherwise restore would exact-hit this snapshot and permanently shadow newer -v0-{run} caches (F1).
-          key: GitFit-data-${{ matrix.source }}-v0-snapshot
+          # run_number + run_id suffix keeps each unarchive a distinct cache entry (no key collision on repeat runs),
+          # mirroring the sync-save key format (data-store/cache/save).
+          key: GitFit-data-${{ matrix.source }}-v0-snapshot-${{ github.run_number }}-${{ github.run_id }}
 
   unarchive-db:
     if: ${{ inputs.source == 'db' || inputs.source == '' }}
@@ -93,4 +95,5 @@ jobs:
           # Recovery snapshot written by unarchive (git → cache).
           # Same sentinel/snapshot discipline as data above: real readable content under -v0- prefix,
           # never collide with the sentinel exact key used by db-store/cache/restore (F1).
-          key: GitFit-db-v0-snapshot
+          # run_number + run_id suffix mirrors the sync-save key format (db-store/cache/save).
+          key: GitFit-db-v0-snapshot-${{ github.run_number }}-${{ github.run_id }}
