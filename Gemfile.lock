@@ -46,7 +46,7 @@ GEM
       multipart-post (~> 2.0)
     faraday-net_http (3.4.4)
       net-http (~> 0.5)
-    git-fit (0.10.0)
+    git-fit (0.10.1)
       csv (~> 3.0)
       faraday (~> 2.0)
       http-cookie (~> 1.0)
@@ -235,7 +235,7 @@ CHECKSUMS
   faraday-cookie_jar (0.0.8) sha256=0140605823f8cc63c7028fccee486aaed8e54835c360cffc1f7c8c07c4299dbb
   faraday-multipart (1.2.0) sha256=7d89a949693714176f612323ca13746a2ded204031a6ba528adee788694ef757
   faraday-net_http (3.4.4) sha256=0e78af151747ed1b00f33e25973b4bc220d7f16c00c39676817c8b12331eb588
-  git-fit (0.10.0) sha256=6f903b4353599c946a44138277738191f5f937ea25959a9a32d9a3f33f69daf8
+  git-fit (0.10.1) sha256=2c31885babc374fe70e66fb19deabd9038eec4b455bba0bdfa2927e5fe88592c
   hashie (5.1.0) sha256=c266471896f323c446ea8207f8ffac985d2718df0a0ba98651a3057096ca3870
   http-cookie (1.1.6) sha256=ba4b82be64de61dc281243dac70e3c382c45142f20268ed9276a3670c93feaa9
   io-console (0.8.2) sha256=d6e3ae7a7cc7574f4b8893b4fca2162e57a825b223a177b7afa236c5ef9814cc
