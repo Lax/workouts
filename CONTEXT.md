@@ -5,8 +5,8 @@
 运动数据聚合 CLI 工具，多渠道同步 → SQLite 数据库 → JSON / CSV / SVG 导出。
 
 **仓库：** `github.com/Lax/workouts`（私有，付费计划）  
-**技术栈：** Ruby 3.4 (Thor, Sequel, SQLite3, Nokogiri, Faraday) + React 19 / TypeScript (npm workspaces, Vite, Leaflet, ECharts, zustand, Tailwind)  
-**部署：** Docker / GitHub Actions / GitHub Pages
+**技术栈：** Ruby 3.4 (Thor, Sequel, SQLite3, Nokogiri, Faraday)
+**部署：** Docker / GitHub Actions / GitHub Pages（数据制品：JSON + SVG + stats）
 
 ---
 
@@ -17,7 +17,7 @@
 | `sync [--source S] [--act TYPE]` | 同步所有配置源（`--source` 指定单一源，`--act` 按运动类型过滤） |
 | `dedup` | 全源重跑去重匹配（覆盖已有 duplicate_info） |
 | `auth <garmin\|garmin_cn>` | 交互式 Garmin SSO 登录 |
-| `export json [--output] [--tracks-output]` | 导出 JSON（`--tracks-output` 将 polyline 拆分到独立文件，用于前端延迟加载） |
+| `export json [--output] [--tracks-output]` | 导出 JSON（`--tracks-output` 将 polyline 拆分到独立文件 tracks.json，供 Lax/running 前端延迟加载） |
 | `export csv [--output]` | 导出 CSV |
 | `export svg --style <style>` | 生成 SVG 海报（5 种风格）。参考：[flopp/GpxTrackPoster](https://github.com/flopp/GpxTrackPoster) |
 | `export stats [--output]` | 导出统计摘要 |
@@ -482,23 +482,22 @@ sync job (runs-on: ${{ vars.RUNNER_LABEL || 'ubuntu-latest' }}):
   13. 数据/DB 变更时触发 sync-scheduler.yml (commit=true)
   14. Write DB summary / upload DB artifact
   15. 数据/DB 变更时触发 gh-pages deploy
+```
 
-build job (needs: sync):
-  1. checkout + setup Ruby + setup Node
-  2. download DB artifact
-  3. create site/ dir
-   4. export json → site/activities.json + tracks.json
-  5. export svg → site/svg/github.svg
-  6. validate SVG
-  7. export stats → site/stats.json
-   8. Vite build (npm run build)
-   9. copy dist → site/ (assets/ + *.html)
-  10. upload build artifact
+### gh-pages.yml
 
-deploy job (needs: build):
-  1. download build artifact
-  2. upload-pages-artifact from ./build
-  3. deploy-pages@v4
+```
+deploy-pages job (runs-on: ${{ vars.RUNNER_LABEL || 'ubuntu-latest' }}):
+  1. checkout (WORKOUTS_SYNC_PAT)
+  2. setup Ruby + bundle
+  3. restore DB cache (db-store/cache/restore@v1)
+  4. Download fresh DB artifact (可选, artifact-run-id)
+  5. export json → site/activities.json + tracks.json
+  6. export svg → site/svg/github.svg
+  7. validate SVG
+  8. export stats → site/stats.json
+  9. upload-pages-artifact from ./site
+  10. deploy-pages@v4
 ```
 
 ### sync-scheduler.yml
@@ -554,12 +553,14 @@ docker compose run --rm workouts export json
 
 ### GitHub Pages
 
+前端代码已迁移至 [Lax/running](https://github.com/Lax/running)，本仓库 Pages 仅部署数据制品供其消费。
+
 | 项 | 值 |
 |---|---|
 | Pages 源 | GitHub Actions |
 | 自定义域名 | liulantao.com |
 | URL | `https://liulantao.com/workouts/` |
-| 部署目录 | 仅 JSON + SVG，排除 DB |
+| 部署目录 | JSON + SVG + stats，排除 DB |
 
 ---
 
@@ -570,140 +571,6 @@ docker compose run --rm workouts export json
 L1 raw → L2 标准化 GPS → L3 SQLite 摘要 → L4 构建制品 → L5 部署。
 转换规则: 坐标归一化、时间归一化、不丢字段。
 每个新源必须实现 L1+L2+L3。
-
----
-
-## 前端架构
-
-### monorepo 结构
-
-```
-packages/
-  shared/             # TypeScript：Activity 类型、格式化、SportMapper、categoryColor（不变）
-  core/               # React 19 核心：PluginAPI, ComponentRegistry, ThemeContext, ErrorBoundary, bootstrap()
-  plugin-data-source/ # 数据层：useActivities（fetch+归一化）, useDerivedData, data.ts（内部 fetch+normalize）
-  plugin-map/         # Leaflet 地图组件（MapView），polyline 解码
-  plugin-chart/       # ECharts 包装（Chart），月距离/类型饼图预设
-  plugin-ui/          # 通用 UI：Card, Badge
-  theme-hello-world/  # 无数据依赖验证主题
-  theme-simple/       # 地图 + 底部列表
-  theme-overview/     # 完整仪表盘（地图/抽屉/详情/图表）
-  web/                # Vite 入口 — 主力前端
-    scripts/
-       template.html        # HTML 模板（FOUC 脚本 + `<link rel="preload">` 预加载 activities.json/stats.json）
-      generate-entries.mjs # 根据 config.json 生成多页 HTML + entry shim
-      generate-fixtures.mjs
-      generate-real-fixtures.mjs
-    config.json            # 入口 + 插件 + 数据源配置
-    src/
-      app.css              # CSS 变量（light/dark 双主题）
-      entries/
-        index.tsx           # overview 主题入口 shim
-        hello.tsx           # hello-world 主题入口 shim
-      json.d.ts             # JSON 模块类型声明
-     public/                 # 静态文件：activities.json, tracks.json, stats.json
-    tests/
-      compute.test.ts       # plugin-data-source 纯函数测试
-      registry.test.ts      # core registry 测试
-      store.test.ts         # theme-overview zustand store 测试
-      formatters.test.ts    # shared 格式化测试
-      colorMode.test.ts     # speedColor/typeColor 测试
-      polyline.test.ts      # decodePolyline 测试
-      fixtures/activities.ts# 测试夹具生成器
-      e2e/spa.spec.ts       # Playwright E2E
-```
-
-### 数据流
-
-```
-Ruby export (JSON) → packages/web/public/ (dev)
-                    → site/ (prod via gh-pages.yml)
-                              ↓
-                    bootstrap(config, { theme })
-                              注册插件 + 渲染骨架
-                              ↓
-                    theme.Layout → useActivities() (@workouts/plugin-data-source)
-                              ↓
-           ┌──────────────────┴──────────────────┐
-           ↓                                      ↓
-   Phase 1 (eager):                         Phase 2 (lazy):
-   fetchData(activities.json + stats.json)  fetchTracks(tracks.json)
-   → 列表 + 统计立即渲染                      → polyline 注入 map 渲染
-                              ↓
-                    { activities, tracks, stats } → 组件层
-                              ↓
-                    组件：MapView / Drawer / ChartOverlay / DetailPanel
-
-                    [远期目标] 数据流通过 HookSystem (beforeDataLoad / afterDataLoad) 编排
-```
-
-activities.json 不含 `summary_polyline`（约 80KB / 1000 活动），tracks.json 包含 `{ run_id: polyline }` 映射（约 2-4MB），前端两阶段加载：摘要优先 → 轨迹渐进。
-
-HTML `<link rel="preload">` 预加载 activities.json/stats.json，消除 JS 初始化 → fetch 串行延迟。`fetchData` 内部使用 `Promise.all` 并行获取多个数据源。`useActivities` hook 返回 `{ activities, tracks, tracksLoading, loading, error }`，Layout 层在 `useEffect` 中合并 `tracks → activities` 后同步到 store。
-
-### 字段名约定
-
-| 前端优先字段 | Ruby 导出字段 | 说明 |
-|---|---|---|
-| `sport_category` | `type` | App 层归一化：`a.type && !a.sport_category` → copy |
-| `summary_polyline` | `summary_polyline` | 两阶段加载：activities.json 中为 null，tracks.json 中按 run_id 索引 |
-| `sport_type` | `sport_type` | JSON 导出旧版本写 `subtype`，前端无消费 |
-
-### 层级 (z-index)
-
-| z-index | 元素 |
-|---|---|
-| 0 | Map container |
-| 1 | Map overlays (brand, year picker, legend, theme) |
-| 2 | Drawer |
-| 3 | Detail panel |
-| 4 | Chart overlay |
-
-### 响应式断点
-
-| 断点 | 行为 |
-|---|---|
-| ≥1024px | Drawer 右侧浮动面板，handle 隐藏，collapsed 48px 统计条 |
-| <1024px | Drawer 底部上滑，handle 16px 横条 + collapsed 34px 统计区 |
-| ≤640px | Drawer body 55vh |
-
-### 按钮图标语义
-
-| 按钮类型 | 图标含义 | 示例 |
-|---|---|---|
-| 单按钮开关（地图灯光） | 表示当前状态 | 关灯→无射线灯泡（无标签底图），开灯→有射线灯泡（有标签底图） |
-| 单按钮开关（主题） | 表示当前状态 | 亮色模式→显示带光线的灯泡，暗色模式→显示无光线灯泡 |
-| 多按钮开关组 | 表示目标状态 | 点击"暗色"按钮前预先显示暗色预览图标 |
-
-### 测试分层
-
-| 层 | 工具 | 内容 |
-|---|---|---|
-| L0 Unit | vitest | 纯函数：computeYears, computeFilteredActivities, registry, store |
-| L1 E2E | Playwright | 加载、主题切换、列表、抽屉、详情面板 |
-
-### CI/CD
-
-- **ci.yml**: push/PR → rspec + frontend test job (Biome → vitest → build → playwright)
-- **sync.yml**: schedule → sync data → build + deploy (Ruby 全程)
-- **gh-pages.yml**: CI completed (workflow_run) 或 sync workflow_dispatch → cache DB → export → build → deploy Pages
-
-### CI 等待
-
-用 `gh-run-watch` 替代手动 `sleep` + `gh run list` 轮询：
-
-```bash
-git push && gh run-watch --compact --exit-status
-```
-
-**安装：**
-
-```bash
-cp scripts/gh-run-watch ~/.local/share/gh/extensions/gh-run-watch/
-chmod +x ~/.local/share/gh/extensions/gh-run-watch/gh-run-watch
-```
-
-**算法：** 取最近 50 次成功 CI 的耗时中位数作为预测值，首次 sleep `预测+15s`，之后委托 `gh run watch` 实时尾日志（3s 轮询 + 指数退避）。`DEBUG_CI_WAIT=1` 可查看预测明细。
 
 ## 文档架构
 

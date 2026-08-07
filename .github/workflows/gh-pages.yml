@@ -36,14 +36,6 @@ jobs:
           ruby-version: '3.4'
           bundler-cache: true
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          cache: npm
-
-      - name: Install npm dependencies
-        run: npm ci
-
       - uses: git-fit-actions/db-store/cache/restore@v1
         with:
           database-path: data/db/workouts.db
@@ -83,27 +75,6 @@ jobs:
 
       - name: Export Stats
         run: bundle exec exe/workouts export stats --output site/stats.json
-
-      - name: Build frontend
-        run: npm run build
-        env:
-          VITE__MAPBOX__TOKEN: ${{ secrets.MAPBOX_TOKEN }}
-          VITE__MAPTILER__TOKEN: ${{ secrets.MAPTILER_TOKEN }}
-          VITE_GITHUB_USER: ${{ github.repository_owner }}
-
-      - name: Copy frontend build to site/
-        run: |
-          cp -r packages/web/dist/assets site/
-          cp packages/web/dist/*.html site/
-          cp packages/web/dist/versions.json site/
-
-      - name: Validate build
-        run: |
-          for entry in $(ruby -rjson -e 'JSON.parse(File.read("packages/web/config.json")).fetch("entries", {"index"=>""}).each_key { |k| puts k }'); do
-            test -f "site/$entry.html" || { echo "::error::Missing $entry.html"; exit 1; }
-          done
-          test -f site/versions.json || { echo "::error::Missing versions.json"; exit 1; }
-          echo "OK: frontend build present"
 
       - uses: actions/upload-pages-artifact@v3
         with:
