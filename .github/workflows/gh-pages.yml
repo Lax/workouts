@@ -15,6 +15,8 @@ jobs:
   deploy-pages:
     if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ${{ vars.RUNNER_LABEL || 'ubuntu-latest' }}
+    env:
+      GIT_FIT_DATABASE_PATH: ${{ vars.GIT_FIT_DATABASE_PATH || 'data/db/workouts.db' }}
     permissions:
       actions: read
       pages: write
@@ -74,7 +76,7 @@ jobs:
           '
 
       - name: Export Stats
-        run: bundle exec exe/workouts export stats --output site/stats.json
+        run: bundle exec git fit export stats --output site/stats.json
 
       - uses: actions/upload-pages-artifact@v3
         with:
