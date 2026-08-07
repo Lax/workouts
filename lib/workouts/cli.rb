@@ -7,7 +7,6 @@ module Workouts
   require_relative "cli/sync"
   require_relative "cli/import"
   require_relative "cli/import_cli"
-  require_relative "cli/strava"
 
   class CLI < Thor
     package_name "Workouts"
@@ -72,9 +71,6 @@ module Workouts
 
     desc "import SUBCOMMAND", "Import workout data from local files"
     subcommand "import", ImportCLI
-
-    desc "strava SUBCOMMAND", "Strava web operations"
-    subcommand "strava", StravaCLI
 
     desc "init", "Generate default config.yml"
     def init

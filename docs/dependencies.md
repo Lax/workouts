@@ -8,9 +8,8 @@ Ruby 运行时、Node workspace 依赖引用一览。新增/改依赖时先查�
 
 | 文件 | 作用 |
 |---|---|
-| `Gemfile` | 入口，加载 gemspec + 外部 gem（git-fit, stravaweblib） + dev group |
+| `Gemfile` | 入口，加载 gemspec + 外部 gem（git-fit） + dev group |
 | `workouts-cli.gemspec` | CLI 运行时依赖（ Bundler 安装此表） |
-| `ruby/stravaweblib/stravaweblib.gemspec` | 子 gem 运行时依赖 |
 
 ### 运行时（workouts-cli.gemspec）
 
@@ -34,13 +33,6 @@ Ruby 运行时、Node workspace 依赖引用一览。新增/改依赖时先查�
 | timezone_finder | `~> 1.5` | timezone/resolver.rb |
 | tzinfo | `~> 2.0` | sync/keep/xoss/xingzhe/garmin_base/import |
 
-### 子 gem（stravaweblib）
-
-| 依赖 | 使用位置 |
-|---|---|
-| faraday | client.rb |
-| faraday-cookie_jar | client.rb |
-
 ### Dev group（Gemfile）
 
 | 依赖 | 用途 |
@@ -52,9 +44,9 @@ Ruby 运行时、Node workspace 依赖引用一览。新增/改依赖时先查�
 
 ### 约定
 
-- 运行时依赖全在 gemspec，Gemfile 只加 `gemspec` + 外部 path gem。
+- 运行时依赖全在 gemspec，Gemfile 只加 `gemspec` + 外部 gem（git-fit）。
 - Gemfile dev group **不再重复** gemspec 已有的 runtime gem（mini_racer、webrick 等）。
-- 子 gem 自行声明依赖，主 gemspec 不再重复声明（faraday-cookie_jar 等）。
+- Strava 网页抓取客户端已独立为 `stravaweblib` gem（Lax/stravaweblib），由 git-fit 依赖。
 - default gem（securerandom, date, time, json, zlib, openssl, ostruct, base64, csv）无需额外声明。
 
 ## Node

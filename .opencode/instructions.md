@@ -66,7 +66,7 @@ For changes needed in external repos:
 4. Do NOT create Pull Requests
 
 Changes to this project's own files (`lib/`, `spec/`, `config/`,
-`.github/workflows/`, `docs/`, `ruby/stravaweblib/`) are unaffected.
+`.github/workflows/`, `docs/`) are unaffected.
 
 ## Ambiguity Rule
 

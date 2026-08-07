@@ -31,7 +31,6 @@
 | `import --source apple_health` | 从 Apple Health export.xml 导入运动数据 |
 | `init` | 生成默认 config.yml |
 | `version` | 版本号 |
-| `strava fetch [ID...] [--limit N] [--format F]` | 从 Strava 网站下载原始活动文件（FIT/GPX/TCX），通过 strava_remember_token JWT 认证。无 ID 时自动从 DB 读取 Strava 活动列表。参见 `docs/strava-web-auth.md` |
 
 ---
 
@@ -46,8 +45,6 @@ lib/workouts/cli/db.rb           # 数据库子命令
 lib/workouts/cli/migrate.rb      # 迁移子命令
 lib/workouts/cli/geo.rb          # 地理子命令
 lib/workouts/cli/serve.rb        # 上传服务子命令
-lib/workouts/cli/strava.rb       # Strava 网页操作子命令（fetch 原始文件下载）
-ruby/stravaweblib/               # 子 gem：Strava 网页抓取客户端
 lib/workouts/import/
   apple_health.rb                # Apple Health XML 导入适配器
   local_file.rb                  # 本地 GPX/FIT/TCX 文件导入适配器
@@ -140,7 +137,7 @@ data/import/{gpx,fit,tcx}/ → Import::LocalFile → data/raw/{source}/ (L1)
 | **XingZhe** | imxingzhe.com (行者) | RSA 加密密码 + session Cookie | 行者国内版 |
 | **Garmin CN** | garmin.cn | SSO + OAuth1→OAuth2（不受 CF 影响）| token 文件持久化 + OAuth1 自动 refresh，GH Cache |
 | **Garmin Intl** | garmin.com | DI OAuth2（Playwright primary — session cookies 365d, curl_cffi fallback）| Playwright session cookies 365d, token GH Cache，MFA 首次后零交互 |
-| **Strava** | strava.com | OAuth2 refresh_token | 已配置，含多源去重检测。`workouts strava fetch` 通过 strava_remember_token JWT 下载原始文件（FIT/GPX/TCX），详见 `docs/strava-web-auth.md` |
+| **Strava** | strava.com | OAuth2 refresh_token | 已配置，含多源去重检测。原始文件（FIT/GPX/TCX）下载已迁移至 git-fit：`git fit strava fetch`（stravaweblib gem） |
 
 ### 数据源标识
 
@@ -474,7 +471,7 @@ sync job (runs-on: ${{ vars.RUNNER_LABEL || 'ubuntu-latest' }}):
   5. Import Apple Health (git-configured: 'true', GITHUB_TOKEN push)
   6. restore per-source caches (data-store/cache/restore@v2)
   7. workouts sync (受 SYNC__TIME_BUDGET 限制)
-  8. Fetch Strava original files (strava fetch, continue-on-error)
+  8. Fetch Strava original files (git fit strava fetch, continue-on-error)
   9. save per-source caches (data-store/cache/save@v2)
   10. Parse Geo Regions (detect-limit 200)
   11. [db] Checkpoint SQLite WAL

@@ -92,8 +92,9 @@ jobs:
         timeout-minutes: 10
         shell: bash
         env:
-          SYNC__STRAVA__WEB_AUTH__AUTH_SEED: ${{ secrets.SYNC_STRAVA_WEB_AUTH_SEED }}
-        run: bundle exec workouts strava fetch --db ${{ vars.GIT_FIT_DATABASE_PATH }} --limit 10
+          GIT_FIT_STRAVA_WEB_AUTH_AUTH_SEED: ${{ secrets.SYNC_STRAVA_WEB_AUTH_SEED }}
+          GIT_FIT_DATABASE_PATH: ${{ vars.GIT_FIT_DATABASE_PATH }}
+        run: bundle exec git fit strava fetch --limit 10
 
       - id: data-save
         uses: git-fit-actions/data-store/cache/save@v2
