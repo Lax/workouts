@@ -387,7 +387,7 @@ SYNC__WORKERS           → sync.workers               # 并行 worker 数，默
 
 | 变量 | 作用 | 切换命令 |
 |---|---|---|
-| `vars.RUNNER_LABEL` | 控制 sync job 的 `runs-on`。默认 `ubuntu-latest`；设 `self-hosted` 切本地 runner，setup 步骤自动跳过 | `gh variable set RUNNER_LABEL --body self-hosted` |
+| `vars.RUNNER_LABEL` | 控制 job 的 `runs-on`。默认 `ubuntu-latest`；设 `self-hosted` 切本地 runner（docker compose 模式） | `gh variable set RUNNER_LABEL --body self-hosted` |
 
 ### GitHub Secrets 命名
 
@@ -451,7 +451,7 @@ f > 2N+1 → N = min(7, N+1)    → 减速
 |---|---|
 | schedule `*/N` (自适应) | 同步 + 缓存 + 数据变更时触发 sync-scheduler / gh-pages |
 | workflow_dispatch | 手动触发同步，不改 cron |
-| `vars.RUNNER_LABEL` | 控制 runner 类型。默认 `ubuntu-latest`；设 `self-hosted` 切本地 |
+| `vars.RUNNER_LABEL` | 控制 runner 类型。默认 `ubuntu-latest`；设 `self-hosted` 切本地（docker compose 模式） |
 
 ### sync-scheduler.yml
 
@@ -468,7 +468,7 @@ sync-scheduler 是唯一写 `.github/workflows/*.yml` 的工作流，因此唯�
 ```
 sync job (runs-on: ${{ vars.RUNNER_LABEL || 'ubuntu-latest' }}):
   1. checkout (默认 GITHUB_TOKEN)
-  2. setup Ruby + bundle (if: vars.RUNNER_LABEL != 'self-hosted')
+  2. setup Ruby + bundle
   3. restore DB cache (db-store/cache/restore@v1)
   4. restore DB from archive branch (GitFit/db, cache miss 回退)
   5. Import Apple Health (git-configured: 'true', GITHUB_TOKEN push)
@@ -506,7 +506,7 @@ deploy job (needs: build):
 ```
 manage job (runs-on: ${{ vars.RUNNER_LABEL || 'ubuntu-latest' }}):
   1. checkout (persist-credentials: false)
-  2. setup Ruby + bundle (if: vars.RUNNER_LABEL != 'self-hosted')
+  2. setup Ruby + bundle
   3. restore DB cache (db-store/cache/restore@v1)
   4. Read current cron interval N (grep sync.yml)
   5. Compute new interval (Sequel → f → adjust N)
