@@ -471,7 +471,7 @@ docker compose run --rm workouts sync
 docker compose run --rm workouts export json
 ```
 
-凭据通过环境变量传入（参见 `docker-compose.yml`），数据挂载 `./data:/app/data`。
+凭据通过环境变量传入（`GIT_FIT_*` 前缀，参见 `docker-compose.yml`），数据挂载 `./data:/app/data`。容器入口为 `git fit`（git-fit gem）。
 </details>
 
 ---
