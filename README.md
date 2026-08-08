@@ -288,7 +288,7 @@ gh secret set SYNC_GARMIN_AUTH_SEED \
 
 本地 sync 会旋转 refresh_token 导致 GitHub Actions 的 token 失效。
 
-**自动部署用户不受影响**——只要不在本地跑 `sync --source garmin`，GitHub Actions 每天自动 sync 自行续期 token。
+**自动部署用户不受影响**——只要不在本地跑 `git fit sync --source garmin`，GitHub Actions 每天自动 sync 自行续期 token。
 
 如果本地和 GitHub Actions 同时使用同一账号，每次本地 sync 后必须紧接：
 
@@ -387,10 +387,9 @@ git fit import --source gpx,fit,tcx  # 三种格式一次导入
 # GPX 无内嵌运动类型，用 --sport 指定
 git fit import --source gpx --sport run
 
-# 单文件解析（调试用，支持 GPX/TCX/FIT）
-exe/workouts parse activity.gpx --save
-exe/workouts parse activity.tcx --save
-exe/workouts parse activity.fit --save
+# 单文件解析（调试用，委托 git fit parse，仅支持 GPX/TCX）
+git fit parse activity.gpx --save
+git fit parse activity.tcx --save
 ```
 
 默认读取目录：`data/import/gpx/` · `data/import/fit/` · `data/import/tcx/`
@@ -452,10 +451,10 @@ exe/workouts parse activity.fit --save
 | `git fit export csv` | 导出 CSV |
 | `git fit export stats` | 导出统计摘要 |
 | `git fit dedup` | 全源去重匹配 |
-| `auth garmin_cn` | 交互式登录 |
-| `init` | 生成默认配置 |
-| `parse activity.gpx --save` | 解析本地 GPX/TCX/FIT 并写入 DB |
-| `version` | 查看版本 |
+| `exe/workouts auth garmin_cn` | 交互式登录（本地） |
+| `exe/workouts init` | 生成默认配置（委托 git fit） |
+| `exe/workouts parse activity.gpx --save` | 解析本地 GPX/TCX 并写入 DB（委托 git fit） |
+| `exe/workouts version` | 查看版本（本地） |
 </details>
 
 ---

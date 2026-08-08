@@ -70,11 +70,7 @@ module Workouts
         return nil if config.empty?
 
         klass = case source
-        when "strava" then Workouts::Sync::Strava
-        when "garmin" then Workouts::Sync::Garmin
         when "garmin_cn" then Workouts::Sync::GarminCN
-        when "keep" then Workouts::Sync::Keep
-        when "igpsport" then Workouts::Sync::IGPSPORT
         when "xoss" then Workouts::Sync::XOSS
         when "xingzhe" then Workouts::Sync::XingZhe
         else

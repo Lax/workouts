@@ -1,6 +1,4 @@
 module Workouts
-  require_relative "cli/db"
-  require_relative "cli/geo"
   require_relative "cli/sync"
 
   class CLI < Thor
@@ -28,6 +26,43 @@ module Workouts
       say_status :error, e.message, :red
     end
 
+    desc "db SUBCOMMAND", "Database operations (delegated to git fit)"
+    def db(*args)
+      gitfit_args = ["db", *args]
+      gitfit_args.insert(1, "-c", options[:config]) if options[:config]
+      GitFit::CLI.start(gitfit_args)
+    end
+
+    desc "geo SUBCOMMAND", "Detect geographical regions (delegated to git fit)"
+    def geo(*args)
+      gitfit_args = ["geo", *args]
+      gitfit_args.insert(1, "-c", options[:config]) if options[:config]
+      GitFit::CLI.start(gitfit_args)
+    end
+
+    desc "init", "Generate default config.yml (delegated to git fit)"
+    option :output, type: :string, desc: "Output path", aliases: "-o"
+    def init
+      gitfit_args = ["init"]
+      gitfit_args += ["-c", options[:config]] if options[:config]
+      gitfit_args += ["-o", options[:output]] if options[:output]
+      GitFit::CLI.start(gitfit_args)
+    end
+
+    desc "parse FILE", "Parse a GPX or TCX file (delegated to git fit)"
+    option :save, type: :boolean, desc: "Save parsed activities to database", aliases: "-s"
+    def parse(file)
+      gitfit_args = ["parse", file]
+      gitfit_args.insert(1, "-c", options[:config]) if options[:config]
+      gitfit_args << "-s" if options[:save]
+      GitFit::CLI.start(gitfit_args)
+    end
+
+    desc "version", "Show version"
+    def version
+      puts "Workouts v#{Workouts::VERSION}"
+    end
+
     no_commands do
       def workouts_config
         @workouts_config ||= begin
@@ -40,65 +75,6 @@ module Workouts
       def db_path
         (respond_to?(:options) ? options[:db] : nil) || workouts_config.db_path
       end
-    end
-
-    desc "db SUBCOMMAND", "Database operations"
-    subcommand "db", DbCLI
-
-    desc "geo SUBCOMMAND", "Detect geographical administrative regions"
-    subcommand "geo", GeoCLI
-
-    desc "init", "Generate default config.yml"
-    def init
-      path = options[:output] || "config/config.yml"
-      File.write(path, ConfigTemplate.generate)
-      say_status :created, path, :green
-    end
-
-    desc "parse FILE", "Parse a GPX or TCX file and optionally save to DB"
-    option :save, type: :boolean, desc: "Save parsed activities to database", aliases: "-s"
-    option :dry, type: :boolean, default: true, desc: "Print parsed data without saving"
-    def parse(file)
-      content = File.read(file)
-      format = file.match?(/\.gpx$/i) ? :gpx : :tcx
-      parser = (format == :gpx) ? Parser::GPX.new(source: "file") : Parser::TCX.new(source: "file")
-      activities = parser.call(content)
-
-      if activities.empty?
-        say_status :warn, "No activities found in #{file}", :yellow
-        return
-      end
-
-      activities.each do |act|
-        say_status :activity, act[:name] || "unnamed", :green
-        say "  Sport: #{act[:sport_category]}#{" (#{act[:sport_type]})" if act[:sport_type]}"
-        say "  Date:  #{act[:start_date]}"
-        say "  Dist:  #{act[:distance]&.round(2)}m" if act[:distance]
-        say "  Time:  #{act[:moving_time]}s" if act[:moving_time]
-        say "  HR:    #{act[:average_heartrate]}" if act[:average_heartrate]
-        say "  Elev:  #{act[:elevation_gain]}m" if act[:elevation_gain]
-      end
-
-      if options[:save]
-        db = connect_db
-        now = Time.now.utc
-        activities.each do |act|
-          existing = db[:activities].where(run_id: act[:run_id]).first
-          if existing
-            db[:activities].where(run_id: act[:run_id]).update(act.merge(updated_at: now))
-          else
-            db[:activities].insert(act.merge(created_at: now, updated_at: now))
-          end
-        end
-        say_status :done, "Saved #{activities.size} activities to database", :green
-      end
-    rescue => e
-      say_status :error, "Parse failed: #{e.message}", :red
-    end
-
-    desc "version", "Show version"
-    def version
-      puts "Workouts v#{Workouts::VERSION}"
     end
 
     private

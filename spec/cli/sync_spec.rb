@@ -3,6 +3,14 @@ RSpec.describe Workouts::CLI do
     expect(described_class.commands).to include("auth")
   end
 
+  it "registers db command" do
+    expect(described_class.commands).to include("db")
+  end
+
+  it "registers geo command" do
+    expect(described_class.commands).to include("geo")
+  end
+
   it "registers init command" do
     expect(described_class.commands).to include("init")
   end

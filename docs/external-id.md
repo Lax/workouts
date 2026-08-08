@@ -1,5 +1,7 @@
 # External ID — Cross-Source Exact Matching
 
+> **已迁移至 git-fit gem。** 文中 `lib/workouts/import/apple_health.rb`、`lib/workouts/sync/strava.rb`、`lib/workouts/dedup/*` 为迁移前的本地路径（现已删除），dedup / import / strava 逻辑位于 git-fit。以下保留设计记录。
+
 ## Motivation
 
 Cross-source duplicate detection currently relies entirely on heuristic matching (time + distance + duration + sport_category comparison). This is expensive, imprecise, and cannot achieve confidence=1.0. An exact match via a shared external identifier would make dedup deterministic for certain source pairs.

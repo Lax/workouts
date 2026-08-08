@@ -142,7 +142,7 @@ activities (
 
 ### 导出 JSON 结构
 
-见 `lib/workouts/export/json.rb` — `format_activity` 输出 21 字段。
+见 `lib/workouts/export/json.rb`（已迁移至 git-fit `Export::JSON`）— `format_activity` 输出 21 字段。
 Svelte `Activity` 接口定义于 `packages/shared/src/index.ts`。
 
 ### 适配器接口

@@ -1,10 +1,12 @@
 # XOSS — Implementation Notes
 
+> **已迁移至 git-fit gem（`git fit sync --source xoss`）。** 本地薄壳仅保留 XOSS 适配器用于交互式 auth。以下为迁移前的实现历史记录，`lib/workouts/sync/xoss.rb` 等路径指向已删除的本地文件。
+
 ## Commands
 
 ```
-workouts sync --source xoss              # Sync all XOSS activities
-workouts sync --source xoss --act ride   # Sync only ride activities
+git fit sync --source xoss              # Sync all XOSS activities
+git fit sync --source xoss --act ride   # Sync only ride activities
 ```
 
 ## Files

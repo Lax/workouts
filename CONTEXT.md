@@ -18,11 +18,11 @@
 | `git fit dedup` | 全源重跑去重匹配（覆盖已有 duplicate_info）— 已迁移至 git-fit gem，本地 `exe/workouts dedup` 已移除 |
 | `git fit import [--source S] [--sport S]` | 从本地目录批量导入 GPX/FIT/TCX/Apple Health — 已迁移至 git-fit gem，本地 `exe/workouts import` 已移除 |
 | `git fit export [json\|csv\|stats\|gpx]` | 导出 JSON/CSV/统计/GPX — 已迁移至 git-fit gem，本地 `exe/workouts export` 已移除 |
-| `auth <garmin\|garmin_cn>` | 交互式 Garmin SSO 登录 |
-| `db migrate` | 运行数据库迁移（本地 DbCLI） |
-| `geo detect` | 检测活动的地理行政区域（本地 GeoCLI） |
-| `parse <file.gpx\|file.tcx> [--save]` | 解析本地 GPX/TCX 文件，可选写入 DB |
-| `init` | 生成默认 config.yml |
+| `auth <garmin\|garmin_cn\|xoss\|xingzhe\|strava>` | 交互式 auth（garmin 打印脚本指引；garmin_cn/xoss/xingzhe 用本地适配器 SSO；strava WEBrick OAuth2）|
+| `db SUBCOMMAND` | 数据库操作 — **委托 git fit db** |
+| `geo SUBCOMMAND` | 地理行政区域检测 — **委托 git fit geo** |
+| `parse <file.gpx\|file.tcx> [--save]` | 解析 GPX/TCX — **委托 git fit parse** |
+| `init` | 生成默认 config.yml — **委托 git fit init** |
 | `version` | 版本号 |
 
 ---
@@ -30,33 +30,42 @@
 ## CLI 文件结构
 
 ```
-lib/workouts/cli.rb              # 主 CLI（Workouts::CLI），加载子模块
-lib/workouts/cli/sync.rb         # 同步子模块（auth）
-lib/workouts/cli/db.rb           # 数据库子命令
-lib/workouts/cli/geo.rb          # 地理子命令
-lib/workouts/parser/
-  base.rb                        # 解析器基类（haversine、polyline、sport 归一化 → SportMapper）
-  gpx.rb                         # GPX 解析器（Nokogiri）
-  tcx.rb                         # TCX 解析器（Nokogiri）
-  fit.rb                         # FIT 解析器（mini_racer + @garmin/fitsdk）
+lib/workouts/cli.rb              # 主 CLI（Workouts::CLI），auth 本地 + db/geo/init/parse 委托 git fit
+lib/workouts/cli/sync.rb         # auth 子模块（garmin 脚本指引 / garmin_cn/xoss/xingzhe SSO）
+lib/workouts/sync/
+  base.rb                        # 适配器基类（仅用于交互式 auth）
+  garmin_base.rb                 # GarminBase（SSO + token 管理）
+  garmin_cn.rb                   # GarminCN
+  xoss.rb                        # XOSS
+  xingzhe.rb                     # XingZhe
+  tally.rb                       # 中文计数
+lib/workouts/fit/
+  decoder.rb + decoder.js        # FIT 解码器（mini_racer + @garmin/fitsdk）
+lib/workouts/auth/
+  strava.rb                      # Strava WEBrick OAuth2
+lib/workouts/db/
+  connection.rb                  # Sequel 连接 + 迁移
+  rebuild.rb                     # 迁移失败重建
+lib/workouts/config.rb           # 配置
 ```
 
 ---
 
 ## 架构
 
-本地 CLI 是薄壳，核心逻辑（sync / import / export / dedup）已迁移至 git-fit gem：
+本地 CLI 是薄壳：`auth` 命令本地实现（交互式 SSO），`db / geo / parse / init` 委托 git-fit gem，核心逻辑（sync / import / export / dedup）已迁移：
 
 ```
 ┌─────────────────────────────────────────────────────────┐
 │  git fit (git-fit gem)                                  │
-│  sync / import / export / dedup / strava / gh / install │
+│  sync / import / export / dedup / db / geo / parse      │
+│  init / strava / gh / install / auth                    │
 └────────────────────────┬────────────────────────────────┘
-                         │
+                         │  委托（Thor 方式）
 ┌────────────────────────▼────────────────────────────────┐
 │  本地 exe/workouts (薄壳)                                │
-│  auth / db / geo / parse / init / version               │
-│  Sync 适配器 (Strava/Garmin/Keep/...) 仅用于交互式 auth   │
+│  auth（本地） / db / geo / init / parse / version        │
+│  Sync 适配器 (GarminCN/XOSS/XingZhe) 仅用于交互式 auth   │
 └────────────────────────┬────────────────────────────────┘
                          │
                 ┌────────▼─────────┐
@@ -80,8 +89,8 @@ lib/workouts/parser/
 | Keep 用摘要数据 | Keep API 不提供 FIT，iGPSPORT 使用 mini_racer + @garmin/fitsdk 解析 FIT |
 | `data/raw/{source}/` 平面目录 | 与 running_page `GPX_OUT/` 兼容，symlink 级桥接 |
 | Keep raw 存 decrypt JSON | 保留原始 HR 序列和相对时间戳，polyline 生成可重跑 |
-| 统一列表：new_ids + missing_raw | 一次 API 调用完成 summary + raw，省 50% API 开销 |
-| 时间预算在循环顶部 break | 避免写了 summary 但没写 raw 的不一致状态 |
+| 统一列表：new_ids + missing_raw | 一次 API 调用完成 summary + raw，省 50% API 开销。**（已迁移至 git-fit）** |
+| 时间预算在循环顶部 break | 避免写了 summary 但没写 raw 的不一致状态。**（已迁移至 git-fit）** |
 | 多源并行使用队列调度 | Runner 启动 N 线程 Worker 池（默认 3），类 1 队列每 source 单元素即为分布式锁。Worker pop = acquire lock，push = release。批量 BATCH_SIZE=5 后交还，减少竞争。**（已迁移至 git-fit）** |
 | 超时采用旗标机制 | `@timed_out` 设后不再 pop 新源，但当前 batch 完整收尾。不强制退出，数据一致。**（已迁移至 git-fit）** |
 | DedupService 独立于 adapter | 所有 source 完成后统一触发，不再绑定 Strava 内部 `recheck_duplicates`。双向写入，含轨迹对比。**（已迁移至 git-fit）** |
@@ -89,11 +98,13 @@ lib/workouts/parser/
 | Per-source 独立 GH Cache | 每源独立 cache key（`GitFit-data-{source}-v0-{run_id}`），通过 `scripts/generate-checksums.sh` 计算 SHA256SUMS 检测变化，仅变动的源写 cache。通过 `git-fit-actions/data-store/cache/{restore,save}@v2` 直连（`sources` 多源循环；save 输出 `changed`/`changed_sources`/`unchanged_sources`/`save_errors` 到 step summary）。数据目录示例: `data/raw/{garmin,garmin_cn,igpsport,...}/`, `data/std/{...}/` |
 | 导出默认路径 `data/` → `site/` | 源数据与生成制品分离，gitignored |
 | `mini_racer` + `@garmin/fitsdk` 解析 FIT | V8 引擎在 Ruby 进程中执行 JS SDK，纯 gem 依赖，无需外部运行时 |
-| local_file 适配器单类处理三种格式 | GPX/FIT/TCX 共享相同的文件扫描、L1/L2写入、DB upsert 逻辑，仅解析器不同。单类避免三份重复代码 |
+| local_file 适配器单类处理三种格式 | GPX/FIT/TCX 共享相同的文件扫描、L1/L2写入、DB upsert 逻辑，仅解析器不同。单类避免三份重复代码。**（已迁移至 git-fit）** |
 
 ---
 
 ## 同步适配器
+
+> **同步适配器已迁移至 git-fit gem（`git fit sync`）。** 本地薄壳仅保留 GarminBase/GarminCN/XOSS/XingZhe 用于交互式 auth。以下保留设计摘要。
 
 ### 数据源
 
@@ -128,6 +139,8 @@ lib/workouts/parser/
 
 ### Sync Adapter 接口
 
+> **已迁移至 git-fit gem（`git fit sync`）。** 以下保留设计摘要。
+
 每个 adapter 实现三个公共方法，供 Runner 或单源 CLI 调用：
 
 | 方法 | 返回值 | 说明 |
@@ -136,7 +149,7 @@ lib/workouts/parser/
 | `pending_ids` | `[{id:, type:, summary:}]` | 预拉列表 + 过滤 existing + `skip_type?`。`summary` 保存列表 API 响应，供 `process_one` 使用 |
 | `process_one(pending)` | `attrs hash / nil` | 单活动完整流程：fetch detail → write raw → write std → upsert DB |
 
-`call` 方法委拖为 `authenticate + pending_ids.filter_map { \|p\| process_one(p) }.size`，保持单源 CL I 兼容。
+`call` 方法委托为 `authenticate + pending_ids.filter_map { \|p\| process_one(p) }.size`，保持单源 CLI 兼容。
 
 ### Import Adapter 接口
 
@@ -338,6 +351,8 @@ Secrets 名用单 `_`（`SYNC_KEEP_PHONE`），Workflow env 块映射为 `SYNC__
 
 ## SportMapper
 
+> **已迁移至 git-fit gem。** 以下保留设计摘要。
+
 三层回退链：
 
 ```
@@ -414,10 +429,10 @@ sync job (runs-on: ${{ vars.RUNNER_LABEL || 'ubuntu-latest' }}):
   4. restore DB from archive branch (GitFit/db, cache miss 回退)
   5. Import Apple Health (git-configured: 'true', GITHUB_TOKEN push)
   6. restore per-source caches (data-store/cache/restore@v2)
-  7. workouts sync (受 SYNC__TIME_BUDGET 限制)
+  7. git fit sync（受 vars.SYNC_TIME_BUDGET / SYNC_TOTAL_TIMEOUT 限制）
   8. Fetch Strava original files (git fit strava fetch, continue-on-error)
   9. save per-source caches (data-store/cache/save@v2)
-  10. Parse Geo Regions (detect-limit 200)
+  10. Parse Geo Regions (git fit geo detect, detect-limit 200)
   11. [db] Checkpoint SQLite WAL
   12. save DB cache (db-store/cache/save@v1)
   13. 数据/DB 变更时触发 sync-scheduler.yml (commit=true)
@@ -539,7 +554,7 @@ L1 raw → L2 标准化 GPS → L3 SQLite 摘要 → L4 构建制品 → L5 部�
 | 文件锚点 | 每个 `docs/` 文件以 `# <feature> — <summary>` 开头 |
 | 不列测试数量 | 文档中不出现测试用例数量、耗时等数字。测试相关仅写 `测试（全 stub、零网络）` |
 | 测试不用 rm_rf | Spec 不得用 `FileUtils.rm_rf` 删除生产目录。用 `Dir.mktmpdir` 管理临时文件 |
-| 不重复 OAuth | OAuth token 管理集中在 `Auth::GarminToken`，其他类不得包含 OAuth 客户端逻辑 |
+| 不重复 OAuth | OAuth token 管理集中在 git-fit 的 `Auth::GarminToken`，其他类不得包含 OAuth 客户端逻辑 |
 
 ## 错误消息约定
 

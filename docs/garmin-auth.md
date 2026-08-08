@@ -1,5 +1,7 @@
 # Garmin OAuth Auth — Design
 
+> **已迁移至 git-fit gem（`git fit sync`）。** 本地薄壳仅保留 `GarminBase` / `GarminCN` / XOSS / XingZhe 用于交互式 auth；Garmin Intl 认证（`GarminBaseDI` / `Garmin`）与 token 管理（`Auth::GarminToken`）位于 git-fit 的 `lib/git_fit/sync/` / `lib/git_fit/auth/`。以下为设计摘要。
+
 ## Architecture overview
 
 ```
@@ -10,10 +12,10 @@ GarminBase（OAuth1 纯基类）
 
 | 类 | 域 | 认证路径 | 代码文件 |
 |---|---|---|---|
-| `GarminBase` | - | 共享基类方法（parse_secret_string、dump_secret、api_get 等） | `garmin_base.rb` |
-| `GarminBaseDI` | - | CI: token cache → auth_seed refresh | `garmin_base_di.rb` |
-| `Garmin` | garmin.com | authenticate_di → DI OAuth2 | `garmin.rb`（12 行） |
-| `GarminCN` | garmin.cn | authenticate → OAuth1→OAuth2 | `garmin_cn.rb`（13 行） |
+| `GarminBase` | - | 共享基类方法（parse_secret_string、dump_secret、api_get 等） | 本地 `garmin_base.rb` + git-fit `garmin_base.rb` |
+| `GarminBaseDI` | - | CI: token cache → auth_seed refresh | git-fit `garmin_base_di.rb` |
+| `Garmin` | garmin.com | authenticate_di → DI OAuth2 | git-fit `garmin.rb`（12 行） |
+| `GarminCN` | garmin.cn | authenticate → OAuth1→OAuth2 | 本地 `garmin_cn.rb` + git-fit `garmin_cn.rb` |
 
 ---
 
@@ -123,7 +125,7 @@ garmin.com 的 SSO 端点 `/mobile/api/login` 已被 Garmin 关闭（返回 400�
 
 **为什么需要 `--sync`：**
 
-1. 本地执行 `workouts sync --source garmin` 后，CI 中使用的 refresh_token **被旋转**（每次 refresh_token 调用旋转 token，旧 token 永久失效）。
+1. 本地执行 `git fit sync --source garmin` 后，CI 中使用的 refresh_token **被旋转**（每次 refresh_token 调用旋转 token，旧 token 永久失效）。
 2. 此时 `SYNC_GARMIN_AUTH_SEED` 中保存的旧 auth_seed 已包含被旋转过的 refresh_token。
 3. 下一次 CI 运行，若 GH Cache miss（7 天缓存或 cache 全部失效），CI 回退到 `load_auth_seed` → `refresh_token()` → **失败**（refresh_token 已被本地旋转）→ 需重新运行 `scripts/garmin_auth_local.sh` 更新 auth_seed
 4. `auth_seed` 是 CI 冷启动的最后防线；只要 auth_seed 中的 refresh_token 比 CI 的 cache 更新即可。
