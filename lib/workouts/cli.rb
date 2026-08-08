@@ -113,24 +113,6 @@ module Workouts
       say_status :error, "Parse failed: #{e.message}", :red
     end
 
-    desc "dedup", "Run cross-source dedup matching"
-    method_option :incremental, type: :boolean, default: false, desc: "Skip already-grouped records"
-    method_option :log, type: :string, default: nil, desc: "Log path (or 'auto' for data/dedup/)"
-    method_option :verbose, type: :boolean, default: false, desc: "Detailed per-match output"
-    def dedup
-      db = connect_db
-      log_path = (options[:log] == "auto") ? nil : options[:log]
-      count = Workouts::Dedup::Service.new(
-        db,
-        incremental: options[:incremental],
-        log_path: log_path,
-        verbose: options[:verbose]
-      ).run
-      say_status :done, "Dedup: #{count} matches updated", :green
-    rescue => e
-      say_status :error, "Dedup failed: #{e.message}", :red
-    end
-
     desc "version", "Show version"
     def version
       puts "Workouts v#{Workouts::VERSION}"

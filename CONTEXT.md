@@ -15,7 +15,7 @@
 | 命令 | 说明 |
 |---|---|
 | `git fit sync [--source S] [--act TYPE]` | 同步所有配置源（`--source` 指定单一源，`--act` 按运动类型过滤）— 已迁移至 git-fit gem，本地 `exe/workouts sync` 已移除 |
-| `dedup` | 全源重跑去重匹配（覆盖已有 duplicate_info） |
+| `git fit dedup` | 全源重跑去重匹配（覆盖已有 duplicate_info）— 已迁移至 git-fit gem，本地 `exe/workouts dedup` 已移除 |
 | `auth <garmin\|garmin_cn>` | 交互式 Garmin SSO 登录 |
 | `export json [--output] [--tracks-output]` | 导出 JSON（`--tracks-output` 将 polyline 拆分到独立文件 tracks.json，供 Lax/running 前端延迟加载） |
 | `export csv [--output]` | 导出 CSV |
