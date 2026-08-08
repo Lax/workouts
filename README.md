@@ -363,8 +363,8 @@ Apple Health 按 XML 的 sourceName 字段自动忽略 Strava / Keep / Garmin Co
 <summary>本地导入详解 + 强制重新导入</summary>
 
 ```bash
-# 本地导入
-exe/workouts import --source apple_health
+# 本地导入（已迁移至 git-fit）
+git fit import apple_health
 
 # 强制重新导入（删除 cache 后重跑 workflow）
 gh actions-cache delete imported-v1-apple-health
@@ -379,13 +379,13 @@ gh actions-cache delete imported-v1-apple-health
 
 ```bash
 # 批量导入：文件放入 data/import/{gpx,fit,tcx}/ 后执行
-exe/workouts import --source gpx          # 所有 GPX 文件
-exe/workouts import --source fit          # 所有 FIT 文件
-exe/workouts import --source tcx          # 所有 TCX 文件
-exe/workouts import --source gpx,fit,tcx  # 三种格式一次导入
+git fit import --source gpx          # 所有 GPX 文件
+git fit import --source fit          # 所有 FIT 文件
+git fit import --source tcx          # 所有 TCX 文件
+git fit import --source gpx,fit,tcx  # 三种格式一次导入
 
 # GPX 无内嵌运动类型，用 --sport 指定
-exe/workouts import --source gpx --sport run
+git fit import --source gpx --sport run
 
 # 单文件解析（调试用，支持 GPX/TCX/FIT）
 exe/workouts parse activity.gpx --save
@@ -442,17 +442,17 @@ exe/workouts parse activity.fit --save
 
 | 命令 | 说明 |
 |---|---|
-| `sync` | 同步所有已配置的来源 |
-| `sync --source strava` | 只同步特定来源 |
-| `sync --act run` | 只同步某种运动类型 |
-| `import --source apple_health` | 导入 Apple Health（export.zip）|
-| `import --source gpx,fit,tcx` | 批量导入本地 GPX/FIT/TCX 文件 |
-| `import --source gpx --sport run` | 导入 GPX 并指定 sport_category 为 run |
+| `git fit sync` | 同步所有已配置的来源 |
+| `git fit sync --source strava` | 只同步特定来源 |
+| `git fit sync --act run` | 只同步某种运动类型 |
+| `git fit import --source apple_health` | 导入 Apple Health（export.zip）|
+| `git fit import --source gpx,fit,tcx` | 批量导入本地 GPX/FIT/TCX 文件 |
+| `git fit import --source gpx --sport run` | 导入 GPX 并指定 sport_category 为 run |
+| `git fit export json` | 导出 JSON |
+| `git fit export csv` | 导出 CSV |
+| `git fit export stats` | 导出统计摘要 |
+| `git fit dedup` | 全源去重匹配 |
 | `auth garmin_cn` | 交互式登录 |
-| `export json` | 导出 JSON |
-| `export csv` | 导出 CSV |
-| `export stats` | 导出统计摘要 |
-| `export all` | 执行所有导出 |
 | `init` | 生成默认配置 |
 | `parse activity.gpx --save` | 解析本地 GPX/TCX/FIT 并写入 DB |
 | `version` | 查看版本 |
@@ -470,7 +470,7 @@ docker compose run --rm workouts sync
 docker compose run --rm workouts export json
 ```
 
-凭据通过环境变量传入（`GIT_FIT_*` 前缀，参见 `docker-compose.yml`），数据挂载 `./data:/app/data`。容器入口为 `git fit`（git-fit gem）。
+容器入口为 `git fit`（git-fit gem），因此上面命令等价于 `git fit sync` / `git fit export json`。凭据通过环境变量传入（`GIT_FIT_*` 前缀，参见 `docker-compose.yml`），数据挂载 `./data:/app/data`。
 </details>
 
 ---

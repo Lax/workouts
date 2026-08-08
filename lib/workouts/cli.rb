@@ -1,12 +1,7 @@
 module Workouts
-  require_relative "cli/export"
   require_relative "cli/db"
   require_relative "cli/geo"
-  require_relative "cli/migrate"
-  require_relative "cli/serve"
   require_relative "cli/sync"
-  require_relative "cli/import"
-  require_relative "cli/import_cli"
 
   class CLI < Thor
     package_name "Workouts"
@@ -47,23 +42,11 @@ module Workouts
       end
     end
 
-    desc "export SUBCOMMAND", "Export activities to various formats"
-    subcommand "export", ExportCLI
-
-    desc "migrate SUBCOMMAND", "Migrate data between platforms"
-    subcommand "migrate", MigrateCLI
-
     desc "db SUBCOMMAND", "Database operations"
     subcommand "db", DbCLI
 
     desc "geo SUBCOMMAND", "Detect geographical administrative regions"
     subcommand "geo", GeoCLI
-
-    desc "serve SUBCOMMAND", "Start HTTP upload server for Apple Health export"
-    subcommand "serve", ServeCLI
-
-    desc "import SUBCOMMAND", "Import workout data from local files"
-    subcommand "import", ImportCLI
 
     desc "init", "Generate default config.yml"
     def init

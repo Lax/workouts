@@ -7,10 +7,6 @@ module Workouts
     DEFAULTS = {
       "database" => {"path" => "data/db/workouts.db"},
       "sync" => {},
-      "export" => {
-        "json" => {"path" => "site/activities.json"},
-        "csv" => {"path" => "site/workouts.csv"}
-      },
       "privacy" => {
         "start_end_range" => 200
       },
@@ -23,7 +19,7 @@ module Workouts
 
     ENV_SEPARATOR = "__"
     DEFAULT_PATH = "config/config.yml"
-    KNOWN_TOP_KEYS = %w[database sync export migrate privacy system import].freeze
+    KNOWN_TOP_KEYS = %w[database sync privacy system].freeze
 
     def initialize(path = nil)
       @data = deep_dup(DEFAULTS)
@@ -47,10 +43,6 @@ module Workouts
 
     def privacy_config
       @data["privacy"] || {}
-    end
-
-    def export_config
-      @data["export"] || {}
     end
 
     def db_path

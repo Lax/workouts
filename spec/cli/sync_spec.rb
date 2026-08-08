@@ -3,14 +3,6 @@ RSpec.describe Workouts::CLI do
     expect(described_class.commands).to include("auth")
   end
 
-  it "registers export subcommand" do
-    expect(described_class.commands).to include("export")
-  end
-
-  it "registers migrate command" do
-    expect(described_class.commands).to include("migrate")
-  end
-
   it "registers init command" do
     expect(described_class.commands).to include("init")
   end

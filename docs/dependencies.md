@@ -18,20 +18,18 @@ Ruby 运行时、Node workspace 依赖引用一览。新增/改依赖时先查�
 | thor | `~> 1.3` | cli/*.rb |
 | sequel | `~> 5.0` | db/connection.rb, db/rebuild.rb |
 | sqlite3 | `~> 2.0` | workouts.rb（require "sqlite3"） |
-| faraday | `~> 2.0` | auth/strava.rb, migrate/igpsport_to_garmin.rb |
-| faraday-multipart | `~> 1.0` | migrate/igpsport_to_garmin.rb（upload） |
-| csv | `~> 3.0` | export/csv.rb |
+| faraday | `~> 2.0` | auth/strava.rb |
 | base64 | `~> 0.2` | sync/keep.rb, sync/garmin_base.rb |
 | zlib | `~> 3.0` | sync/keep.rb（deflate） |
 | openssl | `~> 3.0` | sync/keep.rb, sync/xingzhe.rb（HMAC/RSA） |
-| nokogiri | `~> 1.16` | import/apple_health.rb, import/local_file.rb, migrate/igpsport_to_garmin.rb |
+| nokogiri | `~> 1.16` | parser/gpx.rb, parser/tcx.rb |
 | oauth | `~> 1.0` | sync/garmin_base.rb（OAuth1 签名） |
 | mini_racer | `~> 0.16` | fit/decoder.rb（V8 执行 vendored @garmin/fitsdk） |
-| webrick | `~> 1.8` | auth/strava.rb（本地 HTTP 回调）, cli/serve.rb |
+| webrick | `~> 1.8` | auth/strava.rb（本地 HTTP 回调） |
 | ostruct | `~> 0.6` | sync/garmin_base.rb（OpenStruct 转 hash） |
-| rubyzip | `~> 2.3` | sync/garmin_base.rb, import/apple_health.rb（require "zip"） |
+| rubyzip | `~> 2.3` | sync/garmin_base.rb（require "zip"） |
 | timezone_finder | `~> 1.5` | timezone/resolver.rb |
-| tzinfo | `~> 2.0` | sync/keep/xoss/xingzhe/garmin_base/import |
+| tzinfo | `~> 2.0` | sync/keep/xoss/xingzhe/garmin_base |
 
 ### Dev group（Gemfile）
 
@@ -47,7 +45,7 @@ Ruby 运行时、Node workspace 依赖引用一览。新增/改依赖时先查�
 - 运行时依赖全在 gemspec，Gemfile 只加 `gemspec` + 外部 gem（git-fit）。
 - Gemfile dev group **不再重复** gemspec 已有的 runtime gem（mini_racer、webrick 等）。
 - Strava 网页抓取客户端已独立为 `stravaweblib` gem（Lax/stravaweblib），由 git-fit 依赖。
-- default gem（securerandom, date, time, json, zlib, openssl, ostruct, base64, csv）无需额外声明。
+- default gem（securerandom, date, time, json, zlib, openssl, ostruct, base64）无需额外声明。
 
 ## Node
 

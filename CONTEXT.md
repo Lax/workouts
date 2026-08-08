@@ -16,17 +16,12 @@
 |---|---|
 | `git fit sync [--source S] [--act TYPE]` | 同步所有配置源（`--source` 指定单一源，`--act` 按运动类型过滤）— 已迁移至 git-fit gem，本地 `exe/workouts sync` 已移除 |
 | `git fit dedup` | 全源重跑去重匹配（覆盖已有 duplicate_info）— 已迁移至 git-fit gem，本地 `exe/workouts dedup` 已移除 |
+| `git fit import [--source S] [--sport S]` | 从本地目录批量导入 GPX/FIT/TCX/Apple Health — 已迁移至 git-fit gem，本地 `exe/workouts import` 已移除 |
+| `git fit export [json\|csv\|stats\|gpx]` | 导出 JSON/CSV/统计/GPX — 已迁移至 git-fit gem，本地 `exe/workouts export` 已移除 |
 | `auth <garmin\|garmin_cn>` | 交互式 Garmin SSO 登录 |
-| `export json [--output] [--tracks-output]` | 导出 JSON（`--tracks-output` 将 polyline 拆分到独立文件 tracks.json，供 Lax/running 前端延迟加载） |
-| `export csv [--output]` | 导出 CSV |
-| `export stats [--output]` | 导出统计摘要 |
-| `export all` | 执行所有导出 |
-| `migrate igpsport_to_garmin [--limit]` | 上传 iGPSPORT 数据至 Garmin |
-| `migrate igpsport_to_garmin_cn [--limit]` | 上传 iGPSPORT 数据至 Garmin CN |
-| `db migrate` | 运行数据库迁移 |
+| `db migrate` | 运行数据库迁移（本地 DbCLI） |
+| `geo detect` | 检测活动的地理行政区域（本地 GeoCLI） |
 | `parse <file.gpx\|file.tcx> [--save]` | 解析本地 GPX/TCX 文件，可选写入 DB |
-| `import --source gpx,fit,tcx [--sport S]` | 从本地目录批量导入 GPX/FIT/TCX 文件（`data/import/{source}/`）。`--sport` 覆盖 GPX sport_category |
-| `import --source apple_health` | 从 Apple Health export.xml 导入运动数据 |
 | `init` | 生成默认 config.yml |
 | `version` | 版本号 |
 
@@ -36,64 +31,39 @@
 
 ```
 lib/workouts/cli.rb              # 主 CLI（Workouts::CLI），加载子模块
-lib/workouts/cli/export.rb       # 导出子命令（ExportCLI: json, csv, all）
 lib/workouts/cli/sync.rb         # 同步子模块（auth）
-lib/workouts/cli/import.rb       # 导入子命令（import: apple_health, gpx, fit, tcx）
 lib/workouts/cli/db.rb           # 数据库子命令
-lib/workouts/cli/migrate.rb      # 迁移子命令
 lib/workouts/cli/geo.rb          # 地理子命令
-lib/workouts/cli/serve.rb        # 上传服务子命令
-lib/workouts/import/
-  apple_health.rb                # Apple Health XML 导入适配器
-  local_file.rb                  # 本地 GPX/FIT/TCX 文件导入适配器
-lib/workouts/sync/runner.rb      # Sync::Runner — 队列调度 + Worker 池
 lib/workouts/parser/
   base.rb                        # 解析器基类（haversine、polyline、sport 归一化 → SportMapper）
   gpx.rb                         # GPX 解析器（Nokogiri）
   tcx.rb                         # TCX 解析器（Nokogiri）
   fit.rb                         # FIT 解析器（mini_racer + @garmin/fitsdk）
-lib/workouts/dedup/
-  matcher.rb                     # Dedup::Matcher — 置信度计算
-  trajectory.rb                  # Dedup::Trajectory — GPS 轨迹重叠判定
-  service.rb                     # Dedup::Service — 滑动窗口匹配 + 双向写入
 ```
 
 ---
 
 ## 架构
 
-```
-┌─────────────┐     ┌──────────────────┐     ┌─────────────┐
-│ Strava      │     │  Sync::Runner    │     │ Export::JSON│
-│ Garmin      │────▶│  Worker Pool × N │────▶│ Export::CSV │
-│ Keep        │     │  Output Queue    │     └─────────────┘
-│ iGPSPORT    │     └────┬──────────┬──┘
-│ XOSS (xoss) │     └────┬──────────┬──┘
-│ XingZhe     │          │          │
-└─────────────┘          │          └───▶ data/raw/{source}/
-                         │               (原始 GPS 点阵备份, 每源独立 GH Cache)
-                         ▼
-                     ┌──────────────────┐
-                     │   SQLite DB      │
-                     │  (Sequel ORM)    │
-                     └────────┬─────────┘
-                              │
-                     ┌────────▼─────────┐
-                     │  Dedup::Service  │
-                     │   Matcher        │
-                     │   Trajectory     │
-                      └──────────────────┘
-```
-
-### 本地导入架构
+本地 CLI 是薄壳，核心逻辑（sync / import / export / dedup）已迁移至 git-fit gem：
 
 ```
-data/import/{gpx,fit,tcx}/ → Import::LocalFile → data/raw/{source}/ (L1)
-                                               → data/std/{source}/ (L2)
-                                               → SQLite DB (L3)
+┌─────────────────────────────────────────────────────────┐
+│  git fit (git-fit gem)                                  │
+│  sync / import / export / dedup / strava / gh / install │
+└────────────────────────┬────────────────────────────────┘
+                         │
+┌────────────────────────▼────────────────────────────────┐
+│  本地 exe/workouts (薄壳)                                │
+│  auth / db / geo / parse / init / version               │
+│  Sync 适配器 (Strava/Garmin/Keep/...) 仅用于交互式 auth   │
+└────────────────────────┬────────────────────────────────┘
+                         │
+                ┌────────▼─────────┐
+                │   SQLite DB      │
+                │  (Sequel ORM)    │
+                └──────────────────┘
 ```
-
-无网络，纯文件系统操作。不经过 Sync::Runner。
 
 ---
 
@@ -112,9 +82,9 @@ data/import/{gpx,fit,tcx}/ → Import::LocalFile → data/raw/{source}/ (L1)
 | Keep raw 存 decrypt JSON | 保留原始 HR 序列和相对时间戳，polyline 生成可重跑 |
 | 统一列表：new_ids + missing_raw | 一次 API 调用完成 summary + raw，省 50% API 开销 |
 | 时间预算在循环顶部 break | 避免写了 summary 但没写 raw 的不一致状态 |
-| 多源并行使用队列调度 | Runner 启动 N 线程 Worker 池（默认 3），类 1 队列每 source 单元素即为分布式锁。Worker pop = acquire lock，push = release。批量 BATCH_SIZE=5 后交还，减少竞争 |
-| 超时采用旗标机制 | `@timed_out` 设后不再 pop 新源，但当前 batch 完整收尾。不强制退出，数据一致 |
-| DedupService 独立于 adapter | 所有 source 完成后统一触发，不再绑定 Strava 内部 `recheck_duplicates`。双向写入，含轨迹对比 |
+| 多源并行使用队列调度 | Runner 启动 N 线程 Worker 池（默认 3），类 1 队列每 source 单元素即为分布式锁。Worker pop = acquire lock，push = release。批量 BATCH_SIZE=5 后交还，减少竞争。**（已迁移至 git-fit）** |
+| 超时采用旗标机制 | `@timed_out` 设后不再 pop 新源，但当前 batch 完整收尾。不强制退出，数据一致。**（已迁移至 git-fit）** |
+| DedupService 独立于 adapter | 所有 source 完成后统一触发，不再绑定 Strava 内部 `recheck_duplicates`。双向写入，含轨迹对比。**（已迁移至 git-fit）** |
 | temp→rename 原子写入 raw 文件 | 崩溃恢复时 `raw_file_exists?` 不误判 |
 | Per-source 独立 GH Cache | 每源独立 cache key（`GitFit-data-{source}-v0-{run_id}`），通过 `scripts/generate-checksums.sh` 计算 SHA256SUMS 检测变化，仅变动的源写 cache。通过 `git-fit-actions/data-store/cache/{restore,save}@v2` 直连（`sources` 多源循环；save 输出 `changed`/`changed_sources`/`unchanged_sources`/`save_errors` 到 step summary）。数据目录示例: `data/raw/{garmin,garmin_cn,igpsport,...}/`, `data/std/{...}/` |
 | 导出默认路径 `data/` → `site/` | 源数据与生成制品分离，gitignored |
@@ -170,6 +140,8 @@ data/import/{gpx,fit,tcx}/ → Import::LocalFile → data/raw/{source}/ (L1)
 
 ### Import Adapter 接口
 
+> **已迁移至 git-fit gem。** 以下保留设计摘要。
+
 导入适配器（`Import::LocalFile`、`Import::AppleHealth`）也继承 `Sync::Base`，但覆盖 `call` 方法实现自定义流程，不再依赖 `pending_ids` + `process_one` 的默认循环。`authenticate` 直接返回 `true`（无网络调用）。
 
 ### 数据流程
@@ -190,6 +162,8 @@ data/import/{gpx,fit,tcx}/ → Import::LocalFile → data/raw/{source}/ (L1)
 ```
 
 #### 多源模式（默认）
+
+> **已迁移至 git-fit gem（`git fit sync`）。** 本地 Runner + Worker 池已移除，以下保留设计摘要。
 
 ```
 初始化（串行）:
@@ -212,49 +186,21 @@ data/import/{gpx,fit,tcx}/ → Import::LocalFile → data/raw/{source}/ (L1)
 
 ### 去重机制
 
+> **已迁移至 git-fit gem。** 以下保留设计摘要。
+
 #### 一级去重：`run_id`
 
-基于 `run_id` 字段（格式：`{source}_{platform_id}`），每次同步前读取 DB 中已有 ID 列表，跳过完全重复的活动。这是第一道防线，防止同一活动的重复导入。
+基于 `run_id` 字段（格式：`{source}_{platform_id}`），每次同步前读取 DB 中已有 ID 列表，跳过完全重复的活动。
 
 #### 二级去重：`Dedup::Service`
 
-所有 source 同步完成后由 Runner 触发，与具体 adapter 解耦。算法跨全源滑动窗口匹配：
-
-**窗口分组：** 按 start_date 排序，5 分钟滑动窗口内两两比较
-
-**置信度因子（`Dedup::Matcher`）：**
-
-| 因子 | 权重 | 条件 |
-|---|---|---|
-| 时间相近度 | 35% | 开始时间差 ≤ 5min |
-| 距离相近度 | 35% | 距离差 ≤ 较大值的 15% |
-| 时长相近度 | 15% | 运动时长差 ≤ 较大值的 15% |
-| 运动类型匹配 | 15% | 同类型 +15%，不同类型 -10% |
-
-**轨迹分类（`Dedup::Trajectory`）：**
-
-读取 L2 标准化 GPS 文件，默认每 10 点采样一个，检查采样点中 ≥ 30% 在对方轨迹 50m 范围内。此分类覆盖全等、包含、大重叠三种重复轨迹情形。
-
-**分类体系（4 种 flag）：**
-
-| flag | 含义 | 条件 |
-|---|---|---|
-| `derived` | 极可能是同一活动 | 置信度 ≥ 0.85 |
-| `duplicate` | 轨迹高度重叠的重複活动 | 置信度 ≥ 0.15 + GPS 采样重叠 ≥ 30% |
-| `similar` | 相似但不是同一活动 | 置信度 ≥ 0.15 + 无轨迹重叠 |
-| `overlap` | （旧数据兼容，保留） | — |
-
-**双向写入：** 匹配结果同时写入双方活动的 `duplicate_info` 列（JSON 数组）：
-
-```json
-[{"source": "strava", "run_id": "strava_123", "confidence": 0.92, "flag": "derived"}]
-```
-
-前端（Lax/running）渲染时，标注上区分 derived（高置信度合并）、duplicate（轨迹重叠）和 similar（低置信度重叠），鼠标悬停显示匹配来源和评分。
+所有 source 同步完成后由 Runner 触发，与具体 adapter 解耦。算法跨全源滑动窗口匹配（5 分钟窗口），置信度综合时间/距离/时长/类型四因子，配合 GPS 轨迹采样重叠判定（`Dedup::Trajectory`），输出 derived/duplicate/similar 三种 flag，双向写入 `duplicate_info` 列。
 
 ---
 
 ## 导入适配器
+
+> **已迁移至 git-fit gem。** 以下保留设计摘要。
 
 ### 数据源
 

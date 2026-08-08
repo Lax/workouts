@@ -3,9 +3,7 @@ PATH
   specs:
     workouts-cli (0.1.0)
       base64 (~> 0.2)
-      csv (~> 3.0)
       faraday (~> 2.0)
-      faraday-multipart (~> 1.0)
       mini_racer (~> 0.16)
       nokogiri (~> 1.16)
       oauth (~> 1.0)
@@ -42,8 +40,6 @@ GEM
     faraday-cookie_jar (0.0.8)
       faraday (>= 0.8.0)
       http-cookie (>= 1.0.0)
-    faraday-multipart (1.2.0)
-      multipart-post (~> 2.0)
     faraday-net_http (3.4.4)
       net-http (~> 0.5)
     git-fit (0.10.6)
@@ -81,7 +77,6 @@ GEM
     method_source (1.1.0)
     mini_racer (0.21.4)
       libv8-node (~> 24.12.0.1)
-    multipart-post (2.4.1)
     net-http (0.9.1)
       uri (>= 0.11.1)
     nokogiri (1.19.4-aarch64-linux-gnu)
@@ -234,7 +229,6 @@ CHECKSUMS
   domain_name (0.6.20240107) sha256=5f693b2215708476517479bf2b3802e49068ad82167bcd2286f899536a17d933
   faraday (2.14.3) sha256=1882247e6766615c8220b4392bf1d27f6ebb63d8e28267587cef1fb0bf37f278
   faraday-cookie_jar (0.0.8) sha256=0140605823f8cc63c7028fccee486aaed8e54835c360cffc1f7c8c07c4299dbb
-  faraday-multipart (1.2.0) sha256=7d89a949693714176f612323ca13746a2ded204031a6ba528adee788694ef757
   faraday-net_http (3.4.4) sha256=0e78af151747ed1b00f33e25973b4bc220d7f16c00c39676817c8b12331eb588
   git-fit (0.10.6) sha256=1fcd080f2e67e9591c7d95c07cb4f8910d329ca341deddcaa7bdf669363131fb
   hashie (5.1.0) sha256=c266471896f323c446ea8207f8ffac985d2718df0a0ba98651a3057096ca3870
@@ -253,7 +247,6 @@ CHECKSUMS
   logger (1.7.0) sha256=196edec7cc44b66cfb40f9755ce11b392f21f7967696af15d274dde7edff0203
   method_source (1.1.0) sha256=181301c9c45b731b4769bc81e8860e72f9161ad7d66dd99103c9ab84f560f5c5
   mini_racer (0.21.4) sha256=ccf5e37288097f079d84449e111cd4e2170b37f3b80b30900766ffa6df4632db
-  multipart-post (2.4.1) sha256=9872d03a8e552020ca096adadbf5e3cb1cd1cdd6acd3c161136b8a5737cdb4a8
   net-http (0.9.1) sha256=25ba0b67c63e89df626ed8fac771d0ad24ad151a858af2cc8e6a716ca4336996
   nokogiri (1.19.4-aarch64-linux-gnu) sha256=1269fb644a6de405057a53dd5c762b1209b43ca7424f839454d3dbc677c31a8f
   nokogiri (1.19.4-aarch64-linux-musl) sha256=35c65b9ce72b3bb03207bdbe7067915019dc18c1b9b59139684bd6690fdd01af

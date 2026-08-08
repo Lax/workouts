@@ -12,9 +12,6 @@ RSpec.describe Workouts::Config do
           client_id: "123"
       privacy:
         start_end_range: 500
-      export:
-        json:
-          path: /tmp/test.json
     YAML
   end
 
@@ -33,7 +30,6 @@ RSpec.describe Workouts::Config do
     expect(config.db_path).to eq("/tmp/test.db")
     expect(config.sync_config("strava")).to eq("client_id" => "123")
     expect(config.privacy_config["start_end_range"]).to eq(500)
-    expect(config.export_config.dig("json", "path")).to eq("/tmp/test.json")
   end
 
   it "merges nested hashes" do
