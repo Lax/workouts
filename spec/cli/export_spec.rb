@@ -7,10 +7,6 @@ RSpec.describe Workouts::ExportCLI do
     expect(described_class.commands).to include("csv")
   end
 
-  it "registers svg command" do
-    expect(described_class.commands).to include("svg")
-  end
-
   it "registers stats command" do
     expect(described_class.commands).to include("stats")
   end

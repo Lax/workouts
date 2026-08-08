@@ -53,27 +53,10 @@ jobs:
           github-token: ${{ github.token }}
 
       - name: Create build directory
-        run: mkdir -p site/svg
+        run: mkdir -p site
 
       - name: Export JSON
         run: bundle exec exe/workouts export json --output site/activities.json --tracks-output site/tracks.json
-
-      - name: Export SVG
-        run: bundle exec exe/workouts export svg --style github --title "Workouts" --output site/svg/github.svg
-
-      - name: Validate SVG
-        run: |
-          bundle exec ruby -e '
-            require "nokogiri"
-            Dir["site/svg/*.svg"].each do |f|
-              doc = Nokogiri::XML(File.read(f))
-              if doc.errors.any?
-                puts "::error::#{f}: #{doc.errors.map(&:to_s).join(", ")}"
-                exit 1
-              end
-              puts "OK #{f}"
-            end
-          '
 
       - name: Export Stats
         run: bundle exec git fit export stats --output site/stats.json

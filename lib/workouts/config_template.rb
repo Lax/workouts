@@ -53,8 +53,6 @@ module Workouts
         export:
           json:
             path: site/activities.json
-          svg:
-            dir: site/svg
           csv:
             path: site/workouts.csv
 

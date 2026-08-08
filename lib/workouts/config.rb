@@ -9,7 +9,6 @@ module Workouts
       "sync" => {},
       "export" => {
         "json" => {"path" => "site/activities.json"},
-        "svg" => {"dir" => "site/svg"},
         "csv" => {"path" => "site/workouts.csv"},
         "gpx" => {"path" => "site/gpx_out"}
       },

@@ -428,7 +428,6 @@ exe/workouts parse activity.fit --save
 |---|---|
 | JSON | `site/activities.json`（摘要）+ `site/tracks.json`（polyline 映射，可选） |
 | CSV | `site/workouts.csv` |
-| SVG | `site/svg/` |
 | Stats | `site/stats.json` |
 
 详见 `.env.example` 和 `config/config.yml.example`。
@@ -452,15 +451,12 @@ exe/workouts parse activity.fit --save
 | `auth garmin_cn` | 交互式登录 |
 | `export json` | 导出 JSON |
 | `export csv` | 导出 CSV |
-| `export svg --style github` | 生成 SVG 海报（5 种风格） |
 | `export stats` | 导出统计摘要 |
 | `export gpx` | 从 L2 重新导出 GPX |
 | `export all` | 执行所有导出 |
 | `init` | 生成默认配置 |
 | `parse activity.gpx --save` | 解析本地 GPX/TCX/FIT 并写入 DB |
 | `version` | 查看版本 |
-
-SVG 5 种风格：`github` / `grid` / `circular` / `month-of-life` / `year-summary`。
 </details>
 
 ---
@@ -472,7 +468,6 @@ SVG 5 种风格：`github` / `grid` / `circular` / `month-of-life` / `year-summa
 
 ```bash
 docker compose run --rm workouts sync
-docker compose run --rm workouts export svg --style github
 docker compose run --rm workouts export json
 ```
 

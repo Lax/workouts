@@ -2,11 +2,11 @@
 
 ## 项目概述
 
-运动数据聚合 CLI 工具，多渠道同步 → SQLite 数据库 → JSON / CSV / SVG 导出。
+运动数据聚合 CLI 工具，多渠道同步 → SQLite 数据库 → JSON / CSV / GPX 导出。
 
 **仓库：** `github.com/Lax/workouts`（私有，付费计划）  
 **技术栈：** Ruby 3.4 (Thor, Sequel, SQLite3, Nokogiri, Faraday)
-**部署：** Docker / GitHub Actions / GitHub Pages（数据制品：JSON + SVG + stats）
+**部署：** Docker / GitHub Actions / GitHub Pages（数据制品：JSON + stats）
 
 ---
 
@@ -19,7 +19,6 @@
 | `auth <garmin\|garmin_cn>` | 交互式 Garmin SSO 登录 |
 | `export json [--output] [--tracks-output]` | 导出 JSON（`--tracks-output` 将 polyline 拆分到独立文件 tracks.json，供 Lax/running 前端延迟加载） |
 | `export csv [--output]` | 导出 CSV |
-| `export svg --style <style>` | 生成 SVG 海报（5 种风格）。参考：[flopp/GpxTrackPoster](https://github.com/flopp/GpxTrackPoster) |
 | `export stats [--output]` | 导出统计摘要 |
 | `export gpx [--output]` | 从 L2 文件重新导出 GPX |
 | `export all` | 执行所有导出 |
@@ -38,7 +37,7 @@
 
 ```
 lib/workouts/cli.rb              # 主 CLI（Workouts::CLI），加载子模块
-lib/workouts/cli/export.rb       # 导出子命令（ExportCLI: json, csv, svg, all）
+lib/workouts/cli/export.rb       # 导出子命令（ExportCLI: json, csv, all）
 lib/workouts/cli/sync.rb         # 同步子模块（sync, auth, dedup）
 lib/workouts/cli/import.rb       # 导入子命令（import: apple_health, gpx, fit, tcx）
 lib/workouts/cli/db.rb           # 数据库子命令
@@ -66,10 +65,10 @@ lib/workouts/dedup/
 
 ```
 ┌─────────────┐     ┌──────────────────┐     ┌─────────────┐
-│ Strava      │     │  Sync::Runner    │     │ Export::SVG │
-│ Garmin      │────▶│  Worker Pool × N │────▶│ Export::JSON│
-│ Keep        │     │  Source Queue    │     │ Export::CSV │
-│ iGPSPORT    │     │  Output Queue    │     └─────────────┘
+│ Strava      │     │  Sync::Runner    │     │ Export::JSON│
+│ Garmin      │────▶│  Worker Pool × N │────▶│ Export::CSV │
+│ Keep        │     │  Output Queue    │     └─────────────┘
+│ iGPSPORT    │     └────┬──────────┬──┘
 │ XOSS (xoss) │     └────┬──────────┬──┘
 │ XingZhe     │          │          │
 └─────────────┘          │          └───▶ data/raw/{source}/
@@ -252,7 +251,7 @@ data/import/{gpx,fit,tcx}/ → Import::LocalFile → data/raw/{source}/ (L1)
 [{"source": "strava", "run_id": "strava_123", "confidence": 0.92, "flag": "derived"}]
 ```
 
-SVG 导出时，标注上区分 derived（高置信度合并）、duplicate（轨迹重叠）和 similar（低置信度重叠），鼠标悬停显示匹配来源和评分。
+前端（Lax/running）渲染时，标注上区分 derived（高置信度合并）、duplicate（轨迹重叠）和 similar（低置信度重叠），鼠标悬停显示匹配来源和评分。
 
 ---
 
@@ -490,10 +489,8 @@ deploy-pages job (runs-on: ${{ vars.RUNNER_LABEL || 'ubuntu-latest' }}):
   3. restore DB cache (db-store/cache/restore@v1)
   4. Download fresh DB artifact (可选, artifact-run-id)
   5. export json → site/activities.json + tracks.json
-  6. export svg → site/svg/github.svg
-  7. validate SVG
-  8. export stats → site/stats.json
-  9. upload-pages-artifact from ./site
+  6. export stats → site/stats.json
+  7. upload-pages-artifact from ./site
   10. deploy-pages@v4
 ```
 
@@ -542,7 +539,6 @@ manage job (runs-on: ${{ vars.RUNNER_LABEL || 'ubuntu-latest' }}):
 
 ```bash
 docker compose run --rm workouts sync
-docker compose run --rm workouts export svg --style github
 docker compose run --rm workouts export json
 ```
 
@@ -557,7 +553,7 @@ docker compose run --rm workouts export json
 | Pages 源 | GitHub Actions |
 | 自定义域名 | liulantao.com |
 | URL | `https://liulantao.com/workouts/` |
-| 部署目录 | JSON + SVG + stats，排除 DB |
+| 部署目录 | JSON + stats，排除 DB |
 
 ---
 
