@@ -4,7 +4,7 @@ mode: subagent
 permission:
   edit: allow
   bash:
-    "bundle exec exe/workouts sync *": allow
+    "bundle exec git fit sync *": allow
     "bundle exec exe/workouts auth *": allow
     "bundle exec rspec spec/sync/*": allow
     "bundle exec rspec spec/parser/*": allow

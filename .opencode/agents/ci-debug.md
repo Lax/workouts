@@ -5,7 +5,7 @@ permission:
   edit: allow
   bash:
     "bash scripts/*": allow
-    "bundle exec exe/workouts sync*": allow
+    "bundle exec git fit sync*": allow
     "bundle exec exe/workouts export*": allow
     "gh *": allow
     "ruby -c *": allow

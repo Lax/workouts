@@ -1,8 +1,4 @@
 RSpec.describe Workouts::CLI do
-  it "registers sync command" do
-    expect(described_class.commands).to include("sync")
-  end
-
   it "registers auth command" do
     expect(described_class.commands).to include("auth")
   end

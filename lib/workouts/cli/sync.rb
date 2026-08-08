@@ -1,45 +1,6 @@
 module Workouts
   module Cli
     module Sync
-      def sync
-        db = connect_db
-        sources = if options[:source]
-          [options[:source]]
-        else
-          %w[igpsport keep xoss xingzhe garmin_cn garmin strava].select do |s|
-            source_configured?(s)
-          end
-        end
-
-        filter = options[:activity]&.map(&:strip)&.map(&:downcase)
-
-        if sources.size == 1
-          source = sources.first
-          say_status :syncing, source, :green
-          adapter = build_sync_adapter(source, db, filter)
-          if adapter
-            begin
-              count = adapter.call
-              if count == 0
-                say_status :warn, "#{source}: 0 activities", :yellow
-              else
-                say_status :done, "#{source}: #{count} activities", :green
-              end
-            rescue => e
-              say_status :error, "#{source}: #{e.message}", :red
-            end
-          end
-        else
-          runner = Workouts::Sync::Runner.new(
-            sources: sources, db: db, config: workouts_config,
-            activity_filter: filter,
-            num_workers: (workouts_config.dig("sync", "workers") || 3).to_i,
-            time_budget: workouts_config.dig("sync", "time_budget")
-          )
-          runner.run
-        end
-      end
-
       # auth garmin: redirect to scripts/garmin_auth_local.sh (MFA-only, DI OAuth2)
       # auth garmin_cn/xoss/xingzhe: adapter.authenticate → SSO
       def auth(source)
@@ -102,28 +63,6 @@ module Workouts
       end
 
       private
-
-      def source_configured?(source)
-        config = workouts_config.sync_config(source)
-        case source
-        when "strava"
-          config["client_id"].to_s != "" && config["client_secret"].to_s != "" && config["refresh_token"].to_s != ""
-        when "garmin"
-          config["auth_seed"].to_s != ""
-        when "garmin_cn"
-          (config["email"].to_s != "" && config["password"].to_s != "") || config["secret"].to_s != ""
-        when "keep"
-          (config["phone"] || config["mobile"]).to_s != "" && config["password"].to_s != ""
-        when "igpsport"
-          config["phone"].to_s != "" && config["password"].to_s != ""
-        when "xoss"
-          config["email"].to_s != "" && config["password"].to_s != ""
-        when "xingzhe"
-          config["email"].to_s != "" && config["password"].to_s != ""
-        else
-          config.values.any? { |v| v.to_s != "" }
-        end
-      end
 
       def build_sync_adapter(source, db, filter)
         config = workouts_config.sync_config(source)

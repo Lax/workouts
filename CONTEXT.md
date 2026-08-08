@@ -14,7 +14,7 @@
 
 | 命令 | 说明 |
 |---|---|
-| `sync [--source S] [--act TYPE]` | 同步所有配置源（`--source` 指定单一源，`--act` 按运动类型过滤） |
+| `git fit sync [--source S] [--act TYPE]` | 同步所有配置源（`--source` 指定单一源，`--act` 按运动类型过滤）— 已迁移至 git-fit gem，本地 `exe/workouts sync` 已移除 |
 | `dedup` | 全源重跑去重匹配（覆盖已有 duplicate_info） |
 | `auth <garmin\|garmin_cn>` | 交互式 Garmin SSO 登录 |
 | `export json [--output] [--tracks-output]` | 导出 JSON（`--tracks-output` 将 polyline 拆分到独立文件 tracks.json，供 Lax/running 前端延迟加载） |
@@ -38,7 +38,7 @@
 ```
 lib/workouts/cli.rb              # 主 CLI（Workouts::CLI），加载子模块
 lib/workouts/cli/export.rb       # 导出子命令（ExportCLI: json, csv, all）
-lib/workouts/cli/sync.rb         # 同步子模块（sync, auth, dedup）
+lib/workouts/cli/sync.rb         # 同步子模块（auth）
 lib/workouts/cli/import.rb       # 导入子命令（import: apple_health, gpx, fit, tcx）
 lib/workouts/cli/db.rb           # 数据库子命令
 lib/workouts/cli/migrate.rb      # 迁移子命令

@@ -122,7 +122,7 @@ git clone https://github.com/你的用户名/workouts.git
 cd workouts
 bundle install
 
-exe/workouts sync --source keep
+git fit sync --source keep
 ```
 </details>
 
@@ -178,7 +178,7 @@ gh secret set SYNC_STRAVA_REFRESH_TOKEN \
 <summary>本地同步可选</summary>
 
 ```bash
-exe/workouts sync --source strava
+git fit sync --source strava
 ```
 </details>
 
@@ -241,7 +241,7 @@ OAuth1 是链条的根，一次 auth 后自动续期，维护成本极低。
 <summary>本地同步可选</summary>
 
 ```bash
-exe/workouts sync --source garmin_cn
+git fit sync --source garmin_cn
 ```
 </details>
 
@@ -293,7 +293,7 @@ gh secret set SYNC_GARMIN_AUTH_SEED \
 如果本地和 GitHub Actions 同时使用同一账号，每次本地 sync 后必须紧接：
 
 ```bash
-exe/workouts sync --source garmin
+git fit sync --source garmin
 ./scripts/garmin_auth_local.sh --sync
 ```
 
@@ -312,7 +312,7 @@ GitHub Actions 每天跑 = 自动续期。停了 30+ 天需重新完整认证。
 <summary>本地同步可选</summary>
 
 ```bash
-exe/workouts sync --source garmin
+git fit sync --source garmin
 ```
 
 注意：email + password 只用于本地首次认证，不进 GitHub Secrets。

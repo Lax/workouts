@@ -20,13 +20,6 @@ module Workouts
 
     include Cli::Sync
 
-    desc "sync", "Sync workout data from configured sources"
-    option :source, type: :string, desc: "Sync only specific source (strava/garmin/keep/igpsport/xoss)"
-    option :activity, type: :array, desc: "Filter by sport type (run,ride,hike,...)", aliases: "--act"
-    def sync
-      super
-    end
-
     desc "auth SOURCE", "Authenticate with a sync source (strava, garmin, garmin_cn, xoss, xingzhe)"
     def auth(source)
       if source == "strava"
