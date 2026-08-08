@@ -56,7 +56,7 @@ jobs:
         run: mkdir -p site
 
       - name: Export JSON
-        run: bundle exec exe/workouts export json --output site/activities.json --tracks-output site/tracks.json
+        run: bundle exec git fit export json --output site/activities.json --tracks-output site/tracks.json
 
       - name: Export Stats
         run: bundle exec git fit export stats --output site/stats.json
