@@ -108,6 +108,50 @@ garmin.com 的 SSO 端点 `/mobile/api/login` 已被 Garmin 关闭（返回 400�
 
 **选 B 优先的原因：** (1) cookie 服务端声明 365 天有效；(2) 首次后零交互；(3) 纯 Python 依赖无 C 编译。A 作为已验证的 TLS 指纹降级路径。
 
+### git fit auth garmin CLI（设计：git-fit #63）
+
+> **状态：** 接口设计已定稿，实现待 git-fit #63。本地 `auth garmin` 当前仍打印 `scripts/garmin_auth_local.sh` 指引，待 #63 实现后改为委托 `git fit auth garmin`。
+> 本小节为设计文档（docs-first），历史结论（策略语义、实测时间戳、cookie 有效期）以原文「实测结果（2026-06-18 更新）」为准。
+
+#### 策略参数接口
+
+`git fit auth garmin` 通过三个互斥旗标选择认证策略：
+
+| 命令 | 策略 | 行为 |
+|---|---|---|
+| `git fit auth garmin` | B（默认） | 等价 `-B` |
+| `git fit auth garmin -B` | B | Playwright 策略 B（`playwright-ruby-client`） |
+| `git fit auth garmin -A` | A | 强制策略 A（`curl-impersonate` shellout） |
+| `git fit auth garmin --auto` | auto | 先 B，失败降级 A |
+
+- `-A` / `-B` / `--auto` 互斥，同时给出报错
+- 默认 `-B`，与下方「决策依据」中选 B 优先的三条原因一致
+- `--auto` 将 B primary / A fallback 链显式化：B 失败自动降级 A
+
+#### Ruby 等价映射（对齐 git-fit #63 技术选项）
+
+| 策略 | workouts 现有（Python 脚本） | git-fit #63（Ruby） | 运行时依赖 |
+|---|---|---|---|
+| B（默认） | `scripts/garmin_auth_playwright.py` | `playwright-ruby-client` gem | Node.js 运行时 |
+| A | `scripts/garmin_auth.py`（curl_cffi） | `curl-impersonate` 二进制 shellout | curl-impersonate（原生，零 gem 依赖） |
+
+策略 B / A 的 TLS 穿透语义与上文「Strategy B (Playwright)」/「Strategy A (curl_cffi)」实测结论一致，仅运行时载体从 Python 脚本换为 Ruby 等价实现。
+
+#### 决策依据
+
+依据上文「实测结果（2026-06-18 更新）」逐条对应：
+
+| 旗标设计 | 依据 |
+|---|---|
+| 默认 `-B` | B primary：`context.request` Chrome TLS 指纹穿透 mobile API CF；首次 SSO+MFA 后 cookie 365d（CASMFA `Max-Age=31536000` + DI token 内 `mfa_expiration_timestamp` 双证据）；后续零交互、秒级完成 |
+| 选 B 优先的三条原因 | (1) cookie 服务端声明 365 天有效；(2) 首次后零交互；(3) 纯 Python 依赖无 C 编译 |
+| `-A` 强制 | A fallback：`mobile+cffi` Safari TLS 穿透但无 cookie 持久化，每次 30-45s 延时 + MFA；`portal+cffi` 部分指纹返回 403。提供 Playwright 运行时（Node.js）不可用时的强制降级路径 |
+| `--auto` | 显式化文档的 primary/fallback 链：B 优先，A 作已验证的 TLS 指纹降级路径 |
+
+#### 历史保留说明
+
+「实测结果（2026-06-18 更新）」段落原文保留不动，其策略语义、实测时间戳、cookie 有效期等历史结论以原文为准。本小节仅追加接口设计，不覆盖既有内容。
+
 ### 首次设置（有 MFA）
 
 ```bash
