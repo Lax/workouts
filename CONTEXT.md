@@ -20,7 +20,6 @@
 | `export json [--output] [--tracks-output]` | 导出 JSON（`--tracks-output` 将 polyline 拆分到独立文件 tracks.json，供 Lax/running 前端延迟加载） |
 | `export csv [--output]` | 导出 CSV |
 | `export stats [--output]` | 导出统计摘要 |
-| `export gpx [--output]` | 从 L2 文件重新导出 GPX |
 | `export all` | 执行所有导出 |
 | `migrate igpsport_to_garmin [--limit]` | 上传 iGPSPORT 数据至 Garmin |
 | `migrate igpsport_to_garmin_cn [--limit]` | 上传 iGPSPORT 数据至 Garmin CN |

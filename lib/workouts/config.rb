@@ -9,8 +9,7 @@ module Workouts
       "sync" => {},
       "export" => {
         "json" => {"path" => "site/activities.json"},
-        "csv" => {"path" => "site/workouts.csv"},
-        "gpx" => {"path" => "site/gpx_out"}
+        "csv" => {"path" => "site/workouts.csv"}
       },
       "privacy" => {
         "start_end_range" => 200

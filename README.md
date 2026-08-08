@@ -452,7 +452,6 @@ exe/workouts parse activity.fit --save
 | `export json` | 导出 JSON |
 | `export csv` | 导出 CSV |
 | `export stats` | 导出统计摘要 |
-| `export gpx` | 从 L2 重新导出 GPX |
 | `export all` | 执行所有导出 |
 | `init` | 生成默认配置 |
 | `parse activity.gpx --save` | 解析本地 GPX/TCX/FIT 并写入 DB |

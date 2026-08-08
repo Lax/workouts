@@ -50,27 +50,12 @@ module Workouts
       say_status :error, "Stats export failed: #{e.message}", :red
     end
 
-    desc "gpx", "Export activities to GPX files (one per activity)"
-    option :output, type: :string, aliases: "-o", desc: "Output directory"
-    option :activity, type: :array, desc: "Filter by sport type", aliases: "--act"
-    def gpx
-      config = Workouts::Config.new
-      db = Workouts::DB::Connection.new(config.db_path).db
-      outdir = options[:output] || config.export_config.dig("gpx", "path") || "site/gpx_out"
-      filter = options[:activity]&.map(&:strip)&.map(&:downcase)
-      count = Export::GPX.new(db: db, output: outdir, activity_filter: filter).call
-      say_status :done, "Exported #{count} GPX files to #{outdir}/", :green
-    rescue => e
-      say_status :error, "GPX export failed: #{e.message}", :red
-    end
-
     desc "all", "Export all formats"
     option :activity, type: :array, desc: "Filter by sport type", aliases: "--act"
     def all
       invoke :json, [], options
       invoke :csv, [], options
       invoke :stats, [], options
-      invoke :gpx, [], options
       say_status :done, "All exports complete", :green
     rescue => e
       say_status :error, "Export failed: #{e.message}", :red
