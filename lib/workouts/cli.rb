@@ -15,8 +15,8 @@ module Workouts
 
     desc "auth SOURCE", "Authenticate with a sync source (strava, garmin, garmin_cn, xoss, xingzhe)"
     option :A, type: :boolean, desc: "Garmin Strategy A: curl-impersonate shellout (git fit auth garmin)"
-    option :B, type: :boolean, desc: "Garmin Strategy B: Playwright (default)"
-    option :auto, type: :boolean, desc: "Garmin auto: B first, fallback to A"
+    option :B, type: :boolean, desc: "Garmin Strategy B: Playwright"
+    option :auto, type: :boolean, desc: "Garmin auto: B first, fallback to A (default)"
     option :sync, type: :boolean, desc: "Garmin: promote cached token to auth_seed"
     option :mfa_code, type: :string, desc: "Garmin MFA code (from email), re-run to continue"
     def auth(source)
