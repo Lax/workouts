@@ -1,7 +1,0 @@
-{
-  "code": 10301,
-  "data": {
-    "non_field_errors": "No active account found with the given credentials"
-  },
-  "msg": "Invalid input."
-}

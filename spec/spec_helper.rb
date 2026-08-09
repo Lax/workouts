@@ -17,11 +17,3 @@ RSpec.configure do |config|
   config.order = :random
   Kernel.srand config.seed
 end
-
-def fixture_path(name)
-  File.join(File.dirname(__FILE__), "fixtures", name)
-end
-
-def load_fixture(name)
-  File.read(fixture_path(name))
-end

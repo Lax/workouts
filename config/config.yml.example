@@ -1,51 +1,48 @@
 ---
+# 参考模板。权威模板由 `git fit init` 生成（git-fit gem ConfigTemplate）。
+# env 前缀用 GIT_FIT_（与 git-fit 一致）。
+
 database:
   path: data/db/workouts.db
 
 sync:
-  # time_budget: 300            # 单次同步最大秒数 (可选, env: SYNC__TIME_BUDGET)
-  # total_timeout: 600          # Runner 总超时秒数 (可选, env: SYNC__TOTAL_TIMEOUT)
+  # workers: 3                                 # env: GIT_FIT_SYNC_WORKERS
+  # time_budget: 90                            # env: GIT_FIT_SYNC_TIME_BUDGET (seconds)
+  # total_timeout: 600                         # env: GIT_FIT_SYNC_TOTAL_TIMEOUT (seconds)
 
   # amap:                       # 高德 Web 服务 API (行政区逆地理编码)
   #   api_key: "your_key"       # env: AMAP_API_KEY
 
-  # strava:                     # OAuth2
-  #   client_id: ""             # env: SYNC__STRAVA__CLIENT_ID
-  #   client_secret: ""         # env: SYNC__STRAVA__CLIENT_SECRET
-  #   refresh_token: ""         # env: SYNC__STRAVA__REFRESH_TOKEN
+  # strava:                                    # env: GIT_FIT_STRAVA_CLIENT_ID
+  #   client_id: ""                            # env: GIT_FIT_STRAVA_CLIENT_SECRET
+  #   refresh_token: ""                        # env: GIT_FIT_STRAVA_REFRESH_TOKEN
 
-  # garmin:                     # Garmin International (garmin.com)
-  #   email: "your@email.com"   # env: SYNC__GARMIN__EMAIL
-  #   password: "your_password" # env: SYNC__GARMIN__PASSWORD
-  #   auth_seed: "base64..."    # DI OAuth2 token (env: SYNC__GARMIN__AUTH_SEED)
+  # garmin:                                    # env: GIT_FIT_GARMIN_EMAIL
+  #   email: "your@email.com"                  # env: GIT_FIT_GARMIN_PASSWORD
+  #   password: "your_password"
+  #   auth_seed: "base64..."                   # DI OAuth2 token (env: GIT_FIT_GARMIN_AUTH_SEED)
 
-  # garmin_cn:                  # Garmin China (garmin.cn)
-  #   email: "13800138000"      # env: SYNC__GARMIN_CN__EMAIL
-  #   password: "your_password" # env: SYNC__GARMIN_CN__PASSWORD
-  #   secret: "base64..."       # OAuth1+OAuth2 token (env: SYNC__GARMIN_CN__SECRET)
+  # garmin_cn:                                 # env: GIT_FIT_GARMIN_CN_EMAIL
+  #   email: "13800138000"                     # env: GIT_FIT_GARMIN_CN_PASSWORD
+  #   password: "your_password"
+  #   secret: "base64..."                      # OAuth1+OAuth2 token (env: GIT_FIT_GARMIN_CN_SECRET)
 
-  # keep:
-  #   phone: "13800138000"      # env: SYNC__KEEP__PHONE
-  #   password: "your_password" # env: SYNC__KEEP__PASSWORD
+  # keep:                                      # env: GIT_FIT_KEEP_PHONE
+  #   phone: "13800138000"                     # env: GIT_FIT_KEEP_PASSWORD
+  #   password: "your_password"
 
-  # igpsport:
-  #   phone: "13800138000"      # env: SYNC__IGPSPORT__PHONE
-  #   password: "your_password" # env: SYNC__IGPSPORT__PASSWORD
+  # igpsport:                                  # env: GIT_FIT_IGPSPORT_PHONE
+  #   phone: "13800138000"                     # env: GIT_FIT_IGPSPORT_PASSWORD
+  #   password: "your_password"
 
-  # xoss:                       # XOSS International (backend.xoss.co)
-  #   email: "your@email.com"   # env: SYNC__XOSS__EMAIL
-  #   password: "your_password" # env: SYNC__XOSS__PASSWORD
+  # xoss:                                      # env: GIT_FIT_XOSS_EMAIL
+  #   email: "your@email.com"                  # env: GIT_FIT_XOSS_PASSWORD
+  #   password: "your_password"
 
-  # xingzhe:                    # 行者国内版 (imxingzhe.com)
-  #   email: "13800138000"      # env: SYNC__XINGZHE__EMAIL
-  #   password: "your_password" # env: SYNC__XINGZHE__PASSWORD
+  # xingzhe:                                   # env: GIT_FIT_XINGZHE_EMAIL
+  #   email: "13800138000"                     # env: GIT_FIT_XINGZHE_PASSWORD
+  #   password: "your_password"
   #   session_path: "data/cache/xingzhe_session.json"  # env: GIT_FIT_XINGZHE_SESSION_PATH
-
-migrate:
-  # igpsport_to_garmin:
-  #   limit: 10                 # 默认上传数量 (env: MIGRATE__IGPSPORT_TO_GARMIN__LIMIT)
-  # igpsport_to_garmin_cn:
-  #   limit: 10                 # env: MIGRATE__IGPSPORT_TO_GARMIN_CN__LIMIT
 
 export:
   json:
@@ -59,4 +56,4 @@ privacy:
 system:
   units: metric
   log_level: info
-  timezone: UTC
+  timezone: Asia/Shanghai

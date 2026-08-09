@@ -1,38 +1,35 @@
 module Workouts
-  require_relative "cli/sync"
-
   class CLI < Thor
     package_name "Workouts"
 
     class_option :config, type: :string, desc: "Path to config file", aliases: "-c"
-    class_option :db, type: :string, desc: "Database path override"
 
     def self.exit_on_failure?
       true
     end
 
-    include Cli::Sync
-
-    desc "auth SOURCE", "Authenticate with a sync source (strava, garmin, garmin_cn, xoss, xingzhe)"
+    desc "auth SOURCE", "Authenticate with a sync source (garmin, garmin_cn, strava)"
     option :A, type: :boolean, desc: "Garmin Strategy A: curl-impersonate shellout (git fit auth garmin)"
     option :B, type: :boolean, desc: "Garmin Strategy B: Playwright"
     option :auto, type: :boolean, desc: "Garmin auto: B first, fallback to A (default)"
     option :sync, type: :boolean, desc: "Garmin: promote cached token to auth_seed"
     option :mfa_code, type: :string, desc: "Garmin MFA code (from email), re-run to continue"
     def auth(source)
-      if source == "garmin"
-        delegate_garmin_auth
-        return
-      end
-      if source == "strava"
-        Auth::Strava.new(options, workouts_config).call
+      case source
+      when "garmin"
+        delegate_auth
+      when "garmin_cn", "strava"
+        gitfit_args = ["auth", source]
+        gitfit_args.insert(2, "-c", options[:config]) if options[:config]
+        GitFit::CLI.start(gitfit_args)
+      when "xoss", "xingzhe"
+        say_status :warn,
+          "#{source} self-authenticates during `git fit sync`; no interactive auth", :yellow
       else
-        super
+        say_status :error, "Supported: garmin, garmin_cn, strava", :red
       end
-    rescue Workouts::AuthError => e
+    rescue GitFit::Sync::AuthError => e
       say_status :error, "Auth failed: #{e.message}", :red
-    rescue => e
-      say_status :error, e.message, :red
     end
 
     desc "db SUBCOMMAND", "Database operations (delegated to git fit)"
@@ -72,23 +69,9 @@ module Workouts
       puts "Workouts v#{Workouts::VERSION}"
     end
 
-    no_commands do
-      def workouts_config
-        @workouts_config ||= begin
-          cfg = respond_to?(:options) ? options[:config] : nil
-          cfg = cfg.to_s if cfg
-          Workouts::Config.new(cfg)
-        end
-      end
-
-      def db_path
-        (respond_to?(:options) ? options[:db] : nil) || workouts_config.db_path
-      end
-    end
-
     private
 
-    def delegate_garmin_auth
+    def delegate_auth
       gitfit_args = ["auth", "garmin"]
       %i[A B].each { |flag| gitfit_args << "-#{flag}" if options[flag] }
       %i[auto sync].each { |flag| gitfit_args << "--#{flag}" if options[flag] }
@@ -97,10 +80,6 @@ module Workouts
       end
       gitfit_args.insert(2, "-c", options[:config]) if options[:config]
       GitFit::CLI.start(gitfit_args)
-    end
-
-    def connect_db
-      Workouts::DB::Connection.new(db_path).db
     end
   end
 end

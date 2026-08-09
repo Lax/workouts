@@ -18,7 +18,7 @@
 | `git fit dedup` | 全源重跑去重匹配（覆盖已有 duplicate_info）— 已迁移至 git-fit gem，本地 `exe/workouts dedup` 已移除 |
 | `git fit import [--source S] [--sport S]` | 从本地目录批量导入 GPX/FIT/TCX/Apple Health — 已迁移至 git-fit gem，本地 `exe/workouts import` 已移除 |
 | `git fit export [json\|csv\|stats\|gpx]` | 导出 JSON/CSV/统计/GPX — 已迁移至 git-fit gem，本地 `exe/workouts export` 已移除 |
-| `auth <garmin\|garmin_cn\|xoss\|xingzhe\|strava>` | 交互式 auth（garmin/strava 委托 git fit；garmin_cn/xoss/xingzhe 用本地适配器 SSO — **待迁移**，见 [Lax/git-fit#65](https://github.com/Lax/git-fit/issues/65)）|
+| `auth <garmin\|garmin_cn\|strava>` | 交互式 auth — **全部委托 git fit**（`auth xoss/xingzhe` 被 git-fit 否决：sync 时自动认证，见 [git-fit auth-model](https://github.com/Lax/git-fit/wiki/specs/auth-model.md)）|
 | `db SUBCOMMAND` | 数据库操作 — **委托 git fit db** |
 | `geo SUBCOMMAND` | 地理行政区域检测 — **委托 git fit geo** |
 | `parse <file.gpx\|file.tcx> [--save]` | 解析 GPX/TCX — **委托 git fit parse** |
@@ -29,33 +29,19 @@
 
 ## CLI 文件结构
 
-> 以下 `sync/`、`auth/`、`fit/`、`db/` 目录为**待清理**（workouts #7 审计）：git-fit 已有对应实现，删除前置是 [Lax/git-fit#65](https://github.com/Lax/git-fit/issues/65)（auth 白名单支持 xoss/xingzhe）。
+> 已清理（workouts #7，git-fit#65 否决交互式 auth 后解锁）：`sync/`、`auth/`、`fit/`、`db/`、`config.rb` 全部删除。本地薄壳仅剩 3 个文件：
 
 ```
-lib/workouts/cli.rb              # 主 CLI（Workouts::CLI），auth 本地（garmin/strava 委托）+ db/geo/init/parse 委托 git fit
-lib/workouts/cli/sync.rb         # auth 子模块（garmin_cn/xoss/xingzhe SSO）— 待删（依赖 git-fit#65）
-lib/workouts/sync/
-  base.rb                        # 适配器基类（仅用于交互式 auth）— 待删
-  garmin_base.rb                 # GarminBase（SSO + token 管理）— 待删（sync 逻辑占多数，auth 只用 authenticate）
-  garmin_cn.rb                   # GarminCN — 待删
-  xoss.rb                        # XOSS — 待删
-  xingzhe.rb                     # XingZhe — 待删
-  tally.rb                       # 中文计数 — 待删
-lib/workouts/fit/
-  decoder.rb + decoder.js        # FIT 解码器（mini_racer + @garmin/fitsdk）— 待删（仅被 garmin_base 引用）
-lib/workouts/auth/
-  strava.rb                      # Strava WEBrick OAuth2 — 待删（git-fit Auth::Strava 完全 port）
-lib/workouts/db/
-  connection.rb                  # Sequel 连接 + 迁移 — 待删
-  rebuild.rb                     # 迁移失败重建 — 待删
-lib/workouts/config.rb           # 配置 — 待定（git-fit Config 为超集，env 名有差异）
+lib/workouts.rb              # 入口：require git-fit + thor
+lib/workouts/cli.rb          # 主 CLI（Workouts::CLI）：auth 全委托 git fit + db/geo/init/parse 委托
+lib/workouts/version.rb      # 版本号
 ```
 
 ---
 
 ## 架构
 
-本地 CLI 是薄壳：`auth` 命令本地实现（garmin/strava 委托 git-fit；garmin_cn/xoss/xingzhe 本地交互式 SSO），`db / geo / parse / init` 委托 git-fit gem，核心逻辑（sync / import / export / dedup）已迁移：
+本地 CLI 是薄壳：`auth` 命令全部委托 git-fit（garmin/garmin_cn/strava；xoss/xingzhe 被否决：sync 时自动认证），`db / geo / parse / init` 委托 git-fit gem，核心逻辑（sync / import / export / dedup）已迁移：
 
 ```
 ┌─────────────────────────────────────────────────────────┐
@@ -66,9 +52,7 @@ lib/workouts/config.rb           # 配置 — 待定（git-fit Config 为超集�
                          │  委托（Thor 方式）
 ┌────────────────────────▼────────────────────────────────┐
 │  本地 exe/workouts (薄壳)                                │
-│  auth（本地） / db / geo / init / parse / version        │
-│  Sync 适配器 (GarminCN/XOSS/XingZhe) 仅用于交互式 auth   │
-│  （待迁移：git-fit#65 支持 xoss/xingzhe 后全部删除）     │
+│  auth / db / geo / init / parse / version（全委托 git fit）│
 └────────────────────────┬────────────────────────────────┘
                          │
                 ┌────────▼─────────┐
@@ -87,7 +71,7 @@ lib/workouts/config.rb           # 配置 — 待定（git-fit Config 为超集�
 | 内联 deploy job 而非 reusable workflow | 调用 `uses:` 在该仓库导致 `startup_failure` |
 | cron 管理拆为独立 `sync-scheduler.yml` | 唯一写 `.github/workflows/*.yml` 的工作流，集中持有 `WORKOUTS_SYNC_PAT`（workflows:write）。sync.yml 不再需要 PAT，import-apple-health push 改用默认 GITHUB_TOKEN |
 | sync-scheduler 用 persist-credentials:false + bare PAT extraheader + git-auto-commit-action | 不能将 PAT 传给 `actions/checkout`（会被包装为 `x-access-token:` → GitHub App 路由）。`workflows: write` 不是 `permissions:` 块的有效值，无法通过 YAML 声明。改用 `persist-credentials: false` + 手动写入裸 PAT extraheader（不含 `x-access-token:` 前缀），服务器路由为 PAT，token 自带 `repo` 权限含 workflows:write。commit/push 交给 `stefanzweifel/git-auto-commit-action@v7`，复用 bare PAT extraheader 凭据 |
-| `__` 分隔 env var | 避免与 `garmin_cn` 等 key 中的 `_` 冲突 |
+| `__` 分隔 env var（已迁移至 git-fit，本地 config.rb 已删） | 避免与 `garmin_cn` 等 key 中的 `_` 冲突。CI 已改用 `GIT_FIT_` 前缀 env |
 | 保留 `upload-artifact` | Pages 部署稳定后再移除 |
 | Keep 用摘要数据 | Keep API 不提供 FIT，iGPSPORT 使用 mini_racer + @garmin/fitsdk 解析 FIT |
 | `data/raw/{source}/` 平面目录 | 与 running_page `GPX_OUT/` 兼容，symlink 级桥接 |

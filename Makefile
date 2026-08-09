@@ -7,15 +7,12 @@ install:
 	bundle install
 
 sync:
-	$(BUNDLE) exe/workouts sync
+	$(BUNDLE) git fit sync
 
 export:
-	$(BUNDLE) exe/workouts export all
+	$(BUNDLE) git fit export json
 
 all: sync export
-
-migrate:
-	$(BUNDLE) exe/workouts db migrate
 
 build:
 	gem build workouts-cli.gemspec
@@ -30,7 +27,7 @@ help:
 	@echo "Commands:"
 	@echo "  make install   - Install dependencies"
 	@echo "  make sync      - Sync all workout data"
-	@echo "  make export    - Export all formats"
+	@echo "  make export    - Export JSON"
 	@echo "  make all       - Sync + export"
 	@echo "  make build     - Build the gem"
 	@echo "  make test      - Run tests"

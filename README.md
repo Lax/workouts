@@ -417,9 +417,9 @@ git fit parse activity.tcx --save
 
 ### 配置层级（优先级从高到低）
 
-1. 环境变量（`SYNC__KEEP__PHONE`，双下划线分隔层级）
+1. 环境变量（`GIT_FIT_KEEP_PHONE`，与 git-fit gem 一致，见 `git fit init` 模板）
 2. `config/config.yml`
-3. 代码内默认值
+3. git-fit 代码内默认值
 
 ### 导出路径
 
@@ -451,7 +451,10 @@ git fit parse activity.tcx --save
 | `git fit export csv` | 导出 CSV |
 | `git fit export stats` | 导出统计摘要 |
 | `git fit dedup` | 全源去重匹配 |
-| `exe/workouts auth garmin_cn` | 交互式登录（本地） |
+| `exe/workouts auth garmin` | Garmin 国际版认证（委托 git fit auth garmin，支持 `-A`/`-B`/`--auto`/`--sync`/`--mfa-code`）|
+| `exe/workouts auth garmin_cn` | Garmin CN 认证（委托 git fit auth garmin_cn）|
+| `exe/workouts auth strava` | Strava 授权（委托 git fit auth strava）|
+| `exe/workouts auth xoss\|xingzhe` | 不支持交互式认证 — sync 时自动认证（见 git-fit auth-model）|
 | `exe/workouts init` | 生成默认配置（委托 git fit） |
 | `exe/workouts parse activity.gpx --save` | 解析本地 GPX/TCX 并写入 DB（委托 git fit） |
 | `exe/workouts version` | 查看版本（本地） |
