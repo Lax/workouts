@@ -9,6 +9,7 @@ data/raw/
 data/std/
 data/cache/
 data/db/
+data/auth/
 data/*.checksum
 build/
 target/
