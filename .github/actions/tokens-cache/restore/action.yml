@@ -29,6 +29,13 @@ runs:
         key: tokens-v1-xoss-auth-${{ github.run_id }}
         restore-keys: tokens-v1-xoss-auth-
 
+    - id: restore-xingzhe-session
+      uses: actions/cache/restore@v6.1.0
+      with:
+        path: data/cache/xingzhe_session.json
+        key: tokens-v1-xingzhe-auth-${{ github.run_id }}
+        restore-keys: tokens-v1-xingzhe-auth-
+
     - id: restore-strava-web
       uses: actions/cache/restore@v6.1.0
       with:
@@ -45,6 +52,8 @@ runs:
         elif [ "${{ steps.restore-garmin-intl-auth.outputs.cache-hit }}" = "true" ]; then
           hit=true
         elif [ "${{ steps.restore-xoss.outputs.cache-hit }}" = "true" ]; then
+          hit=true
+        elif [ "${{ steps.restore-xingzhe-session.outputs.cache-hit }}" = "true" ]; then
           hit=true
         elif [ "${{ steps.restore-strava-web.outputs.cache-hit }}" = "true" ]; then
           hit=true

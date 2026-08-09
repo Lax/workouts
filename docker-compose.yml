@@ -23,5 +23,6 @@ services:
       - GIT_FIT_XOSS_TOKEN_PATH
       - GIT_FIT_XINGZHE_EMAIL
       - GIT_FIT_XINGZHE_PASSWORD
+      - GIT_FIT_XINGZHE_SESSION_PATH
     tmpfs:
       - /tmp

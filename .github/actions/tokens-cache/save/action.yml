@@ -24,6 +24,13 @@ runs:
         path: data/cache/strava_session.yml
         key: tokens-v1-strava-web-auth-${{ github.run_id }}
 
+    - name: Save XingZhe session
+      uses: actions/cache/save@v6.1.0
+      if: always()
+      with:
+        path: data/cache/xingzhe_session.json
+        key: tokens-v1-xingzhe-auth-${{ github.run_id }}
+
     - name: Save XOSS tokens (auth-only)
       uses: actions/cache/save@v6.1.0
       if: always()

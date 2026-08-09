@@ -40,6 +40,10 @@ inputs:
   xingzhe-password:
     description: XingZhe password
     required: true
+  xingzhe-session-path:
+    description: XingZhe session cache path
+    required: false
+    default: data/cache/xingzhe_session.json
   keep-phone:
     description: Keep phone
     required: true
@@ -86,6 +90,7 @@ runs:
         GIT_FIT_XOSS_TOKEN_PATH: ${{ inputs.xoss-token-path }}
         GIT_FIT_XINGZHE_EMAIL: ${{ inputs.xingzhe-email }}
         GIT_FIT_XINGZHE_PASSWORD: ${{ inputs.xingzhe-password }}
+        GIT_FIT_XINGZHE_SESSION_PATH: ${{ inputs.xingzhe-session-path }}
         GIT_FIT_KEEP_PHONE: ${{ inputs.keep-phone }}
         GIT_FIT_KEEP_PASSWORD: ${{ inputs.keep-password }}
         GIT_FIT_IGPSPORT_PHONE: ${{ inputs.igpsport-phone }}

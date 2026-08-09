@@ -39,6 +39,7 @@ sync:
   # xingzhe:                    # 行者国内版 (imxingzhe.com)
   #   email: "13800138000"      # env: SYNC__XINGZHE__EMAIL
   #   password: "your_password" # env: SYNC__XINGZHE__PASSWORD
+  #   session_path: "data/cache/xingzhe_session.json"  # env: GIT_FIT_XINGZHE_SESSION_PATH
 
 migrate:
   # igpsport_to_garmin:
