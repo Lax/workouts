@@ -1,30 +1,12 @@
 module Workouts
   module Cli
     module Sync
-      # auth garmin: redirect to scripts/garmin_auth_local.sh (MFA-only, DI OAuth2)
+      # auth garmin: delegated to git fit auth garmin (lib/workouts/cli.rb)
       # auth garmin_cn/xoss/xingzhe: adapter.authenticate → SSO
       def auth(source)
         sources = %w[garmin garmin_cn xoss xingzhe]
         unless sources.include?(source)
           say_status :error, "Supported: #{sources.join(", ")}", :red
-          return
-        end
-
-        if source == "garmin"
-          say "Garmin international uses DI OAuth2 with MFA — handled by scripts/garmin_auth_local.sh:", :blue
-          puts ""
-          puts "  Initial setup (SSO + MFA):"
-          puts "    ./scripts/garmin_auth_local.sh"
-          puts ""
-          puts "  Push cached token to auth_seed:"
-          puts "    ./scripts/garmin_auth_local.sh --sync"
-          puts ""
-          puts "  The script will:"
-          puts "    · Handle MFA via garmin_auth.py (curl_cffi)"
-          puts "    · Update config/config.yml with Base64 auth_seed"
-          puts "    · Optionally set GitHub Secret via gh CLI"
-          puts ""
-          puts "  CI uses auth_seed only — no email/password required."
           return
         end
 

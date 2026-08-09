@@ -110,7 +110,7 @@ garmin.com 的 SSO 端点 `/mobile/api/login` 已被 Garmin 关闭（返回 400�
 
 ### git fit auth garmin CLI（设计：git-fit #63）
 
-> **状态：** 接口设计已定稿，实现待 git-fit #63。本地 `auth garmin` 当前仍打印 `scripts/garmin_auth_local.sh` 指引，待 #63 实现后改为委托 `git fit auth garmin`。
+> **状态：** **已实现（git-fit 0.10.7，[#63](https://github.com/Lax/git-fit/issues/63)）**。本地 `auth garmin` 已改为委托 `git fit auth garmin`（透传 `-A`/`-B`/`--auto`/`--sync`）。workouts 的 `scripts/garmin_auth_*.sh/py` 保留为历史参考实现，不再执行。真实端点验证发现并修复两个运行时 bug（Playwright driver 路径、curl-impersonate 指纹名），MFA 登录验证待凭据可用时完成，**issue #63 在真实登录成功前保持 OPEN**。
 > 本小节为设计文档（docs-first），历史结论（策略语义、实测时间戳、cookie 有效期）以原文「实测结果（2026-06-18 更新）」为准。
 
 #### 策略参数接口
@@ -130,12 +130,12 @@ garmin.com 的 SSO 端点 `/mobile/api/login` 已被 Garmin 关闭（返回 400�
 
 #### Ruby 等价映射（对齐 git-fit #63 技术选项）
 
-| 策略 | workouts 现有（Python 脚本） | git-fit #63（Ruby） | 运行时依赖 |
+| 策略 | workouts 现有（Python 脚本） | git-fit #63（Ruby，已落地 0.10.7） | 运行时依赖 |
 |---|---|---|---|
-| B（默认） | `scripts/garmin_auth_playwright.py` | `playwright-ruby-client` gem | Node.js 运行时 |
-| A | `scripts/garmin_auth.py`（curl_cffi） | `curl-impersonate` 二进制 shellout | curl-impersonate（原生，零 gem 依赖） |
+| B（默认） | `scripts/garmin_auth_playwright.py` | `playwright-ruby-client` gem（`Auth::Garmin::StrategyB`） | Node.js 运行时 |
+| A | `scripts/garmin_auth.py`（curl_cffi） | `curl-impersonate` 二进制 shellout（`Auth::Garmin::StrategyA`） | curl-impersonate（原生，零 gem 依赖） |
 
-策略 B / A 的 TLS 穿透语义与上文「Strategy B (Playwright)」/「Strategy A (curl_cffi)」实测结论一致，仅运行时载体从 Python 脚本换为 Ruby 等价实现。
+策略 B / A 的 TLS 穿透语义与上文「Strategy B (Playwright)」/「Strategy A (curl_cffi)」实测结论一致，仅运行时载体从 Python 脚本换为 Ruby 等价实现（`git fit auth garmin` 编排：`Auth::Garmin` → `StrategyA/B` → `DIExchange`）。
 
 #### 决策依据
 

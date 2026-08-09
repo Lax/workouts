@@ -14,7 +14,15 @@ module Workouts
     include Cli::Sync
 
     desc "auth SOURCE", "Authenticate with a sync source (strava, garmin, garmin_cn, xoss, xingzhe)"
+    option :A, type: :boolean, desc: "Garmin Strategy A: curl-impersonate shellout (git fit auth garmin)"
+    option :B, type: :boolean, desc: "Garmin Strategy B: Playwright (default)"
+    option :auto, type: :boolean, desc: "Garmin auto: B first, fallback to A"
+    option :sync, type: :boolean, desc: "Garmin: promote cached token to auth_seed"
     def auth(source)
+      if source == "garmin"
+        delegate_garmin_auth
+        return
+      end
       if source == "strava"
         Auth::Strava.new(options, workouts_config).call
       else
@@ -78,6 +86,14 @@ module Workouts
     end
 
     private
+
+    def delegate_garmin_auth
+      gitfit_args = ["auth", "garmin"]
+      %i[A B].each { |flag| gitfit_args << "-#{flag}" if options[flag] }
+      %i[auto sync].each { |flag| gitfit_args << "--#{flag}" if options[flag] }
+      gitfit_args.insert(2, "-c", options[:config]) if options[:config]
+      GitFit::CLI.start(gitfit_args)
+    end
 
     def connect_db
       Workouts::DB::Connection.new(db_path).db
