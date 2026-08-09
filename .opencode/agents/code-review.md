@@ -22,7 +22,7 @@ Every actionable error MUST have:
 | Element | Format | Example |
 |---|---|---|
 | Problem | `<source>: <failure reason>` | `Garmin: auth_seed decode failed — invalid Base64` |
-| Action | `  <verb>: <command>` | `  Fix: ./scripts/garmin_auth_local.sh --sync` |
+| Action | `  <verb>: <command>` | `  Fix: git fit auth garmin --sync` |
 
 Rules:
 1. Never silence errors — every `rescue` must output at least one line

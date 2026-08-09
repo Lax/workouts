@@ -249,7 +249,7 @@ git fit sync --source garmin_cn
 
 ### Garmin 国际版
 
-garmin.com 受 Cloudflare 防护，认证需要额外 Python 工具。这是最复杂的源。
+garmin.com 受 Cloudflare 防护，认证需要额外工具。这是最复杂的源。
 
 需要本地克隆代码并安装依赖完成首次认证。
 
@@ -257,8 +257,7 @@ garmin.com 受 Cloudflare 防护，认证需要额外 Python 工具。这是最�
 git clone https://github.com/你的用户名/workouts.git
 cd workouts
 bundle install
-pip install -r scripts/requirements.txt
-playwright install chromium
+playwright install chromium   # Playwright 策略 B 运行时
 ```
 
 #### 首次准备
@@ -270,8 +269,8 @@ sync:
     email: "your@email.com"
     password: "xxx"
 
-# 认证脚本（Playwright 开启无头浏览器）
-./scripts/garmin_auth_local.sh
+# 交互式认证（git fit auth garmin，默认 Playwright 策略 B）
+git fit auth garmin
 # → 自动登录 garmin.com
 # → 如有 MFA，终端输入验证码
 # → auth_seed 自动写入 config.yml
@@ -294,7 +293,7 @@ gh secret set SYNC_GARMIN_AUTH_SEED \
 
 ```bash
 git fit sync --source garmin
-./scripts/garmin_auth_local.sh --sync
+git fit auth garmin --sync
 ```
 
 <details>
@@ -492,7 +491,7 @@ docker compose run --rm workouts export json
   配置未找到。检查 GitHub Secrets 是否存在，或者 env 变量名是否正确。
 
 **Garmin Intl 报 400/401**
-  auth_seed 过期。重新运行 `./scripts/garmin_auth_local.sh` 完整认证后重新推送 secret。
+  auth_seed 过期。重新运行 `git fit auth garmin` 完整认证后重新推送 secret。
 
 **Apple Health 找不到 export.zip**
   检查 `_/import/apple_health` 分支是否存在，且包含 `data/import/apple_health/export.zip`。

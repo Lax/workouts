@@ -550,7 +550,7 @@ L1 raw → L2 标准化 GPS → L3 SQLite 摘要 → L4 构建制品 → L5 部�
 | 要素 | 格式 | 示例 |
 |---|---|---|
 | 问题描述 | `<层级>: <失败原因>` | `Garmin: auth_seed decode failed — invalid Base64` |
-| 操作指引 | `  <动>: <命令>` | `  Fix: ./scripts/garmin_auth_local.sh --sync` |
+| 操作指引 | `  <动>: <命令>` | `  Fix: git fit auth garmin --sync` |
 
 规则：
 1. 错误不吞 — 每层至少输出一行描述，`rescue` 不加原因视为 bug

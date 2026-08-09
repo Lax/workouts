@@ -42,7 +42,7 @@ You are a sync adapter specialist for the Workouts CLI.
 ## Error conventions
 Every actionable error must have:
 1. `<source>: <failure reason>` — e.g. `Garmin: auth_seed decode failed`
-2. `  <action>: <command>` — e.g. `  Fix: ./scripts/garmin_auth_local.sh --sync`
+2. `  <action>: <command>` — e.g. `  Fix: git fit auth garmin --sync`
 
 ## Testing
 - `bundle exec rspec spec/sync/<adapter>_spec.rb` — Run single adapter test

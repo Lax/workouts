@@ -1,6 +1,8 @@
 # Garmin OAuth Auth — Design
 
-> **已迁移至 git-fit gem（`git fit sync`）。** 本地薄壳仅保留 `GarminBase` / `GarminCN` / XOSS / XingZhe 用于交互式 auth；Garmin Intl 认证（`GarminBaseDI` / `Garmin`）与 token 管理（`Auth::GarminToken`）位于 git-fit 的 `lib/git_fit/sync/` / `lib/git_fit/auth/`。以下为设计摘要。
+> **已迁移至 git-fit gem（`git fit sync` / `git fit auth garmin`）。** 本地薄壳仅保留 `GarminBase` / `GarminCN` / XOSS / XingZhe 用于交互式 auth；Garmin Intl 认证（`GarminBaseDI` / `Garmin`）与 token 管理（`Auth::GarminToken`）位于 git-fit 的 `lib/git_fit/sync/` / `lib/git_fit/auth/`。以下为设计摘要。
+
+> **2026-08-09：** workouts 侧 Python 认证脚本（`scripts/garmin_auth_local.sh` / `garmin_auth.py` / `garmin_auth_playwright.py`）已删除，由 git-fit `Auth::Garmin`（StrategyA/B，全 Ruby）取代（git-fit #66）。本文保留 DI OAuth2 协议设计（token 格式、传输链、故障排查）作为权威参考，Python 实现细节段落已移除。
 
 ## Architecture overview
 
@@ -71,8 +73,8 @@ garmin.com 的 SSO 端点 `/mobile/api/login` 已被 Garmin 关闭（返回 400�
    Base64 DI OAuth2 JSON → decode → save_tokens → use / di_refresh
    refresh 失败 → 清空 @access_token → false
 
-本地 MFA 登录通过 scripts/garmin_auth_local.sh 独立完成，
-不在 Ruby authenticate 流程内。
+本地 MFA 登录通过 `git fit auth garmin`（Ruby StrategyA/B）独立完成，
+不在 Ruby authenticate（sync）流程内。
 ```
 
 ### Token lifetimes
@@ -89,7 +91,7 @@ garmin.com 的 SSO 端点 `/mobile/api/login` 已被 Garmin 关闭（返回 400�
 | `SYNC__GARMIN__AUTH_SEED`（GitHub Secret） | ✅ 唯一 CI 入口 |
 | DI token（GH Cache） | ✅ 日常续期 |
 
-本地 MFA 登录通过 `scripts/garmin_auth_local.sh` 独立于 Ruby 认证流程。
+本地 MFA 登录通过 `git fit auth garmin` 独立于 Ruby 认证（sync）流程。
 
 ### 实测结果（2026-06-18 更新）
 
@@ -110,7 +112,7 @@ garmin.com 的 SSO 端点 `/mobile/api/login` 已被 Garmin 关闭（返回 400�
 
 ### git fit auth garmin CLI（设计：git-fit #63）
 
-> **状态：** **已实现（git-fit 0.10.7，[#63](https://github.com/Lax/git-fit/issues/63)）**。本地 `auth garmin` 已改为委托 `git fit auth garmin`（透传 `-A`/`-B`/`--auto`/`--sync`）。workouts 的 `scripts/garmin_auth_*.sh/py` 保留为历史参考实现，不再执行。真实端点验证发现并修复两个运行时 bug（Playwright driver 路径、curl-impersonate 指纹名），MFA 登录验证待凭据可用时完成，**issue #63 在真实登录成功前保持 OPEN**。
+> **状态：** **已实现（git-fit 0.10.7，[#63](https://github.com/Lax/git-fit/issues/63)）**。本地 `auth garmin` 已改为委托 `git fit auth garmin`（透传 `-A`/`-B`/`--auto`/`--sync`）。原 workouts `scripts/garmin_auth_*.sh/py` Python 参考实现已删除（git-fit #66），由 Ruby 策略取代。真实端点验证发现并修复两个运行时 bug（Playwright driver 路径、curl-impersonate 指纹名），MFA 登录验证待凭据可用时完成，**issue #63 在真实登录成功前保持 OPEN**。
 > 本小节为设计文档（docs-first），历史结论（策略语义、实测时间戳、cookie 有效期）以原文「实测结果（2026-06-18 更新）」为准。
 
 #### 策略参数接口
@@ -130,12 +132,12 @@ garmin.com 的 SSO 端点 `/mobile/api/login` 已被 Garmin 关闭（返回 400�
 
 #### Ruby 等价映射（对齐 git-fit #63 技术选项）
 
-| 策略 | workouts 现有（Python 脚本） | git-fit #63（Ruby，已落地 0.10.7） | 运行时依赖 |
-|---|---|---|---|
-| B（默认） | `scripts/garmin_auth_playwright.py` | `playwright-ruby-client` gem（`Auth::Garmin::StrategyB`） | Node.js 运行时 |
-| A | `scripts/garmin_auth.py`（curl_cffi） | `curl-impersonate` 二进制 shellout（`Auth::Garmin::StrategyA`） | curl-impersonate（原生，零 gem 依赖） |
+| 策略 | git-fit（Ruby，已落地 0.10.7） | 运行时依赖 |
+|---|---|---|
+| B（默认） | `playwright-ruby-client` gem（`Auth::Garmin::StrategyB`） | Node.js 运行时 |
+| A | `curl-impersonate` 二进制 shellout（`Auth::Garmin::StrategyA`） | curl-impersonate（原生，零 gem 依赖） |
 
-策略 B / A 的 TLS 穿透语义与上文「Strategy B (Playwright)」/「Strategy A (curl_cffi)」实测结论一致，仅运行时载体从 Python 脚本换为 Ruby 等价实现（`git fit auth garmin` 编排：`Auth::Garmin` → `StrategyA/B` → `DIExchange`）。
+策略 B / A 的 TLS 穿透语义与上文「Strategy B (Playwright)」/「Strategy A (curl_cffi)」实测结论一致，仅运行时载体为 Ruby 实现（`git fit auth garmin` 编排：`Auth::Garmin` → `StrategyA/B` → `DIExchange`）。原 Python 脚本参考实现已删除（git-fit #66）。
 
 #### 决策依据
 
@@ -155,23 +157,24 @@ garmin.com 的 SSO 端点 `/mobile/api/login` 已被 Garmin 关闭（返回 400�
 ### 首次设置（有 MFA）
 
 ```bash
-./scripts/garmin_auth_local.sh
+git fit auth garmin
 ```
+
 静态 `auth_seed` 引导 CI 完成第一次认证 → 后续 CI 使用 `data/cache/` 中的工作副本自旋。
 
-脚本自动做：读 `config.yml` → `mobile+cffi` 穿透 CF（~60s）→ 提示输入 MFA → DI OAuth2 token 交换 → Base64 编码 → 写入 `config.yml`（`sync.garmin.auth_seed`）→ 尝试 `gh secret set SYNC_GARMIN_AUTH_SEED`
+命令自动做：读 `config.yml` → Strategy B（Playwright，默认）/ A（curl-impersonate）穿透 CF → 提示输入 MFA（或 `--mfa-code`）→ DI OAuth2 token 交换 → Base64 编码 → 写入 `config.yml`（`sync.garmin.auth_seed`）→ 尝试 `gh secret set SYNC_GARMIN_AUTH_SEED`。
 
 ### 日常 token 同步
 
 ```bash
-./scripts/garmin_auth_local.sh --sync
+git fit auth garmin --sync
 ```
 
 **为什么需要 `--sync`：**
 
 1. 本地执行 `git fit sync --source garmin` 后，CI 中使用的 refresh_token **被旋转**（每次 refresh_token 调用旋转 token，旧 token 永久失效）。
 2. 此时 `SYNC_GARMIN_AUTH_SEED` 中保存的旧 auth_seed 已包含被旋转过的 refresh_token。
-3. 下一次 CI 运行，若 GH Cache miss（7 天缓存或 cache 全部失效），CI 回退到 `load_auth_seed` → `refresh_token()` → **失败**（refresh_token 已被本地旋转）→ 需重新运行 `scripts/garmin_auth_local.sh` 更新 auth_seed
+3. 下一次 CI 运行，若 GH Cache miss（7 天缓存或 cache 全部失效），CI 回退到 `load_auth_seed` → `refresh_token()` → **失败**（refresh_token 已被本地旋转）→ 需重新运行 `git fit auth garmin` 更新 auth_seed
 4. `auth_seed` 是 CI 冷启动的最后防线；只要 auth_seed 中的 refresh_token 比 CI 的 cache 更新即可。
 
 **`--sync` 解决的问题：** 在后续本地完成 sync（`data/cache/garmin_garmin_com_tokens.json` 已更新）后，调用 `--sync` 将最新的 cache token 升格为下一个 auth_seed。
@@ -180,114 +183,27 @@ garmin.com 的 SSO 端点 `/mobile/api/login` 已被 Garmin 关闭（返回 400�
 **用法：** 本地 sync 后执行 `--sync`
 
 ```
-scripts/garmin_auth_local.sh --sync
+git fit auth garmin --sync
 # 读取 data/cache/garmin_garmin_com_tokens.json
 # Base64 编码 → 写 config.yml（sync.garmin.auth_seed）
 # → gh secret set SYNC_GARMIN_AUTH_SEED
 ```
 
-### 本地 MFA 登录脚本
+### 本地 MFA 登录
 
-本地 MFA 登录通过 `scripts/` 下的 Python 脚本独立完成，**不在 Ruby authenticate 流程内**。
-Ruby 只消费脚本产出的 token（`data/cache/garmin_garmin_com_tokens.json`）+ 已编码的 `auth_seed`。
+本地 MFA 登录通过 `git fit auth garmin` 的 Ruby 策略（`Auth::Garmin` → `StrategyA/B` → `DIExchange`）独立完成，**不在 Ruby authenticate（sync）流程内**。
+sync 只消费产出的 token（`data/cache/garmin_garmin_com_tokens.json`）+ 已编码的 `auth_seed`。
 CI 不与 MFA 交互——仅使用 auth_seed + token 缓存自旋。
 
-#### 调用关系
-
-```
-garmin_auth_local.sh               # Shell orchestrator, reads config.yml → dispatches
-  ├── --sync 模式                   # reads cache token → Base64 → writes auth_seed
-  └── SSO 模式 (without --sync)     # environment: SYNC__GARMIN__EMAIL + PASSWORD
-        ├── Strategy B (primary)    # garmin_auth_playwright.py (Playwright, ~1yr session cookies)
-        │     └── mobile API        # context.request → /mobile/api/login → /mobile/api/mfa/verifyCode
-        └── Strategy A (fallback)   # garmin_auth.py (curl_cffi, TLS impersonation)
-              ├── mobile+cffi       # Safari TLS, /mobile/api/login
-              └── portal+cffi       # 5 TLS fingerprints, /portal/api/login
-```
-
-两种策略都是**独立的本地工具**，各打印 JSON DI OAuth2 token 到 stdout。
-脚本成功后自动完成：DI exchange → token JSON → Base64 → 写入 `config.yml`(`sync.garmin.auth_seed`) → 尝试 `gh secret set`。
-
-#### Strategy A: curl_cffi（`scripts/garmin_auth.py:258-284`）
-
-依赖 `curl_cffi` Python 包。通过对 TLS 指纹的精确模拟绕过 Cloudflare 检测。
-
-| 子策略 | 端点 | TLS 模拟 | 调用路径 |
-|---|---|---|---|
-| `mobile+cffi`（主） | `/mobile/api/login` | `safari` | Android WebView UA, 30-45s 随机延迟 |
-| `portal+cffi`（降级） | `/portal/api/login` | 5 指纹轮换：`safari`, `safari_ios`, `chrome120`, `edge101`, `chrome` | 桌面 UA, 每个指纹 30-45s 延迟 |
-
-流程：
-```
-mobile+cffi: GET signin page → random delay(30-45s) → POST credentials
-  → success: return serviceTicketId
-  → MFA_REQUIRED: stdin prompt "Enter MFA code:" → POST /mobile/api/mfa/verifyCode
-  → success: return serviceTicketId
-  → 429/error → fall to portal+cffi
-
-portal+cffi: for each of 5 TLS fingerprints:
-  GET signin → delay(30-45s) → POST credentials
-  → success: return serviceTicketId
-  → MFA_REQUIRED: stdin prompt → POST /portal/api/mfa/verifyCode
-  → 429 → continue to next fingerprint
-
-After ticket: _di_exchange(domain, ticket, service_url)
-  → POST diauth.garmin.com/di-oauth2-service/oauth/token
-  → 3 DI_CLIENT_IDS retry (quarterly rotation: 2025Q2, 2024Q4, base)
-```
-
-MFA 处理 (`_handle_mfa`, line 96-130):
-- 优先读 env var `SYNC__GARMIN__MFA_CODE`（自动化场景）
-- 否则 `stdin` 交互式提示 "Enter MFA code:"（交互式场景）
-- 先试 `portal/api/mfa/verifyCode`，失败再试 `mobile/api/mfa/verifyCode`
-
-实测结论 (2026-06-17):
-- `mobile+cffi` Safari TLS 成功穿透 CF（有/无 MFA 均可用）
-- `portal+cffi` 中 `safari_ios`/`chrome120` 返回 403，`safari`/`edge101`/`chrome` 无响应
-- 30-45s 随机延迟对 CF WAF bypass 至关重要
-
-#### Strategy B: Playwright（`scripts/garmin_auth_playwright.py`）
-
-依赖 `playwright` Python 包 + Chromium 浏览器。使用真实浏览器的 APIRequestContext 调用 mobile API 端点绕过 Cloudflare。
-
-Garmin SSO **网页**（portal / widget / connect 页面）受 CF WAF 严格保护，headless Chromium 返回 429 / "Access denied"。但 `/mobile/api/login` 等 **API 端点** 接受真实 Chrome TLS 指纹，Playwright 的 `context.request` 可正常调用。
-
-| 特性 | 详情 |
-|---|---|
-| 引擎 | Playwright Chromium, headless |
-| 通信方式 | `context.request`（APIRequestContext），非页面导航 |
-| UA | Android WebView (same as mobile+cffi) |
-| Session 缓存 | `data/cache/garmin_playwright_session_{domain}.json` — cookies 有助降低 CF 检测，但每次仍需重新 SSO 登录 |
-| MFA 处理 | stdin 交互 + `SYNC__GARMIN__MFA_CODE` env var |
-| 延时 | 30-45s 随机延时（与 Strategy A 一致） |
-
-流程：
-```
-1. Launch Chromium (headless)
-2. Restore session cookies from cache (optional — helps CF bypass)
-3. GET /mobile/sso/en_US/sign-in (establish CF cookies)
-4. 30-45s random delay
-5. POST /mobile/api/login (credentials as JSON)
-   → SUCCESS: return CAS ticket
-   → MFA_REQUIRED: prompt code → POST /mobile/api/mfa/verifyCode
-6. _di_exchange(domain, ticket) — POST diauth.garmin.com
-7. Save session cookies + output DI OAuth2 JSON to stdout
-```
-
-与 Strategy A 的区别:
-- Strategy A（curl_cffi）依赖 C 扩展的 TLS 指纹模拟，需编译 `curl_cffi` 包
-- Strategy B（Playwright）纯 Python 依赖（pip install playwright），部署更简单
-- 两者都使用相同的 mobile API 端点 + DI exchange 逻辑
-- Playwright 的 `context.request` 在浏览器进程的上下文中发请求，CF 看到真实 Chrome TLS 指纹
+策略 B / A 的端点流程、TLS 穿透语义与上文「实测结果（2026-06-18 更新）」结论一致；原 Python 参考实现（curl_cffi / playwright）已删除，由 git-fit `Auth::Garmin` Ruby 实现取代（git-fit #66）。
 
 #### 为什么不在 Ruby authenticate 中
 
 | 原因 | 说明 |
 |---|---|
-| CF TLS 检测 | Ruby `Net::HTTP` 被 Cloudflare 429/403。Playwright（APIRequestContext，真实 Chrome TLS）/ curl_cffi（TLS 指纹模拟）才具备穿透能力 |
-| 重依赖 | `curl_cffi` (C FFI + TLS 库) 和 `playwright` (Chromium 浏览器) 是 Python-only 的 |
-| MFA 交互 | stdin 交互式输入（"Enter MFA code:"）不适合 CI 的无人值守环境 |
-| 设计原则 | CI 通过 `auth_seed`（预先认证的 DI token）初始化，然后靠 token 缓存 + `refresh_token` 自旋。本地脚本一次性生成 `auth_seed`，编入 GitHub Secret |
+| CF TLS 检测 | Ruby `Net::HTTP` 被 Cloudflare 429/403。Playwright（APIRequestContext，真实 Chrome TLS）/ curl-impersonate（TLS 指纹模拟）才具备穿透能力 |
+| MFA 交互 | MFA 需交互式输入（或 `--mfa-code`），不适合 CI 的无人值守环境 |
+| 设计原则 | CI 通过 `auth_seed`（预先认证的 DI token）初始化，然后靠 token 缓存 + `refresh_token` 自旋。本地认证一次性生成 `auth_seed`，编入 GitHub Secret |
 
 ### CI cache
 
