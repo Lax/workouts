@@ -40,4 +40,10 @@ RSpec.describe Workouts::CLI do
     GitFit::CLI.start(%w[auth garmin -c custom.yml])
     expect(GitFit::CLI).to have_received(:start).with(["auth", "garmin", "-c", "custom.yml"])
   end
+
+  it "passes --mfa-code through to git fit auth garmin" do
+    allow(GitFit::CLI).to receive(:start)
+    GitFit::CLI.start(%w[auth garmin --mfa-code 123456])
+    expect(GitFit::CLI).to have_received(:start).with(["auth", "garmin", "--mfa-code", "123456"])
+  end
 end

@@ -18,6 +18,7 @@ module Workouts
     option :B, type: :boolean, desc: "Garmin Strategy B: Playwright (default)"
     option :auto, type: :boolean, desc: "Garmin auto: B first, fallback to A"
     option :sync, type: :boolean, desc: "Garmin: promote cached token to auth_seed"
+    option :mfa_code, type: :string, desc: "Garmin MFA code (from email), re-run to continue"
     def auth(source)
       if source == "garmin"
         delegate_garmin_auth
@@ -91,6 +92,9 @@ module Workouts
       gitfit_args = ["auth", "garmin"]
       %i[A B].each { |flag| gitfit_args << "-#{flag}" if options[flag] }
       %i[auto sync].each { |flag| gitfit_args << "--#{flag}" if options[flag] }
+      if options[:mfa_code] && !options[:mfa_code].to_s.strip.empty?
+        gitfit_args += ["--mfa-code", options[:mfa_code].to_s]
+      end
       gitfit_args.insert(2, "-c", options[:config]) if options[:config]
       GitFit::CLI.start(gitfit_args)
     end
