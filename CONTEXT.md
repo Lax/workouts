@@ -18,7 +18,7 @@
 | `git fit dedup` | 全源重跑去重匹配（覆盖已有 duplicate_info）— 已迁移至 git-fit gem，本地 `exe/workouts dedup` 已移除 |
 | `git fit import [--source S] [--sport S]` | 从本地目录批量导入 GPX/FIT/TCX/Apple Health — 已迁移至 git-fit gem，本地 `exe/workouts import` 已移除 |
 | `git fit export [json\|csv\|stats\|gpx]` | 导出 JSON/CSV/统计/GPX — 已迁移至 git-fit gem，本地 `exe/workouts export` 已移除 |
-| `auth <garmin\|garmin_cn\|xoss\|xingzhe\|strava>` | 交互式 auth（garmin 打印脚本指引；garmin_cn/xoss/xingzhe 用本地适配器 SSO；strava WEBrick OAuth2）|
+| `auth <garmin\|garmin_cn\|xoss\|xingzhe\|strava>` | 交互式 auth（garmin/strava 委托 git fit；garmin_cn/xoss/xingzhe 用本地适配器 SSO — **待迁移**，见 [Lax/git-fit#65](https://github.com/Lax/git-fit/issues/65)）|
 | `db SUBCOMMAND` | 数据库操作 — **委托 git fit db** |
 | `geo SUBCOMMAND` | 地理行政区域检测 — **委托 git fit geo** |
 | `parse <file.gpx\|file.tcx> [--save]` | 解析 GPX/TCX — **委托 git fit parse** |
@@ -29,31 +29,33 @@
 
 ## CLI 文件结构
 
+> 以下 `sync/`、`auth/`、`fit/`、`db/` 目录为**待清理**（workouts #7 审计）：git-fit 已有对应实现，删除前置是 [Lax/git-fit#65](https://github.com/Lax/git-fit/issues/65)（auth 白名单支持 xoss/xingzhe）。
+
 ```
-lib/workouts/cli.rb              # 主 CLI（Workouts::CLI），auth 本地 + db/geo/init/parse 委托 git fit
-lib/workouts/cli/sync.rb         # auth 子模块（garmin 脚本指引 / garmin_cn/xoss/xingzhe SSO）
+lib/workouts/cli.rb              # 主 CLI（Workouts::CLI），auth 本地（garmin/strava 委托）+ db/geo/init/parse 委托 git fit
+lib/workouts/cli/sync.rb         # auth 子模块（garmin_cn/xoss/xingzhe SSO）— 待删（依赖 git-fit#65）
 lib/workouts/sync/
-  base.rb                        # 适配器基类（仅用于交互式 auth）
-  garmin_base.rb                 # GarminBase（SSO + token 管理）
-  garmin_cn.rb                   # GarminCN
-  xoss.rb                        # XOSS
-  xingzhe.rb                     # XingZhe
-  tally.rb                       # 中文计数
+  base.rb                        # 适配器基类（仅用于交互式 auth）— 待删
+  garmin_base.rb                 # GarminBase（SSO + token 管理）— 待删（sync 逻辑占多数，auth 只用 authenticate）
+  garmin_cn.rb                   # GarminCN — 待删
+  xoss.rb                        # XOSS — 待删
+  xingzhe.rb                     # XingZhe — 待删
+  tally.rb                       # 中文计数 — 待删
 lib/workouts/fit/
-  decoder.rb + decoder.js        # FIT 解码器（mini_racer + @garmin/fitsdk）
+  decoder.rb + decoder.js        # FIT 解码器（mini_racer + @garmin/fitsdk）— 待删（仅被 garmin_base 引用）
 lib/workouts/auth/
-  strava.rb                      # Strava WEBrick OAuth2
+  strava.rb                      # Strava WEBrick OAuth2 — 待删（git-fit Auth::Strava 完全 port）
 lib/workouts/db/
-  connection.rb                  # Sequel 连接 + 迁移
-  rebuild.rb                     # 迁移失败重建
-lib/workouts/config.rb           # 配置
+  connection.rb                  # Sequel 连接 + 迁移 — 待删
+  rebuild.rb                     # 迁移失败重建 — 待删
+lib/workouts/config.rb           # 配置 — 待定（git-fit Config 为超集，env 名有差异）
 ```
 
 ---
 
 ## 架构
 
-本地 CLI 是薄壳：`auth` 命令本地实现（交互式 SSO），`db / geo / parse / init` 委托 git-fit gem，核心逻辑（sync / import / export / dedup）已迁移：
+本地 CLI 是薄壳：`auth` 命令本地实现（garmin/strava 委托 git-fit；garmin_cn/xoss/xingzhe 本地交互式 SSO），`db / geo / parse / init` 委托 git-fit gem，核心逻辑（sync / import / export / dedup）已迁移：
 
 ```
 ┌─────────────────────────────────────────────────────────┐
@@ -66,6 +68,7 @@ lib/workouts/config.rb           # 配置
 │  本地 exe/workouts (薄壳)                                │
 │  auth（本地） / db / geo / init / parse / version        │
 │  Sync 适配器 (GarminCN/XOSS/XingZhe) 仅用于交互式 auth   │
+│  （待迁移：git-fit#65 支持 xoss/xingzhe 后全部删除）     │
 └────────────────────────┬────────────────────────────────┘
                          │
                 ┌────────▼─────────┐
