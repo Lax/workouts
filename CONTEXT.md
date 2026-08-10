@@ -206,7 +206,7 @@ lib/workouts/version.rb      # 版本号
 
 | 适配器 | 源格式 | 认证 | 特点 |
 |---|---|---|---|
-| **Apple Health** | export.zip (XML + GPX) | 无 | 从 iOS 健康导出 zip 解析，心率从 HKQuantityTypeIdentifierHeartRate 关联，自动跳过 Strava/Keep/Garmin 等已知源 |
+| **Apple Health** | export.zip (XML + GPX) | 无 | 从 iOS 健康导出 zip 解析，心率从 HKQuantityTypeIdentifierHeartRate 关联，自动跳过 Strava/Keep/Garmin 等已知源。CI 经 `import-apple-health` action 从 `GitFit/import/apple_health` 分支拉取，检测机制用 git blob id（`git rev-parse`）编码的 data_hash，精确判断数据文件内容变化。SHA256SUMS 保留用于跨 cache 恢复和快速校验 |
 | **LocalFile (GPX)** | .gpx 文件 | 无 | 扫描 `data/import/gpx/`，sport_category 默认 "other"，`--sport` 覆盖。多 track → 多活动 |
 | **LocalFile (FIT)** | .fit 文件 | 无 | 扫描 `data/import/fit/`，sport 从 FIT session mesg 提取（通过 decoder.js fitSport）。FIT 纪元时间戳 |
 | **LocalFile (TCX)** | .tcx 文件 | 无 | 扫描 `data/import/tcx/`，sport 从 XML Sport 属性提取。多 Activity → 多活动 |

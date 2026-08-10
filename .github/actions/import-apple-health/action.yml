@@ -1,7 +1,7 @@
 name: Import Apple Health
 description: >
-  Preflight checks (branch + blob existence), detect change
-  (.modified-at + SHA256SUMS), then import via LFS smudge.
+  Detect data-file changes via git blob id (content-addressed).
+  SHA256SUMS retained for cross-cache recovery and quick checks.
 
 inputs:
   branch:
@@ -57,24 +57,17 @@ runs:
         git fetch origin "+refs/heads/$AH_BRANCH:refs/remotes/$AH_REMOTE"
         echo "Fetched $AH_BRANCH" >&2
 
-        modified_sha=$(git log --format=%H -1 "$AH_REMOTE" -- "$AH_DIR/export.zip")
-        if [ -z "$modified_sha" ]; then
+        data_hash=$(git rev-parse -q --verify "$AH_REMOTE:$AH_DIR/export.zip" 2>/dev/null || echo "")
+        if [ -z "$data_hash" ]; then
           echo "export.zip not found in branch — skip" >&2
           echo "skip=true" >> $GITHUB_OUTPUT
           echo "reason=export-zip-missing" >> $GITHUB_OUTPUT
           exit 0
         fi
 
-        if ! git cat-file -e "$modified_sha:$AH_DIR/export.zip" 2>/dev/null; then
-          echo "Blob missing at ${modified_sha:0:7} — deleted in git history, skipping" >&2
-          echo "skip=true" >> $GITHUB_OUTPUT
-          echo "reason=export-zip-deleted" >> $GITHUB_OUTPUT
-          exit 0
-        fi
-
-        echo "export.zip at ${modified_sha:0:7}" >&2
+        echo "data_hash=${data_hash:0:12}" >&2
         echo "skip=false" >> $GITHUB_OUTPUT
-        echo "modified_sha=$modified_sha" >> $GITHUB_OUTPUT
+        echo "data_hash=$data_hash" >> $GITHUB_OUTPUT
 
     - name: Restore cache
       id: cache
@@ -91,40 +84,29 @@ runs:
       if: steps.preflight.outputs.skip != 'true'
       shell: bash
       env:
-        AH_BRANCH: ${{ inputs.branch }}
         AH_DIR: ${{ inputs.dir }}
-        AH_REMOTE: ${{ inputs.remote }}
       run: |
-        modified_sha="${{ steps.preflight.outputs.modified_sha }}"
+        data_hash="${{ steps.preflight.outputs.data_hash }}"
 
         if [ "${{ steps.cache.outputs.cache-hit }}" = "true" ]; then
-          echo "[cache] .modified-at + export.zip.SHA256SUMS restored" >&2
+          echo "[cache] .modified-at restored" >&2
         else
           echo "[cache] No cache hit — fresh start" >&2
         fi
 
-        cached_sha=$(cat "$AH_DIR/.modified-at" 2>/dev/null || echo "")
-        if [ "$modified_sha" = "$cached_sha" ]; then
-          echo "export.zip unchanged at ${modified_sha:0:7} — skip" >&2
+        cached=$(cat "$AH_DIR/.modified-at" 2>/dev/null || echo "")
+        if [ "$data_hash" = "$cached" ]; then
+          echo "export.zip unchanged (${data_hash:0:12}) — skip" >&2
           echo "skip=true" >> $GITHUB_OUTPUT
           echo "reason=unchanged" >> $GITHUB_OUTPUT
           exit 0
         fi
 
-        if git show "$AH_REMOTE:$AH_DIR/export.zip.SHA256SUMS" > "$RUNNER_TEMP/apple-health.sha256" 2>/dev/null; then
-          if [ -f "$AH_DIR/export.zip.SHA256SUMS" ] && cmp -s "$RUNNER_TEMP/apple-health.sha256" "$AH_DIR/export.zip.SHA256SUMS"; then
-            echo "SHA256 match — commit ID changed (${cached_sha:0:7} → ${modified_sha:0:7}) but content unchanged, skip" >&2
-            echo "skip=true" >> $GITHUB_OUTPUT
-            echo "reason=sha256-match" >> $GITHUB_OUTPUT
-            exit 0
-          fi
-        fi
-
         echo "skip=false" >> $GITHUB_OUTPUT
-        if [ -z "$cached_sha" ]; then
-          echo "First import — ${modified_sha:0:7}" >&2
+        if [ -z "$cached" ]; then
+          echo "First import — ${data_hash:0:12}" >&2
         else
-          echo "export.zip changed — ${cached_sha:0:7} → ${modified_sha:0:7}" >&2
+          echo "export.zip changed — ${cached:0:12} → ${data_hash:0:12}" >&2
         fi
 
     - name: Download export.zip
@@ -132,7 +114,6 @@ runs:
       if: steps.detect.outputs.skip == 'false' && inputs.git-configured == 'true'
       shell: bash
       env:
-        AH_BRANCH: ${{ inputs.branch }}
         AH_DIR: ${{ inputs.dir }}
         AH_REMOTE: ${{ inputs.remote }}
       run: |
@@ -171,12 +152,11 @@ runs:
       env:
         AH_BRANCH: ${{ inputs.branch }}
         AH_DIR: ${{ inputs.dir }}
-        AH_REMOTE: ${{ inputs.remote }}
       run: |
         echo "[store] Generating SHA256SUMS..." >&2
         bash scripts/generate-checksums.sh "$AH_DIR/export.zip"
 
-        echo "[store] Saving state to branch..." >&2
+        echo "[store] Saving SHA256SUMS to branch..." >&2
         push_output=$(bash scripts/append-to-branch.sh "$AH_BRANCH" \
           "$AH_DIR/export.zip.SHA256SUMS" 2>&1)
         echo "$push_output" >&2
@@ -186,22 +166,20 @@ runs:
           echo "pushed=noop" >> $GITHUB_OUTPUT
         fi
 
-        git fetch origin "+refs/heads/$AH_BRANCH:refs/remotes/$AH_REMOTE"
-        git log --format=%H -1 "$AH_REMOTE" -- "$AH_DIR/export.zip" \
-          > "$AH_DIR/.modified-at"
-        echo "[store] .modified-at updated" >&2
+        data_hash="${{ steps.preflight.outputs.data_hash }}"
+        echo "$data_hash" > "$AH_DIR/.modified-at"
+        echo "[store] .modified-at updated (${data_hash:0:12})" >&2
 
     - name: Write summary
       if: always()
       shell: bash
       env:
         AH_DIR: ${{ inputs.dir }}
-        AH_REMOTE: ${{ inputs.remote }}
       run: |
         pre_skip="${{ steps.preflight.outputs.skip }}"
         det_skip="${{ steps.detect.outputs.skip }}"
         det_reason="${{ steps.detect.outputs.reason }}"
-        modified="${{ steps.preflight.outputs.modified_sha }}"
+        data_hash="${{ steps.preflight.outputs.data_hash }}"
         cached="$(cat "$AH_DIR/.modified-at" 2>/dev/null || echo '')"
         size="${{ steps.download.outputs.size }}"
         pushed="${{ steps.store.outputs.pushed }}"
@@ -223,7 +201,7 @@ runs:
         {
           echo "### Apple Health import"
           echo "- Status: $status"
-          echo "- export.zip: ${modified:0:7} (last import: ${cached:0:7})"
+          echo "- data_hash: ${data_hash:0:12} (last: ${cached:0:12})"
           if [ -n "$size" ]; then echo "- Download: $size bytes"; fi
           if [ -n "$pushed" ]; then echo "- Store state: $pushed"; fi
         } >> "$GITHUB_STEP_SUMMARY"
