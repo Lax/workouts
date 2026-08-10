@@ -84,7 +84,7 @@ Fine-grained PAT 即使有 `workflows: write` permission，当其被 `x-access-t
 
 **优点：** `ps` 不可见、一步到位、安全。短板也已补齐。
 
-> **2026-08 更新：** cron 管理已拆分为独立 `sync-scheduler.yml` 工作流（参考 gh-pages 条件触发模式），PAT 仅在此处使用。sync.yml 中 import-apple-health 对 `_/import/apple_health` 分支的 push 改用默认 GITHUB_TOKEN（无 workflows 写权限）。commit/push 现交由 `stefanzweifel/git-auto-commit-action@v7`，复用上述 bare PAT extraheader 凭据，无需手动 `git commit`/`git push`。
+> **2026-08 更新：** cron 管理已拆分为独立 `sync-scheduler.yml` 工作流（参考 gh-pages 条件触发模式），PAT 仅在此处使用。sync.yml 中 import-apple-health 对 `GitFit/import/apple_health` 分支的 push 改用默认 GITHUB_TOKEN（无 workflows 写权限）。commit/push 现交由 `stefanzweifel/git-auto-commit-action@v7`，复用上述 bare PAT extraheader 凭据，无需手动 `git commit`/`git push`。
 >
 > **关键约束（实测）：** `workflows: write` **不是** workflow `permissions:` 块的有效值（GitHub 解析直接报错 `Unexpected value 'workflows'`）。因此不能通过 "把 PAT 传给 `actions/checkout` token 输入 + permissions 块声明 workflows:write" 来走 GitHub App 路由——PAT 必须先 `persist-credentials: false` + 手动 bare extraheader 走 PAT 路由。
 

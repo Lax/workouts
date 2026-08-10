@@ -332,7 +332,7 @@ git fit sync --source garmin
 #### 2. 存入专用分支
 
 ```bash
-git checkout --orphan _/import/apple_health
+git checkout --orphan GitFit/import/apple_health
 mkdir -p data/import/apple_health
 # 放入 export.zip
 
@@ -342,7 +342,7 @@ mkdir -p data/import/apple_health
 
 git add data/import/apple_health/export.zip
 git commit -m "Add Apple Health export"
-git push origin _/import/apple_health
+git push origin GitFit/import/apple_health
 git checkout main   # 切回主分支
 ```
 
@@ -353,7 +353,7 @@ git checkout main   # 切回主分支
 确认数据已导入后，可安全删除该分支：
 
 ```bash
-git push origin --delete _/import/apple_health
+git push origin --delete GitFit/import/apple_health
 ```
 
 Apple Health 按 XML 的 sourceName 字段自动忽略 Strava / Keep / Garmin Connect 等 App 的活动，避免重复。
@@ -494,7 +494,7 @@ docker compose run --rm workouts export json
   auth_seed 过期。重新运行 `git fit auth garmin` 完整认证后重新推送 secret。
 
 **Apple Health 找不到 export.zip**
-  检查 `_/import/apple_health` 分支是否存在，且包含 `data/import/apple_health/export.zip`。
+  检查 `GitFit/import/apple_health` 分支是否存在，且包含 `data/import/apple_health/export.zip`。
 
 **部署后页面 404**
   确认 Settings → Pages → Source 选了 "GitHub Actions"（不是 "Deploy from a branch"），且 workflow 的 build 和 deploy job 都已成功。

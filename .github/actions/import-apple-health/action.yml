@@ -7,7 +7,7 @@ inputs:
   branch:
     description: Git branch storing export.zip
     required: false
-    default: _/import/apple_health
+    default: GitFit/import/apple_health
   dir:
     description: Local directory for import data
     required: false
@@ -15,7 +15,7 @@ inputs:
   remote:
     description: Remote tracking ref
     required: false
-    default: origin/_/import/apple_health
+    default: origin/GitFit/import/apple_health
   cache-key:
     description: Cache key for state markers
     required: false

@@ -405,7 +405,7 @@ f > 2N+1 → N = min(7, N+1)    → 减速
 | schedule `0 3 * * 0`（每周日，保底） | 同上。覆盖减速分支（f > 2N+1 需在数据不更新时触发） |
 | workflow_dispatch（手动） | 读 N → 算 f，默认不写回（commit=false） |
 
-sync-scheduler 是唯一写 `.github/workflows/*.yml` 的工作流，因此唯一持有 `WORKOUTS_SYNC_PAT`（workflows:write）。sync.yml 已移除 PAT，import-apple-health 的 `_/import/apple_health` 分支 push 改用默认 GITHUB_TOKEN。
+sync-scheduler 是唯一写 `.github/workflows/*.yml` 的工作流，因此唯一持有 `WORKOUTS_SYNC_PAT`（workflows:write）。sync.yml 已移除 PAT，import-apple-health 的 `GitFit/import/apple_health` 分支 push 改用默认 GITHUB_TOKEN。
 
 ### jobs
 
