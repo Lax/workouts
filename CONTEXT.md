@@ -210,7 +210,7 @@ lib/workouts/version.rb      # 版本号
 | **LocalFile (GPX)** | .gpx 文件 | 无 | 扫描 `data/import/gpx/`，sport_category 默认 "other"，`--sport` 覆盖。多 track → 多活动 |
 | **LocalFile (FIT)** | .fit 文件 | 无 | 扫描 `data/import/fit/`，sport 从 FIT session mesg 提取（通过 decoder.js fitSport）。FIT 纪元时间戳 |
 | **LocalFile (TCX)** | .tcx 文件 | 无 | 扫描 `data/import/tcx/`，sport 从 XML Sport 属性提取。多 Activity → 多活动 |
-| **2bulu (KML + 2tk)** | .2tk + .kml 文件 | 无（本地导入） | 扫描 `data/import/2bulu/`。Parser 双格式直读：.2tk（native binary，保留分段成绩 sportinfo）+ .kml（TbuluKmlVersion2）。坐标 WGS-84 无需 GCJ-02 纠偏。详情见 `~/checkouts/mine/2bulu-research/` |
+| **2bulu (KML + 2tk)** | .2tk + .kml 文件 | 无（本地导入） | 扫描 `data/import/2bulu/`。Parser 双格式直读：.2tk（native binary，保留分段成绩 sportinfo）+ .kml（TbuluKmlVersion2）。坐标 WGS-84 无需 GCJ-02 纠偏。run_id 用 `2bulu_{YYYYMMDD}_{sha[0,12]}`（日期前缀排序 + 内容哈希去重，规避 trackFileId 冲突）。**官方赛道 KML 不入导入统计**（参考轨迹功能另行规划）。详情见 `~/checkouts/mine/2bulu-research/` 与 [git-fit#67](https://github.com/Lax/git-fit/issues/67) |
 
 ### 数据流
 
