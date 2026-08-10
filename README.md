@@ -393,7 +393,7 @@ git checkout main   # 切回主分支
 
 #### 2. 导入行为
 
-- 每次 sync 检查分支数据文件（`.2tk` / `.kml`）是否变化；仅 SHA256SUMS / 标记文件变化不触发导入
+- 每次 sync 检查数据文件内容变化，变化时才重新导入
 - run_id = `2bulu_{YYYYMMDD}_{sha[0,12]}`（日期前缀 + 内容哈希去重）
 - 运动类型：TrackTypeId=8 / SportTypeId 3、18 → `hike`，24 → `run`
 - 坐标 WGS-84，无需 GCJ-02 纠偏
