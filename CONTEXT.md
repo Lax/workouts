@@ -210,7 +210,7 @@ lib/workouts/version.rb      # 版本号
 | **LocalFile (GPX)** | .gpx 文件 | 无 | 扫描 `data/import/gpx/`，sport_category 默认 "other"，`--sport` 覆盖。多 track → 多活动 |
 | **LocalFile (FIT)** | .fit 文件 | 无 | 扫描 `data/import/fit/`，sport 从 FIT session mesg 提取（通过 decoder.js fitSport）。FIT 纪元时间戳 |
 | **LocalFile (TCX)** | .tcx 文件 | 无 | 扫描 `data/import/tcx/`，sport 从 XML Sport 属性提取。多 Activity → 多活动 |
-| **2bulu (KML + 2tk)** | .2tk + .kml 文件 | 无（本地导入） | 扫描 `data/import/2bulu/`。Parser 双格式直读：.2tk（native binary，保留分段成绩 sportinfo）+ .kml（TbuluKmlVersion2）。坐标 WGS-84 无需 GCJ-02 纠偏。run_id 用 `2bulu_{YYYYMMDD}_{sha[0,12]}`（日期前缀排序 + 内容哈希去重，规避 trackFileId 冲突）。**官方赛道 KML 不入导入统计**（参考轨迹功能另行规划）。详情见 `~/checkouts/mine/2bulu-research/` 与 [git-fit#67](https://github.com/Lax/git-fit/issues/67) |
+| **2bulu (KML + 2tk)** | .2tk + .kml 文件 | 无（本地导入） | 扫描 `data/import/2bulu/`。Parser 双格式直读：.2tk（native binary，保留分段成绩 sportinfo）+ .kml（TbuluKmlVersion2）。坐标 WGS-84 无需 GCJ-02 纠偏。run_id 用 `2bulu_{YYYYMMDD}_{sha[0,12]}`（日期前缀排序 + 内容哈希去重，规避 trackFileId 冲突）。CI 经 `import-2bulu` action 从 `GitFit/import/2bulu` 分支拉取，检测机制用 git blob id 编码的 data_hash（`git ls-tree -r` + 过滤标志文件 + sha256sum），精确判断数据文件内容变化。SHA256SUMS 保留用于跨 cache 恢复和快速校验。**官方赛道 KML 不入导入统计**（参考轨迹功能另行规划）。详情见 `~/checkouts/mine/2bulu-research/` 与 [git-fit#67](https://github.com/Lax/git-fit/issues/67) |
 
 ### 数据流
 
@@ -416,6 +416,7 @@ sync job (runs-on: ${{ vars.RUNNER_LABEL || 'ubuntu-latest' }}):
   3. restore DB cache (db-store/cache/restore@v1)
   4. restore DB from archive branch (GitFit/db, cache miss 回退)
   5. Import Apple Health (git-configured: 'true', GITHUB_TOKEN push)
+  5b. Import 2bulu (import-2bulu action, GitFit/import/2bulu 分支, 仅数据文件变化时导入)
   6. restore per-source caches (data-store/cache/restore@v2)
   7. git fit sync（受 vars.SYNC_TIME_BUDGET / SYNC_TOTAL_TIMEOUT 限制）
   8. Fetch Strava original files (git fit strava fetch, continue-on-error)

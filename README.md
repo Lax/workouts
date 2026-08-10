@@ -372,6 +372,46 @@ gh actions-cache delete imported-v1-apple-health
 
 ---
 
+### 2bulu（两步路）导入
+
+本地文件导入，无网络请求。数据源为两步路 App/网页导出的 `.2tk` / `.kml` 文件。
+
+#### 1. 存入专用分支
+
+```bash
+git checkout --orphan GitFit/import/2bulu
+mkdir -p data/import/2bulu
+# 放入 .2tk / .kml 文件
+
+git add data/import/2bulu
+git commit -m "Add 2bulu import data"
+git push origin GitFit/import/2bulu
+git checkout main   # 切回主分支
+```
+
+分支不存在时 GitHub Actions 静默跳过。
+
+#### 2. 导入行为
+
+- 每次 sync 检查分支数据文件（`.2tk` / `.kml`）是否变化；仅 SHA256SUMS / 标记文件变化不触发导入
+- run_id = `2bulu_{YYYYMMDD}_{sha[0,12]}`（日期前缀 + 内容哈希去重）
+- 运动类型：TrackTypeId=8 / SportTypeId 3、18 → `hike`，24 → `run`
+- 坐标 WGS-84，无需 GCJ-02 纠偏
+
+<details>
+<summary>本地导入详解 + 强制重新导入</summary>
+
+```bash
+# 本地导入（已迁移至 git-fit）
+git fit import tbulu
+
+# 强制重新导入（删除 cache 后重跑 workflow）
+gh actions-cache delete import-2bulu-v1-detect
+```
+</details>
+
+---
+
 ### 本地文件导入
 
 纯本地操作，无网络要求。

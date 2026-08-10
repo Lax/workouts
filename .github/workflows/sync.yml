@@ -63,6 +63,11 @@ jobs:
         with:
           git-configured: 'true'
 
+      - name: Import 2bulu
+        uses: ./.github/actions/import-2bulu
+        with:
+          git-configured: 'true'
+
       # ── Data restore ──
       - uses: git-fit-actions/data-store/cache/restore@v2
         with:

@@ -1,0 +1,205 @@
+name: Import 2bulu
+description: >
+  Detect data-file changes via git blob-id hash (content-addressed).
+  SHA256SUMS retained for cross-cache recovery and quick checks.
+
+inputs:
+  branch:
+    description: Git branch storing 2bulu import files
+    required: false
+    default: GitFit/import/2bulu
+  dir:
+    description: Local directory for import data
+    required: false
+    default: data/import/2bulu
+  remote:
+    description: Remote tracking ref
+    required: false
+    default: origin/GitFit/import/2bulu
+  cache-key:
+    description: Cache key for state markers
+    required: false
+    default: import-2bulu-v1-detect
+  db-path:
+    description: SQLite database path
+    required: false
+    default: data/db/workouts.db
+  git-configured:
+    description: Whether git push auth is configured
+    required: true
+
+outputs:
+  skip:
+    description: Whether the import was skipped
+    value: ${{ steps.detect.outputs.skip }}
+  reason:
+    description: Reason for skipping
+    value: ${{ steps.detect.outputs.reason }}
+
+runs:
+  using: composite
+  steps:
+    - name: Preflight
+      id: preflight
+      shell: bash
+      env:
+        T2B_BRANCH: ${{ inputs.branch }}
+        T2B_DIR: ${{ inputs.dir }}
+        T2B_REMOTE: ${{ inputs.remote }}
+      run: |
+        if ! git ls-remote --exit-code origin "refs/heads/$T2B_BRANCH" >/dev/null 2>&1; then
+          echo "No 2bulu branch — skip import" >&2
+          echo "skip=true" >> $GITHUB_OUTPUT
+          echo "reason=no-branch" >> $GITHUB_OUTPUT
+          exit 0
+        fi
+
+        git fetch origin "+refs/heads/$T2B_BRANCH:refs/remotes/$T2B_REMOTE"
+        echo "Fetched $T2B_BRANCH" >&2
+
+        data_hash=$(git ls-tree -r "$T2B_REMOTE" "$T2B_DIR" \
+          | grep -v '/SHA256SUMS$\|/\.modified-at$' \
+          | awk '{print $3}' \
+          | sha256sum | cut -d' ' -f1)
+        if [ -z "$data_hash" ] || [ "$data_hash" = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855" ]; then
+          echo "$T2B_DIR has no data files in branch — skip" >&2
+          echo "skip=true" >> $GITHUB_OUTPUT
+          echo "reason=no-data-files" >> $GITHUB_OUTPUT
+          exit 0
+        fi
+
+        echo "data_hash=${data_hash:0:12}" >&2
+        echo "skip=false" >> $GITHUB_OUTPUT
+        echo "data_hash=$data_hash" >> $GITHUB_OUTPUT
+
+    - name: Restore cache
+      id: cache
+      if: steps.preflight.outputs.skip != 'true'
+      uses: actions/cache@v6.1.0
+      with:
+        path: |
+          ${{ inputs.dir }}/SHA256SUMS
+          ${{ inputs.dir }}/.modified-at
+        key: ${{ inputs.cache-key }}
+
+    - name: Detect change
+      id: detect
+      if: steps.preflight.outputs.skip != 'true'
+      shell: bash
+      env:
+        T2B_DIR: ${{ inputs.dir }}
+      run: |
+        data_hash="${{ steps.preflight.outputs.data_hash }}"
+
+        if [ "${{ steps.cache.outputs.cache-hit }}" = "true" ]; then
+          echo "[cache] .modified-at restored" >&2
+        else
+          echo "[cache] No cache hit — fresh start" >&2
+        fi
+
+        cached=$(cat "$T2B_DIR/.modified-at" 2>/dev/null || echo "")
+        if [ "$data_hash" = "$cached" ]; then
+          echo "$T2B_DIR unchanged (${data_hash:0:12}) — skip" >&2
+          echo "skip=true" >> $GITHUB_OUTPUT
+          echo "reason=unchanged" >> $GITHUB_OUTPUT
+          exit 0
+        fi
+
+        echo "skip=false" >> $GITHUB_OUTPUT
+        if [ -z "$cached" ]; then
+          echo "First import — ${data_hash:0:12}" >&2
+        else
+          echo "$T2B_DIR changed — ${cached:0:12} → ${data_hash:0:12}" >&2
+        fi
+
+    - name: Download files
+      id: download
+      if: steps.detect.outputs.skip == 'false' && inputs.git-configured == 'true'
+      shell: bash
+      env:
+        T2B_DIR: ${{ inputs.dir }}
+        T2B_REMOTE: ${{ inputs.remote }}
+      run: |
+        mkdir -p "$T2B_DIR"
+        git archive --format=tar "$T2B_REMOTE" "$T2B_DIR" | tar xf - -C ./
+
+        file_count=$(find "$T2B_DIR" -maxdepth 1 -type f ! -name 'SHA256SUMS' ! -name '.modified-at' | wc -l)
+        echo "file_count=$file_count" >> $GITHUB_OUTPUT
+        echo "[download] Extracted $T2B_DIR ($file_count files)" >&2
+        if [ "$file_count" -eq 0 ]; then
+          echo "[download] No import files found in branch" >&2
+          exit 1
+        fi
+        echo "[download] Validation passed" >&2
+
+    - name: Import
+      id: import
+      if: steps.download.conclusion == 'success'
+      shell: bash
+      env:
+        GIT_FIT_DATABASE_PATH: ${{ inputs.db-path }}
+      run: |
+        echo "[import] Running git fit import tbulu..." >&2
+        bundle exec git fit import tbulu
+
+    - name: Store state
+      id: store
+      if: steps.import.conclusion == 'success'
+      shell: bash
+      env:
+        T2B_BRANCH: ${{ inputs.branch }}
+        T2B_DIR: ${{ inputs.dir }}
+        T2B_REMOTE: ${{ inputs.remote }}
+      run: |
+        echo "[store] Generating SHA256SUMS..." >&2
+        bash scripts/generate-checksums.sh "$T2B_DIR"
+
+        echo "[store] Saving SHA256SUMS to branch..." >&2
+        push_output=$(bash scripts/append-to-branch.sh "$T2B_BRANCH" \
+          "$T2B_DIR/SHA256SUMS" 2>&1)
+        echo "$push_output" >&2
+        if echo "$push_output" | grep -q "Pushed to"; then
+          echo "pushed=pushed" >> $GITHUB_OUTPUT
+        else
+          echo "pushed=noop" >> $GITHUB_OUTPUT
+        fi
+
+        data_hash="${{ steps.preflight.outputs.data_hash }}"
+        echo "$data_hash" > "$T2B_DIR/.modified-at"
+        echo "[store] .modified-at updated (${data_hash:0:12})" >&2
+
+    - name: Write summary
+      if: always()
+      shell: bash
+      env:
+        T2B_DIR: ${{ inputs.dir }}
+      run: |
+        pre_skip="${{ steps.preflight.outputs.skip }}"
+        det_skip="${{ steps.detect.outputs.skip }}"
+        det_reason="${{ steps.detect.outputs.reason }}"
+        data_hash="${{ steps.preflight.outputs.data_hash }}"
+        cached="$(cat "$T2B_DIR/.modified-at" 2>/dev/null || echo '')"
+        file_count="${{ steps.download.outputs.file_count }}"
+        pushed="${{ steps.store.outputs.pushed }}"
+
+        if [ "$pre_skip" = "true" ]; then
+          status="skipped (preflight: ${det_reason:-unknown})"
+        elif [ "$det_skip" = "true" ]; then
+          status="skipped (${det_reason})"
+        elif [ "${{ steps.import.conclusion }}" = "success" ]; then
+          status="imported"
+        elif [ "${{ steps.download.conclusion }}" = "failure" ]; then
+          status="download failed"
+        elif [ "${{ steps.download.conclusion }}" = "skipped" ]; then
+          status="not run"
+        else
+          status="failed"
+        fi
+
+        {
+          echo "### 2bulu import"
+          echo "- Status: $status"
+          echo "- data_hash: ${data_hash:0:12} (last: ${cached:0:12})"
+          if [ -n "$file_count" ]; then echo "- Files: $file_count"; fi
+          if [ -n "$pushed" ]; then echo "- Store state: $pushed"; fi
+        } >> "$GITHUB_STEP_SUMMARY"
