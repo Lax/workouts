@@ -2,7 +2,7 @@ source "https://rubygems.org"
 
 gemspec
 
-gem "git-fit", "~> 0.11.0"
+gem "git-fit", "~> 0.12.0"
 
 group :development do
   gem "rake", "~> 13.0"

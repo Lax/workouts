@@ -13,6 +13,6 @@ Gem::Specification.new do |s|
 
   s.required_ruby_version = ">= 3.4"
 
-  s.add_dependency "git-fit", "~> 0.11.0"
+  s.add_dependency "git-fit", "~> 0.12.0"
   s.add_dependency "thor", "~> 1.3"
 end
