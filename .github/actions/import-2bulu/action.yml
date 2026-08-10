@@ -17,7 +17,7 @@ inputs:
     required: false
     default: origin/GitFit/import/2bulu
   cache-key:
-    description: Cache key for state markers
+    description: Cache key namespace. Current data_hash appended automatically at save.
     required: false
     default: import-2bulu-v1-detect
   db-path:
@@ -80,7 +80,8 @@ runs:
         path: |
           ${{ inputs.dir }}/SHA256SUMS
           ${{ inputs.dir }}/.modified-at
-        key: ${{ inputs.cache-key }}
+        key: ${{ inputs.cache-key }}-${{ steps.preflight.outputs.data_hash }}
+        restore-keys: ${{ inputs.cache-key }}-
 
     - name: Detect change
       id: detect
@@ -98,6 +99,7 @@ runs:
         fi
 
         cached=$(cat "$T2B_DIR/.modified-at" 2>/dev/null || echo "")
+        echo "cached=$cached" >> $GITHUB_OUTPUT
         if [ "$data_hash" = "$cached" ]; then
           echo "$T2B_DIR unchanged (${data_hash:0:12}) — skip" >&2
           echo "skip=true" >> $GITHUB_OUTPUT
@@ -171,14 +173,12 @@ runs:
     - name: Write summary
       if: always()
       shell: bash
-      env:
-        T2B_DIR: ${{ inputs.dir }}
       run: |
         pre_skip="${{ steps.preflight.outputs.skip }}"
         det_skip="${{ steps.detect.outputs.skip }}"
         det_reason="${{ steps.detect.outputs.reason }}"
         data_hash="${{ steps.preflight.outputs.data_hash }}"
-        cached="$(cat "$T2B_DIR/.modified-at" 2>/dev/null || echo '')"
+        cached="${{ steps.detect.outputs.cached }}"
         file_count="${{ steps.download.outputs.file_count }}"
         pushed="${{ steps.store.outputs.pushed }}"
 

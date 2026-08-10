@@ -17,7 +17,7 @@ inputs:
     required: false
     default: origin/GitFit/import/apple_health
   cache-key:
-    description: Cache key for state markers
+    description: Cache key namespace. Current data_hash appended automatically at save.
     required: false
     default: import-apple-health-v1-detect
   db-path:
@@ -77,7 +77,8 @@ runs:
         path: |
           ${{ inputs.dir }}/export.zip.SHA256SUMS
           ${{ inputs.dir }}/.modified-at
-        key: ${{ inputs.cache-key }}
+        key: ${{ inputs.cache-key }}-${{ steps.preflight.outputs.data_hash }}
+        restore-keys: ${{ inputs.cache-key }}-
 
     - name: Detect change
       id: detect
@@ -95,6 +96,7 @@ runs:
         fi
 
         cached=$(cat "$AH_DIR/.modified-at" 2>/dev/null || echo "")
+        echo "cached=$cached" >> $GITHUB_OUTPUT
         if [ "$data_hash" = "$cached" ]; then
           echo "export.zip unchanged (${data_hash:0:12}) — skip" >&2
           echo "skip=true" >> $GITHUB_OUTPUT
@@ -173,14 +175,12 @@ runs:
     - name: Write summary
       if: always()
       shell: bash
-      env:
-        AH_DIR: ${{ inputs.dir }}
       run: |
         pre_skip="${{ steps.preflight.outputs.skip }}"
         det_skip="${{ steps.detect.outputs.skip }}"
         det_reason="${{ steps.detect.outputs.reason }}"
         data_hash="${{ steps.preflight.outputs.data_hash }}"
-        cached="$(cat "$AH_DIR/.modified-at" 2>/dev/null || echo '')"
+        cached="${{ steps.detect.outputs.cached }}"
         size="${{ steps.download.outputs.size }}"
         pushed="${{ steps.store.outputs.pushed }}"
 
