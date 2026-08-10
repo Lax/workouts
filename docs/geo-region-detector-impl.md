@@ -79,10 +79,12 @@ workouts geo detect --dry-run
 
 ## Workflow Cache Key
 
-- Restore: `workouts-geo-v1-{migration_hash}-` (broad prefix match)
-- Save: `workouts-geo-v1-{migration_hash}-{run_id}` (versioned with migration hash)
+- Restore: `actions/cache/restore`，`key: {cache_key}` 精确尝试，`restore-keys: workouts-geo-v1-` 前缀兜底命中最新条目
+- Save: `{cache_key}-{content_hash}`（`cache_key` 含 migration hash，`content_hash` 为 cache 目录内三个文件 `amap-points.jsonl`/`nominatim-points.jsonl`/`SHA256SUMS` 的复合哈希）
 
-Migration version in key ensures schema change invalidates cache.
+Save 仅在 `content_hash` 与 restore 到的 key（`cache-matched-key`）不匹配时触发——数据变化 → 哈希变 → 存新 key；数据未变 → 跳过，避免冗余 cache。
+
+Migration version 在 key 中确保 schema 变更可手动 bump 命名空间强制失效 cache。
 
 ## Admin Level Roadmap
 
