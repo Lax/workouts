@@ -75,7 +75,7 @@ runs:
       uses: actions/cache@v6.1.0
       with:
         path: |
-          ${{ inputs.dir }}/export.zip.SHA256SUMS
+          ${{ inputs.dir }}/SHA256SUMS
           ${{ inputs.dir }}/.modified-at
         key: ${{ inputs.cache-key }}-${{ steps.preflight.outputs.data_hash }}
         restore-keys: ${{ inputs.cache-key }}-
@@ -156,11 +156,11 @@ runs:
         AH_DIR: ${{ inputs.dir }}
       run: |
         echo "[store] Generating SHA256SUMS..." >&2
-        bash scripts/generate-checksums.sh "$AH_DIR/export.zip"
+        bash scripts/generate-checksums.sh "$AH_DIR"
 
         echo "[store] Saving SHA256SUMS to branch..." >&2
         push_output=$(bash scripts/append-to-branch.sh "$AH_BRANCH" \
-          "$AH_DIR/export.zip.SHA256SUMS" 2>&1)
+          "$AH_DIR/SHA256SUMS" 2>&1)
         echo "$push_output" >&2
         if echo "$push_output" | grep -q "Pushed to"; then
           echo "pushed=pushed" >> $GITHUB_OUTPUT

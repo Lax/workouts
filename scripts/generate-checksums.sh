@@ -7,7 +7,7 @@ for target in "$@"; do
     sha256sum "$target" > "${target}.SHA256SUMS"
   elif [ -d "$target" ]; then
     pushd "$target" >/dev/null
-    find . -type f ! -name 'SHA256SUMS' -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS 2>/dev/null || true
+    find . -type f ! -name 'SHA256SUMS' ! -name '.modified-at' -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS 2>/dev/null || true
     popd >/dev/null
   fi
 done

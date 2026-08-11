@@ -33,6 +33,15 @@ RSpec.describe "scripts/generate-checksums.sh" do
       expect(content).to include("b.fit")
       expect(content).not_to include("SHA256SUMS")
     end
+
+    it "excludes .modified-at marker from content" do
+      File.write("data/raw/test/.modified-at", "stale marker")
+      `bash #{script} data/raw/test`
+      content = File.read("data/raw/test/SHA256SUMS")
+      expect(content).to include("a.fit")
+      expect(content).to include("b.fit")
+      expect(content).not_to include(".modified-at")
+    end
   end
 
   describe "with a single file" do
