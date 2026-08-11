@@ -146,7 +146,7 @@ jobs:
       - name: Trigger sync scheduler
         if: steps.db-save.outputs.changed == 'true' || steps.data-save.outputs.changed == 'true'
         run: |
-          gh workflow run sync-scheduler.yml --ref main -f commit=true
+          gh workflow run sync-scheduler.yml --ref master -f commit=true
         env:
           GH_TOKEN: ${{ github.token }}
 
@@ -176,7 +176,7 @@ jobs:
       - name: Trigger gh-pages deploy
         if: steps.db-save.outputs.changed == 'true' || steps.data-save.outputs.changed == 'true'
         run: |
-          gh workflow run gh-pages.yml --ref main \
+          gh workflow run gh-pages.yml --ref master \
             -f artifact-run-id=${{ github.run_id }}
         env:
           GH_TOKEN: ${{ github.token }}

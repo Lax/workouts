@@ -5,7 +5,7 @@
 GitHub Actions 中，`git push` 修改 `.github/workflows/*.yml` 文件时报错：
 
 ```
-! [remote rejected] main -> main (refusing to allow a GitHub App to create or update
+! [remote rejected] master -> master (refusing to allow a GitHub App to create or update
   workflow `.github/workflows/sync.yml` without `workflows` permission)
 ```
 

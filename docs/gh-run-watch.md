@@ -40,7 +40,7 @@ All flags pass through to `gh run watch`. See `gh run watch --help` for the full
 
 ### Prediction
 
-- Source: Last 50 success runs of `ci.yml` on `main`
+- Source: Last 50 success runs of `ci.yml` on `master`
 - Statistic: **Median** (vs mean — resistant to outliers)
 - Floor: 10s (avoid 0 prediction for new repos)
 - Debug: `DEBUG_CI_WAIT=1 gh run-watch` prints timing

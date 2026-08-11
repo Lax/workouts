@@ -77,7 +77,7 @@ Step 4/5: restore from git archive → 权威覆盖（git-fit-archive.yml 每周
 | 20 | Save DB git `GitFit/db`（已废弃，git-by-source 模式移除） | — | — |
 | 21 | Save per-source git branches（已废弃） | — | — |
 | 22 | Save combined git `data/_/_`（已废弃，git-combined 模式移除） | — | — |
-| 23 | Save flat git (commit to main)（已废弃，git-flat 模式移除） | — | — |
+| 23 | Save flat git (commit to master)（已废弃，git-flat 模式移除） | — | — |
 | 24 | Save DB cache | — | ✓ |
 | 25 | Save per-source caches | — | ✓ |
 | 26 | Save combined cache | ✓ | — |

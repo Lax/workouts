@@ -301,7 +301,7 @@ mhash = inputs.db-schema-hash (非空则 "workouts-db-v1-abc123-{run_id}"，空�
       - name: Git add sources
 ```
 
-**说明：** db-store/save 内建 `commit-tree` 直接 push 到 `_/workouts-db` branch，不再需要 stage DB 到 main branch commit。
+**说明：** db-store/save 内建 `commit-tree` 直接 push 到 `_/workouts-db` branch，不再需要 stage DB 到 master branch commit。
 
 **影响行数：** 删除 6 行，净 -6 行。
 
@@ -321,7 +321,7 @@ mhash = inputs.db-schema-hash (非空则 "workouts-db-v1-abc123-{run_id}"，空�
         if: steps.mode.outputs.shall_commit_data == 'true' && steps.data-save.outputs.any_changed == 'true'
 ```
 
-**说明：** DB 不由 unified commit 提交到 main——db-store/save 已将其 push 到 `_/workouts-db`。统一 commit 现在只负责 source data。
+**说明：** DB 不由 unified commit 提交到 master——db-store/save 已将其 push 到 `_/workouts-db`。统一 commit 现在只负责 source data。
 
 ---
 
@@ -529,7 +529,7 @@ concurrency:
 
 ## 8. 实际提交记录
 
-变更已通过 2 个 commit 推送至 `main`：
+变更已通过 2 个 commit 推送至 `master`：
 
 ```bash
 fc8750c  chore: upgrade git-fit to v0.5.9 + fix data-store sha256sum crash

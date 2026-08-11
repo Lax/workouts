@@ -40,7 +40,7 @@ spec/
 - Fixtures in `spec/fixtures/` loaded via `fixture_path(name)` / `load_fixture(name)`
 
 ## CI setup
-- `.github/workflows/ci.yml` runs `bundle exec rspec` on push/PR to main (Ruby 3.2/3.3/3.4 matrix)
+- `.github/workflows/ci.yml` runs `bundle exec rspec` on push/PR to master (Ruby 3.2/3.3/3.4 matrix)
 - Also runs `ruby -c` syntax check on all `lib/*.rb`
 
 > git-fit gem 自身的测试（sync/import/export/dedup adapters）在 git-fit 仓库跑，不在此仓库。

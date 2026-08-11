@@ -5,7 +5,7 @@
 将 GH Actions cache 中的每源 raw/std 数据以及 workouts.db，按源独立归档到 git branch，实现：
 - **长期留存** — 绕过 cache 7 天 LRU 限制
 - **历史追溯** — git 天然提供版本 diff
-- **零侵占 main** — 归档数据不进 main，走独立 orphan branch
+- **零侵占 master** — 归档数据不进 master，走独立 orphan branch
 
 ## 分支命名
 
@@ -17,10 +17,10 @@
 ## 流程
 
 ```
-Step 0: checkout main（GITHUB_TOKEN，无需 PAT）
+Step 0: checkout master（GITHUB_TOKEN，无需 PAT）
 Step 1: ls-remote → 分支不存在则 plumbing 创建空 commit + push
 Step 2: git fetch + checkout GitFit/data/$SRC
-        （此后 index 只含 archive 文件，与 main 隔离）
+        （此后 index 只含 archive 文件，与 master 隔离）
 Step 3: cache restore → 覆盖 disk（写入新文件、覆盖已有、不删旧文件）
 Step 4: git add -f -A（含所有变动，包括删除）
         → write-tree
@@ -35,7 +35,7 @@ Step 4: git add -f -A（含所有变动，包括删除）
 `archive-db` job 独立于 matrix，处理 `data/db/workouts.db` 单文件归档到 `GitFit/db` 分支：
 
 ```
-Step 0-2: 同上（checkout main → 创建/切换 GitFit/db）
+Step 0-2: 同上（checkout master → 创建/切换 GitFit/db）
 Step 3: cache restore via git-fit-actions/db-store/cache/restore@v1（key: GitFit-db-v0-*）
 Step 4: git add -f -A data/db/workouts.db → diff --cached --quiet? skip : commit + push
 ```
@@ -58,11 +58,11 @@ git push origin "$COMMIT:refs/heads/$BRANCH"
 - 动态计算空树 hash（不同 git 版本计算结果不同，`commit-tree` 接受本地对象）
 - `commit-tree` 创建 commit 对象须指定作者身份（`-c user.name/email`）
 - 不碰 index、不碰 worktree、不切换 HEAD
-- Step 2 统一从 main 出发，fetch + checkout
+- Step 2 统一从 master 出发，fetch + checkout
 
 ### Step 2 — checkout 的 index 隔离
 
-`git checkout GitFit/data/xoss` 后，index 和 worktree 只含 archive branch 的跟踪文件（`data/raw/xoss/`、`data/std/xoss/`）。main 的文件完全不被纳入。
+`git checkout GitFit/data/xoss` 后，index 和 worktree 只含 archive branch 的跟踪文件（`data/raw/xoss/`、`data/std/xoss/`）。master 的文件完全不被纳入。
 
 ### Step 4 — rename 保护 + 删除排除
 
@@ -100,7 +100,7 @@ jobs:
 
 | 工具 | 用途 |
 |---|---|
-| `actions/checkout@v4` | 初始检出 main |
+| `actions/checkout@v4` | 初始检出 master |
 | `actions/cache/restore@v4` | 加载 per-source / DB cache |
 | `git ls-remote` | 检查远程分支是否存在 |
 | `git commit-tree` | 创建 orphan commit（plumbing） |

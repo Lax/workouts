@@ -279,7 +279,7 @@ f > 2N+1 → N = min(7, N+1)    → 减速
 
 | 触发 | 操作 |
 |---|---|
-| push/PR → main | `bundle exec rspec` + 语法检查 |
+| push/PR → master | `bundle exec rspec` + 语法检查 |
 | Ruby 版本 | 3.2 / 3.3 / 3.4 |
 
 ### sync.yml

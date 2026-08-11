@@ -344,7 +344,7 @@ mkdir -p data/import/apple_health
 git add data/import/apple_health/export.zip
 git commit -m "Add Apple Health export"
 git push origin GitFit/import/apple_health
-git checkout main   # 切回主分支
+git checkout master   # 切回主分支
 ```
 
 分支不存在时 GitHub Actions 静默跳过。无需额外 Secrets。
@@ -387,7 +387,7 @@ mkdir -p data/import/2bulu
 git add data/import/2bulu
 git commit -m "Add 2bulu import data"
 git push origin GitFit/import/2bulu
-git checkout main   # 切回主分支
+git checkout master   # 切回主分支
 ```
 
 分支不存在时 GitHub Actions 静默跳过。
