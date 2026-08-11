@@ -10,7 +10,7 @@
 
 ## 支持的源
 
-| 源 | 方式 | 认证方式 | 源数据格式L1 ( → L2 JSON → L3 DB) |
+| 源 | 方式 | 认证方式 | L1 源格式 → L2 JSON → L3 DB |
 |---|---|---|---|
 | Strava | 同步 | OAuth2 refresh_token | **JSON**，GPX，FIT，TCX |
 | Keep | 同步 | 手机号 + 密码 | **JSON**（AES解密+GCJ-02→WGS84） |
@@ -23,6 +23,7 @@
 | GPX | 导入 | — | ✅ **GPX** |
 | FIT | 导入 | — | ✅ **FIT** |
 | TCX | 导入 | — | ✅ **TCX** |
+| 2bulu（两步路） | 导入 | — | ✅ **.2tk / .kml** |
 
 > ✅ 已实现
 
@@ -257,7 +258,7 @@ garmin.com 受 Cloudflare 防护，认证需要额外工具。这是最复杂的
 git clone https://github.com/你的用户名/workouts.git
 cd workouts
 bundle install
-playwright install chromium   # Playwright 策略 B 运行时
+playwright install chromium   # 策略 B（Playwright）运行时，--auto 默认链优先
 ```
 
 #### 首次准备
@@ -269,7 +270,7 @@ sync:
     email: "your@email.com"
     password: "xxx"
 
-# 交互式认证（git fit auth garmin，默认 Playwright 策略 B）
+# 交互式认证（git fit auth garmin，默认 --auto：B primary / A fallback）
 git fit auth garmin
 # → 自动登录 garmin.com
 # → 如有 MFA，终端输入验证码
@@ -366,7 +367,7 @@ Apple Health 按 XML 的 sourceName 字段自动忽略 Strava / Keep / Garmin Co
 git fit import apple_health
 
 # 强制重新导入（删除 cache 后重跑 workflow）
-gh actions-cache delete imported-v1-apple-health
+gh actions-cache delete import-apple-health-v1-detect-
 ```
 </details>
 

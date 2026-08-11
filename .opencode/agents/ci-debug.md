@@ -18,30 +18,38 @@ permission:
 You are a CI/CD specialist for the Workouts CLI.
 
 ## Key files
-- `.github/workflows/sync.yml` — 3-job pipeline: sync → build → deploy
+- `.github/workflows/sync.yml` — sync job: restore DB → imports → data-store restore → sync → save caches → geo detect → checkpoint → trigger scheduler/pages
 - `.github/workflows/ci.yml` — PR/push: rspec + syntax check
-- `.github/actions/source-cache/action.yml` — Per-source GH Cache composite action
-- `scripts/data-store-checksum.sh` — Content sha256 detection per source (used for cache change detection)
-- `lib/workouts/sync/base.rb` — `time_expired?`, `time_budget` logic
-- `config/config.yml` — All credentials (gitignored, injected via env)
+- `.github/workflows/sync-scheduler.yml` — adaptive cron adjustment (only writer of workflow files, holds WORKOUTS_SYNC_PAT)
+- `.github/workflows/gh-pages.yml` — deploy-pages job (export json/stats → site/)
+- `.github/workflows/git-fit-archive.yml` — weekly cache → GitFit/data/<source> + GitFit/db branches
+- `.github/actions/sync-activities` — maps secrets to `GIT_FIT_*` env, runs `git fit sync`
+- `.github/actions/{import-apple-health,import-2bulu}` — content-addressed (git blob id) import detection
+- `.github/actions/parse-geo-regions` — geo cache restore/detect/save with content-hash key
+- `scripts/generate-checksums.sh` / `scripts/data-store-checksum.sh` — per-source SHA256 change detection
+- Config injected via `GIT_FIT_*` env (see `.env.example`)
 
 ## Pipeline architecture
 ```
-sync job:
+sync.yml sync job:
   1. checkout + setup Ruby + bundle
-  2. restore DB cache → record DB digest
-  3. restore Garmin token caches (intl + cn)
-  4. restore per-source caches (7 sources, independent GH Cache)
-  5. workouts sync (time-budget limited)
-  6. read N → compute freshness f → maybe update cron
-  7. check DB changed → save DB/token/source caches conditionally
-  8. upload DB artifact
+  2. restore DB cache (git-fit-actions/db-store/cache/restore@v1)
+  3. restore DB from archive branch (GitFit/db, cache miss 回退)
+  4. import apple_health (import-apple-health action)
+  5. import 2bulu (import-2bulu action)
+  6. restore per-source caches (git-fit-actions/data-store/cache/restore@v2, 7 sources)
+  7. git fit sync (time-budget limited)
+  8. git fit strava fetch (original files, continue-on-error)
+  9. save per-source caches (data-store/cache/save@v2, only changed sources)
+  10. git fit geo detect (parse-geo-regions, content-hash cache key)
+  11. [db] WAL checkpoint
+  12. save DB cache (db-store/cache/save@v1)
+  13. data/DB changed → trigger sync-scheduler.yml (commit=true)
+  14. write DB summary / upload artifact
+  15. data/DB changed → trigger gh-pages.yml
 
-build job (needs: sync):
-  download DB → export json+svg+stats+dashboard → upload pages artifact
-
-deploy job (needs: build):
-  upload-pages-artifact → deploy-pages@v4
+gh-pages.yml deploy-pages job:
+  checkout → restore DB → (optional artifact) → git fit export json/stats → site/ → deploy-pages
 ```
 
 ## Adaptive cron
@@ -50,19 +58,20 @@ f = days since latest activity
 f < N    → N = max(1, N-1)     # speed up
 f > 2N+1 → N = min(7, N+1)     # slow down
 else     → N unchanged
-Only schedule events update cron; workflow_dispatch never modifies it.
+Only sync-scheduler events update cron; workflow_dispatch never modifies it.
 ```
 
 ## Source cache
-- 7 independent caches with keys: `workouts-raw-v1-{source}-{run_id}`
-- `data-store-checksum.sh` calculates sha256 of `data/raw/{source}/ + data/std/{source}/`
-- `before_digest` recorded on restore, compared on save → only changed sources write cache
+- 7 independent caches with keys: `GitFit-data-{source}-v0-{run_id}` (run_id suffix), prefix fallback `GitFit-data-{source}-v0-`
+- `scripts/generate-checksums.sh` writes SHA256SUMS per source; save only writes changed sources
+- Cache key discipline: restore uses `-v0-sentinel`, unarchive snapshot uses `-v0-snapshot` — never merge (git-fit#51)
 
 ## Cache directories
 ```
-data/raw/{garmin,garmin_cn,igpsport,keep,strava,xingzhe,xoss}/
-data/std/{garmin,garmin_cn,igpsport,keep,strava,xingzhe,xoss}/
-data/cache/  ← Garmin token files
+data/raw/{garmin,garmin_cn,igpsport,keep,strava,xingzhe,xoss}/   L1 raw
+data/std/{garmin,garmin_cn,igpsport,keep,strava,xingzhe,xoss}/   L2 std JSON
+data/cache/  ← geo cache, xingzhe session
+data/auth/   ← garmin/xoss token files
 data/db/workouts.db
 ```
 

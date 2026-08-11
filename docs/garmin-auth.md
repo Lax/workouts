@@ -121,21 +121,20 @@ garmin.com 的 SSO 端点 `/mobile/api/login` 已被 Garmin 关闭（返回 400�
 
 | 命令 | 策略 | 行为 |
 |---|---|---|
-| `git fit auth garmin` | B（默认） | 等价 `-B` |
+| `git fit auth garmin` | `--auto`（默认） | 先 B，失败降级 A |
+| `git fit auth garmin --auto` | auto | 显式等价默认：B 失败自动降级 A |
 | `git fit auth garmin -B` | B | Playwright 策略 B（`playwright-ruby-client`） |
 | `git fit auth garmin -A` | A | 强制策略 A（`curl-impersonate` shellout） |
-| `git fit auth garmin --auto` | auto | 先 B，失败降级 A |
 
 - `-A` / `-B` / `--auto` 互斥，同时给出报错
-- 默认 `-B`，与下方「决策依据」中选 B 优先的三条原因一致
-- `--auto` 将 B primary / A fallback 链显式化：B 失败自动降级 A
+- 默认 `--auto`（B primary / A fallback），与下方「决策依据」中选 B 优先的三条原因一致；`-B` / `-A` 为显式覆盖旗标
 
 #### Ruby 等价映射（对齐 git-fit #63 技术选项）
 
 | 策略 | git-fit（Ruby，已落地 0.10.7） | 运行时依赖 |
 |---|---|---|
-| B（默认） | `playwright-ruby-client` gem（`Auth::Garmin::StrategyB`） | Node.js 运行时 |
-| A | `curl-impersonate` 二进制 shellout（`Auth::Garmin::StrategyA`） | curl-impersonate（原生，零 gem 依赖） |
+| B（`--auto` 优先） | `playwright-ruby-client` gem（`Auth::Garmin::StrategyB`） | Node.js 运行时 |
+| A（`--auto` 降级） | `curl-impersonate` 二进制 shellout（`Auth::Garmin::StrategyA`） | curl-impersonate（原生，零 gem 依赖） |
 
 策略 B / A 的 TLS 穿透语义与上文「Strategy B (Playwright)」/「Strategy A (curl_cffi)」实测结论一致，仅运行时载体为 Ruby 实现（`git fit auth garmin` 编排：`Auth::Garmin` → `StrategyA/B` → `DIExchange`）。原 Python 脚本参考实现已删除（git-fit #66）。
 
@@ -145,10 +144,10 @@ garmin.com 的 SSO 端点 `/mobile/api/login` 已被 Garmin 关闭（返回 400�
 
 | 旗标设计 | 依据 |
 |---|---|
-| 默认 `-B` | B primary：`context.request` Chrome TLS 指纹穿透 mobile API CF；首次 SSO+MFA 后 cookie 365d（CASMFA `Max-Age=31536000` + DI token 内 `mfa_expiration_timestamp` 双证据）；后续零交互、秒级完成 |
+| 默认 `--auto` | B primary：`context.request` Chrome TLS 指纹穿透 mobile API CF；首次 SSO+MFA 后 cookie 365d（CASMFA `Max-Age=31536000` + DI token 内 `mfa_expiration_timestamp` 双证据）；后续零交互、秒级完成。A 作失败降级 |
 | 选 B 优先的三条原因 | (1) cookie 服务端声明 365 天有效；(2) 首次后零交互；(3) 纯 Python 依赖无 C 编译 |
 | `-A` 强制 | A fallback：`mobile+cffi` Safari TLS 穿透但无 cookie 持久化，每次 30-45s 延时 + MFA；`portal+cffi` 部分指纹返回 403。提供 Playwright 运行时（Node.js）不可用时的强制降级路径 |
-| `--auto` | 显式化文档的 primary/fallback 链：B 优先，A 作已验证的 TLS 指纹降级路径 |
+| `--auto` | 默认策略：显式化 B primary / A fallback 链，B 优先，A 作已验证的 TLS 指纹降级路径 |
 
 #### 历史保留说明
 
@@ -162,7 +161,7 @@ git fit auth garmin
 
 静态 `auth_seed` 引导 CI 完成第一次认证 → 后续 CI 使用 `data/cache/` 中的工作副本自旋。
 
-命令自动做：读 `config.yml` → Strategy B（Playwright，默认）/ A（curl-impersonate）穿透 CF → 提示输入 MFA（或 `--mfa-code`）→ DI OAuth2 token 交换 → Base64 编码 → 写入 `config.yml`（`sync.garmin.auth_seed`）→ 尝试 `gh secret set SYNC_GARMIN_AUTH_SEED`。
+命令自动做：读 `config.yml` → 默认 `--auto`（Strategy B Playwright 优先，失败降级 Strategy A curl-impersonate）穿透 CF → 提示输入 MFA（或 `--mfa-code`）→ DI OAuth2 token 交换 → Base64 编码 → 写入 `config.yml`（`sync.garmin.auth_seed`）→ 尝试 `gh secret set SYNC_GARMIN_AUTH_SEED`。
 
 ### 日常 token 同步
 

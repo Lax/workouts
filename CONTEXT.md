@@ -91,7 +91,7 @@ lib/workouts/version.rb      # 版本号
 
 ## 同步适配器
 
-> **同步适配器已迁移至 git-fit gem（`git fit sync`）。** 本地薄壳仅保留 GarminBase/GarminCN/XOSS/XingZhe 用于交互式 auth。以下保留设计摘要。
+> **同步适配器已迁移至 git-fit gem（`git fit sync`）。** 本地薄壳仅剩 `auth` 委托（garmin/garmin_cn/strava），无 adapter 类。以下保留设计摘要。
 
 ### 数据源
 
@@ -102,7 +102,7 @@ lib/workouts/version.rb      # 版本号
 | **XOSS** | backend.xoss.co (国际版) | email+JWT | FIT 下载 + mini_racer/fitsdk 解析，JWT token 缓存 7d |
 | **XingZhe** | imxingzhe.com (行者) | RSA 加密密码 + session Cookie | 行者国内版 |
 | **Garmin CN** | garmin.cn | SSO + OAuth1→OAuth2（不受 CF 影响）| token 文件持久化 + OAuth1 自动 refresh，GH Cache |
-| **Garmin Intl** | garmin.com | DI OAuth2（Playwright primary — session cookies 365d, curl_cffi fallback）| Playwright session cookies 365d, token GH Cache，MFA 首次后零交互 |
+| **Garmin Intl** | garmin.com | DI OAuth2（默认 `--auto`：策略 B Playwright primary — session cookies 365d；策略 A curl-impersonate fallback）| Playwright session cookies 365d, token GH Cache，MFA 首次后零交互 |
 | **Strava** | strava.com | OAuth2 refresh_token | 已配置，含多源去重检测。原始文件（FIT/GPX/TCX）下载已迁移至 git-fit：`git fit strava fetch`（stravaweblib gem） |
 
 ### 数据源标识
@@ -124,77 +124,16 @@ lib/workouts/version.rb      # 版本号
 
 每源使用 `scripts/data-store-checksum.sh` 读取 `.checksum` 文件计算摘要，用于 CI cache 的变更检测。restore 阶段每个 source 目录下生成 `.checksum` 文件（`data/raw/{src}/.checksum`），save 阶段通过 `sha256sum -c` 逐源校验，仅变化的源写回 cache。
 
-### Sync Adapter 接口
+### Adapter 接口与调度
 
-> **已迁移至 git-fit gem（`git fit sync`）。** 以下保留设计摘要。
-
-每个 adapter 实现三个公共方法，供 Runner 或单源 CLI 调用：
-
-| 方法 | 返回值 | 说明 |
-|---|---|---|
-| `authenticate` | `true/false` | 登录 / 刷新 token。在 `pending_ids` 前调用，共享 `@access_token` / `@session` 状态 |
-| `pending_ids` | `[{id:, type:, summary:}]` | 预拉列表 + 过滤 existing + `skip_type?`。`summary` 保存列表 API 响应，供 `process_one` 使用 |
-| `process_one(pending)` | `attrs hash / nil` | 单活动完整流程：fetch detail → write raw → write std → upsert DB |
-
-`call` 方法委托为 `authenticate + pending_ids.filter_map { \|p\| process_one(p) }.size`，保持单源 CLI 兼容。
-
-### Import Adapter 接口
-
-> **已迁移至 git-fit gem。** 以下保留设计摘要。
-
-导入适配器（`Import::LocalFile`、`Import::AppleHealth`）也继承 `Sync::Base`，但覆盖 `call` 方法实现自定义流程，不再依赖 `pending_ids` + `process_one` 的默认循环。`authenticate` 直接返回 `true`（无网络调用）。
-
-### 数据流程
-
-#### 单源模式（`--source`）
-
-```
-同步前:
-  1. 检查凭证是否存在
-  2. 认证（登录 / 刷新 token）
-
-同步中:
-  3. pending_ids: 分页拉列表 + 过滤 existing + skip_type
-  4. process_one 逐活动: API → write raw → write std → upsert DB
-
-同步后:
-  5. 计算新鲜度 f → 调整 cron 间隔
-```
-
-#### 多源模式（默认）
-
-> **已迁移至 git-fit gem（`git fit sync`）。** 本地 Runner + Worker 池已移除，以下保留设计摘要。
-
-```
-初始化（串行）:
-  source 依次: 检查凭证 → authenticate → pending_ids → 入类 1 队列
-
-并行调度:
-  Worker 池(默认 3 线程) 循环:
-    pop 类 1 队列 → source           [acquire 分布式锁]
-    处理最多 BATCH_SIZE=5 活动:
-      shift pending_ids[source]
-      process_one                   [独占 source，无竞态]
-    还有剩余? → push 回队列           [release 锁]
-    已完成? → completion -1
-    全部完成? → push POISON
-
-扫尾:
-  worker.join → 输出队列线程 join
-  Dedup::Service.run               [全源去重]
-```
+> 已迁移至 git-fit gem（`git fit sync`），详见 git-fit 仓库。同步适配器继承 `Sync::Base`，实现 `authenticate` / `pending_ids` / `process_one`；Runner 用队列调度 Worker 池（默认 3 线程）+ BATCH_SIZE=5 分派。
 
 ### 去重机制
 
-> **已迁移至 git-fit gem。** 以下保留设计摘要。
+> 已迁移至 git-fit gem（`Dedup::Service`），所有 source 完成后统一触发。
 
-#### 一级去重：`run_id`
-
-基于 `run_id` 字段（格式：`{source}_{platform_id}`），每次同步前读取 DB 中已有 ID 列表，跳过完全重复的活动。
-
-#### 二级去重：`Dedup::Service`
-
-所有 source 同步完成后由 Runner 触发，与具体 adapter 解耦。算法跨全源滑动窗口匹配（5 分钟窗口），置信度综合时间/距离/时长/类型四因子，配合 GPS 轨迹采样重叠判定（`Dedup::Trajectory`），输出 derived/duplicate/similar 三种 flag，双向写入 `duplicate_info` 列。
+- **一级去重**：`run_id`（`{source}_{platform_id}`），每次同步前读 DB 已有 ID 跳过重复
+- **二级去重**：跨全源滑动窗口匹配（5 分钟窗口），时间/距离/时长/类型四因子置信度 + GPS 轨迹采样重叠（`Dedup::Trajectory`），输出 derived/duplicate/similar 写入 `duplicate_info`
 
 ---
 
@@ -212,38 +151,9 @@ lib/workouts/version.rb      # 版本号
 | **LocalFile (TCX)** | .tcx 文件 | 无 | 扫描 `data/import/tcx/`，sport 从 XML Sport 属性提取。多 Activity → 多活动 |
 | **2bulu (KML + 2tk)** | .2tk + .kml 文件 | 无（本地导入） | 扫描 `data/import/2bulu/`。Parser 双格式直读：.2tk（native binary，保留分段成绩 sportinfo）+ .kml（TbuluKmlVersion2）。坐标 WGS-84 无需 GCJ-02 纠偏。run_id 用 `2bulu_{YYYYMMDD}_{sha[0,12]}`（日期前缀排序 + 内容哈希去重，规避 trackFileId 冲突）。CI 经 `import-2bulu` action 从 `GitFit/import/2bulu` 分支拉取，检测机制用 git blob id 编码的 data_hash（`git ls-tree -r` + 过滤标志文件 + sha256sum），精确判断数据文件内容变化。SHA256SUMS 保留用于跨 cache 恢复和快速校验。**官方赛道 KML 不入导入统计**（参考轨迹功能另行规划）。详情见 `~/checkouts/mine/2bulu-research/` 与 [git-fit#67](https://github.com/Lax/git-fit/issues/67) |
 
-### 数据流
+### 数据流与差异
 
-```
-数据准备:
-  将文件放入 data/import/{gpx,fit,tcx}/
-  目录不存在时跳过，不报错
-
-导入过程:
-  1. 读取文件 → SHA256 内容哈希 → 检查 DB 中是否已存在（去重）
-  2. 写入 L1 raw: data/raw/{source}/{run_id}.{ext}（temp→rename 原子写）
-  3. 解析文件（Parser::GPX / Parser::TCX / Parser::FIT）
-  4. 提取 GPS 点阵 → 写入 L2 std: data/std/{source}/{run_id}.json
-  5. upsert_activity → SQLite DB
-
-run_id:
-  {source}_{SHA256(file_content)[0..12]}（如 gpx_a1b2c3d4e5f6）
-  内容不变 → run_id 不变 → upsert 自动跳过
-
-错误处理:
-  单文件失败 → 打印错误，继续处理下一文件
-  目录不存在 → 跳过，进入下一格式
-```
-
-### 与同步适配器的区别
-
-| 维度 | 同步 | 导入 |
-|------|------|------|
-| 网络 | 需要 API 调用 | 无 |
-| 认证 | OAuth / 密码 | 无 |
-| 调度 | Runner Worker 池（3 线程） | 单线程顺序 |
-| 去重 | run_id 一级 + Dedup::Service 二级 | run_id 一级（内容哈希） |
-| CI cache | per-source GH Cache | 无（一次操作） |
+> 已迁移至 git-fit gem（`git fit import`）。文件放 `data/import/{gpx,fit,tcx,apple_health,2bulu}/`，目录不存在时跳过不报错。单线程顺序处理，run_id 用内容哈希去重（内容不变自动跳过），单文件失败打印错误继续下一文件。导入无需网络/认证，不做二级去重。
 
 ---
 
@@ -308,22 +218,22 @@ CREATE TABLE activities (
 
 ### 配置层级（优先级：高→低）
 
-1. 环境变量 `` SYNC__{SOURCE}__KEY ``（`__` 双下划线分隔层级）
+1. 环境变量 `GIT_FIT_*`（与 git-fit gem 一致，见 `git fit init` 模板）
 2. `` config/config.yml ``（自动加载）
-3. `` Config::DEFAULTS `` 硬编码默认值
+3. git-fit 代码内默认值
 
 ### 环境变量命名
 
 ```
-SYNC__KEEP__PHONE       → sync.keep.phone
-SYNC__GARMIN_CN__EMAIL  → sync.garmin_cn.email
-SYNC__GARMIN__AUTH_SEED → sync.garmin.auth_seed
-SYNC__STRAVA_CLIENT_ID  → sync.strava.client_id
-SYNC__TIME_BUDGET       → sync.time_budget           # 全局 sync 配置
-SYNC__WORKERS           → sync.workers               # 并行 worker 数，默认 3
+GIT_FIT_KEEP_PHONE        → sync.keep.phone
+GIT_FIT_GARMIN_CN_EMAIL   → sync.garmin_cn.email
+GIT_FIT_GARMIN_AUTH_SEED  → sync.garmin.auth_seed
+GIT_FIT_STRAVA_CLIENT_ID  → sync.strava.client_id
+GIT_FIT_SYNC_TIME_BUDGET  → sync.time_budget           # 全局 sync 配置
+GIT_FIT_SYNC_WORKERS      → sync.workers               # 并行 worker 数，默认 3
 ```
 
-`__` 作为层级分隔符 → key 自身可含单 `_`（如 `garmin_cn`）
+前缀 `GIT_FIT_` 后跟 key（大写 + 下划线），单 `_` 分隔（如 `garmin_cn` 保留原样）。
 
 ### GitHub Variables
 
@@ -333,30 +243,13 @@ SYNC__WORKERS           → sync.workers               # 并行 worker 数，默
 
 ### GitHub Secrets 命名
 
-Secrets 名用单 `_`（`SYNC_KEEP_PHONE`），Workflow env 块映射为 `SYNC__KEEP__PHONE`。
+Secrets 名用单 `_`（`SYNC_KEEP_PHONE`），sync.yml 经 `.github/actions/sync-activities` 映射为 `GIT_FIT_KEEP_PHONE` 等 env 传给 `git fit sync`。
 
 ---
 
 ## SportMapper
 
-> **已迁移至 git-fit gem。** 以下保留设计摘要。
-
-三层回退链：
-
-```
-输入 → ① ALIASES（精确匹配表）
-     → ② KEYWORDS（正则/子串匹配）
-     → ③ Levenshtein（编辑距离 ≤ 3）
-     → ④ "other"
-```
-
-- 精确别名：`running` → `run`, `cycling` → `ride`，含 trail/virtual/indoor/gravel/ebike/backcountry/nordic 等扩展别名
-- 关键词：`mountaineering` → `hike`, `jogging` → `run`，含 crossfit/yoga/pilates/elliptical/strength/snowboard 等
-- Levenshtein：`swiming` → `swim`, `runing` → `run`
-
-**统一接入点**：`Parser::Base#normalize_sport_type` 已委托给 `SportMapper.canonicalize`，FIT/GPX/TCX 三个 parser 与 Strava/AppleHealth/LocalFile 使用同一套三层映射，不再有独立简单 hash 降级逻辑。
-
-各适配器保留自己的整数 SPORT_MAP（平台特有 code 体系不可统一）。
+> **已迁移至 git-fit gem。** 三层回退链：① ALIASES 精确匹配 → ② KEYWORDS 正则/子串 → ③ Levenshtein（编辑距离 ≤ 3）→ ④ `"other"`。`Parser::Base#normalize_sport_type` 统一委托 `SportMapper.canonicalize`，各适配器保留自己的整数 SPORT_MAP（平台特有 code 体系不可统一）。
 
 ---
 

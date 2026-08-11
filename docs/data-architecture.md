@@ -30,10 +30,12 @@ L1 -> L2 -> L3 -> L4 (build job)
 
 ## GH Cache 辅助层
 
-`data/raw/` 通过 `actions/cache` 管理：
-- key: `workouts-raw-v1-<run_id>`，前缀回退 `workouts-raw-v1-`
-- 保留 7 天，仅新活动触发更新
+`data/raw/{source}/` + `data/std/{source}/` 通过 `git-fit-actions/data-store/cache/{restore,save}@v2` 按源独立管理：
+- key: `GitFit-data-{source}-v0-{run_id}`，前缀回退 `GitFit-data-{source}-v0-`
+- 保留 7 天，`scripts/generate-checksums.sh` 计算 SHA256SUMS 检测变化，仅变动的源写 cache
 - cache miss → API 全量重拉（受 `time_budget` 限制，1-3 次 CI run 补齐）
+
+> 2026-08 变更：per-source cache（见 CONTEXT.md「关键技术决策」），旧 `workouts-raw-v1-*` 单 key 模式已废弃。
 
 ## Source adapter matrix
 

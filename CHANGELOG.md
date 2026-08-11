@@ -1,28 +1,42 @@
 # Changelog
 
-## Completed
+> 核心逻辑（sync / import / export / dedup / db / geo / parse）已迁移至 git-fit gem，本仓库为薄壳 CLI。下述条目中标注「git-fit」的已迁移，详细实现见 git-fit 仓库。
+
+## 2026-08 — thin-shell 迁移
 
 | Item | Status |
 |---|---|
-| Keep raw 数据持久化（838 条，21MB） | ✅ 已完成 |
-| iGPSPORT 原生 GPS 调研（FIT 方案选型完成） | ✅ 已完成（选定 mini_racer + JS SDK） |
-| iGPSPORT FIT raw 数据 pipeline（L1+L2+L3） | ✅ 已完成 |
-| L1/L2 数据架构设计（三层模型 + 源适配矩阵） | ✅ 已完成 |
-| 导出路径 `data/` → `build/` → `site/`（源数据与制品分离） | ✅ 已完成 |
-| 3-job workflow（sync / build / deploy） | ✅ 已完成 |
+| workouts-cli 剥为薄壳：删除 sync/auth/fit/db/export 本地实现，`auth`/`db`/`geo`/`init`/`parse` 委托 git-fit | ✅ 已完成 |
+| Garmin 认证迁移至 `git fit auth garmin`（-A/-B/--auto/--sync/--mfa-code），Python 脚本删除（git-fit #66） | ✅ 已完成 |
+| `git fit auth garmin` 默认策略改为 `--auto`（B primary / A fallback） | ✅ 已完成 |
+| XingZhe session cookie 跨 CI 持久化（git-fit 0.11.1） | ✅ 已完成 |
+| per-source 独立 GH Cache（`GitFit-data-{source}-v0-{run_id}`，data-store@v2），废弃 `workouts-raw-v1-*` | ✅ 已完成 |
+| sync 纯 cache-only：`shall-commit-data/db` 移除，`git-fit-archive.yml` 每周归档到 `GitFit/data/*` + `GitFit/db` 分支 | ✅ 已完成 |
+| 缓存 key 命名纪律（restore 用 `-v0-sentinel`，unarchive 用 `-v0-snapshot`，严禁合并，git-fit#51） | ✅ 已完成 |
+
+## 2026-07 — 数据链路与 CI 基建
+
+| Item | Status |
+|---|---|
+| Git blob id 内容寻址检测 Apple Health / 2bulu 导入数据变化（import-apple-health / import-2bulu action） | ✅ 已完成 |
+| 2bulu（两步路）.2tk / .kml 导入（git-fit 0.12.0） | ✅ 已完成 |
+| Geo 区域检测（`git fit geo detect`，AMap + Nominatim，content-hash cache key） | ✅ 已完成 |
+| Apple Health export.zip 导入（心率关联，跳过已知源） | ✅ 已完成 |
+| LocalFile 三格式导入（GPX / FIT / TCX，单类适配器） | ✅ 已完成 |
+| Garmin 国际版 DI OAuth2（Playwright 策略 B primary + curl-impersonate 策略 A fallback，session cookie 365d） | ✅ 已完成（git-fit） |
+| 数据导出路径 `data/` → `site/`（源数据与制品分离） | ✅ 已完成 |
+| 多源去重检测（Dedup::Service，四因子置信度 + 轨迹重叠） | ✅ 已完成（git-fit） |
+| SportMapper 三层回退（ALIASES → KEYWORDS → Levenshtein → other） | ✅ 已完成（git-fit） |
+| mini_racer + @garmin/fitsdk 解析 FIT（Keep / iGPSPORT / XOSS） | ✅ 已完成（git-fit） |
+| Keep 解密 pipeline（AES-128-CBC + zlib + GCJ-02→WGS84，raw 存 decrypt JSON） | ✅ 已完成（git-fit） |
+| GitHub Pages 数据制品部署（json + stats，前端已迁 [Lax/running](https://github.com/Lax/running)） | ✅ 已完成 |
+
+## 历史（pre 迁移，实现已迁 git-fit）
+
+| Item | Status |
+|---|---|
+| L1/L2/L3 三层数据架构（raw → std JSON → SQLite 摘要） | ✅ 已完成 |
+| GitHub Pages 部署 + 3-job workflow（sync / build / deploy） | ✅ 已完成 |
 | 原始数据 GH Cache（替代 submodule） | ✅ 已完成 |
-| Keep spider_sleep 1s → 0.1s | ✅ 已完成 |
-| Config 未知 key 警告 | ✅ 已完成 |
-| SportMapper 三层回退 | ✅ 已完成 |
-| SVG footer rebrand | ✅ 已完成 |
-| LICENSE.txt + 移除 email 占位符 | ✅ 已完成 |
-| GitHub Pages 部署 | ✅ 已完成 |
-| 多源去重检测（confidence scoring + SVG 标注） | ✅ 已完成 |
-| Strava OAuth 自动 refresh + L1/L2/L3 数据链路 | ✅ 已完成 |
-| Strava 测试夹具 + 集成测试 | ✅ 已完成 |
-| 品牌一致性审计 | ✅ 已完成 |
-| GPX 重新导出（`export gpx` from L2） | ✅ 已完成（lib/workouts/export/gpx.rb）|
-| Strava OAuth 交互式授权（`auth strava`本地HTTP） | ✅ 已完成（lib/workouts/auth/strava.rb）|
-| FIT 解析 pipeline（mini_racer + @garmin/fitsdk） | ✅ 已完成（lib/workouts/fit/decoder.rb）|
-| Garmin DI OAuth2 认证（Playwright + curl_cffi 降级链，session cookie 365d 持久化） | ✅ 已完成（lib/workouts/sync/garmin.rb）|
-| CI 移除 python 死步骤（setup-python + pip install curl_cffi） | ✅ 已完成（.github/workflows/sync.yml）|
+| Strava OAuth2 自动 refresh + 原始文件下载（stravaweblib，`git fit strava fetch`） | ✅ 已完成 |
+| 配置 env 前缀 `GIT_FIT_*`（与 git-fit gem 一致） | ✅ 已完成 |

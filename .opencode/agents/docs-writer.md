@@ -46,7 +46,7 @@ Existing docs (`data-architecture.md`, `garmin-auth.md`) keep original names; ne
 - L2 = standardized JSON with lat/lng/altitude/timestamps
 - L3 = SQLite summary (activities table)
 - L4 = build artifacts (JSON, CSV, SVG)
-- `SYNC__{SOURCE}__KEY` — env var with `__` as hierarchy separator (not single `_`)
+- `GIT_FIT_*` — env var prefix for all config (matches git-fit gem, single `_` separator, e.g. `GIT_FIT_GARMIN_CN_EMAIL`)
 - Upsert flow: new_ids + missing_raw → per-activity API call → raw write → DB upsert
 
 ## Available doc sources
@@ -54,9 +54,9 @@ Existing docs (`data-architecture.md`, `garmin-auth.md`) keep original names; ne
 - `docs/garmin-auth.md` — Garmin OAuth mechanisms
 - `docs/data-architecture.md` — L1-L5 data pipeline
 - `docs/igpsport-fit-research.md` — FIT parsing research
-- `docs/igpsport-to-garmin-impl.md` — Migration implementation
+- `docs/geo-region-detector-impl.md` — Geo region detection
 - `docs/sensor-fields-impl.md` — Sensor fields implementation
-- `lib/` — Source code
+- `lib/` — 薄壳 CLI 源码（委托 git-fit）
 - `spec/` — Test files
 - `.github/workflows/` — CI pipeline
 

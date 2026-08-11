@@ -53,7 +53,7 @@ Input → ① ALIASES (exact match) → ② KEYWORDS (regex) → ③ Levenshtein
 ## Security
 - Never log secrets/keys
 - Never commit credentials to repo
-- CI secrets use `SYNC__{SOURCE}__KEY` env vars (double underscore separator)
+- GitHub secrets use single `_` (`SYNC_KEEP_PHONE`); config injected via `GIT_FIT_*` env vars
 - Auth tokens stored in `data/cache/`, gitignored
 
 ## Spec conventions
