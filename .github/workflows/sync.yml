@@ -91,16 +91,8 @@ jobs:
           strava-client-id: ${{ secrets.SYNC_STRAVA_CLIENT_ID }}
           strava-client-secret: ${{ secrets.SYNC_STRAVA_CLIENT_SECRET }}
           strava-refresh-token: ${{ secrets.SYNC_STRAVA_REFRESH_TOKEN }}
-
-      - name: Fetch Strava original files
-        continue-on-error: true
-        timeout-minutes: 10
-        shell: bash
-        env:
-          GIT_FIT_STRAVA_WEB_AUTH_AUTH_SEED: ${{ secrets.SYNC_STRAVA_WEB_AUTH_SEED }}
-          GIT_FIT_DATABASE_PATH: ${{ vars.GIT_FIT_DATABASE_PATH }}
-          GIT_FIT_SYSTEM_TIMEZONE: ${{ vars.GIT_FIT_SYSTEM_TIMEZONE || 'Asia/Shanghai' }}
-        run: bundle exec git fit strava fetch --limit 10
+          strava-web-auth-seed: ${{ secrets.SYNC_STRAVA_WEB_AUTH_SEED }}
+          timezone: ${{ vars.GIT_FIT_SYSTEM_TIMEZONE || 'Asia/Shanghai' }}
 
       - id: data-save
         uses: git-fit-actions/data-store/cache/save@v2

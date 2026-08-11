@@ -65,6 +65,14 @@ inputs:
   strava-refresh-token:
     description: Strava refresh token
     required: true
+  strava-web-auth-seed:
+    description: Strava web auth JWT seed (base64) for original file fetch
+    required: false
+    default: ''
+  timezone:
+    description: Git-Fit framework timezone (system.timezone) for display formatting
+    required: false
+    default: Asia/Shanghai
   db-path:
     description: SQLite database path
     required: false
@@ -100,6 +108,15 @@ runs:
         GIT_FIT_STRAVA_REFRESH_TOKEN: ${{ inputs.strava-refresh-token }}
         GIT_FIT_DATABASE_PATH: ${{ inputs.db-path }}
       run: bundle exec git fit sync
+
+    - name: Fetch Strava original files
+      continue-on-error: true
+      shell: bash
+      env:
+        GIT_FIT_STRAVA_WEB_AUTH_AUTH_SEED: ${{ inputs.strava-web-auth-seed }}
+        GIT_FIT_DATABASE_PATH: ${{ inputs.db-path }}
+        GIT_FIT_SYSTEM_TIMEZONE: ${{ inputs.timezone }}
+      run: bundle exec git fit strava fetch --limit 10
 
     - name: Save token caches
       if: always()
