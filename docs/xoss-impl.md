@@ -135,9 +135,7 @@ Follows Garmin's pattern (`GarminBaseDI#save_tokens` / `#load_tokens`).
 
 ### File
 
-Default: `data/cache/xoss_tokens.json` (workouts adapter)  
-CI override: `data/auth/xoss_tokens.json` (via `SYNC__XOSS__TOKEN_PATH` env var)  
-git-fit default (v0.8.2+): `data/auth/xoss_tokens.json`
+git-fit default: `data/auth/xoss/tokens.json`
 
 ```json
 {

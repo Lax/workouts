@@ -13,14 +13,6 @@ inputs:
   garmin-auth-seed:
     description: Garmin auth seed
     required: true
-  garmin-token-path:
-    description: Garmin Intl token path
-    required: false
-    default: data/auth/garmin_garmin_com_tokens.json
-  garmin-cn-token-path:
-    description: Garmin CN token path
-    required: false
-    default: data/auth/garmin_garmin_cn_tokens.json
   garmin-cn-secret:
     description: Garmin CN secret
     required: true
@@ -30,20 +22,12 @@ inputs:
   xoss-password:
     description: XOSS password
     required: true
-  xoss-token-path:
-    description: XOSS token path
-    required: false
-    default: data/auth/xoss_tokens.json
   xingzhe-email:
     description: XingZhe email
     required: true
   xingzhe-password:
     description: XingZhe password
     required: true
-  xingzhe-session-path:
-    description: XingZhe session cache path
-    required: false
-    default: data/cache/xingzhe_session.json
   keep-phone:
     description: Keep phone
     required: true
@@ -90,15 +74,11 @@ runs:
         GIT_FIT_SYNC_TIME_BUDGET: ${{ inputs.sync-time-budget }}
         GIT_FIT_SYNC_TOTAL_TIMEOUT: ${{ inputs.sync-total-timeout }}
         GIT_FIT_GARMIN_AUTH_SEED: ${{ inputs.garmin-auth-seed }}
-        GIT_FIT_GARMIN_TOKEN_PATH: ${{ inputs.garmin-token-path }}
-        GIT_FIT_GARMIN_CN_TOKEN_PATH: ${{ inputs.garmin-cn-token-path }}
         GIT_FIT_GARMIN_CN_SECRET: ${{ inputs.garmin-cn-secret }}
         GIT_FIT_XOSS_EMAIL: ${{ inputs.xoss-email }}
         GIT_FIT_XOSS_PASSWORD: ${{ inputs.xoss-password }}
-        GIT_FIT_XOSS_TOKEN_PATH: ${{ inputs.xoss-token-path }}
         GIT_FIT_XINGZHE_EMAIL: ${{ inputs.xingzhe-email }}
         GIT_FIT_XINGZHE_PASSWORD: ${{ inputs.xingzhe-password }}
-        GIT_FIT_XINGZHE_SESSION_PATH: ${{ inputs.xingzhe-session-path }}
         GIT_FIT_KEEP_PHONE: ${{ inputs.keep-phone }}
         GIT_FIT_KEEP_PASSWORD: ${{ inputs.keep-password }}
         GIT_FIT_IGPSPORT_PHONE: ${{ inputs.igpsport-phone }}

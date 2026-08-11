@@ -33,7 +33,7 @@ garmin.cn 未受 CF 封锁影响，SSO 登录可正常工作。
    Parse → OAuth2 valid? → 直接用。过期 → OAuth1 refresh → 新 OAuth2
    Fail → 降级
 
-② token 文件（data/cache/garmin_garmin_cn_tokens.json, GH Cache）
+② token 文件（data/auth/garmin_cn/tokens.json, GH Cache）
    同 ①。Fail → 删除陈旧文件 → 降级
 
 ③ SSO 登录（email+password，支持 MFA）
@@ -53,7 +53,7 @@ garmin.cn 未受 CF 封锁影响，SSO 登录可正常工作。
 | 优先级 | 来源 | CI 可用？ |
 |---|---|---|
 | 权威 | `SYNC__GARMIN_CN__SECRET`（GitHub Secret） | ✅ |
-| 缓存 | `data/cache/garmin_garmin_cn_tokens.json`（GH Cache） | ✅ |
+| 缓存 | `data/auth/garmin_cn/tokens.json`（GH Cache） | ✅ |
 | 降级 | SSO 登录（email+password） | ❌ 交互式 |
 
 ---
@@ -65,7 +65,7 @@ garmin.com 的 SSO 端点 `/mobile/api/login` 已被 Garmin 关闭（返回 400�
 ### Auth priority chain（GarminBaseDI#authenticate — CI only）
 
 ```
-① DI token 缓存（data/cache/garmin_garmin_com_tokens.json, GH Cache）
+① DI token 缓存（data/auth/garmin/tokens.json, GH Cache）
    access_token 有效 → 直接用。过期 → di_refresh。
    refresh 失败 → 清除缓存 → 降级
 
@@ -176,14 +176,14 @@ git fit auth garmin --sync
 3. 下一次 CI 运行，若 GH Cache miss（7 天缓存或 cache 全部失效），CI 回退到 `load_auth_seed` → `refresh_token()` → **失败**（refresh_token 已被本地旋转）→ 需重新运行 `git fit auth garmin` 更新 auth_seed
 4. `auth_seed` 是 CI 冷启动的最后防线；只要 auth_seed 中的 refresh_token 比 CI 的 cache 更新即可。
 
-**`--sync` 解决的问题：** 在后续本地完成 sync（`data/cache/garmin_garmin_com_tokens.json` 已更新）后，调用 `--sync` 将最新的 cache token 升格为下一个 auth_seed。
+**`--sync` 解决的问题：** 在后续本地完成 sync（`data/auth/garmin/tokens.json` 已更新）后，调用 `--sync` 将最新的 cache token 升格为下一个 auth_seed。
 这确保 CI 在任何 cache miss 时都能降级到最新的 refresh_token。
 
 **用法：** 本地 sync 后执行 `--sync`
 
 ```
 git fit auth garmin --sync
-# 读取 data/cache/garmin_garmin_com_tokens.json
+# 读取 data/auth/garmin/tokens.json
 # Base64 编码 → 写 config.yml（sync.garmin.auth_seed）
 # → gh secret set SYNC_GARMIN_AUTH_SEED
 ```
@@ -191,7 +191,7 @@ git fit auth garmin --sync
 ### 本地 MFA 登录
 
 本地 MFA 登录通过 `git fit auth garmin` 的 Ruby 策略（`Auth::Garmin` → `StrategyA/B` → `DIExchange`）独立完成，**不在 Ruby authenticate（sync）流程内**。
-sync 只消费产出的 token（`data/cache/garmin_garmin_com_tokens.json`）+ 已编码的 `auth_seed`。
+sync 只消费产出的 token（`data/auth/garmin/tokens.json`）+ 已编码的 `auth_seed`。
 CI 不与 MFA 交互——仅使用 auth_seed + token 缓存自旋。
 
 策略 B / A 的端点流程、TLS 穿透语义与上文「实测结果（2026-06-18 更新）」结论一致；原 Python 参考实现（curl_cffi / playwright）已删除，由 git-fit `Auth::Garmin` Ruby 实现取代（git-fit #66）。
@@ -208,8 +208,8 @@ CI 不与 MFA 交互——仅使用 auth_seed + token 缓存自旋。
 
 | 缓存 | GH Cache Key | 路径 |
 |---|---|---|
-| DI token | `garmin-tokens-v1-garmin-{run_id}` | `data/cache/garmin_garmin_com_tokens.json` |
-| CN token | `garmin-tokens-v1-garmin_cn-{run_id}` | `data/cache/garmin_garmin_cn_tokens.json` |
+| DI token | `tokens-v0-garmin-auth-{run_id}` | `data/auth/garmin/` |
+| CN token | `tokens-v0-garmin_cn-auth-{run_id}` | `data/auth/garmin_cn/` |
 | Playwright browser（可选） | `garmin-playwright-browser-v1-{os}` | `~/.cache/ms-playwright` |
 
 ---
