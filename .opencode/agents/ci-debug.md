@@ -24,7 +24,7 @@ You are a CI/CD specialist for the Workouts CLI.
 - `.github/workflows/gh-pages.yml` — deploy-pages job (export json/stats → site/)
 - `.github/workflows/git-fit-archive.yml` — weekly cache → GitFit/data/<source> + GitFit/db branches
 - `.github/actions/sync-activities` — maps secrets to `GIT_FIT_*` env, runs `git fit sync`
-- `.github/actions/{import-apple-health,import-2bulu}` — content-addressed (git blob id) import detection
+- `.github/git-fit-actions/import` — JS (node24) import action: directory tree-hash detection, unified `git show | git lfs smudge` download, `git fit import`, store-state push
 - `.github/actions/parse-geo-regions` — geo cache restore/detect/save with content-hash key
 - `scripts/generate-checksums.sh` / `scripts/data-store-checksum.sh` — per-source SHA256 change detection
 - Config injected via `GIT_FIT_*` env (see `.env.example`)
@@ -35,8 +35,7 @@ sync.yml sync job:
   1. checkout + setup Ruby + bundle
   2. restore DB cache (git-fit-actions/db-store/cache/restore@v1)
   3. restore DB from archive branch (GitFit/db, cache miss 回退)
-  4. import apple_health (import-apple-health action)
-  5. import 2bulu (import-2bulu action)
+  4. import apple_health + 2bulu (git-fit-actions/import, sources: apple_health,2bulu)
   6. restore per-source caches (git-fit-actions/data-store/cache/restore@v2, 7 sources)
   7. git fit sync (time-budget limited)
   8. git fit strava fetch (original files, continue-on-error)

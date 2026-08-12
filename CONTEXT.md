@@ -69,7 +69,7 @@ lib/workouts/version.rb      # 版本号
 |---|---|
 | 默认使用系统代理（`HTTP_PROXY`/`HTTPS_PROXY`） | 不再强制绕过代理，XOSS/XingZhe 可通过代理访问中国境内服务 |
 | 内联 deploy job 而非 reusable workflow | 调用 `uses:` 在该仓库导致 `startup_failure` |
-| cron 管理拆为独立 `sync-scheduler.yml` | 唯一写 `.github/workflows/*.yml` 的工作流，集中持有 `WORKOUTS_SYNC_PAT`（workflows:write）。sync.yml 不再需要 PAT，import-apple-health push 改用默认 GITHUB_TOKEN |
+| cron 管理拆为独立 `sync-scheduler.yml` | 唯一写 `.github/workflows/*.yml` 的工作流，集中持有 `WORKOUTS_SYNC_PAT`（workflows:write）。sync.yml 不再需要 PAT，import action 的 store-state push（SHA256SUMS 回 `GitFit/import/*` 分支）改用默认 GITHUB_TOKEN |
 | sync-scheduler 用 persist-credentials:false + bare PAT extraheader + git-auto-commit-action | 不能将 PAT 传给 `actions/checkout`（会被包装为 `x-access-token:` → GitHub App 路由）。`workflows: write` 不是 `permissions:` 块的有效值，无法通过 YAML 声明。改用 `persist-credentials: false` + 手动写入裸 PAT extraheader（不含 `x-access-token:` 前缀），服务器路由为 PAT，token 自带 `repo` 权限含 workflows:write。commit/push 交给 `stefanzweifel/git-auto-commit-action@v7`，复用 bare PAT extraheader 凭据 |
 | `__` 分隔 env var（已迁移至 git-fit，本地 config.rb 已删） | 避免与 `garmin_cn` 等 key 中的 `_` 冲突。CI 已改用 `GIT_FIT_` 前缀 env |
 | 保留 `upload-artifact` | Pages 部署稳定后再移除 |
@@ -145,11 +145,11 @@ lib/workouts/version.rb      # 版本号
 
 | 适配器 | 源格式 | 认证 | 特点 |
 |---|---|---|---|
-| **Apple Health** | export.zip (XML + GPX) | 无 | 从 iOS 健康导出 zip 解析，心率从 HKQuantityTypeIdentifierHeartRate 关联，自动跳过 Strava/Keep/Garmin 等已知源。CI 经 `import-apple-health` action 从 `GitFit/import/apple_health` 分支拉取，检测机制用 git blob id（`git rev-parse`）编码的 data_hash，精确判断数据文件内容变化。SHA256SUMS 保留用于跨 cache 恢复和快速校验 |
+| **Apple Health** | export.zip (XML + GPX) | 无 | 从 iOS 健康导出 zip 解析，心率从 HKQuantityTypeIdentifierHeartRate 关联，自动跳过 Strava/Keep/Garmin 等已知源。CI 经 `.github/git-fit-actions/import` action 从 `GitFit/import/apple_health` 分支拉取，检测机制用目录树哈希（`git ls-tree -r` + 过滤标志文件 + sha256sum）编码的 data_hash，精确判断数据文件内容变化。SHA256SUMS 保留用于跨 cache 恢复和快速校验 |
 | **LocalFile (GPX)** | .gpx 文件 | 无 | 扫描 `data/import/gpx/`，sport_category 默认 "other"，`--sport` 覆盖。多 track → 多活动 |
 | **LocalFile (FIT)** | .fit 文件 | 无 | 扫描 `data/import/fit/`，sport 从 FIT session mesg 提取（通过 decoder.js fitSport）。FIT 纪元时间戳 |
 | **LocalFile (TCX)** | .tcx 文件 | 无 | 扫描 `data/import/tcx/`，sport 从 XML Sport 属性提取。多 Activity → 多活动 |
-| **2bulu (KML + 2tk)** | .2tk + .kml 文件 | 无（本地导入） | 扫描 `data/import/2bulu/`。Parser 双格式直读：.2tk（native binary，保留分段成绩 sportinfo）+ .kml（TbuluKmlVersion2）。坐标 WGS-84 无需 GCJ-02 纠偏。run_id 用 `2bulu_{YYYYMMDD}_{sha[0,12]}`（日期前缀排序 + 内容哈希去重，规避 trackFileId 冲突）。CI 经 `import-2bulu` action 从 `GitFit/import/2bulu` 分支拉取，检测机制用 git blob id 编码的 data_hash（`git ls-tree -r` + 过滤标志文件 + sha256sum），精确判断数据文件内容变化。SHA256SUMS 保留用于跨 cache 恢复和快速校验。**官方赛道 KML 不入导入统计**（参考轨迹功能另行规划）。详情见 `~/checkouts/mine/2bulu-research/` 与 [git-fit#67](https://github.com/Lax/git-fit/issues/67) |
+| **2bulu (KML + 2tk)** | .2tk + .kml 文件 | 无（本地导入） | 扫描 `data/import/2bulu/`。Parser 双格式直读：.2tk（native binary，保留分段成绩 sportinfo）+ .kml（TbuluKmlVersion2）。坐标 WGS-84 无需 GCJ-02 纠偏。run_id 用 `2bulu_{YYYYMMDD}_{sha[0,12]}`（日期前缀排序 + 内容哈希去重，规避 trackFileId 冲突）。CI 经 `.github/git-fit-actions/import` action 从 `GitFit/import/2bulu` 分支拉取，检测机制用目录树哈希（`git ls-tree -r` + 过滤标志文件 + sha256sum）编码的 data_hash，精确判断数据文件内容变化。SHA256SUMS 保留用于跨 cache 恢复和快速校验。**官方赛道 KML 不入导入统计**（参考轨迹功能另行规划）。详情见 `~/checkouts/mine/2bulu-research/` 与 [git-fit#67](https://github.com/Lax/git-fit/issues/67) |
 
 ### 数据流与差异
 
@@ -298,7 +298,7 @@ f > 2N+1 → N = min(7, N+1)    → 减速
 | schedule `0 3 * * 0`（每周日，保底） | 同上。覆盖减速分支（f > 2N+1 需在数据不更新时触发） |
 | workflow_dispatch（手动） | 读 N → 算 f，默认不写回（commit=false） |
 
-sync-scheduler 是唯一写 `.github/workflows/*.yml` 的工作流，因此唯一持有 `WORKOUTS_SYNC_PAT`（workflows:write）。sync.yml 已移除 PAT，import-apple-health 的 `GitFit/import/apple_health` 分支 push 改用默认 GITHUB_TOKEN。
+sync-scheduler 是唯一写 `.github/workflows/*.yml` 的工作流，因此唯一持有 `WORKOUTS_SYNC_PAT`（workflows:write）。sync.yml 已移除 PAT，import action 的 store-state push（SHA256SUMS 回 `GitFit/import/*` 分支）改用默认 GITHUB_TOKEN。
 
 ### jobs
 
@@ -308,8 +308,7 @@ sync job (runs-on: ${{ vars.RUNNER_LABEL || 'ubuntu-latest' }}):
   2. setup Ruby + bundle
   3. restore DB cache (db-store/cache/restore@v1)
   4. restore DB from archive branch (GitFit/db, cache miss 回退)
-  5. Import Apple Health (git-configured: 'true', GITHUB_TOKEN push)
-  5b. Import 2bulu (import-2bulu action, GitFit/import/2bulu 分支, 仅数据文件变化时导入)
+  5. Import data (git-fit-actions/import, sources: apple_health,2bulu, 目录树哈希检测 + store-state push)
   6. restore per-source caches (data-store/cache/restore@v2)
   7. git fit sync（受 vars.SYNC_TIME_BUDGET / SYNC_TOTAL_TIMEOUT 限制）
   8. Fetch Strava original files (git fit strava fetch, continue-on-error)

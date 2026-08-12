@@ -18,7 +18,7 @@
 
 | Item | Status |
 |---|---|
-| Git blob id 内容寻址检测 Apple Health / 2bulu 导入数据变化（import-apple-health / import-2bulu action） | ✅ 已完成 |
+| 目录树哈希检测 Apple Health / 2bulu 导入数据变化（`.github/git-fit-actions/import`，JS action，`sources` 一次性传入） | ✅ 已完成 |
 | 2bulu（两步路）.2tk / .kml 导入（git-fit 0.12.0） | ✅ 已完成 |
 | Geo 区域检测（`git fit geo detect`，AMap + Nominatim，content-hash cache key） | ✅ 已完成 |
 | Apple Health export.zip 导入（心率关联，跳过已知源） | ✅ 已完成 |

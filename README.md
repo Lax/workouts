@@ -367,7 +367,7 @@ Apple Health 按 XML 的 sourceName 字段自动忽略 Strava / Keep / Garmin Co
 git fit import apple_health
 
 # 强制重新导入（删除 cache 后重跑 workflow）
-gh actions-cache delete import-apple-health-v1-detect-
+gh actions-cache delete import-apple-health-v0-marker-
 ```
 </details>
 
@@ -407,7 +407,7 @@ git checkout master   # 切回主分支
 git fit import tbulu
 
 # 强制重新导入（删除 cache 后重跑 workflow）
-gh actions-cache delete import-2bulu-v1-detect
+gh actions-cache delete import-2bulu-v0-marker-
 ```
 </details>
 
