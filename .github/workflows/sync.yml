@@ -15,6 +15,8 @@ jobs:
     permissions:
       contents: write
       actions: write
+    env:
+      GIT_FIT_DATABASE_PATH: ${{ vars.GIT_FIT_DATABASE_PATH || 'data/db/workouts.db' }}
     steps:
       - uses: actions/checkout@v6
 
@@ -23,6 +25,15 @@ jobs:
           ruby-version: '3.4'
           bundler-cache: true
 
+      # ── DB paths ──
+      # 单一真值 GIT_FIT_DATABASE_PATH → dir/name/db-path，供 db-store、git-fit、
+      # checkpoint、artifact、summary 统一引用。
+      - name: '[db] Derive database paths'
+        id: db-paths
+        uses: git-fit-actions/db-store/paths@v1
+        with:
+          database-path: ${{ env.GIT_FIT_DATABASE_PATH }}
+
       # ── DB restore (git-fit db-store) ──
       # cache miss 时从 GitFit/db 分支兜底恢复（fallback 模式），恢复成功会经 save-to-git-branch
       # 输出建议 save 侧把 DB push 回该分支。
@@ -30,7 +41,8 @@ jobs:
         id: db-restore
         uses: git-fit-actions/db-store/cache/restore@v1
         with:
-          database-path: data/db/workouts.db
+          db-dir: ${{ steps.db-paths.outputs.dir }}
+          db-name: ${{ steps.db-paths.outputs.name }}
           git-restore-mode: fallback
           git-branch: GitFit/db
 
@@ -64,6 +76,7 @@ jobs:
           strava-refresh-token: ${{ secrets.SYNC_STRAVA_REFRESH_TOKEN }}
           strava-web-auth-seed: ${{ secrets.SYNC_STRAVA_WEB_AUTH_SEED }}
           timezone: ${{ vars.GIT_FIT_SYSTEM_TIMEZONE || 'Asia/Shanghai' }}
+          db-path: ${{ steps.db-paths.outputs.db-path }}
 
       - id: data-save
         if: always()
@@ -76,7 +89,7 @@ jobs:
         with:
           geo-cache-dir: data/cache
           amap-key: ${{ secrets.AMAP_API_KEY }}
-          db-path: ${{ vars.GIT_FIT_DATABASE_PATH }}
+          db-path: ${{ steps.db-paths.outputs.db-path }}
           detect-limit: 200
           detect-batch: 20
           detect-strategy: proportional
@@ -87,7 +100,7 @@ jobs:
         if: always()
         shell: bash
         env:
-          DB_PATH: ${{ vars.GIT_FIT_DATABASE_PATH }}
+          DB_PATH: ${{ steps.db-paths.outputs.db-path }}
         run: |
           if [ -f "$DB_PATH" ]; then
             bytes=$(bundle exec ruby -e '
@@ -113,7 +126,8 @@ jobs:
         if: always()
         uses: git-fit-actions/db-store/cache/save@v1
         with:
-          database-path: data/db/workouts.db
+          db-dir: ${{ steps.db-paths.outputs.dir }}
+          db-name: ${{ steps.db-paths.outputs.name }}
           save-to-git-branch: ${{ steps.git-save-gate.outputs.save-to-git-branch || 'false' }}
 
       - name: Trigger sync scheduler
@@ -129,7 +143,7 @@ jobs:
         run: |
           {
             echo "### DB sync result"
-            echo "- DB path: ${{ vars.GIT_FIT_DATABASE_PATH }}"
+            echo "- DB path: ${{ steps.db-paths.outputs.db-path }}"
             echo "- DB changed: ${{ steps.db-save.outputs.changed }}"
             echo "- DB size: ${{ steps.db-checkpoint.outputs.db_size }} bytes"
             echo "- Archive restore: ${{ steps.db-restore.outputs.git-restored-bytes }} bytes"
@@ -144,7 +158,7 @@ jobs:
         if: steps.db-save.outputs.changed == 'true' || steps.data-save.outputs.changed == 'true'
         with:
           name: workouts-db
-          path: data/db/workouts.db
+          path: ${{ steps.db-paths.outputs.db-path }}
           retention-days: 1
 
       - name: Trigger gh-pages deploy

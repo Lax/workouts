@@ -77,10 +77,16 @@ jobs:
           fetch-depth: 1
           persist-credentials: false
 
+      - uses: git-fit-actions/db-store/paths@v1
+        id: db-paths
+        with:
+          database-path: ${{ vars.GIT_FIT_DATABASE_PATH || 'data/db/workouts.db' }}
+
       - name: Validate DB file
         shell: bash
         run: |
-          if [[ ! -f data/db/workouts.db ]]; then
+          DB_PATH="${{ steps.db-paths.outputs.db-path }}"
+          if [[ ! -f "$DB_PATH" ]]; then
             echo "::error::DB file not found in branch 'GitFit/db'"
             exit 1
           fi
@@ -88,10 +94,10 @@ jobs:
       - uses: actions/cache/save@v6.1.0
         with:
           path: |
-            data/db/workouts.db
-            data/db/workouts.db.SHA256SUMS
-            data/db/workouts.db-wal
-            data/db/workouts.db-shm
+            ${{ steps.db-paths.outputs.db-path }}
+            ${{ steps.db-paths.outputs.db-path }}.SHA256SUMS
+            ${{ steps.db-paths.outputs.db-path }}-wal
+            ${{ steps.db-paths.outputs.db-path }}-shm
           # Recovery snapshot written by unarchive (git → cache).
           # Same sentinel/snapshot discipline as data above: real readable content under -v0- prefix,
           # never collide with the sentinel exact key used by db-store/cache/restore (F1).

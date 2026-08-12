@@ -38,10 +38,16 @@ jobs:
           ruby-version: '3.4'
           bundler-cache: true
 
+      - uses: git-fit-actions/db-store/paths@v1
+        id: db-paths
+        with:
+          database-path: ${{ vars.GIT_FIT_DATABASE_PATH || 'data/db/workouts.db' }}
+
       - name: '[db] Restore cache'
         uses: git-fit-actions/db-store/cache/restore@v1
         with:
-          database-path: data/db/workouts.db
+          db-dir: ${{ steps.db-paths.outputs.dir }}
+          db-name: ${{ steps.db-paths.outputs.name }}
 
       - name: Read current cron interval
         id: read
@@ -53,7 +59,7 @@ jobs:
         shell: bash
         env:
           N: ${{ steps.read.outputs.N || '3' }}
-          DB_PATH: ${{ vars.GIT_FIT_DATABASE_PATH }}
+          DB_PATH: ${{ steps.db-paths.outputs.db-path }}
         run: |
           bundle exec ruby -e '
             n = ENV["N"].to_i

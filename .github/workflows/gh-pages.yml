@@ -38,9 +38,15 @@ jobs:
           ruby-version: '3.4'
           bundler-cache: true
 
+      - uses: git-fit-actions/db-store/paths@v1
+        id: db-paths
+        with:
+          database-path: ${{ env.GIT_FIT_DATABASE_PATH }}
+
       - uses: git-fit-actions/db-store/cache/restore@v1
         with:
-          database-path: data/db/workouts.db
+          db-dir: ${{ steps.db-paths.outputs.dir }}
+          db-name: ${{ steps.db-paths.outputs.name }}
 
       - name: Download fresh DB artifact
         if: inputs.artifact-run-id != ''
@@ -48,7 +54,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: workouts-db
-          path: data/db/
+          path: ${{ steps.db-paths.outputs.dir }}
           run-id: ${{ inputs.artifact-run-id }}
           github-token: ${{ github.token }}
 
