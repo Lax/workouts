@@ -62,8 +62,3 @@ jobs:
 
       - name: Run tests
         run: bundle exec rspec
-
-      - name: Check syntax
-        run: |
-          ruby -c lib/workouts.rb
-          for f in $(find lib -name '*.rb'); do ruby -c "$f"; done

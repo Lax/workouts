@@ -4,7 +4,6 @@ mode: subagent
 permission:
   edit: allow
   bash:
-    "bundle exec exe/workouts *": allow
     "git status": allow
     "git diff*": allow
     "git log*": allow
@@ -50,11 +49,10 @@ Example: `garmin-auth-goal.md`, `garmin-auth-research.md`, `garmin-auth-impl.md`
 ## Available doc sources
 - `CONTEXT.md` — Complete project design document (primary reference)
 - Wiki pages — [Architecture](https://github.com/Lax/workouts/wiki/Architecture) (L1-L5 pipeline), [Auth](https://github.com/Lax/workouts/wiki/Auth) (Garmin OAuth), [Sources](https://github.com/Lax/workouts/wiki/Sources) (adapter/FIT/sensor research), [Dedup](https://github.com/Lax/workouts/wiki/Dedup), [Geo](https://github.com/Lax/workouts/wiki/Geo), [CI-CD](https://github.com/Lax/workouts/wiki/CI-CD)
-- `lib/` — 薄壳 CLI 源码（委托 git-fit）
 - `spec/` — Test files
 - `.github/workflows/` — CI pipeline
 
 ## Verification
-- `bundle exec exe/workouts version` — Check CLI works
-- `bundle exec exe/workouts --help` — Check CLI help output matches docs
+- `git fit version` — Check CLI works
+- `git fit --help` — Check CLI help output matches docs
 - Read wiki pages in raw markdown to verify formatting before finalizing

@@ -5,7 +5,6 @@ permission:
   edit: allow
   bash:
     "bundle exec git fit sync*": allow
-    "bundle exec exe/workouts export*": allow
     "gh *": allow
     "ruby -c *": allow
     "git diff*": allow
@@ -18,7 +17,7 @@ You are a CI/CD specialist for the Workouts CLI.
 
 ## Key files
 - `.github/workflows/sync.yml` — sync job: restore DB → imports → data-store restore → sync → save caches → geo detect → checkpoint → trigger scheduler/pages
-- `.github/workflows/ci.yml` — PR/push: rspec + syntax check
+- `.github/workflows/ci.yml` — PR/push: rspec
 - `.github/workflows/sync-scheduler.yml` — adaptive cron adjustment (only writer of workflow files, holds WORKOUTS_SYNC_PAT)
 - `.github/workflows/gh-pages.yml` — deploy-pages job (export json/stats → site/)
 - `.github/workflows/git-fit-archive.yml` — weekly cache → GitFit/data/<source> + GitFit/db branches

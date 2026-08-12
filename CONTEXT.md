@@ -5,8 +5,8 @@
 运动数据聚合 CLI 工具，多渠道同步 → SQLite 数据库 → JSON / CSV / GPX 导出。
 
 **仓库：** `github.com/Lax/workouts`（私有，付费计划）  
-**技术栈：** Ruby 3.4 (Thor, Sequel, SQLite3, Nokogiri, Faraday)
-**部署：** Docker / GitHub Actions / GitHub Pages（数据制品：JSON + stats）
+**技术栈：** Ruby 3.4（核心逻辑在 git-fit gem）
+**部署：** GitHub Actions / GitHub Pages（数据制品：JSON + stats）
 
 ---
 
@@ -14,45 +14,28 @@
 
 | 命令 | 说明 |
 |---|---|
-| `git fit sync [--source S] [--act TYPE]` | 同步所有配置源（`--source` 指定单一源，`--act` 按运动类型过滤）— 已迁移至 git-fit gem，本地 `exe/workouts sync` 已移除 |
-| `git fit dedup` | 全源重跑去重匹配（覆盖已有 duplicate_info）— 已迁移至 git-fit gem，本地 `exe/workouts dedup` 已移除 |
-| `git fit import [--source S] [--sport S]` | 从本地目录批量导入 GPX/FIT/TCX/Apple Health — 已迁移至 git-fit gem，本地 `exe/workouts import` 已移除 |
-| `git fit export [json\|csv\|stats\|gpx]` | 导出 JSON/CSV/统计/GPX — 已迁移至 git-fit gem，本地 `exe/workouts export` 已移除 |
-| `auth <garmin\|garmin_cn\|strava>` | 交互式 auth — **全部委托 git fit**（`auth xoss/xingzhe` 被 git-fit 否决：sync 时自动认证，见 [git-fit auth-model](https://github.com/Lax/git-fit/wiki/specs/auth-model.md)）|
-| `db SUBCOMMAND` | 数据库操作 — **委托 git fit db** |
-| `geo SUBCOMMAND` | 地理行政区域检测 — **委托 git fit geo** |
-| `parse <file.gpx\|file.tcx> [--save]` | 解析 GPX/TCX — **委托 git fit parse** |
-| `init` | 生成默认 config.yml — **委托 git fit init** |
-| `version` | 版本号 |
-
----
-
-## CLI 文件结构
-
-> 已清理（workouts #7，git-fit#65 否决交互式 auth 后解锁）：`sync/`、`auth/`、`fit/`、`db/`、`config.rb` 全部删除。本地薄壳仅剩 3 个文件：
-
-```
-lib/workouts.rb              # 入口：require git-fit + thor
-lib/workouts/cli.rb          # 主 CLI（Workouts::CLI）：auth 全委托 git fit + db/geo/init/parse 委托
-lib/workouts/version.rb      # 版本号
-```
+| `git fit sync [--source S] [--act TYPE]` | 同步所有配置源（`--source` 指定单一源，`--act` 按运动类型过滤）|
+| `git fit dedup` | 全源重跑去重匹配（覆盖已有 duplicate_info）|
+| `git fit import [--source S] [--sport S]` | 从本地目录批量导入 GPX/FIT/TCX/Apple Health |
+| `git fit export [json\|csv\|stats\|gpx]` | 导出 JSON/CSV/统计/GPX |
+| `git fit auth <garmin\|garmin_cn\|strava>` | 交互式 auth（`auth xoss/xingzhe` 被 git-fit 否决：sync 时自动认证，见 [git-fit auth-model](https://github.com/Lax/git-fit/wiki/specs/auth-model.md)）|
+| `git fit db SUBCOMMAND` | 数据库操作 |
+| `git fit geo SUBCOMMAND` | 地理行政区域检测 |
+| `git fit parse <file.gpx\|file.tcx> [--save]` | 解析 GPX/TCX |
+| `git fit init` | 生成默认 config.yml |
+| `git fit version` | 版本号 |
 
 ---
 
 ## 架构
 
-本地 CLI 是薄壳：`auth` 命令全部委托 git-fit（garmin/garmin_cn/strava；xoss/xingzhe 被否决：sync 时自动认证），`db / geo / parse / init` 委托 git-fit gem，核心逻辑（sync / import / export / dedup）已迁移：
+本地仓库是配置与 CI/CD 壳，核心逻辑全部在 git-fit gem：
 
 ```
 ┌─────────────────────────────────────────────────────────┐
 │  git fit (git-fit gem)                                  │
 │  sync / import / export / dedup / db / geo / parse      │
 │  init / strava / gh / install / auth                    │
-└────────────────────────┬────────────────────────────────┘
-                         │  委托（Thor 方式）
-┌────────────────────────▼────────────────────────────────┐
-│  本地 exe/workouts (薄壳)                                │
-│  auth / db / geo / init / parse / version（全委托 git fit）│
 └────────────────────────┬────────────────────────────────┘
                          │
                 ┌────────▼─────────┐
@@ -91,7 +74,7 @@ lib/workouts/version.rb      # 版本号
 
 ## 同步适配器
 
-> **同步适配器已迁移至 git-fit gem（`git fit sync`）。** 本地薄壳仅剩 `auth` 委托（garmin/garmin_cn/strava），无 adapter 类。以下保留设计摘要。
+> **同步适配器已迁移至 git-fit gem（`git fit sync`）。** 本地仓库无 adapter 类。以下保留设计摘要。
 
 ### 数据源
 
@@ -381,15 +364,6 @@ manage job (runs-on: ${{ vars.RUNNER_LABEL || 'ubuntu-latest' }}):
 > **2026-08 缓存 key 命名纪律（[`Lax/git-fit#51`](https://github.com/Lax/git-fit/issues/51)）：** restore 精确 key 用永不写入的 `-v0-sentinel` 强制前缀回退；unarchive 恢复快照写 `-v0-snapshot`（真实可读内容，可被后续 restore 前缀命中）。二者严禁合并为同一 key，否则触发 F1 粘滞阴影（unarchive 后精确命中 snapshot，永久遮蔽更新的 `-v0-{run}` sync cache）。`git-fit-actions/{data-store,db-store}` 的 `@v1` 已发布修复（v1.0.1）；workouts 侧 `git-fit-archive.yml`（archive restore）与 `git-fit-unarchive.yml`（unarchive save）已内联对齐。快照 key 追加 `-{run_number}-{run_id}` 后缀（与 sync save 格式一致），避免重复 unarchive 的 key 碰撞。
 
 ## 部署
-
-### Docker
-
-```bash
-docker compose run --rm workouts sync
-docker compose run --rm workouts export json
-```
-
-数据卷：`./data:/app/data`。容器入口为 `git fit`（git-fit gem），凭据用 `GIT_FIT_*` 环境变量传入（参见 `docker-compose.yml`）。
 
 ### GitHub Pages
 

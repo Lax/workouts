@@ -148,7 +148,7 @@ bundle install
 #    Authorization Callback Domain 填 "localhost"
 
 # 2. 浏览器授权
-exe/workouts auth strava
+git fit auth strava
 # → 打开终端输出的链接
 # → 点击 "Connect with Strava" → 授权
 # → refresh_token 自动写入 config.yml
@@ -205,7 +205,7 @@ sync:
     password: "xxx"
 
 # 交互式认证
-exe/workouts auth garmin_cn
+git fit auth garmin_cn
 # → 根据提示输入短信/邮箱验证码
 # → secret 自动写入 config.yml（sync.garmin_cn.secret）
 ```
@@ -491,28 +491,13 @@ git fit parse activity.tcx --save
 | `git fit export csv` | 导出 CSV |
 | `git fit export stats` | 导出统计摘要 |
 | `git fit dedup` | 全源去重匹配 |
-| `exe/workouts auth garmin` | Garmin 国际版认证（委托 git fit auth garmin，支持 `-A`/`-B`/`--auto`/`--sync`/`--mfa-code`）|
-| `exe/workouts auth garmin_cn` | Garmin CN 认证（委托 git fit auth garmin_cn）|
-| `exe/workouts auth strava` | Strava 授权（委托 git fit auth strava）|
-| `exe/workouts auth xoss\|xingzhe` | 不支持交互式认证 — sync 时自动认证（见 git-fit auth-model）|
-| `exe/workouts init` | 生成默认配置（委托 git fit） |
-| `exe/workouts parse activity.gpx --save` | 解析本地 GPX/TCX 并写入 DB（委托 git fit） |
-| `exe/workouts version` | 查看版本（本地） |
-</details>
-
----
-
-## Docker
-
-<details>
-<summary>展开 →</summary>
-
-```bash
-docker compose run --rm workouts sync
-docker compose run --rm workouts export json
-```
-
-容器入口为 `git fit`（git-fit gem），因此上面命令等价于 `git fit sync` / `git fit export json`。凭据通过环境变量传入（`GIT_FIT_*` 前缀，参见 `docker-compose.yml`），数据挂载 `./data:/app/data`。
+| `git fit auth garmin` | Garmin 国际版认证（支持 `-A`/`-B`/`--auto`/`--sync`/`--mfa-code`）|
+| `git fit auth garmin_cn` | Garmin CN 认证 |
+| `git fit auth strava` | Strava 授权 |
+| `git fit auth xoss\|xingzhe` | 不支持交互式认证 — sync 时自动认证（见 git-fit auth-model）|
+| `git fit init` | 生成默认配置 |
+| `git fit parse activity.gpx --save` | 解析本地 GPX/TCX 并写入 DB |
+| `git fit version` | 版本号 |
 </details>
 
 ---

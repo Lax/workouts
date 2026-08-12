@@ -1,7 +1,5 @@
 source "https://rubygems.org"
 
-gemspec
-
 gem "git-fit", "~> 0.13.0"
 
 group :development do

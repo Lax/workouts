@@ -52,8 +52,8 @@ No unsolicited files or actions.
 | Type | Examples | Skip CI |
 |------|----------|---------|
 | Docs | `CONTEXT.md`, `*.md` (except test/bench fixtures) | yes |
-| Config | `.opencode/*`, `.github/*`, `config/*`, `Dockerfile`, `*.yml` | yes |
-| Code | `lib/*`, `spec/*`, `packages/*`, `exe/*`, `assets/*` | no |
+| Config | `.opencode/*`, `.github/*`, `config/*`, `*.yml` | yes |
+| Code | `spec/*`, `.github/git-fit-actions/` | no |
 
 ## External Repos
 
@@ -65,7 +65,7 @@ For changes needed in external repos:
 3. Reference the issue URL in any related commits
 4. Do NOT create Pull Requests
 
-Changes to this project's own files (`lib/`, `spec/`, `config/`,
+Changes to this project's own files (`spec/`, `config/`,
 `.github/workflows/`, `.opencode/`) are unaffected.
 
 ## Ambiguity Rule

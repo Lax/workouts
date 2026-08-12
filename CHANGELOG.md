@@ -1,11 +1,13 @@
 # Changelog
 
-> 核心逻辑（sync / import / export / dedup / db / geo / parse）已迁移至 git-fit gem，本仓库为薄壳 CLI。下述条目中标注「git-fit」的已迁移，详细实现见 git-fit 仓库。
+> 核心逻辑（sync / import / export / dedup / db / geo / parse）已迁移至 git-fit gem，本仓库仅保留配置与 CI/CD。下述条目中标注「git-fit」的已迁移，详细实现见 git-fit 仓库。
 
 ## 2026-08 — thin-shell 迁移
 
 | Item | Status |
 |---|---|
+| 薄壳彻底移除：删除 `exe/workouts` + `lib/`（workouts.rb/cli.rb/version.rb）+ `spec/cli/`，全命令直接用 `git fit`（auth 旗标逐一对齐） | ✅ 已完成 |
+| 部署三件套移除：删除 Dockerfile + docker-compose.yml + .dockerignore + Makefile + workouts-cli.gemspec，Gemfile 改为独立声明 git-fit 依赖。仓库成为纯配置 + CI/CD 壳 | ✅ 已完成 |
 | workouts-cli 剥为薄壳：删除 sync/auth/fit/db/export 本地实现，`auth`/`db`/`geo`/`init`/`parse` 委托 git-fit | ✅ 已完成 |
 | Garmin 认证迁移至 `git fit auth garmin`（-A/-B/--auto/--sync/--mfa-code），Python 脚本删除（git-fit #66） | ✅ 已完成 |
 | `git fit auth garmin` 默认策略改为 `--auto`（B primary / A fallback） | ✅ 已完成 |
