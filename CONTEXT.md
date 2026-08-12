@@ -262,8 +262,8 @@ f > 2N+1 → N = min(7, N+1)    → 减速
 
 | 触发 | 操作 |
 |---|---|
-| push/PR → master | `bundle exec rspec` + 语法检查 |
-| Ruby 版本 | 3.2 / 3.3 / 3.4 |
+| push/PR → master | 3 jobs：`workflow-lint`（actionlint@v2 校验 workflow 语法，shellcheck: false）、`test-import-action`（`.github/git-fit-actions/import` node 测试：npm ci + typecheck + test + build:check）、`ruby-test`（`bundle exec rspec`） |
+| Ruby 版本 | matrix `ruby-version: ["3.4"]` |
 
 ### sync.yml
 
@@ -293,16 +293,15 @@ sync job (runs-on: ${{ vars.RUNNER_LABEL || 'ubuntu-latest' }}):
   4. restore DB cache (db-store/cache/restore@v1, db-dir + db-name, git-restore-mode: fallback — cache miss 时从 GitFit/db 分支兜底恢复，输出 git-restored-bytes + save-to-git-branch)
   5. Import data (git-fit-actions/import, sources: apple_health,2bulu, 目录树哈希检测 + store-state push)
   6. restore per-source caches (data-store/cache/restore@v2)
-  7. git fit sync（受 vars.SYNC_TIME_BUDGET / SYNC_TOTAL_TIMEOUT 限制）
-  8. Fetch Strava original files (git fit strava fetch, continue-on-error)
-  9. save per-source caches (data-store/cache/save@v2)
-  10. Parse Geo Regions (git fit geo detect, detect-limit 200)
-  11. [db] Checkpoint SQLite WAL
-  12. git-save-gate（if: success()，job 成功时透传 restore 的 save-to-git-branch）
-  13. save DB cache (db-store/cache/save@v1, db-dir + db-name, save-to-git-branch 透传 — job 成功 + changed 时 push 回 GitFit/db)
-  14. 数据/DB 变更时触发 sync-scheduler.yml (commit=true)
-  15. Write DB summary / upload DB artifact
-  16. 数据/DB 变更时触发 gh-pages deploy
+  7. Sync activities (sync-activities action — 内含 git fit sync 受 vars.SYNC_TIME_BUDGET / SYNC_TOTAL_TIMEOUT 限制 + git fit strava fetch --limit 10 continue-on-error)
+  8. save per-source caches (data-store/cache/save@v2)
+  9. Parse Geo Regions (git fit geo detect, detect-limit 200)
+  10. [db] Checkpoint SQLite WAL
+  11. git-save-gate（if: success()，job 成功时透传 restore 的 save-to-git-branch）
+  12. save DB cache (db-store/cache/save@v1, db-dir + db-name, save-to-git-branch 透传 — job 成功 + changed 时 push 回 GitFit/db)
+  13. 数据/DB 变更时触发 sync-scheduler.yml (commit=true)
+  14. Write DB summary / upload DB artifact
+  15. 数据/DB 变更时触发 gh-pages deploy
 ```
 
 ### gh-pages.yml

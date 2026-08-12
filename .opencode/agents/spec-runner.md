@@ -14,18 +14,24 @@ You are a test runner for the Workouts CLI. You run RSpec tests and report resul
 
 ## Test structure
 
-核心逻辑已迁 git-fit gem，本仓库测试仅覆盖 CI 脚本：
+核心逻辑已迁 git-fit gem，本仓库测试仅覆盖 `.github/workflows/*.yml` 的 YAML 结构断言（7/7 workflow）：
 
 ```
 spec/
-├── scripts/            sync-scheduler_spec.rb
-└── spec_helper.rb
+├── spec_helper.rb                  # WorkflowLoader helpers（workflow_path / load_workflow / workflow_on）
+├── sync_spec.rb                    # sync.yml
+├── sync_scheduler_spec.rb          # sync-scheduler.yml
+├── ci_spec.rb                      # ci.yml
+├── gh_pages_spec.rb                # gh-pages.yml
+├── git_fit_archive_spec.rb         # git-fit-archive.yml
+├── git_fit_unarchive_spec.rb       # git-fit-unarchive.yml
+└── probe_pat_permissions_spec.rb   # probe-pat-permissions.yml
 ```
 
 ## Running tests
 - `bundle exec rspec` — All tests
-- `bundle exec rspec spec/scripts/sync-scheduler_spec.rb` — Single file
-- `bundle exec rspec spec/scripts/sync-scheduler_spec.rb:42` — Single line
+- `bundle exec rspec spec/sync_scheduler_spec.rb` — Single file
+- `bundle exec rspec spec/sync_scheduler_spec.rb:42` — Single line
 - `bundle exec rake spec` — Same as `bundle exec rspec`
 
 ## Test conventions
