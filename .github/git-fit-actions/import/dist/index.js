@@ -68088,8 +68088,8 @@ function git(args, env = {}) {
     error: r.error ?? null
   };
 }
-function isLfsPointer(buf) {
-  return buf.subarray(0, 60).toString("utf8").startsWith("version https://git-lfs");
+function shellQuote(s) {
+  return "'" + s.replace(/'/g, "'\\''") + "'";
 }
 function checkBranch(branch) {
   const r = git(["ls-remote", "--exit-code", "origin", `refs/heads/${branch}`]);
@@ -68122,26 +68122,13 @@ function downloadFiles(cfg) {
     const relPath = remoteFile.startsWith(cfg.dir + "/") ? remoteFile.substring(cfg.dir.length + 1) : remoteFile;
     const localPath = path12.join(cfg.dir, relPath);
     fs9.mkdirSync(path12.dirname(localPath), { recursive: true });
-    const show = (0, import_child_process.spawnSync)("git", ["show", `${cfg.remote}:${remoteFile}`], {
-      encoding: "buffer"
-    });
-    if (show.error || show.status !== 0) {
+    const ref = `${cfg.remote}:${remoteFile}`;
+    const cmd = `set -o pipefail; git show ${shellQuote(ref)} | git lfs smudge > ${shellQuote(localPath)}`;
+    const r = (0, import_child_process.spawnSync)("bash", ["-c", cmd], { encoding: "utf8" });
+    if (r.status !== 0) {
       throw new Error(
-        `git show ${remoteFile} failed: ${show.stderr?.toString() || show.error?.message}`
+        `download ${remoteFile} failed (status=${r.status ?? "null"}): ${r.stderr.trim() || r.error?.message || "unknown"}. Fix: verify LFS auth and network; retry the workflow.`
       );
-    }
-    const smudge = (0, import_child_process.spawnSync)("git", ["lfs", "smudge"], {
-      input: show.stdout,
-      encoding: "buffer"
-    });
-    if (!smudge.error && smudge.status === 0) {
-      fs9.writeFileSync(localPath, smudge.stdout);
-    } else if (isLfsPointer(show.stdout)) {
-      throw new Error(
-        `git lfs smudge failed for ${remoteFile}: ${smudge.stderr?.toString() || smudge.error?.message}. Fix: install git-lfs.`
-      );
-    } else {
-      fs9.writeFileSync(localPath, show.stdout);
     }
   }
   return files.length;

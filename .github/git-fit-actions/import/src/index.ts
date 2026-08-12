@@ -43,8 +43,8 @@ function git(
   };
 }
 
-function isLfsPointer(buf: Buffer): boolean {
-  return buf.subarray(0, 60).toString("utf8").startsWith("version https://git-lfs");
+function shellQuote(s: string): string {
+  return "'" + s.replace(/'/g, "'\\''") + "'";
 }
 
 /**
@@ -105,32 +105,18 @@ function downloadFiles(cfg: SourceConfig): number {
     const localPath = path.join(cfg.dir, relPath);
     fs.mkdirSync(path.dirname(localPath), { recursive: true });
 
-    const show = spawnSync("git", ["show", `${cfg.remote}:${remoteFile}`], {
-      encoding: "buffer",
-    });
-    if (show.error || show.status !== 0) {
+    // bash pipe (stdout → file, bypasses Node's spawnSync large-buffer stall):
+    // matches the legacy composite's `git show <ref>:<f> | git lfs smudge >
+    // file` byte-for-byte. smudge passes through non-LFS content unchanged;
+    // for LFS pointers it fetches the real blob. `set -o pipefail` propagates
+    // a git show failure (bash default only takes the last command's exit).
+    const ref = `${cfg.remote}:${remoteFile}`;
+    const cmd = `set -o pipefail; git show ${shellQuote(ref)} | git lfs smudge > ${shellQuote(localPath)}`;
+    const r = spawnSync("bash", ["-c", cmd], { encoding: "utf8" });
+    if (r.status !== 0) {
       throw new Error(
-        `git show ${remoteFile} failed: ${show.stderr?.toString() || show.error?.message}`
+        `download ${remoteFile} failed (status=${r.status ?? "null"}): ${r.stderr.trim() || r.error?.message || "unknown"}. Fix: verify LFS auth and network; retry the workflow.`
       );
-    }
-
-    // Unified pipeline: `git show | git lfs smudge`. smudge passes through
-    // non-LFS content unchanged; for LFS pointers it fetches the real blob.
-    const smudge = spawnSync("git", ["lfs", "smudge"], {
-      input: show.stdout,
-      encoding: "buffer",
-    });
-    if (!smudge.error && smudge.status === 0) {
-      fs.writeFileSync(localPath, smudge.stdout);
-    } else if (isLfsPointer(show.stdout)) {
-      throw new Error(
-        `git lfs smudge failed for ${remoteFile}: ${
-          smudge.stderr?.toString() || smudge.error?.message
-        }. Fix: install git-lfs.`
-      );
-    } else {
-      // Non-LFS content; smudge unavailable/failed — write the raw content.
-      fs.writeFileSync(localPath, show.stdout);
     }
   }
   return files.length;
