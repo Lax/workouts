@@ -183,4 +183,4 @@ bash scripts/data-store-git-save.sh GitFit/db \
 
 ## 校验和方法（后续实现）
 
-参考 `scripts/data-store-checksum.sh`（当前孤立）和两份 action 中重复的 `.checksum` 生成内联 bash，后续抽取为 `scripts/generate-checksums.sh`。本次文档不包含。
+SHA256SUMS 生成与校验已内联进 `git-fit-actions/data-store/cache/save@v2`（`find | sort | xargs sha256sum`），仓库内无独立脚本。

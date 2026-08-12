@@ -505,7 +505,7 @@ end
    - 如果推送被拒 → 停止，报告分叉，升级。不要强制推送。
 
 3. 监控 CI（SKIP_CI 时跳过）：
-   - `gh run-watch --compact --exit-status` ← 需要安装 gh-run-watch
+   - `gh run-watch --compact --exit-status` ← gh extension（已装在用户目录）
    - 如果失败 → 记录错误，建议回滚
    - 如果成功 → 确认交付完成
 
@@ -528,9 +528,9 @@ todowrite("5/5 🚀 Deliver" → completed)
 
 | Tool | Phase | Install |
 |---|---|---|
-| `gh-run-watch` | 5/5 CI monitoring | `cp scripts/gh-run-watch ~/.local/share/gh/extensions/gh-run-watch/ && chmod +x ~/.local/share/gh/extensions/gh-run-watch/gh-run-watch` |
+| `gh-run-watch` | 5/5 CI monitoring | 已安装为 gh extension（`~/.local/share/gh/extensions/gh-run-watch/`），仓库内无副本 |
 
-Predicts CI duration from recent runs (median), sleeps predictively, delegates to `gh run watch`. Supports `--compact`, `--exit-status`. Project script at `scripts/gh-run-watch`.
+Predicts CI duration from recent runs (median), sleeps predictively, delegates to `gh run watch`. Supports `--compact`, `--exit-status`.
 
 ## Status.json
 

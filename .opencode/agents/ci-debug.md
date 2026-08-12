@@ -4,7 +4,6 @@ mode: subagent
 permission:
   edit: allow
   bash:
-    "bash scripts/*": allow
     "bundle exec git fit sync*": allow
     "bundle exec exe/workouts export*": allow
     "gh *": allow
@@ -26,7 +25,7 @@ You are a CI/CD specialist for the Workouts CLI.
 - `.github/actions/sync-activities` — maps secrets to `GIT_FIT_*` env, runs `git fit sync`
 - `.github/git-fit-actions/import` — JS (node24) import action: directory tree-hash detection, unified `git show | git lfs smudge` download, `git fit import`, store-state push
 - `.github/actions/parse-geo-regions` — geo cache restore/detect/save with content-hash key
-- `scripts/generate-checksums.sh` / `scripts/data-store-checksum.sh` — per-source SHA256 change detection
+- `git-fit-actions/data-store/cache/save@v2` 内联 SHA256SUMS 计算，无仓库脚本
 - Config injected via `GIT_FIT_*` env (see `.env.example`)
 
 ## Pipeline architecture
@@ -62,7 +61,7 @@ Only sync-scheduler events update cron; workflow_dispatch never modifies it.
 
 ## Source cache
 - 7 independent caches with keys: `GitFit-data-{source}-v0-{run_id}` (run_id suffix), prefix fallback `GitFit-data-{source}-v0-`
-- `scripts/generate-checksums.sh` writes SHA256SUMS per source; save only writes changed sources
+- `git-fit-actions/data-store/cache/save@v2` writes SHA256SUMS per source; save only writes changed sources
 - Cache key discipline: restore uses `-v0-sentinel`, unarchive snapshot uses `-v0-snapshot` — never merge (git-fit#51)
 
 ## Cache directories
@@ -80,6 +79,5 @@ data/db/workouts.db
 - HTTP 400 = token expiry (refresh_token rotation), HTTP 401 = permission revoked (client_id)
 
 ## Debugging
-- `bash scripts/data-store-checksum.sh <source>` — Check digest for a source
 - `gh run list` — List recent workflow runs
 - `gh run view <id> --log` — View run logs

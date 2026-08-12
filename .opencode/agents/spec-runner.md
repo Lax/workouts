@@ -19,8 +19,7 @@ You are a test runner for the Workouts CLI. You run RSpec tests and report resul
 ```
 spec/
 ├── cli/                sync_spec.rb (auth/db/geo/init/parse 委托行为)
-├── scripts/            data-store-checksum_spec.rb, generate-checksums_spec.rb, sync-scheduler_spec.rb
-├── fixtures/           Test fixtures
+├── scripts/            sync-scheduler_spec.rb
 └── spec_helper.rb
 ```
 
@@ -37,7 +36,6 @@ spec/
 - HTTP calls are fully stubbed (`allow(conn).to receive(:get)`)
 - File system uses `Dir.mktmpdir`, never writes to production `data/`
 - `verify_partial_doubles = true` in spec_helper
-- Fixtures in `spec/fixtures/` loaded via `fixture_path(name)` / `load_fixture(name)`
 
 ## CI setup
 - `.github/workflows/ci.yml` runs `bundle exec rspec` on push/PR to master (Ruby 3.2/3.3/3.4 matrix)
