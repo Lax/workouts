@@ -28,8 +28,6 @@ module Workouts
       else
         say_status :error, "Supported: garmin, garmin_cn, strava", :red
       end
-    rescue GitFit::Sync::AuthError => e
-      say_status :error, "Auth failed: #{e.message}", :red
     end
 
     desc "db SUBCOMMAND", "Database operations (delegated to git fit)"
