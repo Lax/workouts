@@ -2,7 +2,6 @@
 
 require "yaml"
 
-ROOT = File.expand_path("../..", __dir__)
 CRON_N_REGEX = %r{/\K\d+(?= \* \*)}
 
 RSpec.describe "cron management split" do
