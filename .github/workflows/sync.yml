@@ -24,39 +24,15 @@ jobs:
           bundler-cache: true
 
       # ── DB restore (git-fit db-store) ──
+      # cache miss 时从 GitFit/db 分支兜底恢复（fallback 模式），恢复成功会经 save-to-git-branch
+      # 输出建议 save 侧把 DB push 回该分支。
       - name: '[db] Restore cache'
+        id: db-restore
         uses: git-fit-actions/db-store/cache/restore@v1
         with:
           database-path: data/db/workouts.db
-
-      - name: '[db] Restore from archive branch'
-        id: db-archive-restore
-        shell: bash
-        run: |
-          if [ ! -s data/db/workouts.db ]; then
-            echo "Cache miss — falling back to archive branch"
-            git fetch origin GitFit/db || true
-            if git archive --format=tar origin/GitFit/db \
-                 data/db/workouts.db data/db/workouts.db.SHA256SUMS 2>/dev/null | tar xf -; then
-              bytes=$(stat -c%s data/db/workouts.db 2>/dev/null || echo 0)
-              echo "restored=$bytes" >> $GITHUB_OUTPUT
-              echo "Restored DB from archive branch: $bytes bytes"
-            else
-              echo "SHA256SUMS not in archive — restoring DB only"
-              git archive --format=tar origin/GitFit/db \
-                 data/db/workouts.db 2>/dev/null | tar xf - || true
-              if [ -f data/db/workouts.db ] && [ -s data/db/workouts.db ]; then
-                bytes=$(stat -c%s data/db/workouts.db 2>/dev/null || echo 0)
-                echo "restored=$bytes" >> $GITHUB_OUTPUT
-                echo "Restored DB from archive branch: $bytes bytes"
-              else
-                echo "restored=0" >> $GITHUB_OUTPUT
-                echo "Archive branch restore failed — DB will be created fresh by sync"
-              fi
-            fi
-          else
-            echo "restored=0" >> $GITHUB_OUTPUT
-          fi
+          git-restore-mode: fallback
+          git-branch: GitFit/db
 
       - name: Import data (Apple Health + 2bulu)
         uses: ./.github/git-fit-actions/import
@@ -125,12 +101,20 @@ jobs:
           fi
 
       # ── DB save (git-fit db-store) ──
+      # git-save-gate: 仅 job 成功时透传 restore 的 save-to-git-branch 建议，失败时 save 侧不 push。
+      - name: '[db] Gate git save on job success'
+        id: git-save-gate
+        if: success()
+        shell: bash
+        run: echo "save-to-git-branch=${{ steps.db-restore.outputs.save-to-git-branch }}" >> "$GITHUB_OUTPUT"
+
       - name: '[db] Save cache'
         id: db-save
         if: always()
         uses: git-fit-actions/db-store/cache/save@v1
         with:
           database-path: data/db/workouts.db
+          save-to-git-branch: ${{ steps.git-save-gate.outputs.save-to-git-branch || 'false' }}
 
       - name: Trigger sync scheduler
         if: steps.db-save.outputs.changed == 'true' || steps.data-save.outputs.changed == 'true'
@@ -148,7 +132,8 @@ jobs:
             echo "- DB path: ${{ vars.GIT_FIT_DATABASE_PATH }}"
             echo "- DB changed: ${{ steps.db-save.outputs.changed }}"
             echo "- DB size: ${{ steps.db-checkpoint.outputs.db_size }} bytes"
-            echo "- Archive restore: ${{ steps.db-archive-restore.outputs.restored }} bytes"
+            echo "- Archive restore: ${{ steps.db-restore.outputs.git-restored-bytes }} bytes"
+            echo "- Git save: ${{ steps.db-save.outputs.git-save-status }}"
             echo "- Data changed sources: ${{ steps.data-save.outputs.changed_sources }}"
             echo "- Data unchanged sources: ${{ steps.data-save.outputs.unchanged_sources }}"
             echo "- Data save errors: ${{ steps.data-save.outputs.save_errors }}"

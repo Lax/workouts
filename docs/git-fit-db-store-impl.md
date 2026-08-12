@@ -414,6 +414,8 @@ mhash = inputs.db-schema-hash (非空则 "workouts-db-v1-abc123-{run_id}"，空�
 
 > **2026-08 变更：** `shall-commit-db` / `shall-commit-data` 机制已移除。sync 纯 cache-only，DB 由 `git-fit-actions/db-store/cache/restore@v1` 管理，git 备份由 `git-fit-archive.yml` archive-db job 周归档到 `GitFit/db`。本节保留旧版 db-store 集成记录作为历史参考。
 
+> **2026-08 变更（db-store v1.0.2）：** 原 sync.yml 内联的「Restore from archive branch」step 已移入 `db-store/cache/restore@v1`，通过 `git-restore-mode: fallback` + `git-branch: GitFit/db` 启用；save 侧经 `save-to-git-branch` 输入 + `git-save-gate`（`if: success()`）在 job 成功且 changed 时 push 回 GitFit/db。详见 [archive-impl.md](archive-impl.md) 与 CONTEXT.md「2026-08 DB git 兜底与回写」。以下 7 节为历史实现记录。
+
 gh-pages.yml 原使用 bare `actions/cache/restore` 恢复 DB，仅依赖 cache（7 天 TTL）。已替换为 `db-store/restore`，提供分层恢复：
 
 ```

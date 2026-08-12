@@ -42,6 +42,8 @@ Step 4: git add -f -A data/db/workouts.db → diff --cached --quiet? skip : comm
 
 单文件无需 rename 检测和删除排除。`git write-tree` + `git diff-tree` 步骤省略。
 
+> **2026-08 变更（db-store v1.0.2）：** sync 侧也新增条件回写——`db-store/cache/restore@v1` `git-restore-mode: fallback` 在 cache miss 时从 `GitFit/db` 恢复，`db-store/cache/save@v1` 在 job 成功且 DB changed 时经 detached worktree push 回 `GitFit/db`（detached worktree + `git push origin HEAD:GitFit/db`，与 archive-db 共用 `concurrency: workouts-db` 串行，无 race）。周归档仍是主 writer；sync 侧仅在 cache miss 时补充回写，使分支在 cache 不可靠时保持新鲜。
+
 ## 机制详解
 
 ### Step 1 — 首次分支创建
