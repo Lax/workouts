@@ -159,7 +159,7 @@ lib/workouts/version.rb      # 版本号
 
 ### Garmin OAuth 认证机制
 
-详见 [docs/garmin-auth.md](docs/garmin-auth.md)
+详见 wiki [Auth](https://github.com/Lax/workouts/wiki/Auth)
 
 ### Garmin Intl vs CN 目录/标识隔离
 
@@ -361,7 +361,7 @@ manage job (runs-on: ${{ vars.RUNNER_LABEL || 'ubuntu-latest' }}):
 | schedule `0 4 * * 0` (每周日) | 每源 cache restore → `git add -A` → rename 检测 → 排除纯删除 → commit → push to `GitFit/data/<source>` + `GitFit/db` |
 | workflow_dispatch | 手动触发（可选单个 source） |
 
-详见 [docs/archive-impl.md](docs/archive-impl.md)。
+详见 wiki [CI-CD](https://github.com/Lax/workouts/wiki/CI-CD)。
 
 #### 归档分支
 
@@ -406,13 +406,15 @@ docker compose run --rm workouts export json
 
 ## 数据架构
 
-详见 [docs/data-architecture.md](docs/data-architecture.md)
+详见 wiki [Architecture](https://github.com/Lax/workouts/wiki/Architecture)
 
 L1 raw → L2 标准化 GPS → L3 SQLite 摘要 → L4 构建制品 → L5 部署。
 转换规则: 坐标归一化、时间归一化、不丢字段。
 每个新源必须实现 L1+L2+L3。
 
 ## 文档架构
+
+> **2026-08 变更：** `docs/` 目录已归档至 GitHub Wiki（[Lax/workouts wiki](https://github.com/Lax/workouts/wiki)，主题索引见 [Home](https://github.com/Lax/workouts/wiki)）。设计/调研/实现文档统一按话题存放，不再在仓库内维护 `docs/`。
 
 ### 文档分类
 
@@ -426,7 +428,7 @@ L1 raw → L2 标准化 GPS → L3 SQLite 摘要 → L4 构建制品 → L5 部�
 
 **命名示例：** `garmin-auth-goal.md` / `garmin-auth-research.md` / `garmin-auth-impl.md`
 
-> 已有文档（`data-architecture.md`, `garmin-auth.md`）保持原名不动，新增文档按此规范命名。
+> 历史文档（`data-architecture.md`, `garmin-auth.md` 等）已在归档时按话题合并进 wiki 页面，不保留原名。
 
 ### 编写原则
 
@@ -434,11 +436,11 @@ L1 raw → L2 标准化 GPS → L3 SQLite 摘要 → L4 构建制品 → L5 部�
 
 | 原则 | 说明 |
 |---|---|
-| 术语一致 | 代码 / 注释 / docs/ / CONTEXT.md 用同一组词。避免同义替换 |
-| 显式引用 | 跨文件引用写完整路径。不写"详见上节" |
+| 术语一致 | 代码 / 注释 / wiki / CONTEXT.md 用同一组词。避免同义替换 |
+| 显式引用 | 跨文件引用写完整路径或 wiki URL。不写"详见上节" |
 | 结构化 > 段落 | 表格 / 列表 > 自然段。AI 解析表格比段落可靠 |
 | 约定写出来 | `__` 分隔符、`SOURCE` 占位符含义、OAuth 术语，在注释里写清 |
-| 文件锚点 | 每个 `docs/` 文件以 `# <feature> — <summary>` 开头 |
+| 文件锚点 | 每个 wiki 页面以 `# <topic> — <summary>` 开头 |
 | 不列测试数量 | 文档中不出现测试用例数量、耗时等数字。测试相关仅写 `测试（全 stub、零网络）` |
 | 测试不用 rm_rf | Spec 不得用 `FileUtils.rm_rf` 删除生产目录。用 `Dir.mktmpdir` 管理临时文件 |
 | 不重复 OAuth | OAuth token 管理集中在 git-fit 的 `Auth::GarminToken`，其他类不得包含 OAuth 客户端逻辑 |

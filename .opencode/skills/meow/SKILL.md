@@ -498,7 +498,7 @@ end
    - 检查 .gitignore 是否包含 '/.opencode/meoworks/'（没有就报告）
    - 分类暂存文件判断是否跳过 CI：
      - `git diff --name-only --cached` → 文件列表
-     - SAFE_PATTERNS="^(docs/|CONTEXT\.md|[^/]+\.md|\.opencode/)"
+      - SAFE_PATTERNS="^(CONTEXT\.md|[^/]+\.md|\.opencode/)"
      - 如果所有文件都匹配 → SKIP_CI=true
      - 否则 → SKIP_CI=false
    - 提交（说 WHY 不是 WHAT），`git push`（SKIP_CI 时追加 "[skip ci]"）

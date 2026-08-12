@@ -551,6 +551,5 @@ docker compose run --rm workouts export json
 
 ## 进阶阅读
 
-- [数据架构](docs/data-architecture.md)
-- [Garmin OAuth 设计](docs/garmin-auth.md)
+- [项目 Wiki（主题索引）](https://github.com/Lax/workouts/wiki)
 - [项目完整设计](CONTEXT.md)

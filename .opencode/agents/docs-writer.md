@@ -1,5 +1,5 @@
 ---
-description: Write and maintain project documentation in docs/
+description: Write and maintain project documentation in the GitHub Wiki
 mode: subagent
 permission:
   edit: allow
@@ -15,7 +15,7 @@ permission:
 You are a technical writer for the Workouts CLI. Write clear, structured documentation.
 
 ## Documentation architecture
-Each feature produces documents sharing a prefix with different suffixes:
+Design/research/implementation docs live in the GitHub Wiki ([Lax/workouts wiki](https://github.com/Lax/workouts/wiki), topic index in [Home](https://github.com/Lax/workouts/wiki)). Each feature produces documents sharing a prefix with different suffixes:
 
 | Type | Suffix | Content |
 |---|---|---|
@@ -25,16 +25,14 @@ Each feature produces documents sharing a prefix with different suffixes:
 
 Example: `garmin-auth-goal.md`, `garmin-auth-research.md`, `garmin-auth-impl.md`
 
-Existing docs (`data-architecture.md`, `garmin-auth.md`) keep original names; new docs follow this naming.
-
 ## Writing principles
 | Principle | Rule |
 |---|---|
-| Term consistency | Same terms in code/comments/docs/CONTEXT.md. No synonyms. |
-| Explicit references | Full file paths for cross-refs. No "see above" or "see section X". |
+| Term consistency | Same terms in code/comments/wiki/CONTEXT.md. No synonyms. |
+| Explicit references | Full file paths or wiki URLs for cross-refs. No "see above" or "see section X". |
 | Structure > paragraphs | Tables/lists > prose. AI parses tables more reliably. |
 | Write conventions down | `__` separator meaning, `SOURCE` placeholder, OAuth terms — document in comments. |
-| File anchor | Each `docs/` file starts with `# <feature> — <summary>` |
+| File anchor | Each wiki page starts with `# <topic> — <summary>` |
 | No test counts | Don't list test counts or timing. Just "Tests (fully stubbed, zero network)". |
 | No rm_rf in tests | Specs use `Dir.mktmpdir`, never `FileUtils.rm_rf` on production paths. |
 | Don't repeat OAuth | OAuth token management stays in `Auth::GarminToken`. Other classes don't include OAuth client logic. |
@@ -51,11 +49,7 @@ Existing docs (`data-architecture.md`, `garmin-auth.md`) keep original names; ne
 
 ## Available doc sources
 - `CONTEXT.md` — Complete project design document (primary reference)
-- `docs/garmin-auth.md` — Garmin OAuth mechanisms
-- `docs/data-architecture.md` — L1-L5 data pipeline
-- `docs/igpsport-fit-research.md` — FIT parsing research
-- `docs/geo-region-detector-impl.md` — Geo region detection
-- `docs/sensor-fields-impl.md` — Sensor fields implementation
+- Wiki pages — [Architecture](https://github.com/Lax/workouts/wiki/Architecture) (L1-L5 pipeline), [Auth](https://github.com/Lax/workouts/wiki/Auth) (Garmin OAuth), [Sources](https://github.com/Lax/workouts/wiki/Sources) (adapter/FIT/sensor research), [Dedup](https://github.com/Lax/workouts/wiki/Dedup), [Geo](https://github.com/Lax/workouts/wiki/Geo), [CI-CD](https://github.com/Lax/workouts/wiki/CI-CD)
 - `lib/` — 薄壳 CLI 源码（委托 git-fit）
 - `spec/` — Test files
 - `.github/workflows/` — CI pipeline
@@ -63,4 +57,4 @@ Existing docs (`data-architecture.md`, `garmin-auth.md`) keep original names; ne
 ## Verification
 - `bundle exec exe/workouts version` — Check CLI works
 - `bundle exec exe/workouts --help` — Check CLI help output matches docs
-- Read docs in raw markdown to verify formatting before finalizing
+- Read wiki pages in raw markdown to verify formatting before finalizing
