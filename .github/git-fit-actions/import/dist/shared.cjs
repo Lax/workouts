@@ -41,6 +41,7 @@ __export(shared_exports, {
   hashFile: () => hashFile,
   isDirectory: () => isDirectory,
   isFile: () => isFile,
+  isZipArchive: () => isZipArchive,
   listDataFiles: () => listDataFiles,
   parseChecksumFile: () => parseChecksumFile,
   parseSources: () => parseSources,
@@ -59,7 +60,8 @@ var KNOWN_SOURCES = {
     remote: "origin/GitFit/import/apple_health",
     cacheKeyPrefix: "import-apple-health-v0-marker",
     importCmd: "apple_health",
-    title: "Apple Health"
+    title: "Apple Health",
+    validateFile: "export.zip"
   },
   "2bulu": {
     branch: "GitFit/import/2bulu",
@@ -119,7 +121,8 @@ function resolveConfig(source, overrides = {}) {
     remote: overrides.remote || defaults.remote,
     cacheKeyPrefix: overrides.cacheKey || defaults.cacheKeyPrefix,
     importCmd: defaults.importCmd,
-    title: defaults.title
+    title: defaults.title,
+    validateFile: defaults.validateFile
   };
 }
 var EMPTY_TREE_HASH = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
@@ -267,6 +270,15 @@ function countFiles(dir) {
     return 0;
   }
 }
+function isZipArchive(buf) {
+  if (buf.length < 4) return false;
+  const a = buf[0];
+  const b = buf[1];
+  if (a !== 80 || b !== 75) return false;
+  const c = buf[2];
+  const d = buf[3];
+  return c === 3 && d === 4 || c === 5 && d === 6 || c === 7 && d === 8;
+}
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
   EMPTY_TREE_HASH,
@@ -280,6 +292,7 @@ function countFiles(dir) {
   hashFile,
   isDirectory,
   isFile,
+  isZipArchive,
   listDataFiles,
   parseChecksumFile,
   parseSources,

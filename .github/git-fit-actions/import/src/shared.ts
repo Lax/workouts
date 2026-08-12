@@ -9,6 +9,14 @@ export interface SourceConfig {
   cacheKeyPrefix: string;
   importCmd: string;
   title: string;
+  /**
+   * If set, the named file (relative to `dir`) must be present after download
+   * and pass {@link isZipArchive}. Restores the legacy composite's
+   * `file | grep -qi "Zip archive"` guard against silent LFS-smudge leaks and
+   * content-level corruption. Only apple_health sets this (single canonical LFS
+   * blob export.zip); multi-file sources rely on git-fit's per-file sniff.
+   */
+  validateFile?: string;
 }
 
 export interface OverrideConfig {
@@ -36,6 +44,7 @@ export const KNOWN_SOURCES: Record<string, SourceConfig> = {
     cacheKeyPrefix: "import-apple-health-v0-marker",
     importCmd: "apple_health",
     title: "Apple Health",
+    validateFile: "export.zip",
   },
   "2bulu": {
     branch: "GitFit/import/2bulu",
@@ -109,6 +118,7 @@ export function resolveConfig(
     cacheKeyPrefix: overrides.cacheKey || defaults.cacheKeyPrefix,
     importCmd: defaults.importCmd,
     title: defaults.title,
+    validateFile: defaults.validateFile,
   };
 }
 
@@ -318,4 +328,28 @@ export function countFiles(dir: string): number {
   } catch {
     return 0;
   }
+}
+
+/**
+ * Detect ZIP archives by magic bytes. ZIP files begin with either a local
+ * file header (PK\x03\x04) or, for an empty archive, an end-of-central-directory
+ * record (PK\x05\x06); the spanned-archive marker (PK\x07\x08) is also accepted.
+ * Cross-platform byte check — no `file` binary dependency. Replaces the legacy
+ * composite's `file export.zip | grep -qi "Zip archive"` guard.
+ *
+ * Returns false for non-zip content including a leaked LFS pointer (the case
+ * where `git lfs smudge` produced textual pointer output instead of the blob).
+ */
+export function isZipArchive(buf: Buffer): boolean {
+  if (buf.length < 4) return false;
+  const a = buf[0];
+  const b = buf[1];
+  if (a !== 0x50 || b !== 0x4b) return false; // "PK"
+  const c = buf[2];
+  const d = buf[3];
+  return (
+    (c === 0x03 && d === 0x04) ||
+    (c === 0x05 && d === 0x06) ||
+    (c === 0x07 && d === 0x08)
+  );
 }

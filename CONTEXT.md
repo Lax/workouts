@@ -145,7 +145,7 @@ lib/workouts/version.rb      # 版本号
 
 | 适配器 | 源格式 | 认证 | 特点 |
 |---|---|---|---|
-| **Apple Health** | export.zip (XML + GPX) | 无 | 从 iOS 健康导出 zip 解析，心率从 HKQuantityTypeIdentifierHeartRate 关联，自动跳过 Strava/Keep/Garmin 等已知源。CI 经 `.github/git-fit-actions/import` action 从 `GitFit/import/apple_health` 分支拉取，检测机制用目录树哈希（`git ls-tree -r` + 过滤标志文件 + sha256sum）编码的 data_hash，精确判断数据文件内容变化。SHA256SUMS 保留用于跨 cache 恢复和快速校验 |
+| **Apple Health** | export.zip (XML + GPX) | 无 | 从 iOS 健康导出 zip 解析，心率从 HKQuantityTypeIdentifierHeartRate 关联，自动跳过 Strava/Keep/Garmin 等已知源。CI 经 `.github/git-fit-actions/import` action 从 `GitFit/import/apple_health` 分支拉取，检测机制用目录树哈希（`git ls-tree -r` + 过滤标志文件 + sha256sum）编码的 data_hash，精确判断数据文件内容变化。下载后对 `export.zip` 做 ZIP magic-byte 校验（`isZipArchive`，替代旧 composite 的 `file \| grep "Zip archive"`），LFS smudge 漏出或内容损坏即抛错——避免 `git fit import` 内部 rescue 后 exit 0 导致永久误跳。SHA256SUMS 保留用于跨 cache 恢复和快速校验 |
 | **LocalFile (GPX)** | .gpx 文件 | 无 | 扫描 `data/import/gpx/`，sport_category 默认 "other"，`--sport` 覆盖。多 track → 多活动 |
 | **LocalFile (FIT)** | .fit 文件 | 无 | 扫描 `data/import/fit/`，sport 从 FIT session mesg 提取（通过 decoder.js fitSport）。FIT 纪元时间戳 |
 | **LocalFile (TCX)** | .tcx 文件 | 无 | 扫描 `data/import/tcx/`，sport 从 XML Sport 属性提取。多 Activity → 多活动 |

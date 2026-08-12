@@ -14,6 +14,7 @@ const {
   compareChecksums,
   computeTreeHashFromLS,
   generateSHA256SUMS,
+  isZipArchive,
   listDataFiles,
   parseSources,
   readImportMarker,
@@ -86,6 +87,7 @@ test("resolveConfig: apple_health defaults", () => {
   assert.equal(cfg.cacheKeyPrefix, "import-apple-health-v0-marker");
   assert.equal(cfg.importCmd, "apple_health");
   assert.equal(cfg.title, "Apple Health");
+  assert.equal(cfg.validateFile, "export.zip");
 });
 
 test("resolveConfig: 2bulu maps to tbulu import cmd", () => {
@@ -94,6 +96,7 @@ test("resolveConfig: 2bulu maps to tbulu import cmd", () => {
   assert.equal(cfg.dir, "data/import/2bulu");
   assert.equal(cfg.cacheKeyPrefix, "import-2bulu-v0-marker");
   assert.equal(cfg.importCmd, "tbulu");
+  assert.equal(cfg.validateFile, undefined);
 });
 
 test("resolveConfig: overrides applied, untouched defaults kept", () => {
@@ -337,4 +340,41 @@ test("listDataFiles: sorted byte-wise", () => {
   const dir = tmpdir();
   writeTree(dir, { "b.txt": "x\n", "a.txt": "y\n", "A.txt": "z\n" });
   assert.deepEqual(listDataFiles(dir), ["A.txt", "a.txt", "b.txt"]);
+});
+
+// ── isZipArchive ──
+// Regression guard: apple_health export.zip must be validated post-download
+// (replaces the legacy composite's `file | grep -qi "Zip archive"` check).
+// Detects ZIP archives by magic bytes — cross-platform, no `file` dependency.
+
+const ZIP_LFH = Buffer.from([0x50, 0x4b, 0x03, 0x04]); // local file header
+const ZIP_EOCD = Buffer.from([0x50, 0x4b, 0x05, 0x06]); // empty archive
+
+test("isZipArchive: local file header (PK\\x03\\x04) recognized", () => {
+  assert.equal(isZipArchive(Buffer.concat([ZIP_LFH, Buffer.from("rest")])), true);
+});
+
+test("isZipArchive: empty archive (PK\\x05\\x06) recognized", () => {
+  assert.equal(isZipArchive(ZIP_EOCD), true);
+});
+
+test("isZipArchive: spanned-archive marker (PK\\x07\\x08) recognized", () => {
+  assert.equal(isZipArchive(Buffer.from([0x50, 0x4b, 0x07, 0x08])), true);
+});
+
+test("isZipArchive: LFS pointer text rejected (smudge-leak regression)", () => {
+  const pointer = Buffer.from(
+    "version https://git-lfs.github.com/spec/v1\noid sha256:abc\nsize 10\n"
+  );
+  assert.equal(isZipArchive(pointer), false);
+});
+
+test("isZipArchive: plain garbage rejected", () => {
+  assert.equal(isZipArchive(Buffer.from("this is not a zip")), false);
+  assert.equal(isZipArchive(Buffer.from("PK\\x03\\x04")), false); // literal, not bytes
+});
+
+test("isZipArchive: too short rejected", () => {
+  assert.equal(isZipArchive(Buffer.from("PK")), false);
+  assert.equal(isZipArchive(Buffer.alloc(0)), false);
 });

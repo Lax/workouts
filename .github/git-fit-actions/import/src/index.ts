@@ -13,6 +13,7 @@ import {
   computeTreeHashFromLS,
   generateSHA256SUMS,
   isFile,
+  isZipArchive,
   parseSources,
   readImportMarker,
   resolveConfig,
@@ -46,14 +47,33 @@ function isLfsPointer(buf: Buffer): boolean {
   return buf.subarray(0, 60).toString("utf8").startsWith("version https://git-lfs");
 }
 
+/**
+ * Resolve whether the import branch exists on `origin`.
+ *
+ * `git ls-remote --exit-code`:
+ *   - exit 0  → refs matched, branch exists
+ *   - exit 2  → no matching refs but repo reachable (genuine branch absence)
+ *   - 128/null → auth/network/infra failure — caller must throw, never silently
+ *     skip, otherwise a transient infra blip would be misreported as "no-branch"
+ *     and silently swallow the source.
+ */
 function checkBranch(branch: string): boolean {
-  return git(["ls-remote", "--exit-code", "origin", `refs/heads/${branch}`]).status === 0;
+  const r = git(["ls-remote", "--exit-code", "origin", `refs/heads/${branch}`]);
+  if (r.status === 0) return true;
+  if (r.status === 2) return false;
+  throw new Error(
+    `ls-remote ${branch} failed (status=${r.status ?? "null"}): ${r.stderr.trim() || r.error?.message || "unknown"}. Fix: verify git credentials and origin reachability.`
+  );
 }
 
 function computeTreeHash(remote: string, dir: string): string {
   const r = git(["ls-tree", "-r", remote, dir]);
   if (r.status !== 0) {
-    // Dir absent from the branch (or empty) → no data files.
+    // Defensive: a fetch just succeeded so the ref exists, but a corrupt repo
+    // / bad ref name could still surface here. Treat git-level failure as "no
+    // data" rather than crash. The absent-path-but-ref-ok case returns status
+    // 0 with empty stdout and is handled downstream by computeTreeHashFromLS →
+    // EMPTY_TREE_HASH.
     return EMPTY_TREE_HASH;
   }
   return computeTreeHashFromLS(r.stdout);
@@ -131,9 +151,10 @@ async function runImport(cfg: SourceConfig, dbPath: string): Promise<void> {
 }
 
 /**
- * Port of scripts/append-to-branch.sh reduced to a single SHA256SUMS file:
+ * Push the freshly generated SHA256SUMS back to the import branch:
  * overlay our checksum on the branch's current tree, commit, push. Any failure
- * is non-blocking (no push auth assumed) — warn and continue.
+ * is non-blocking (no push auth assumed) — warn and continue. (Replaces the
+ * now-removed scripts/append-to-branch.sh.)
  */
 function pushChecksums(cfg: SourceConfig): void {
   const sha256Path = path.join(cfg.dir, "SHA256SUMS");
@@ -291,6 +312,21 @@ async function processSource(
     throw new Error(`no data files extracted from ${cfg.branch}`);
   }
   core.info(`[${cfg.title}] Downloaded ${fileCount} file(s)`);
+
+  if (cfg.validateFile) {
+    const target = path.join(cfg.dir, cfg.validateFile);
+    if (!isFile(target)) {
+      throw new Error(
+        `expected ${cfg.validateFile} missing after download from ${cfg.branch}. Fix: check the branch tree or override 'dir'/'branch'.`
+      );
+    }
+    if (!isZipArchive(fs.readFileSync(target))) {
+      throw new Error(
+        `${cfg.validateFile} is not a valid zip archive — possible LFS smudge leak or content corruption. Fix: verify git-lfs on the runner and the ${cfg.validateFile} blob on ${cfg.branch}.`
+      );
+    }
+    core.info(`[${cfg.title}] Validated ${cfg.validateFile}`);
+  }
 
   core.info(`[${cfg.title}] Running git fit import ${cfg.importCmd}…`);
   await runImport(cfg, dbPath);

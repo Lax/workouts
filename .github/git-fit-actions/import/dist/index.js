@@ -67917,7 +67917,8 @@ var KNOWN_SOURCES = {
     remote: "origin/GitFit/import/apple_health",
     cacheKeyPrefix: "import-apple-health-v0-marker",
     importCmd: "apple_health",
-    title: "Apple Health"
+    title: "Apple Health",
+    validateFile: "export.zip"
   },
   "2bulu": {
     branch: "GitFit/import/2bulu",
@@ -67977,7 +67978,8 @@ function resolveConfig(source, overrides = {}) {
     remote: overrides.remote || defaults.remote,
     cacheKeyPrefix: overrides.cacheKey || defaults.cacheKeyPrefix,
     importCmd: defaults.importCmd,
-    title: defaults.title
+    title: defaults.title,
+    validateFile: defaults.validateFile
   };
 }
 var EMPTY_TREE_HASH = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
@@ -68063,6 +68065,15 @@ function isFile(p) {
     return false;
   }
 }
+function isZipArchive(buf) {
+  if (buf.length < 4) return false;
+  const a = buf[0];
+  const b = buf[1];
+  if (a !== 80 || b !== 75) return false;
+  const c = buf[2];
+  const d = buf[3];
+  return c === 3 && d === 4 || c === 5 && d === 6 || c === 7 && d === 8;
+}
 
 // src/index.ts
 function git(args, env = {}) {
@@ -68081,7 +68092,12 @@ function isLfsPointer(buf) {
   return buf.subarray(0, 60).toString("utf8").startsWith("version https://git-lfs");
 }
 function checkBranch(branch) {
-  return git(["ls-remote", "--exit-code", "origin", `refs/heads/${branch}`]).status === 0;
+  const r = git(["ls-remote", "--exit-code", "origin", `refs/heads/${branch}`]);
+  if (r.status === 0) return true;
+  if (r.status === 2) return false;
+  throw new Error(
+    `ls-remote ${branch} failed (status=${r.status ?? "null"}): ${r.stderr.trim() || r.error?.message || "unknown"}. Fix: verify git credentials and origin reachability.`
+  );
 }
 function computeTreeHash(remote, dir) {
   const r = git(["ls-tree", "-r", remote, dir]);
@@ -68279,6 +68295,20 @@ async function processSource(source, cfg, dbPath, storeStateFlag) {
     throw new Error(`no data files extracted from ${cfg.branch}`);
   }
   info(`[${cfg.title}] Downloaded ${fileCount} file(s)`);
+  if (cfg.validateFile) {
+    const target = path12.join(cfg.dir, cfg.validateFile);
+    if (!isFile(target)) {
+      throw new Error(
+        `expected ${cfg.validateFile} missing after download from ${cfg.branch}. Fix: check the branch tree or override 'dir'/'branch'.`
+      );
+    }
+    if (!isZipArchive(fs9.readFileSync(target))) {
+      throw new Error(
+        `${cfg.validateFile} is not a valid zip archive \u2014 possible LFS smudge leak or content corruption. Fix: verify git-lfs on the runner and the ${cfg.validateFile} blob on ${cfg.branch}.`
+      );
+    }
+    info(`[${cfg.title}] Validated ${cfg.validateFile}`);
+  }
   info(`[${cfg.title}] Running git fit import ${cfg.importCmd}\u2026`);
   await runImport(cfg, dbPath);
   await storeState(cfg, dataHash, storeStateFlag);
