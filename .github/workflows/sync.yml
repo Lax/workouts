@@ -90,6 +90,7 @@ jobs:
           timezone: ${{ vars.GIT_FIT_SYSTEM_TIMEZONE || 'Asia/Shanghai' }}
 
       - id: data-save
+        if: always()
         uses: git-fit-actions/data-store/cache/save@v2
         with:
           sources: keep,igpsport,xoss,xingzhe,garmin,garmin_cn,strava
@@ -126,6 +127,7 @@ jobs:
       # ── DB save (git-fit db-store) ──
       - name: '[db] Save cache'
         id: db-save
+        if: always()
         uses: git-fit-actions/db-store/cache/save@v1
         with:
           database-path: data/db/workouts.db
