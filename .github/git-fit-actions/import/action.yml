@@ -1,9 +1,9 @@
 name: GitFit Import
 description: >
-  Import data sources (apple_health | 2bulu) from their git branches.
-  Detects changes via directory tree hash, downloads files (git show | git lfs
-  smudge), runs `git fit import <cmd>`, and caches import state markers for
-  skip detection.
+  Import data sources (apple_health | 2bulu | gpx | fit | tcx) from their git
+  branches. Detects changes via directory tree hash, downloads files
+  (git show | git lfs smudge), runs `git fit import <cmd>`, and caches import
+  state markers for skip detection.
 
 author: Lax
 branding:
@@ -14,7 +14,7 @@ inputs:
   sources:
     description: >
       Comma- or newline-separated list of import sources.
-      Supported: apple_health, 2bulu.
+      Supported: apple_health, 2bulu, gpx, fit, tcx.
     required: true
   db-path:
     description: SQLite database path

@@ -40,6 +40,20 @@ test("parseSources: comma-separated list", () => {
   assert.deepEqual(parseSources("apple_health,2bulu"), ["apple_health", "2bulu"]);
 });
 
+test("parseSources: gpx,fit,tcx sources accepted", () => {
+  assert.deepEqual(parseSources("gpx,fit,tcx"), ["gpx", "fit", "tcx"]);
+});
+
+test("parseSources: all five sources mixed separators", () => {
+  assert.deepEqual(parseSources("apple_health, 2bulu\ngpx,fit,tcx"), [
+    "apple_health",
+    "2bulu",
+    "gpx",
+    "fit",
+    "tcx",
+  ]);
+});
+
 test("parseSources: newline-separated list", () => {
   assert.deepEqual(parseSources("apple_health\n2bulu"), ["apple_health", "2bulu"]);
 });
@@ -58,7 +72,10 @@ test("parseSources: filters empty items", () => {
 
 test("parseSources: unknown source fails with actionable message", () => {
   assert.throws(() => parseSources("foo"), ValidationError);
-  assert.throws(() => parseSources("foo"), /Unknown source 'foo'.*Supported: apple_health, 2bulu.*Fix:/);
+  assert.throws(
+    () => parseSources("foo"),
+    /Unknown source 'foo'.*Supported: apple_health, 2bulu, gpx, fit, tcx.*Fix:/
+  );
 });
 
 test("parseSources: multiple unknown sources reported together", () => {
@@ -97,6 +114,44 @@ test("resolveConfig: 2bulu maps to tbulu import cmd", () => {
   assert.equal(cfg.cacheKeyPrefix, "import-2bulu-v0-marker");
   assert.equal(cfg.importCmd, "tbulu");
   assert.equal(cfg.validateFile, undefined);
+});
+
+test("resolveConfig: gpx defaults", () => {
+  const cfg = resolveConfig("gpx", {});
+  assert.equal(cfg.branch, "GitFit/import/gpx");
+  assert.equal(cfg.dir, "data/import/gpx");
+  assert.equal(cfg.remote, "origin/GitFit/import/gpx");
+  assert.equal(cfg.cacheKeyPrefix, "import-gpx-v0-marker");
+  assert.equal(cfg.importCmd, "gpx");
+  assert.equal(cfg.title, "GPX");
+  assert.equal(cfg.validateFile, undefined);
+});
+
+test("resolveConfig: fit defaults", () => {
+  const cfg = resolveConfig("fit", {});
+  assert.equal(cfg.branch, "GitFit/import/fit");
+  assert.equal(cfg.dir, "data/import/fit");
+  assert.equal(cfg.cacheKeyPrefix, "import-fit-v0-marker");
+  assert.equal(cfg.importCmd, "fit");
+  assert.equal(cfg.validateFile, undefined);
+});
+
+test("resolveConfig: tcx defaults", () => {
+  const cfg = resolveConfig("tcx", {});
+  assert.equal(cfg.branch, "GitFit/import/tcx");
+  assert.equal(cfg.dir, "data/import/tcx");
+  assert.equal(cfg.cacheKeyPrefix, "import-tcx-v0-marker");
+  assert.equal(cfg.importCmd, "tcx");
+  assert.equal(cfg.validateFile, undefined);
+});
+
+test("resolveConfig: gpx overrides applied, defaults kept", () => {
+  const cfg = resolveConfig("gpx", { branch: "x", cacheKey: "y" });
+  assert.equal(cfg.branch, "x");
+  assert.equal(cfg.cacheKeyPrefix, "y");
+  assert.equal(cfg.dir, "data/import/gpx");
+  assert.equal(cfg.importCmd, "gpx");
+  assert.equal(cfg.title, "GPX");
 });
 
 test("resolveConfig: overrides applied, untouched defaults kept", () => {

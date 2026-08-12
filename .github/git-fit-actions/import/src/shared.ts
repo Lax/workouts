@@ -54,6 +54,30 @@ export const KNOWN_SOURCES: Record<string, SourceConfig> = {
     importCmd: "tbulu",
     title: "2bulu",
   },
+  gpx: {
+    branch: "GitFit/import/gpx",
+    dir: "data/import/gpx",
+    remote: "origin/GitFit/import/gpx",
+    cacheKeyPrefix: "import-gpx-v0-marker",
+    importCmd: "gpx",
+    title: "GPX",
+  },
+  fit: {
+    branch: "GitFit/import/fit",
+    dir: "data/import/fit",
+    remote: "origin/GitFit/import/fit",
+    cacheKeyPrefix: "import-fit-v0-marker",
+    importCmd: "fit",
+    title: "FIT",
+  },
+  tcx: {
+    branch: "GitFit/import/tcx",
+    dir: "data/import/tcx",
+    remote: "origin/GitFit/import/tcx",
+    cacheKeyPrefix: "import-tcx-v0-marker",
+    importCmd: "tcx",
+    title: "TCX",
+  },
 };
 
 export class ValidationError extends Error {
