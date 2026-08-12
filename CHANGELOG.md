@@ -14,6 +14,7 @@
 | sync 纯 cache-only：`shall-commit-data/db` 移除，`git-fit-archive.yml` 每周归档到 `GitFit/data/*` + `GitFit/db` 分支 | ✅ 已完成 |
 | 缓存 key 命名纪律（restore 用 `-v0-sentinel`，unarchive 用 `-v0-snapshot`，严禁合并，git-fit#51） | ✅ 已完成 |
 | DB git 兜底与回写（db-store v1.0.2）：restore `git-restore-mode: fallback` + save `save-to-git-branch`，cache miss 时从 `GitFit/db` 恢复、job 成功时 push 回（移入 action，修复 baseline 误报 changed） | ✅ 已完成 |
+| DB 路径管理单位改为目录（db-store v1.1.0）：`db-dir` + `db-name` 替代 `database-path`，新增 `db-store/paths` 推导 `dir/name/db-path`，sync / gh-pages / sync-scheduler / archive / unarchive 统一引用 `steps.db-paths.outputs.*`（git restore 目录级、db-name 防路径穿越） | ✅ 已完成 |
 
 ## 2026-07 — 数据链路与 CI 基建
 

@@ -306,19 +306,20 @@ sync-scheduler 是唯一写 `.github/workflows/*.yml` 的工作流，因此唯�
 sync job (runs-on: ${{ vars.RUNNER_LABEL || 'ubuntu-latest' }}):
   1. checkout (默认 GITHUB_TOKEN)
   2. setup Ruby + bundle
-  3. restore DB cache (db-store/cache/restore@v1, git-restore-mode: fallback — cache miss 时从 GitFit/db 分支兜底恢复，输出 git-restored-bytes + save-to-git-branch)
-  4. Import data (git-fit-actions/import, sources: apple_health,2bulu, 目录树哈希检测 + store-state push)
-  5. restore per-source caches (data-store/cache/restore@v2)
-  6. git fit sync（受 vars.SYNC_TIME_BUDGET / SYNC_TOTAL_TIMEOUT 限制）
-  7. Fetch Strava original files (git fit strava fetch, continue-on-error)
-  8. save per-source caches (data-store/cache/save@v2)
-  9. Parse Geo Regions (git fit geo detect, detect-limit 200)
-  10. [db] Checkpoint SQLite WAL
-  11. git-save-gate（if: success()，job 成功时透传 restore 的 save-to-git-branch）
-  12. save DB cache (db-store/cache/save@v1, save-to-git-branch 透传 — job 成功 + changed 时 push 回 GitFit/db)
-  13. 数据/DB 变更时触发 sync-scheduler.yml (commit=true)
-  14. Write DB summary / upload DB artifact
-  15. 数据/DB 变更时触发 gh-pages deploy
+  3. derive DB paths (db-store/paths@v1 — 单一真值 GIT_FIT_DATABASE_PATH → dir/name/db-path，供后续所有 DB 路径引用)
+  4. restore DB cache (db-store/cache/restore@v1, db-dir + db-name, git-restore-mode: fallback — cache miss 时从 GitFit/db 分支兜底恢复，输出 git-restored-bytes + save-to-git-branch)
+  5. Import data (git-fit-actions/import, sources: apple_health,2bulu, 目录树哈希检测 + store-state push)
+  6. restore per-source caches (data-store/cache/restore@v2)
+  7. git fit sync（受 vars.SYNC_TIME_BUDGET / SYNC_TOTAL_TIMEOUT 限制）
+  8. Fetch Strava original files (git fit strava fetch, continue-on-error)
+  9. save per-source caches (data-store/cache/save@v2)
+  10. Parse Geo Regions (git fit geo detect, detect-limit 200)
+  11. [db] Checkpoint SQLite WAL
+  12. git-save-gate（if: success()，job 成功时透传 restore 的 save-to-git-branch）
+  13. save DB cache (db-store/cache/save@v1, db-dir + db-name, save-to-git-branch 透传 — job 成功 + changed 时 push 回 GitFit/db)
+  14. 数据/DB 变更时触发 sync-scheduler.yml (commit=true)
+  15. Write DB summary / upload DB artifact
+  16. 数据/DB 变更时触发 gh-pages deploy
 ```
 
 ### gh-pages.yml
@@ -327,11 +328,12 @@ sync job (runs-on: ${{ vars.RUNNER_LABEL || 'ubuntu-latest' }}):
 deploy-pages job (runs-on: ${{ vars.RUNNER_LABEL || 'ubuntu-latest' }}):
   1. checkout (WORKOUTS_SYNC_PAT)
   2. setup Ruby + bundle
-  3. restore DB cache (db-store/cache/restore@v1)
-  4. Download fresh DB artifact (可选, artifact-run-id)
-  5. export json → site/activities.json + tracks.json
-  6. export stats → site/stats.json
-  7. upload-pages-artifact from ./site
+  3. derive DB paths (db-store/paths@v1)
+  4. restore DB cache (db-store/cache/restore@v1, db-dir + db-name)
+  5. Download fresh DB artifact (可选, artifact-run-id)
+  6. export json → site/activities.json + tracks.json
+  7. export stats → site/stats.json
+  8. upload-pages-artifact from ./site
   10. deploy-pages@v4
 ```
 
@@ -373,6 +375,8 @@ manage job (runs-on: ${{ vars.RUNNER_LABEL || 'ubuntu-latest' }}):
 > **2026-08 变更：** sync 纯 cache-only，`shall-commit-data` / `shall-commit-db` 机制已移除。raw/std 数据每次 sync 写入 GHA cache（`GitFit-data-*` key），DB 写入 GHA cache；`git-fit-archive.yml` 每周将 cache 内容归档到 `GitFit/data/<source>` + `GitFit/db` 分支，作为 LRU 过期后的 git-archive 回退层。> `_/_/<source>`（旧命名空间）已冻结保留，不再写入。
 
 > **2026-08 DB git 兜底与回写（db-store v1.0.2）：** `db-store/cache/restore@v1` 新增 `git-restore-mode`（none/fallback/force）+ `git-branch`（默认 `GitFit/db`）。sync.yml 用 `fallback`：cache miss 时从 GitFit/db 分支 `git archive` 恢复 DB，并输出 `git-restored-bytes` + `save-to-git-branch`；`db-store/cache/save@v1` 新增 `save-to-git-branch` 输入，在 **job 成功**（`git-save-gate`，`if: success()`）且 DB changed 时经 detached worktree push 回 GitFit/db。原 sync.yml 内联的「Restore from archive branch」step 已移入 action（顺带修复：fallback 恢复现在位于 baseline 之前，cache miss + git 恢复的运行不再误报 changed）。push 用默认 GITHUB_TOKEN（sync.yml 已有 `contents: write`），与每周 archive-db 共用 `concurrency: workouts-db` 串行。
+
+> **2026-08 DB 路径管理单位改为目录（db-store v1.1.0）：** `database-path` 输入替换为 `db-dir` + `db-name`（完整路径内部拼接为 `db-dir/db-name`）。新增 `db-store/paths@v1` action：从单一真值 `GIT_FIT_DATABASE_PATH` 推导 `dir`/`name`/`db-path` 输出，sync / gh-pages / sync-scheduler / archive / unarchive 五个 workflow 全部统一引用 `steps.db-paths.outputs.*`，不再硬编码或拼接路径。restore 的 git archive 改为目录级恢复（严格优于旧双文件调用：分支目录部分存在也能恢复）；`db-name` 校验拒绝路径分隔符与 `.`/`..`（防路径穿越）；`save-to-git-branch` 校验与 `git-branch` 对称。yiyasasa.github.io 同步更新。
 
 > **2026-08 缓存 key 命名纪律（[`Lax/git-fit#51`](https://github.com/Lax/git-fit/issues/51)）：** restore 精确 key 用永不写入的 `-v0-sentinel` 强制前缀回退；unarchive 恢复快照写 `-v0-snapshot`（真实可读内容，可被后续 restore 前缀命中）。二者严禁合并为同一 key，否则触发 F1 粘滞阴影（unarchive 后精确命中 snapshot，永久遮蔽更新的 `-v0-{run}` sync cache）。`git-fit-actions/{data-store,db-store}` 的 `@v1` 已发布修复（v1.0.1）；workouts 侧 `git-fit-archive.yml`（archive restore）与 `git-fit-unarchive.yml`（unarchive save）已内联对齐。快照 key 追加 `-{run_number}-{run_id}` 后缀（与 sync save 格式一致），避免重复 unarchive 的 key 碰撞。
 
