@@ -15,7 +15,7 @@ inputs:
   cache-key:
     description: Cache key namespace. Composite hash of cache files appended automatically at save.
     required: false
-    default: workouts-geo-v1-${{ hashFiles('.github/actions/parse-geo-regions/action.yml') }}
+    default: workouts-geo-v1-${{ hashFiles('.github/git-fit-actions/parse-geo-regions/action.yml') }}
   amap-key:
     description: Amap API key
     required: true

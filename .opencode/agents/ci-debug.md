@@ -23,7 +23,7 @@ You are a CI/CD specialist for the Workouts CLI.
 - `.github/workflows/git-fit-archive.yml` — weekly cache → GitFit/data/<source> + GitFit/db branches
 - `.github/actions/sync-activities` — maps secrets to `GIT_FIT_*` env, runs `git fit sync`
 - `git-fit-actions/import@v1` — 外部公开 action（node24）: directory tree-hash detection, unified `git show | git lfs smudge` download, `git fit import`, store-state push。代码/测试/CI 在 `git-fit-actions/import` 仓库
-- `.github/actions/parse-geo-regions` — geo cache restore/detect/save with content-hash key
+- `.github/git-fit-actions/parse-geo-regions` — geo cache restore/detect/save with content-hash key
 - `git-fit-actions/data-store/cache/save@v2` 内联 SHA256SUMS 计算，无仓库脚本
 - Config injected via `GIT_FIT_*` env (see `.env.example`)
 
