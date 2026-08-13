@@ -4,7 +4,22 @@
 
 数据流：`多渠道同步 → SQLite → GitHub Pages 仪表盘`
 
-> 在线预览：[lax.github.io/workouts/](https://lax.github.io/workouts/) — 交互式地图 + 统计图表，每日自动更新
+> 在线预览：[lax.github.io/running/](https://lax.github.io/running/) — 交互式地图 + 统计图表，每日自动更新
+
+---
+
+## 相关项目
+
+| 项目 | 说明 |
+|---|---|
+| [Lax/workouts](https://github.com/Lax/workouts)（本仓库） | 运动数据聚合工具：多渠道同步 → SQLite → GitHub Pages 数据制品 |
+| [Lax/git-fit](https://github.com/Lax/git-fit) | 核心同步/导入/导出逻辑（Ruby gem，本仓库唯一依赖） |
+| [git-fit-actions/import](https://github.com/git-fit-actions/import) | 导入 action（Apple Health / 2bulu，目录树哈希检测） |
+| [git-fit-actions/data-store](https://github.com/git-fit-actions/data-store) | 每源数据缓存 action（cache restore/save v2） |
+| [git-fit-actions/db-store](https://github.com/git-fit-actions/db-store) | SQLite DB 缓存 action（paths + cache restore/save + git 兜底） |
+| [git-fit-actions/geo-detect](https://github.com/git-fit-actions/geo-detect) | 地理行政区域检测 action（已迁自本地 action） |
+| [Lax/running](https://github.com/Lax/running) | 前端可视化仪表盘（本仓库 Pages 数据制品消费者） |
+| [yihong0618/running_page](https://github.com/yihong0618/running_page) | 数据目录兼容参考（`data/raw/` ↔ `GPX_OUT/`） |
 
 ---
 
@@ -31,9 +46,14 @@
 
 ## GitHub Pages 自动部署（推荐）
 
-Fork 后按以下步骤，5 分钟上线运动看板。
+方案由两个仓库组成，需分别 Fork 部署：
 
-### 快速开始
+- [**workouts**](https://github.com/Lax/workouts)（本仓库）＝ 数据后端：同步 → SQLite → 部署 JSON 到 `<你>.github.io/workouts/`
+- [**Lax/running**](https://github.com/Lax/running)（前端）＝ 可视化看板：消费 `/workouts` 数据，部署到 `<你>.github.io/running/`
+
+> 在线示例（本项目实时部署）：看板 [lax.github.io/running/](https://lax.github.io/running/) · 数据 [lax.github.io/workouts/](https://lax.github.io/workouts/)（[activities.json](https://lax.github.io/workouts/activities.json)）
+
+### A. 部署数据后端（本仓库）
 
 ```
 □ 1. 右上角 Fork 本仓库
@@ -48,7 +68,8 @@ Fork 后按以下步骤，5 分钟上线运动看板。
       Name: WORKOUTS_SYNC_PAT   Value: 刚才复制的 token
 □ 5. 按下方指引添加你的运动平台所需的 GitHub Secrets
 □ 6. 仓库 → Actions → Sync Workouts → Run workflow
-□ 7. 等待 5 分钟 → https://<你的用户名>.github.io/workouts/
+□ 7. 等待 5 分钟 → 数据地址 https://<你的用户名>.github.io/workouts/
+      （activities.json / tracks.json / stats.json）
 ```
 
 > 所有值存入 **GitHub Secrets**（Settings → Secrets and variables → Actions → **Secrets** 标签页），不是 Variables。每条 secret 设好后 workflow 自动读取。
@@ -58,6 +79,18 @@ Fork 后按以下步骤，5 分钟上线运动看板。
 ```bash
 # 安装 GitHub CLI 并登录后：
 gh secret set WORKOUTS_SYNC_PAT --body "你的_token"
+```
+
+### B. 部署前端看板（Lax/running）
+
+```
+□ 1. Fork https://github.com/Lax/running
+□ 2. 该仓库 → Settings → Secrets and variables → Actions → Variables
+      → New repository variable
+      Name: GIT_FIT_DATA_URL   Value: https://<你的用户名>.github.io/workouts
+□ 3. 该仓库 → Settings → Pages → Source 选 "GitHub Actions"
+□ 4. 该仓库 → Actions → Deploy (Github Pages) → Run workflow
+□ 5. → 看板地址 https://<你的用户名>.github.io/running/
 ```
 
 ---
@@ -440,13 +473,16 @@ git fit parse activity.tcx --save
 
 ## 部署 GitHub Pages
 
-已在快速开始中配置完成。确认以下三点即可：
+已在快速开始中配置完成。确认以下四点即可：
 
 - Settings → Pages → Source = "GitHub Actions"
-- Actions → Sync Workflows 最后一次运行绿色通过
-- 访问 `https://<你的用户名>.github.io/workouts/`
+- Actions → Sync Workouts 最后一次运行绿色通过
+- 数据后端：访问 `https://<你的用户名>.github.io/workouts/`（本仓库产物，JSON 数据）
+- 前端看板：访问 `https://<你的用户名>.github.io/running/`（需另行部署 [Lax/running](https://github.com/Lax/running)）
 
 之后每天自动同步、构建、部署，零维护。
+
+> 在线示例（本项目实时部署）：看板 [lax.github.io/running/](https://lax.github.io/running/) · 数据 [lax.github.io/workouts/](https://lax.github.io/workouts/)（[activities.json](https://lax.github.io/workouts/activities.json)）
 
 ---
 
@@ -484,7 +520,7 @@ git fit parse activity.tcx --save
 | `git fit sync` | 同步所有已配置的来源 |
 | `git fit sync --source strava` | 只同步特定来源 |
 | `git fit sync --act run` | 只同步某种运动类型 |
-| `git fit import --source apple_health` | 导入 Apple Health（export.zip）|
+| `git fit import apple_health` | 导入 Apple Health（export.zip）|
 | `git fit import --source gpx,fit,tcx` | 批量导入本地 GPX/FIT/TCX 文件 |
 | `git fit import --source gpx --sport run` | 导入 GPX 并指定 sport_category 为 run |
 | `git fit export json` | 导出 JSON |

@@ -371,8 +371,8 @@ manage job (runs-on: ${{ vars.RUNNER_LABEL || 'ubuntu-latest' }}):
 | 项 | 值 |
 |---|---|
 | Pages 源 | GitHub Actions |
-| 自定义域名 | liulantao.com |
-| URL | `https://liulantao.com/workouts/` |
+| URL | `https://lax.github.io/workouts/`（后端数据） |
+| 前端看板 | `https://lax.github.io/running/`（Lax/running 部署） |
 | 部署目录 | JSON + stats，排除 DB |
 
 ---
