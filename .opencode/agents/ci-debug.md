@@ -23,7 +23,7 @@ You are a CI/CD specialist for the Workouts CLI.
 - `.github/workflows/git-fit-archive.yml` — weekly cache → GitFit/data/<source> + GitFit/db branches
 - `.github/actions/sync-activities` — maps secrets to `GIT_FIT_*` env, runs `git fit sync`
 - `git-fit-actions/import@v1` — 外部公开 action（node24）: directory tree-hash detection, unified `git show | git lfs smudge` download, `git fit import`, store-state push。代码/测试/CI 在 `git-fit-actions/import` 仓库
-- `.github/git-fit-actions/parse-geo-regions` — geo cache restore/detect/save with content-hash key
+- `.github/git-fit-actions/geo-detect` — geo cache restore/detect/save with content-hash key
 - `git-fit-actions/data-store/cache/save@v2` 内联 SHA256SUMS 计算，无仓库脚本
 - Config injected via `GIT_FIT_*` env (see `.env.example`)
 
@@ -38,7 +38,7 @@ sync.yml sync job:
   7. git fit sync (time-budget limited)
   8. git fit strava fetch (original files, continue-on-error)
   9. save per-source caches (data-store/cache/save@v2, only changed sources)
-  10. git fit geo detect (parse-geo-regions, content-hash cache key)
+  10. git fit geo detect (geo-detect, content-hash cache key)
   11. [db] WAL checkpoint
   12. save DB cache (db-store/cache/save@v1)
   13. data/DB changed → trigger sync-scheduler.yml (commit=true)
