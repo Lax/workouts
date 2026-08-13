@@ -38,13 +38,13 @@ jobs:
           ruby-version: '3.4'
           bundler-cache: true
 
-      - uses: ./.github/git-fit-actions/db-store/paths
+      - uses: git-fit-actions/db-store/paths@v1.2.0
         id: db-paths
         with:
           database-path: ${{ vars.GIT_FIT_DATABASE_PATH || 'data/db/workouts.db' }}
 
       - name: '[db] Restore cache'
-        uses: ./.github/git-fit-actions/db-store/cache/restore
+        uses: git-fit-actions/db-store/cache/restore@v1.2.0
         with:
           db-dir: ${{ steps.db-paths.outputs.dir }}
           db-name: ${{ steps.db-paths.outputs.name }}

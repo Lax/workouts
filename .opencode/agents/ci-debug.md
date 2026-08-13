@@ -23,8 +23,9 @@ You are a CI/CD specialist for the Workouts CLI.
 - `.github/workflows/git-fit-archive.yml` — weekly cache → GitFit/data/<source> + GitFit/db branches
 - `.github/actions/sync-activities` — maps secrets to `GIT_FIT_*` env, runs `git fit sync`
 - `git-fit-actions/import@v1` — 外部公开 action（node24）: directory tree-hash detection, unified `git show | git lfs smudge` download, `git fit import`, store-state push。代码/测试/CI 在 `git-fit-actions/import` 仓库
-- `git-fit-actions/geo-detect@v1` — 外部公开 action（node24, main+post write-once）: restore 点缓存 → `git fit geo detect` → post 保存 content-hash cache。无 outputs，状态走 step summary。代码/测试/CI 在 `git-fit-actions/geo-detect` 仓库
-- `.github/git-fit-actions/{data-store,db-store}` — 本地 vendor 的公开 action 副本（issue #11 本地开发阶段，发布后切回公开 pin）。data-store node24（cache/restore + cache/save，内联 SHA256SUMS，无仓库脚本），db-store composite（paths + cache/restore + cache/save）。restore/save 均写 `### GitFit <action> <operation>` step summary
+- `git-fit-actions/geo-detect@v1.0.0` — 外部公开 action（node24, main+post write-once）: restore 点缓存 → `git fit geo detect` → post 保存 content-hash cache。无 outputs，状态走 step summary。代码/测试/CI 在 `git-fit-actions/geo-detect` 仓库
+- `git-fit-actions/data-store/cache/{restore,save}@v2.1.0` — node24（多源循环，内联 SHA256SUMS，无仓库脚本）
+- `git-fit-actions/db-store/{paths,cache/restore,cache/save}@v1.2.0` — composite（git 分支兜底 + save-back）
 - Summary 约定：仅 action/step 级标题（`### GitFit data-store restore` 等），不写 workflow 级标题；status 纯文本；多源用 `| Source | Status | Cache key |`，单实体用 `| Item | Value |`
 - Config injected via `GIT_FIT_*` env (see `.env.example`)
 
@@ -32,16 +33,16 @@ You are a CI/CD specialist for the Workouts CLI.
 ```
 sync.yml sync job:
   1. checkout + setup Ruby + bundle
-  2. restore DB cache (./.github/git-fit-actions/db-store/cache/restore)
+  2. restore DB cache (git-fit-actions/db-store/cache/restore@v1.2.0)
   3. restore DB from archive branch (GitFit/db, cache miss 回退)
-  4. import apple_health + 2bulu (git-fit-actions/import@v1, sources: apple_health,2bulu)
-  6. restore per-source caches (./.github/git-fit-actions/data-store/cache/restore, 7 sources)
+  4. import apple_health + 2bulu (git-fit-actions/import@v1.0.0, sources: apple_health,2bulu)
+  6. restore per-source caches (git-fit-actions/data-store/cache/restore@v2.1.0, 7 sources)
   7. git fit sync (time-budget limited)
   8. git fit strava fetch (original files, continue-on-error)
-  9. save per-source caches (./.github/git-fit-actions/data-store/cache/save, only changed sources)
-  10. git fit geo detect (geo-detect@v1, content-hash cache key)
+  9. save per-source caches (git-fit-actions/data-store/cache/save@v2.1.0, only changed sources)
+  10. git fit geo detect (geo-detect@v1.0.0, content-hash cache key)
   11. [db] WAL checkpoint
-  12. save DB cache (./.github/git-fit-actions/db-store/cache/save)
+  12. save DB cache (git-fit-actions/db-store/cache/save@v1.2.0)
    13. data/DB changed → trigger sync-scheduler.yml (commit=true)
    14. upload artifact
    15. data/DB changed → trigger gh-pages.yml
@@ -61,7 +62,7 @@ Only sync-scheduler events update cron; workflow_dispatch never modifies it.
 
 ## Source cache
 - 7 independent caches with keys: `GitFit-data-{source}-v0-{run_id}` (run_id suffix), prefix fallback `GitFit-data-{source}-v0-`
-- `./.github/git-fit-actions/data-store/cache/save` writes SHA256SUMS per source; save only writes changed sources
+- `git-fit-actions/data-store/cache/save@v2.1.0` writes SHA256SUMS per source; save only writes changed sources
 - Cache key discipline: restore uses `-v0-sentinel`, unarchive snapshot uses `-v0-snapshot` — never merge (git-fit#51)
 
 ## Cache directories
