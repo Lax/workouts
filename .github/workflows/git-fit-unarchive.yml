@@ -77,7 +77,7 @@ jobs:
           fetch-depth: 1
           persist-credentials: false
 
-      - uses: git-fit-actions/db-store/paths@v1.2.1
+      - uses: git-fit-actions/db-store/paths@v1.2.2
         id: db-paths
         with:
           database-path: ${{ vars.GIT_FIT_DATABASE_PATH || 'data/db/workouts.db' }}
