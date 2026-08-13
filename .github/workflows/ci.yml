@@ -9,18 +9,43 @@ on:
 jobs:
   workflow-lint:
     runs-on: ${{ vars.RUNNER_LABEL || 'ubuntu-latest' }}
+    permissions:
+      contents: read
+    concurrency:
+      group: ci-${{ github.ref }}-workflow-lint
+      cancel-in-progress: true
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
 
       - name: Lint GitHub Actions workflows
+        id: actionlint
         uses: raven-actions/actionlint@v2
         with:
           # shellcheck off: repo scripts are not shellcheck-clean (SC2086 style).
           # Empty-option lint ignored via .github/actionlint.yml.
           shellcheck: false
 
+      - name: Write workflow-lint summary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "### workflow-lint result"
+            echo "- Job status: ${{ job.status }}"
+            echo "- actionlint: ${{ steps.actionlint.outcome }}"
+            echo "- Workflows checked: $(find .github/workflows -maxdepth 1 -name '*.yml' | wc -l || true)"
+          } >> "$GITHUB_STEP_SUMMARY"
+
   test-import-action:
     runs-on: ${{ vars.RUNNER_LABEL || 'ubuntu-latest' }}
+    permissions:
+      contents: read
+      actions: read
+    concurrency:
+      group: ci-${{ github.ref }}-test-import-action
+      cancel-in-progress: true
+    timeout-minutes: 10
     defaults:
       run:
         working-directory: .github/git-fit-actions/import
@@ -34,20 +59,43 @@ jobs:
           cache-dependency-path: .github/git-fit-actions/import/package-lock.json
 
       - name: Install dependencies
+        id: install
         run: npm ci
 
       - name: Type check
+        id: typecheck
         run: npm run typecheck
 
       - name: Unit tests
+        id: tests
         run: npm test
 
       - name: Check dist is up to date
+        id: build-check
         run: npm run build:check
+
+      - name: Write test-import-action summary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "### test-import-action result"
+            echo "- Job status: ${{ job.status }}"
+            echo "- npm ci: ${{ steps.install.outcome }}"
+            echo "- npm run typecheck: ${{ steps.typecheck.outcome }}"
+            echo "- npm test: ${{ steps.tests.outcome }}"
+            echo "- npm run build:check: ${{ steps.build-check.outcome }}"
+          } >> "$GITHUB_STEP_SUMMARY"
 
   ruby-test:
     runs-on: ${{ vars.RUNNER_LABEL || 'ubuntu-latest' }}
-
+    permissions:
+      contents: read
+      actions: read
+    concurrency:
+      group: ci-${{ github.ref }}-ruby-test
+      cancel-in-progress: true
+    timeout-minutes: 10
     strategy:
       matrix:
         ruby-version: ["3.4"]
@@ -61,4 +109,16 @@ jobs:
           bundler-cache: true
 
       - name: Run tests
+        id: tests
         run: bundle exec rspec
+
+      - name: Write ruby-test summary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "### ruby-test result"
+            echo "- Job status: ${{ job.status }}"
+            echo "- rspec: ${{ steps.tests.outcome }}"
+            echo "- Ruby: ${{ matrix.ruby-version }}"
+          } >> "$GITHUB_STEP_SUMMARY"
