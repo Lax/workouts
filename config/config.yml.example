@@ -10,45 +10,56 @@ sync:
   # time_budget: 90                            # env: GIT_FIT_SYNC_TIME_BUDGET (seconds)
   # total_timeout: 600                         # env: GIT_FIT_SYNC_TOTAL_TIMEOUT (seconds)
 
-  # amap:                       # 高德 Web 服务 API (行政区逆地理编码)
-  #   api_key: "your_key"       # env: AMAP_API_KEY
-
   # strava:                                    # env: GIT_FIT_STRAVA_CLIENT_ID
   #   client_id: ""                            # env: GIT_FIT_STRAVA_CLIENT_SECRET
   #   refresh_token: ""                        # env: GIT_FIT_STRAVA_REFRESH_TOKEN
+  #   web_auth:                                # web original-file fetch (git fit strava fetch)
+  #     jwt: ""                                # env: GIT_FIT_STRAVA_WEB_AUTH_JWT (strava_remember_token)
+  #     auth_seed: ""                          # env: GIT_FIT_STRAVA_WEB_AUTH_AUTH_SEED (base64 JWT)
+  #     cookie_path: ""                        # default data/auth/strava/session.yml
 
   # garmin:                                    # env: GIT_FIT_GARMIN_EMAIL
-  #   email: "your@email.com"                  # env: GIT_FIT_GARMIN_PASSWORD
-  #   password: "your_password"
-  #   auth_seed: "base64..."                   # DI OAuth2 token (env: GIT_FIT_GARMIN_AUTH_SEED)
+  #   email: ""                                # env: GIT_FIT_GARMIN_PASSWORD
+  #   password: ""
+  #   auth_seed: ""                            # auto-written by git fit auth garmin
+  #   secret: ""                               # CN SSO secret (auto-written by git fit auth garmin_cn)
 
   # garmin_cn:                                 # env: GIT_FIT_GARMIN_CN_EMAIL
-  #   email: "13800138000"                     # env: GIT_FIT_GARMIN_CN_PASSWORD
-  #   password: "your_password"
-  #   secret: "base64..."                      # OAuth1+OAuth2 token (env: GIT_FIT_GARMIN_CN_SECRET)
+  #   email: ""                                # env: GIT_FIT_GARMIN_CN_PASSWORD
+  #   password: ""
 
   # keep:                                      # env: GIT_FIT_KEEP_PHONE
-  #   phone: "13800138000"                     # env: GIT_FIT_KEEP_PASSWORD
-  #   password: "your_password"
+  #   phone: ""                                # env: GIT_FIT_KEEP_PASSWORD
+  #   password: ""
 
   # igpsport:                                  # env: GIT_FIT_IGPSPORT_PHONE
-  #   phone: "13800138000"                     # env: GIT_FIT_IGPSPORT_PASSWORD
-  #   password: "your_password"
+  #   phone: ""                                # env: GIT_FIT_IGPSPORT_PASSWORD
+  #   password: ""
 
-  # xoss:                                      # env: GIT_FIT_XOSS_EMAIL
-  #   email: "your@email.com"                  # env: GIT_FIT_XOSS_PASSWORD
-  #   password: "your_password"
+  # lorem:                                     # env: GIT_FIT_LOREM_COUNT
+  #   count: 5
 
-  # xingzhe:                                   # env: GIT_FIT_XINGZHE_EMAIL
-  #   email: "13800138000"                     # env: GIT_FIT_XINGZHE_PASSWORD
-  #   password: "your_password"
-  #   session_path: "data/cache/xingzhe_session.json"  # env: GIT_FIT_XINGZHE_SESSION_PATH
+  # xoss:                                        # env: GIT_FIT_XOSS_EMAIL
+  #   email: ""                                  # env: GIT_FIT_XOSS_PASSWORD
+  #   password: ""
+  #   token_path: ""                             # env: GIT_FIT_XOSS_TOKEN_PATH
+  #                                              # default data/auth/xoss/tokens.json
+
+  # xingzhe:                                     # env: GIT_FIT_XINGZHE_EMAIL
+  #   email: ""                                  # env: GIT_FIT_XINGZHE_PASSWORD
+  #   password: ""
+  #   session_path: ""                           # env: GIT_FIT_XINGZHE_SESSION_PATH
+  #                                              # default data/auth/xingzhe/session.json
 
 export:
   json:
     path: site/activities.json
-  csv:
-    path: site/workouts.csv
+
+  # csv:
+  #   path: site/workouts.csv
+
+  # gpx:
+  #   path: site/gpx_out
 
 privacy:
   start_end_range: 200
