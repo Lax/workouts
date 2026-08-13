@@ -16,7 +16,7 @@ target/
 site/
 *.bak
 *.gem
-config/config.yml
+/config.yml
 vendor/fit-js/node_modules/
 vendor/fit-js/dist/
 __pycache__/

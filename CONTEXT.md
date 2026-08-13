@@ -202,7 +202,7 @@ CREATE TABLE activities (
 ### 配置层级（优先级：高→低）
 
 1. 环境变量 `GIT_FIT_*`（与 git-fit gem 一致，见 `git fit init` 模板）
-2. `` config/config.yml ``（自动加载）
+2. `` config.yml ``（仓库根目录，git-fit 默认读取；`GIT_FIT_CONFIG_PATH` 显式覆盖路径）
 3. git-fit 代码内默认值
 
 ### 环境变量命名
@@ -214,9 +214,11 @@ GIT_FIT_GARMIN_AUTH_SEED  → sync.garmin.auth_seed
 GIT_FIT_STRAVA_CLIENT_ID  → sync.strava.client_id
 GIT_FIT_SYNC_TIME_BUDGET  → sync.time_budget           # 全局 sync 配置
 GIT_FIT_SYNC_WORKERS      → sync.workers               # 并行 worker 数，默认 3
+GIT_FIT_CONFIG_PATH       → config 文件路径             # 默认 config.yml（根目录）
 ```
 
 前缀 `GIT_FIT_` 后跟 key（大写 + 下划线），单 `_` 分隔（如 `garmin_cn` 保留原样）。
+`GIT_FIT_CONFIG_PATH` 为显式覆盖项，默认即根目录 `config.yml`，通常无需设置。
 
 ### GitHub Variables
 

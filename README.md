@@ -193,7 +193,7 @@ git fit auth strava
 gh secret set SYNC_STRAVA_CLIENT_ID --body "xxx"
 gh secret set SYNC_STRAVA_CLIENT_SECRET --body "xxx"
 gh secret set SYNC_STRAVA_REFRESH_TOKEN \
-  --body "$(ruby -ryaml -e 'puts YAML.load_file("config/config.yml").dig("sync","strava","refresh_token")')"
+  --body "$(ruby -ryaml -e 'puts YAML.load_file("config.yml").dig("sync","strava","refresh_token")')"
 ```
 
 三个缺一不可。`client_id` 和 `client_secret` 从 Strava API 控制台获取。
@@ -247,7 +247,7 @@ git fit auth garmin_cn
 
 ```bash
 gh secret set SYNC_GARMIN_CN_SECRET \
-  --body "$(ruby -ryaml -e 'puts YAML.load_file("config/config.yml").dig("sync","garmin_cn","secret")')"
+  --body "$(ruby -ryaml -e 'puts YAML.load_file("config.yml").dig("sync","garmin_cn","secret")')"
 ```
 
 <details>
@@ -314,7 +314,7 @@ git fit auth garmin
 
 ```bash
 gh secret set SYNC_GARMIN_AUTH_SEED \
-  --body "$(ruby -ryaml -e 'puts YAML.load_file("config/config.yml").dig("sync","garmin","auth_seed")')"
+  --body "$(ruby -ryaml -e 'puts YAML.load_file("config.yml").dig("sync","garmin","auth_seed")')"
 ```
 
 #### ⚠️ 本地与远程票据冲突
@@ -494,7 +494,7 @@ git fit parse activity.tcx --save
 ### 配置层级（优先级从高到低）
 
 1. 环境变量（`GIT_FIT_KEEP_PHONE`，与 git-fit gem 一致，见 `git fit init` 模板）
-2. `config/config.yml`
+2. `config.yml`（仓库根目录，git-fit 默认读取；`GIT_FIT_CONFIG_PATH` 可显式覆盖路径）
 3. git-fit 代码内默认值
 
 ### 导出路径
@@ -505,7 +505,7 @@ git fit parse activity.tcx --save
 | CSV | `site/workouts.csv` |
 | Stats | `site/stats.json` |
 
-详见 `.env.example` 和 `config/config.yml.example`。
+详见 `.env.example` 和 `config.yml.example`。
 </details>
 
 ---
