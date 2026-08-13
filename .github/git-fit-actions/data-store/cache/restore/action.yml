@@ -1,0 +1,18 @@
+name: Data store cache restore
+description: Restore data sources from the GitFit cache before syncing.
+author: Lax
+branding:
+  icon: download
+  color: blue
+
+inputs:
+  source:
+    description: Single data source name (legacy; prefer sources). Must match ^[a-z0-9][a-z0-9_-]*$.
+    required: false
+  sources:
+    description: Comma- or newline-separated list of data source names. Each must match ^[a-z0-9][a-z0-9_-]*$.
+    required: false
+
+runs:
+  using: node24
+  main: dist/index.js
