@@ -295,7 +295,7 @@ sync job (runs-on: ${{ vars.RUNNER_LABEL || 'ubuntu-latest' }}):
   6. restore per-source caches (data-store/cache/restore@v2)
   7. Sync activities (sync-activities action — 内含 git fit sync 受 vars.SYNC_TIME_BUDGET / SYNC_TOTAL_TIMEOUT 限制 + git fit strava fetch --limit 10 continue-on-error)
   8. save per-source caches (data-store/cache/save@v2)
-  9. Parse Geo Regions (git fit geo detect, detect-limit 200)
+  9. Parse Geo Regions (git-fit-actions/geo-detect@v1, detect-limit 200)
   10. [db] Checkpoint SQLite WAL
   11. git-save-gate（if: success()，job 成功时透传 restore 的 save-to-git-branch）
   12. save DB cache (db-store/cache/save@v1, db-dir + db-name, save-to-git-branch 透传 — job 成功 + changed 时 push 回 GitFit/db)

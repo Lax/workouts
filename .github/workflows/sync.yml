@@ -85,7 +85,7 @@ jobs:
           sources: keep,igpsport,xoss,xingzhe,garmin,garmin_cn,strava
 
       - name: Parse Geo Regions
-        uses: ./.github/git-fit-actions/geo-detect
+        uses: git-fit-actions/geo-detect@v1
         with:
           cache-dir: data/cache
           amap-key: ${{ secrets.AMAP_API_KEY }}
