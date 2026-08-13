@@ -54,4 +54,12 @@ RSpec.describe "sync.yml" do
       expect(names).not_to include("Manage sync cron")
     end
   end
+
+  describe "summary convention" do
+    it "removes the workflow-level summary block (actions write their own)" do
+      names = steps.map { |s| s["name"] }
+      expect(names).not_to include("Write DB summary")
+      expect(names).not_to include("DB sync result")
+    end
+  end
 end

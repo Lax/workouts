@@ -96,13 +96,13 @@ jobs:
         with:
           ref: GitFit/db
 
-      - uses: git-fit-actions/db-store/paths@v1
+      - uses: ./.github/git-fit-actions/db-store/paths
         id: db-paths
         with:
           database-path: ${{ vars.GIT_FIT_DATABASE_PATH || 'data/db/workouts.db' }}
 
       - name: Restore DB from cache
-        uses: git-fit-actions/db-store/cache/restore@v1
+        uses: ./.github/git-fit-actions/db-store/cache/restore
         with:
           db-dir: ${{ steps.db-paths.outputs.dir }}
           db-name: ${{ steps.db-paths.outputs.name }}

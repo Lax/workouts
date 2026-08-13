@@ -30,7 +30,7 @@ jobs:
       # checkpoint、artifact、summary 统一引用。
       - name: '[db] Derive database paths'
         id: db-paths
-        uses: git-fit-actions/db-store/paths@v1
+        uses: ./.github/git-fit-actions/db-store/paths
         with:
           database-path: ${{ env.GIT_FIT_DATABASE_PATH }}
 
@@ -39,7 +39,7 @@ jobs:
       # 输出建议 save 侧把 DB push 回该分支。
       - name: '[db] Restore cache'
         id: db-restore
-        uses: git-fit-actions/db-store/cache/restore@v1
+        uses: ./.github/git-fit-actions/db-store/cache/restore
         with:
           db-dir: ${{ steps.db-paths.outputs.dir }}
           db-name: ${{ steps.db-paths.outputs.name }}
@@ -52,7 +52,7 @@ jobs:
           sources: apple_health,2bulu
 
       # ── Data restore ──
-      - uses: git-fit-actions/data-store/cache/restore@v2
+      - uses: ./.github/git-fit-actions/data-store/cache/restore
         with:
           sources: keep,igpsport,xoss,xingzhe,garmin,garmin_cn,strava
 
@@ -80,7 +80,7 @@ jobs:
 
       - id: data-save
         if: always()
-        uses: git-fit-actions/data-store/cache/save@v2
+        uses: ./.github/git-fit-actions/data-store/cache/save
         with:
           sources: keep,igpsport,xoss,xingzhe,garmin,garmin_cn,strava
 
@@ -124,7 +124,7 @@ jobs:
       - name: '[db] Save cache'
         id: db-save
         if: always()
-        uses: git-fit-actions/db-store/cache/save@v1
+        uses: ./.github/git-fit-actions/db-store/cache/save
         with:
           db-dir: ${{ steps.db-paths.outputs.dir }}
           db-name: ${{ steps.db-paths.outputs.name }}
@@ -136,22 +136,6 @@ jobs:
           gh workflow run sync-scheduler.yml --ref master -f commit=true
         env:
           GH_TOKEN: ${{ github.token }}
-
-      - name: Write DB summary
-        if: always()
-        shell: bash
-        run: |
-          {
-            echo "### DB sync result"
-            echo "- DB path: ${{ steps.db-paths.outputs.db-path }}"
-            echo "- DB changed: ${{ steps.db-save.outputs.changed }}"
-            echo "- DB size: ${{ steps.db-checkpoint.outputs.db_size }} bytes"
-            echo "- Archive restore: ${{ steps.db-restore.outputs.git-restored-bytes }} bytes"
-            echo "- Git save: ${{ steps.db-save.outputs.git-save-status }}"
-            echo "- Data changed sources: ${{ steps.data-save.outputs.changed_sources }}"
-            echo "- Data unchanged sources: ${{ steps.data-save.outputs.unchanged_sources }}"
-            echo "- Data save errors: ${{ steps.data-save.outputs.save_errors }}"
-          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload DB artifact
         uses: actions/upload-artifact@v6

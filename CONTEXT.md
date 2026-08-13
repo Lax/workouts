@@ -300,9 +300,23 @@ sync job (runs-on: ${{ vars.RUNNER_LABEL || 'ubuntu-latest' }}):
   11. git-save-gate（if: success()，job 成功时透传 restore 的 save-to-git-branch）
   12. save DB cache (db-store/cache/save@v1, db-dir + db-name, save-to-git-branch 透传 — job 成功 + changed 时 push 回 GitFit/db)
   13. 数据/DB 变更时触发 sync-scheduler.yml (commit=true)
-  14. Write DB summary / upload DB artifact
+  14. upload DB artifact
   15. 数据/DB 变更时触发 gh-pages deploy
 ```
+
+> **2026-08 issue #11 本地开发阶段：** `.github/git-fit-actions/{data-store,db-store}` 为公开 action 的本地 vendor 副本（发布后删除并切回公开 pin）。workflows 中 data-store/db-store 引用指本地路径；import/geo-detect 保持公开引用。
+
+### Step summary 约定
+
+> 所有 summary block 一律 action/step 级标题，不写 workflow 级标题（Actions 页面已提供 workflow/job 上下文）。
+
+| 项 | 约定 |
+|---|---|
+| 标题 | `### GitFit <action> <operation>`（h3）：`GitFit data-store restore/save`、`GitFit db-store restore/save`、`GitFit geo-detect`/`GitFit geo-detect cache`、`GitFit import` |
+| 状态词 | 纯文本无 emoji：restore `hit`/`miss`；save `saved`/`unchanged`/`skipped`/`failed` |
+| 表型 | 多源 `| Source | Status | Cache key |`（尾行汇总 Changed/Unchanged/Errors）；单实体 `| Item | Value |` |
+| 实现 | node24 action 用 `@actions/core` summary（纯 builder 函数可单测）；composite action 用 `$GITHUB_STEP_SUMMARY` |
+| 冗余 | 不加与 action block 重复的 workflow 级块（sync.yml 原「Write DB summary」step 已删） |
 
 ### gh-pages.yml
 
