@@ -15,7 +15,7 @@ import {
 function readInputs(): GeoInputs {
   return {
     dbPath: core.getInput("db-path"),
-    cacheDir: core.getInput("geo-cache-dir"),
+    cacheDir: core.getInput("cache-dir"),
     cacheKey: core.getInput("cache-key") || "GitFit-geo-v0",
     amapKey: core.getInput("amap-key"),
     detectLimit: core.getInput("detect-limit") || "200",
@@ -28,7 +28,7 @@ function readInputs(): GeoInputs {
 
 function validate(inputs: GeoInputs): void {
   validatePath("db-path", inputs.dbPath);
-  validatePath("geo-cache-dir", inputs.cacheDir);
+  validatePath("cache-dir", inputs.cacheDir);
   validatePath("cache-key", inputs.cacheKey);
   validateNumber("detect-limit", inputs.detectLimit);
   validateNumber("detect-batch", inputs.detectBatch);
@@ -68,7 +68,7 @@ async function run(): Promise<void> {
     matchedKey = (await cache.restoreCache([relDir], sentinel, [prefix])) || "";
     core.info(matchedKey ? `Restored (key: ${matchedKey})` : "No cache found, skipped");
   } else {
-    core.info("geo-cache-dir empty — caching disabled");
+    core.info("cache-dir empty — caching disabled");
   }
 
   // main → post state handoff

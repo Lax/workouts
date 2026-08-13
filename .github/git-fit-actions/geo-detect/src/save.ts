@@ -19,7 +19,7 @@ async function run(): Promise<void> {
     return;
   }
 
-  const cacheDir = core.getInput("geo-cache-dir");
+  const cacheDir = core.getInput("cache-dir");
   const relDir = normalizeRel(cacheDir);
 
   if (!isDirectory(relDir)) {

@@ -68,7 +68,7 @@ jobs:
         uses: ./
         with:
           db-path: data/db/smoke.db
-          geo-cache-dir: data/cache/geo
+          cache-dir: data/cache/geo
           cache-key: GitFit-geo-v0-smoke-${{ github.run_id }}
           detect-limit: '10'
 

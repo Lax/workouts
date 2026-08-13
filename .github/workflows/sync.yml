@@ -87,7 +87,7 @@ jobs:
       - name: Parse Geo Regions
         uses: ./.github/git-fit-actions/geo-detect
         with:
-          geo-cache-dir: data/cache
+          cache-dir: data/cache
           amap-key: ${{ secrets.AMAP_API_KEY }}
           db-path: ${{ steps.db-paths.outputs.db-path }}
           detect-limit: 200

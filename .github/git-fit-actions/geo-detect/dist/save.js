@@ -67340,7 +67340,7 @@ async function run() {
     await writeSummary("skipped (caching disabled)", matchedKey, []);
     return;
   }
-  const cacheDir = getInput("geo-cache-dir");
+  const cacheDir = getInput("cache-dir");
   const relDir = normalizeRel(cacheDir);
   if (!isDirectory2(relDir)) {
     await writeSummary("skipped (no cache directory)", matchedKey, []);

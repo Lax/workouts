@@ -22,7 +22,7 @@ calls entirely.
 | Input | Required | Default | Description |
 |---|---|---|---|
 | `db-path` | no | `data/db/git-fit.db` | SQLite database path |
-| `geo-cache-dir` | no | `data/cache/geo` | Geo cache directory (point files + `SHA256SUMS`). Empty string disables caching |
+| `cache-dir` | no | `data/cache/geo` | Geo cache directory (point files + `SHA256SUMS`). Empty string disables caching |
 | `cache-key` | no | `GitFit-geo-v0` | Cache key namespace; content hash appended at save |
 | `amap-key` | no | — | AMap API key for China coordinates. Missing → China coords fail (warned), intl uses Nominatim |
 | `detect-limit` | no | `200` | Max activities to process |
@@ -48,7 +48,7 @@ steps:
   - uses: git-fit-actions/geo-detect@v1
     with:
       db-path: data/db/git-fit.db
-      geo-cache-dir: data/cache/geo
+      cache-dir: data/cache/geo
       amap-key: ${{ secrets.AMAP_API_KEY }}
 ```
 

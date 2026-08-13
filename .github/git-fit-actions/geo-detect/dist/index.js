@@ -66788,7 +66788,7 @@ function summarizeFiles(dir) {
 function readInputs() {
   return {
     dbPath: getInput("db-path"),
-    cacheDir: getInput("geo-cache-dir"),
+    cacheDir: getInput("cache-dir"),
     cacheKey: getInput("cache-key") || "GitFit-geo-v0",
     amapKey: getInput("amap-key"),
     detectLimit: getInput("detect-limit") || "200",
@@ -66800,7 +66800,7 @@ function readInputs() {
 }
 function validate2(inputs) {
   validatePath("db-path", inputs.dbPath);
-  validatePath("geo-cache-dir", inputs.cacheDir);
+  validatePath("cache-dir", inputs.cacheDir);
   validatePath("cache-key", inputs.cacheKey);
   validateNumber("detect-limit", inputs.detectLimit);
   validateNumber("detect-batch", inputs.detectBatch);
@@ -66831,7 +66831,7 @@ async function run() {
     matchedKey = await restoreCache([relDir], sentinel, [prefix2]) || "";
     info(matchedKey ? `Restored (key: ${matchedKey})` : "No cache found, skipped");
   } else {
-    info("geo-cache-dir empty \u2014 caching disabled");
+    info("cache-dir empty \u2014 caching disabled");
   }
   saveState("matched-key", matchedKey);
   saveState("cache-enabled", cacheEnabled ? "true" : "false");

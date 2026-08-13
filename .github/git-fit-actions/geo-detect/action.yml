@@ -11,7 +11,7 @@ inputs:
     description: SQLite database path
     required: false
     default: data/db/git-fit.db
-  geo-cache-dir:
+  cache-dir:
     description: >
       Geo cache directory. Per-provider point files (amap-points.jsonl,
       nominatim-points.jsonl) plus SHA256SUMS are written under this dir.
