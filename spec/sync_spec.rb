@@ -64,15 +64,15 @@ RSpec.describe "sync.yml" do
   end
 
   describe "action version pins" do
-    it "pins data-store/db-store/import/geo-detect to minor tags with summaries" do
+    it "pins data-store/db-store/import/geo-detect to major tags" do
       uses = steps.map { |s| s["uses"] }.compact
-      expect(uses).to include("git-fit-actions/data-store/cache/restore@v2.1.2")
-      expect(uses).to include("git-fit-actions/data-store/cache/save@v2.1.2")
-      expect(uses).to include("git-fit-actions/db-store/paths@v1.2.2")
-      expect(uses).to include("git-fit-actions/db-store/cache/restore@v1.2.2")
-      expect(uses).to include("git-fit-actions/db-store/cache/save@v1.2.2")
-      expect(uses).to include("git-fit-actions/import@v1.0.1")
-      expect(uses).to include("git-fit-actions/geo-detect@v1.0.2")
+      expect(uses).to include("git-fit-actions/data-store/cache/restore@v2")
+      expect(uses).to include("git-fit-actions/data-store/cache/save@v2")
+      expect(uses).to include("git-fit-actions/db-store/paths@v1")
+      expect(uses).to include("git-fit-actions/db-store/cache/restore@v1")
+      expect(uses).to include("git-fit-actions/db-store/cache/save@v1")
+      expect(uses).to include("git-fit-actions/import@v1")
+      expect(uses).to include("git-fit-actions/geo-detect@v1")
     end
   end
 end

@@ -65,7 +65,7 @@
 | 超时采用旗标机制 | `@timed_out` 设后不再 pop 新源，但当前 batch 完整收尾。不强制退出，数据一致。**（已迁移至 git-fit）** |
 | DedupService 独立于 adapter | 所有 source 完成后统一触发，不再绑定 Strava 内部 `recheck_duplicates`。双向写入，含轨迹对比。**（已迁移至 git-fit）** |
 | temp→rename 原子写入 raw 文件 | 崩溃恢复时 `raw_file_exists?` 不误判 |
-| Per-source 独立 GH Cache | 每源独立 cache key（`GitFit-data-{source}-v0-{run_id}`），变更检测由 `git-fit-actions/data-store/cache/save@v2.1.2` 内联 `find \| sort \| xargs sha256sum` 计算 SHA256SUMS（无仓库脚本），仅变动的源写 cache。通过 `git-fit-actions/data-store/cache/{restore,save}@v2.1.2` 直连（`sources` 多源循环；save 输出 `changed`/`changed_sources`/`unchanged_sources`/`save_errors` 到 step outputs（GITHUB_OUTPUT），并写 step summary 块）。数据目录示例: `data/raw/{garmin,garmin_cn,igpsport,...}/`, `data/std/{...}/` |
+| Per-source 独立 GH Cache | 每源独立 cache key（`GitFit-data-{source}-v0-{run_id}`），变更检测由 `git-fit-actions/data-store/cache/save@v2` 内联 `find \| sort \| xargs sha256sum` 计算 SHA256SUMS（无仓库脚本），仅变动的源写 cache。通过 `git-fit-actions/data-store/cache/{restore,save}@v2` 直连（`sources` 多源循环；save 输出 `changed`/`changed_sources`/`unchanged_sources`/`save_errors` 到 step outputs（GITHUB_OUTPUT），并写 step summary 块）。数据目录示例: `data/raw/{garmin,garmin_cn,igpsport,...}/`, `data/std/{...}/` |
 | 导出默认路径 `data/` → `site/` | 源数据与生成制品分离，gitignored |
 | `mini_racer` + `@garmin/fitsdk` 解析 FIT | V8 引擎在 Ruby 进程中执行 JS SDK，纯 gem 依赖，无需外部运行时 |
 | local_file 适配器单类处理三种格式 | GPX/FIT/TCX 共享相同的文件扫描、L1/L2写入、DB upsert 逻辑，仅解析器不同。单类避免三份重复代码。**（已迁移至 git-fit）** |
@@ -105,7 +105,7 @@
 | FIT (导入) | `fit` | `data/raw/fit/` | `data/std/fit/` |
 | TCX (导入) | `tcx` | `data/raw/tcx/` | `data/std/tcx/` |
 
-每源变更检测由 `git-fit-actions/data-store/cache/save@v2.1.2` 内联 SHA256SUMS 完成：restore 阶段恢复每源目录，save 阶段通过 `sha256sum -c` 逐源校验，仅变化的源写回 cache。
+每源变更检测由 `git-fit-actions/data-store/cache/save@v2` 内联 SHA256SUMS 完成：restore 阶段恢复每源目录，save 阶段通过 `sha256sum -c` 逐源校验，仅变化的源写回 cache。
 
 ### Adapter 接口与调度
 
@@ -291,22 +291,22 @@ sync-scheduler 是唯一写 `.github/workflows/*.yml` 的工作流，因此唯�
 sync job (runs-on: ${{ vars.RUNNER_LABEL || 'ubuntu-latest' }}):
   1. checkout (默认 GITHUB_TOKEN)
   2. setup Ruby + bundle
-  3. derive DB paths (db-store/paths@v1.2.2 — 单一真值 GIT_FIT_DATABASE_PATH → dir/name/db-path，供后续所有 DB 路径引用)
-  4. restore DB cache (db-store/cache/restore@v1.2.2, db-dir + db-name, git-restore-mode: fallback — cache miss 时从 GitFit/db 分支兜底恢复，输出 git-restored-bytes + save-to-git-branch)
-  5. Import data (git-fit-actions/import@v1.0.1, sources: apple_health,2bulu, 目录树哈希检测 + store-state push)
-  6. restore per-source caches (data-store/cache/restore@v2.1.2)
+  3. derive DB paths (db-store/paths@v1 — 单一真值 GIT_FIT_DATABASE_PATH → dir/name/db-path，供后续所有 DB 路径引用)
+  4. restore DB cache (db-store/cache/restore@v1, db-dir + db-name, git-restore-mode: fallback — cache miss 时从 GitFit/db 分支兜底恢复，输出 git-restored-bytes + save-to-git-branch)
+  5. Import data (git-fit-actions/import@v1, sources: apple_health,2bulu, 目录树哈希检测 + store-state push)
+  6. restore per-source caches (data-store/cache/restore@v2)
   7. Sync activities (sync-activities action — 内含 git fit sync 受 vars.SYNC_TIME_BUDGET / SYNC_TOTAL_TIMEOUT 限制 + git fit strava fetch --limit 10 continue-on-error)
-  8. save per-source caches (data-store/cache/save@v2.1.2)
-  9. Parse Geo Regions (git-fit-actions/geo-detect@v1.0.2, detect-limit 200)
+  8. save per-source caches (data-store/cache/save@v2)
+  9. Parse Geo Regions (git-fit-actions/geo-detect@v1, detect-limit 200)
   10. [db] Checkpoint SQLite WAL
   11. git-save-gate（if: success()，job 成功时透传 restore 的 save-to-git-branch）
-  12. save DB cache (db-store/cache/save@v1.2.2, db-dir + db-name, save-to-git-branch 透传 — job 成功 + changed 时 push 回 GitFit/db)
+  12. save DB cache (db-store/cache/save@v1, db-dir + db-name, save-to-git-branch 透传 — job 成功 + changed 时 push 回 GitFit/db)
   13. 数据/DB 变更时触发 sync-scheduler.yml (commit=true)
   14. upload DB artifact
   15. 数据/DB 变更时触发 gh-pages deploy
 ```
 
-> **2026-08 issue #11（已发布）：** data-store/db-store 的 step summary 已发布（`data-store@v2.1.2`、`db-store@v1.2.2`，geo-detect `@v1.0.2`、import `@v1.0.1` 标题/格式对齐），本地 vendor 副本已删除。workflows 全部 pin 小版本 tag（大版本 tag 未移动）。本地开发阶段曾临时 vendor 到 `.github/git-fit-actions/` 并切本地引用，发布后已还原。
+> **2026-08 issue #11（已发布）：** data-store/db-store 的 step summary 已发布（`data-store@v2`、`db-store@v1`，geo-detect `@v1`、import `@v1` 标题/格式对齐），本地 vendor 副本已删除。workflows 全部 pin 大版本 tag（随小版本发布移动）。本地开发阶段曾临时 vendor 到 `.github/git-fit-actions/` 并切本地引用，发布后已还原。
 
 ### Step summary 约定
 
