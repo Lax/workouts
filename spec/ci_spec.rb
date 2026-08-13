@@ -46,6 +46,10 @@ RSpec.describe "ci.yml" do
       expect(step).not_to be_nil
       expect(step.dig("with", "shellcheck")).to be(false)
     end
+
+    it "runs on the hosted image (actionlint needs npm, missing on self-hosted)" do
+      expect(jobs.fetch("workflow-lint")["runs-on"]).to eq("ubuntu-latest")
+    end
   end
 
   describe "ruby-test" do
