@@ -47,7 +47,7 @@ jobs:
           git-branch: GitFit/db
 
       - name: Import data (Apple Health + 2bulu)
-        uses: ./.github/git-fit-actions/import
+        uses: git-fit-actions/import@v1
         with:
           sources: apple_health,2bulu
 

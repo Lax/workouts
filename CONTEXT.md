@@ -128,11 +128,11 @@
 
 | 适配器 | 源格式 | 认证 | 特点 |
 |---|---|---|---|
-| **Apple Health** | export.zip (XML + GPX) | 无 | 从 iOS 健康导出 zip 解析，心率从 HKQuantityTypeIdentifierHeartRate 关联，自动跳过 Strava/Keep/Garmin 等已知源。CI 经 `.github/git-fit-actions/import` action 从 `GitFit/import/apple_health` 分支拉取，检测机制用目录树哈希（`git ls-tree -r` + 过滤标志文件 + sha256sum）编码的 data_hash，精确判断数据文件内容变化。下载后对 `export.zip` 做 ZIP magic-byte 校验（`isZipArchive`，替代旧 composite 的 `file \| grep "Zip archive"`），LFS smudge 漏出或内容损坏即抛错——避免 `git fit import` 内部 rescue 后 exit 0 导致永久误跳。SHA256SUMS 保留用于跨 cache 恢复和快速校验 |
+| **Apple Health** | export.zip (XML + GPX) | 无 | 从 iOS 健康导出 zip 解析，心率从 HKQuantityTypeIdentifierHeartRate 关联，自动跳过 Strava/Keep/Garmin 等已知源。CI 经 `git-fit-actions/import@v1` action 从 `GitFit/import/apple_health` 分支拉取，检测机制用目录树哈希（`git ls-tree -r` + 过滤标志文件 + sha256sum）编码的 data_hash，精确判断数据文件内容变化。下载后对 `export.zip` 做 ZIP magic-byte 校验（`isZipArchive`，替代旧 composite 的 `file \| grep "Zip archive"`），LFS smudge 漏出或内容损坏即抛错——避免 `git fit import` 内部 rescue 后 exit 0 导致永久误跳。SHA256SUMS 保留用于跨 cache 恢复和快速校验 |
 | **LocalFile (GPX)** | .gpx 文件 | 无 | 扫描 `data/import/gpx/`，sport_category 默认 "other"，`--sport` 覆盖。多 track → 多活动 |
 | **LocalFile (FIT)** | .fit 文件 | 无 | 扫描 `data/import/fit/`，sport 从 FIT session mesg 提取（通过 decoder.js fitSport）。FIT 纪元时间戳 |
 | **LocalFile (TCX)** | .tcx 文件 | 无 | 扫描 `data/import/tcx/`，sport 从 XML Sport 属性提取。多 Activity → 多活动 |
-| **2bulu (KML + 2tk)** | .2tk + .kml 文件 | 无（本地导入） | 扫描 `data/import/2bulu/`。Parser 双格式直读：.2tk（native binary，保留分段成绩 sportinfo）+ .kml（TbuluKmlVersion2）。坐标 WGS-84 无需 GCJ-02 纠偏。run_id 用 `2bulu_{YYYYMMDD}_{sha[0,12]}`（日期前缀排序 + 内容哈希去重，规避 trackFileId 冲突）。CI 经 `.github/git-fit-actions/import` action 从 `GitFit/import/2bulu` 分支拉取，检测机制用目录树哈希（`git ls-tree -r` + 过滤标志文件 + sha256sum）编码的 data_hash，精确判断数据文件内容变化。SHA256SUMS 保留用于跨 cache 恢复和快速校验。**官方赛道 KML 不入导入统计**（参考轨迹功能另行规划）。详情见 `~/checkouts/mine/2bulu-research/` 与 [git-fit#67](https://github.com/Lax/git-fit/issues/67) |
+| **2bulu (KML + 2tk)** | .2tk + .kml 文件 | 无（本地导入） | 扫描 `data/import/2bulu/`。Parser 双格式直读：.2tk（native binary，保留分段成绩 sportinfo）+ .kml（TbuluKmlVersion2）。坐标 WGS-84 无需 GCJ-02 纠偏。run_id 用 `2bulu_{YYYYMMDD}_{sha[0,12]}`（日期前缀排序 + 内容哈希去重，规避 trackFileId 冲突）。CI 经 `git-fit-actions/import@v1` action 从 `GitFit/import/2bulu` 分支拉取，检测机制用目录树哈希（`git ls-tree -r` + 过滤标志文件 + sha256sum）编码的 data_hash，精确判断数据文件内容变化。SHA256SUMS 保留用于跨 cache 恢复和快速校验。**官方赛道 KML 不入导入统计**（参考轨迹功能另行规划）。详情见 `~/checkouts/mine/2bulu-research/` 与 [git-fit#67](https://github.com/Lax/git-fit/issues/67) |
 
 ### 数据流与差异
 
@@ -262,7 +262,7 @@ f > 2N+1 → N = min(7, N+1)    → 减速
 
 | 触发 | 操作 |
 |---|---|
-| push/PR → master | 3 jobs：`workflow-lint`（actionlint@v2 校验 workflow 语法，shellcheck: false）、`test-import-action`（`.github/git-fit-actions/import` node 测试：npm ci + typecheck + test + build:check）、`ruby-test`（`bundle exec rspec`） |
+| push/PR → master | 2 jobs：`workflow-lint`（actionlint@v2 校验 workflow 语法，shellcheck: false）、`ruby-test`（`bundle exec rspec`） |
 | Ruby 版本 | matrix `ruby-version: ["3.4"]` |
 
 ### sync.yml
@@ -291,7 +291,7 @@ sync job (runs-on: ${{ vars.RUNNER_LABEL || 'ubuntu-latest' }}):
   2. setup Ruby + bundle
   3. derive DB paths (db-store/paths@v1 — 单一真值 GIT_FIT_DATABASE_PATH → dir/name/db-path，供后续所有 DB 路径引用)
   4. restore DB cache (db-store/cache/restore@v1, db-dir + db-name, git-restore-mode: fallback — cache miss 时从 GitFit/db 分支兜底恢复，输出 git-restored-bytes + save-to-git-branch)
-  5. Import data (git-fit-actions/import, sources: apple_health,2bulu, 目录树哈希检测 + store-state push)
+  5. Import data (git-fit-actions/import@v1, sources: apple_health,2bulu, 目录树哈希检测 + store-state push)
   6. restore per-source caches (data-store/cache/restore@v2)
   7. Sync activities (sync-activities action — 内含 git fit sync 受 vars.SYNC_TIME_BUDGET / SYNC_TOTAL_TIMEOUT 限制 + git fit strava fetch --limit 10 continue-on-error)
   8. save per-source caches (data-store/cache/save@v2)

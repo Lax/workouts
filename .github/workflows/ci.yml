@@ -37,56 +37,6 @@ jobs:
             echo "- Workflows checked: $(find .github/workflows -maxdepth 1 -name '*.yml' | wc -l || true)"
           } >> "$GITHUB_STEP_SUMMARY"
 
-  test-import-action:
-    runs-on: ${{ vars.RUNNER_LABEL || 'ubuntu-latest' }}
-    permissions:
-      contents: read
-      actions: read
-    concurrency:
-      group: ci-${{ github.ref }}-test-import-action
-      cancel-in-progress: true
-    timeout-minutes: 10
-    defaults:
-      run:
-        working-directory: .github/git-fit-actions/import
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-          cache-dependency-path: .github/git-fit-actions/import/package-lock.json
-
-      - name: Install dependencies
-        id: install
-        run: npm ci
-
-      - name: Type check
-        id: typecheck
-        run: npm run typecheck
-
-      - name: Unit tests
-        id: tests
-        run: npm test
-
-      - name: Check dist is up to date
-        id: build-check
-        run: npm run build:check
-
-      - name: Write test-import-action summary
-        if: always()
-        shell: bash
-        run: |
-          {
-            echo "### test-import-action result"
-            echo "- Job status: ${{ job.status }}"
-            echo "- npm ci: ${{ steps.install.outcome }}"
-            echo "- npm run typecheck: ${{ steps.typecheck.outcome }}"
-            echo "- npm test: ${{ steps.tests.outcome }}"
-            echo "- npm run build:check: ${{ steps.build-check.outcome }}"
-          } >> "$GITHUB_STEP_SUMMARY"
-
   ruby-test:
     runs-on: ${{ vars.RUNNER_LABEL || 'ubuntu-latest' }}
     permissions:

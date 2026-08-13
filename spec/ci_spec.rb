@@ -33,8 +33,8 @@ RSpec.describe "ci.yml" do
     end
   end
 
-  it "runs exactly three jobs" do
-    expect(jobs.keys).to contain_exactly("workflow-lint", "test-import-action", "ruby-test")
+  it "runs exactly two jobs" do
+    expect(jobs.keys).to contain_exactly("workflow-lint", "ruby-test")
   end
 
   describe "workflow-lint" do
@@ -45,20 +45,6 @@ RSpec.describe "ci.yml" do
       step = lint.dig("steps").find { |s| s["uses"]&.start_with?("raven-actions/actionlint") }
       expect(step).not_to be_nil
       expect(step.dig("with", "shellcheck")).to be(false)
-    end
-  end
-
-  describe "test-import-action" do
-    it_behaves_like "a structurally complete job", "test-import-action"
-
-    it "runs the import action node test suite" do
-      job = jobs.fetch("test-import-action")
-      expect(job.dig("defaults", "run", "working-directory")).to eq(".github/git-fit-actions/import")
-      runs = job.dig("steps").map { |s| s["run"] }
-      expect(runs).to include("npm ci")
-      expect(runs).to include("npm run typecheck")
-      expect(runs).to include("npm test")
-      expect(runs).to include("npm run build:check")
     end
   end
 

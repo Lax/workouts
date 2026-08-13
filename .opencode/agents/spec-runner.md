@@ -43,6 +43,6 @@ spec/
 
 ## CI setup
 - `.github/workflows/ci.yml` runs `bundle exec rspec` on push/PR to master (Ruby 3.4)
-- Plus Node tests for `.github/git-fit-actions/import`
+- import action 的 Node 测试（npm/typecheck/unit）已随 action 迁至 `git-fit-actions/import` 仓库
 
 > git-fit gem 自身的测试（sync/import/export/dedup adapters）在 git-fit 仓库跑，不在此仓库。
