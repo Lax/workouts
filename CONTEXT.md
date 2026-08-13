@@ -65,7 +65,7 @@
 | 超时采用旗标机制 | `@timed_out` 设后不再 pop 新源，但当前 batch 完整收尾。不强制退出，数据一致。**（已迁移至 git-fit）** |
 | DedupService 独立于 adapter | 所有 source 完成后统一触发，不再绑定 Strava 内部 `recheck_duplicates`。双向写入，含轨迹对比。**（已迁移至 git-fit）** |
 | temp→rename 原子写入 raw 文件 | 崩溃恢复时 `raw_file_exists?` 不误判 |
-| Per-source 独立 GH Cache | 每源独立 cache key（`GitFit-data-{source}-v0-{run_id}`），变更检测由 `git-fit-actions/data-store/cache/save@v2.1.1` 内联 `find \| sort \| xargs sha256sum` 计算 SHA256SUMS（无仓库脚本），仅变动的源写 cache。通过 `git-fit-actions/data-store/cache/{restore,save}@v2.1.1` 直连（`sources` 多源循环；save 输出 `changed`/`changed_sources`/`unchanged_sources`/`save_errors` 到 step summary）。数据目录示例: `data/raw/{garmin,garmin_cn,igpsport,...}/`, `data/std/{...}/` |
+| Per-source 独立 GH Cache | 每源独立 cache key（`GitFit-data-{source}-v0-{run_id}`），变更检测由 `git-fit-actions/data-store/cache/save@v2.1.1` 内联 `find \| sort \| xargs sha256sum` 计算 SHA256SUMS（无仓库脚本），仅变动的源写 cache。通过 `git-fit-actions/data-store/cache/{restore,save}@v2.1.1` 直连（`sources` 多源循环；save 输出 `changed`/`changed_sources`/`unchanged_sources`/`save_errors` 到 step outputs（GITHUB_OUTPUT），并写 step summary 块）。数据目录示例: `data/raw/{garmin,garmin_cn,igpsport,...}/`, `data/std/{...}/` |
 | 导出默认路径 `data/` → `site/` | 源数据与生成制品分离，gitignored |
 | `mini_racer` + `@garmin/fitsdk` 解析 FIT | V8 引擎在 Ruby 进程中执行 JS SDK，纯 gem 依赖，无需外部运行时 |
 | local_file 适配器单类处理三种格式 | GPX/FIT/TCX 共享相同的文件扫描、L1/L2写入、DB upsert 逻辑，仅解析器不同。单类避免三份重复代码。**（已迁移至 git-fit）** |
