@@ -317,7 +317,7 @@ sync job (runs-on: ${{ vars.RUNNER_LABEL || 'ubuntu-latest' }}):
 | 项 | 约定 |
 |---|---|
 | 标题 | `### GitFit <action> <operation>`（h3）：`GitFit data-store restore/save`、`GitFit db-store restore/save`、`GitFit geo-detect`/`GitFit geo-detect cache`、`GitFit import` |
-| 状态词 | 每个状态 cell 前缀彩色 emoji（`✅` 正常产出 / `⏭️` 预料内无变化·兜底 / `❌` 失败），未知状态不加 glyph；图例行 `_✅ 正常产出 · ⏭️ 预料内无变化/兜底 · ❌ 失败_` 追加表后 |
+| 状态词 | 每个状态 cell 前缀彩色 emoji（`✅` 正常产出 / `⏭️` 预料内无变化·兜底 / `❌` 失败），未知状态不加 glyph；图例行 `_✅ 正常产出 · ⏭️ 预料内无变化/兜底 · ❌ 失败_` 仅当 block 含异常状态（`miss`/`failed`/`errors`/`missing`）时追加，正常 block 不重复 |
 | 表型 | **横向布局节约纵向空间**：多源表源作列（表头一行列全部源，`Status`/`Cache key` 各一行，save 尾行 `Changed/Unchanged/Errors`）；单实体表项目作列、单值行。Cache key 去 `GitFit-data-<source>-v0-` 前缀（run-id 段保留、`snapshot` 字保留）；geo key 去前缀截 12 hex |
 | 对齐 | 按数据特征：短分类值/布尔/数字/短 token（状态、cache key、bytes、counts）**居中**（`\|:---:\|`）；路径/标签/长文本（DB path、分支名、源名列、cache files、Details）**左对齐**（`\|:---\|`） |
 | 实现 | node24 action 用 `@actions/core` summary（纯 builder 函数可单测）；composite action 用 `$GITHUB_STEP_SUMMARY` |
