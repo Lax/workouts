@@ -308,7 +308,7 @@ sync job (runs-on: ${{ vars.RUNNER_LABEL || 'ubuntu-latest' }}):
 
 > **2026-08 issue #11（已发布）：** data-store/db-store 的 step summary 已发布（`data-store@v2`、`db-store@v1`，geo-detect `@v1`、import `@v1` 标题/格式对齐），本地 vendor 副本已删除。workflows 全部 pin 大版本引用。本地开发阶段曾临时 vendor 到 `.github/git-fit-actions/` 并切本地引用，发布后已还原。
 
-> **2026-08 大版本双轨（分支 + tag）：** git-fit-actions 各仓库默认分支统一为 `mainline`（data-store/db-store/geo-detect/import 全同）；大版本 tag（`v2`/`v1`）随每次发布 force-move 前移，`@v2`/`@v1` 解析到大版本 tag；小版本用 tag（`v2.1.3`/`v1.0.2`），不可变。发布流程：改 `mainline` → `git tag -a vX.Y.Z` + `git tag -f vX`（主 tag 前移）→ push。
+> **2026-08 默认分支改名 master→mainline：** git-fit-actions 各仓库默认分支由 `master` 更名为 `mainline`（data-store/db-store/geo-detect/import 全同，发布历史已 squash 为单 commit，无残留）。大版本 tag（`v2`/`v1`）随每次发布 force-move 前移，`@v2`/`@v1` 解析到大版本 tag；小版本用 tag（`v2.1.3`/`v1.0.2`），不可变。发布流程：改 `mainline` → `git tag -a vX.Y.Z` + `git tag -f vX`（主 tag 前移）→ push。
 
 ### Step summary 约定
 
