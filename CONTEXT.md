@@ -306,7 +306,9 @@ sync job (runs-on: ${{ vars.RUNNER_LABEL || 'ubuntu-latest' }}):
   15. 数据/DB 变更时触发 gh-pages deploy
 ```
 
-> **2026-08 issue #11（已发布）：** data-store/db-store 的 step summary 已发布（`data-store@v2`、`db-store@v1`，geo-detect `@v1`、import `@v1` 标题/格式对齐），本地 vendor 副本已删除。workflows 全部 pin 大版本 tag（随小版本发布移动）。本地开发阶段曾临时 vendor 到 `.github/git-fit-actions/` 并切本地引用，发布后已还原。
+> **2026-08 issue #11（已发布）：** data-store/db-store 的 step summary 已发布（`data-store@v2`、`db-store@v1`，geo-detect `@v1`、import `@v1` 标题/格式对齐），本地 vendor 副本已删除。workflows 全部 pin 大版本引用。本地开发阶段曾临时 vendor 到 `.github/git-fit-actions/` 并切本地引用，发布后已还原。
+
+> **2026-08 大版本双轨（分支 + tag）：** git-fit-actions 各仓库默认分支即大版本号（data-store `v2`、db-store/geo-detect/import `v1`），大版本 tag（`v2`/`v1`）与分支**同名同 commit** 双轨运行（每次发布二者一起前移，`@v2`/`@v1` 解析到谁都无差别）；小版本用 tag（`v2.1.3`/`v1.0.2`），不可变。
 
 ### Step summary 约定
 
@@ -315,7 +317,7 @@ sync job (runs-on: ${{ vars.RUNNER_LABEL || 'ubuntu-latest' }}):
 | 项 | 约定 |
 |---|---|
 | 标题 | `### GitFit <action> <operation>`（h3）：`GitFit data-store restore/save`、`GitFit db-store restore/save`、`GitFit geo-detect`/`GitFit geo-detect cache`、`GitFit import` |
-| 状态词 | 纯文本无 emoji：restore `hit`/`miss`；save `saved`/`unchanged`/`skipped`/`failed` |
+| 状态词 | 每个状态 cell 前缀彩色 emoji（`✅` 正常产出 / `⏭️` 预料内无变化·兜底 / `❌` 失败），未知状态不加 glyph；图例行 `_✅ 正常产出 · ⏭️ 预料内无变化/兜底 · ❌ 失败_` 追加表后 |
 | 表型 | **横向布局节约纵向空间**：多源表源作列（表头一行列全部源，`Status`/`Cache key` 各一行，save 尾行 `Changed/Unchanged/Errors`）；单实体表项目作列、单值行。Cache key 去 `GitFit-data-<source>-v0-` 前缀（run-id 段保留、`snapshot` 字保留）；geo key 去前缀截 12 hex |
 | 对齐 | 按数据特征：短分类值/布尔/数字/短 token（状态、cache key、bytes、counts）**居中**（`\|:---:\|`）；路径/标签/长文本（DB path、分支名、源名列、cache files、Details）**左对齐**（`\|:---\|`） |
 | 实现 | node24 action 用 `@actions/core` summary（纯 builder 函数可单测）；composite action 用 `$GITHUB_STEP_SUMMARY` |
