@@ -8,7 +8,7 @@
   "dependencies": {
     "@lax/plugin-data-source": "~0.0.1",
     "@lax/theme-hello-world": "^0.0.1",
-    "@lax/theme-stats": "^0.0.3",
+    "@lax/theme-stats": "^0.0.4",
     "@lax/web-build": "^0.0.3"
   },
   "allowScripts": {
