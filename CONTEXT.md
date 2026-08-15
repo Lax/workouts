@@ -232,7 +232,7 @@ Secrets 名用单 `_`（`SYNC_KEEP_PHONE`），sync.yml 经 `.github/actions/syn
 
 ### 前端站点配置（config.json）
 
-> 与 `config.yml`（git-fit 运行配置）语义隔离：`config.json` 是前端站点配置，由 `.github/git-fit-actions/frontend-build` 在 gh-pages 构建时 `cp` 注入 `frontend/packages/web/config.json`。`config.json.example` 为参考模板。
+> 与 `config.yml`（git-fit 运行配置）语义隔离：`config.json` 是前端站点配置，由 `git-fit-actions/frontend-build@v1` 在 gh-pages 构建时传给 `git-fit-web build --config`（消费方根目录，workouts 自身即是消费方）。`config.json.example` 为参考模板。
 
 **site 字段两级解析（优先级高→低，对所有 `site` 字段通用，不限于 title）：**
 
@@ -242,7 +242,16 @@ site.<field>                    →  全局默认
 内置 fallback                   →  title 为 `{Humanized ThemeName} - GitFit`（如 `Hello World - GitFit`）
 ```
 
-实现：`frontend/packages/web/scripts/generate-entries.mjs` 的 `resolveSiteField`/`resolveTitle`。Phase 0 仅实现 title 消费；`url`/`navLinks`/`mapTile*`/`data` 等字段待 overview/simple 主题回归后再纳入 example。
+实现：`Lax/git-fit-web` 的 `@lax/web-build`（`bin/git-fit-web.js` → `scripts/generate-entries.mjs` 的 `resolveSiteField`/`resolveTitle`），以发布包形式消费。Phase 0 仅实现 title 消费；`url`/`navLinks`/`mapTile*`/`data` 等字段待 overview/simple 主题回归后再纳入 example。
+
+### 前端包与 action
+
+| 项 | 位置 |
+|---|---|
+| 前端构建包 | `Lax/git-fit-web` → GitHub Packages `@lax/{shared,core,theme-hello-world,web-build}`（0.0.x 开发期，< 0.1.0） |
+| 构建 action | `git-fit-actions/frontend-build@v1`（`npm ci` + `npx git-fit-web build`） |
+| workouts 依赖 | 根 `package.json`（`@lax/web-build` + `@lax/theme-hello-world`）+ `package-lock.json` + `.npmrc`（`@lax:registry`） |
+| 权限 | 私有包安装需 `packages: read`；同账号（Lax）GITHUB_TOKEN 可用，跨账号需 PAT |
 
 ---
 

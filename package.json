@@ -1,0 +1,15 @@
+{
+  "name": "workouts-site",
+  "private": true,
+  "version": "0.0.0",
+  "scripts": {
+    "build:ui": "git-fit-web build --config config.json --out site"
+  },
+  "dependencies": {
+    "@lax/theme-hello-world": "~0.0.1",
+    "@lax/web-build": "~0.0.1"
+  },
+  "allowScripts": {
+    "esbuild@0.25.12": true
+  }
+}

@@ -21,6 +21,7 @@ vendor/fit-js/node_modules/
 vendor/fit-js/dist/
 __pycache__/
 node_modules/
+.git-fit-web/
 .git-credentials
 
 .githooks/
