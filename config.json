@@ -3,6 +3,17 @@
     "index": "hello-world",
     "stats": "stats"
   },
+  "plugins": {
+    "@lax/plugin-nav": {}
+  },
+  "site": {
+    "nav": {
+      "labels": {
+        "index": "首页",
+        "stats": "统计"
+      }
+    }
+  },
   "data": {
     "stats": { "source": "stats.json", "optional": false }
   },
