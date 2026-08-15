@@ -1,0 +1,15 @@
+{
+  "entries": {
+    "index": "hello-world"
+  },
+  "site": {
+    "title": "hello world"
+  },
+  "themes": {
+    "hello-world": {
+      "site": {
+        "title": "hello world"
+      }
+    }
+  }
+}

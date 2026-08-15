@@ -34,4 +34,23 @@ RSpec.describe "gh-pages.yml" do
       expect(steps.any? { |s| s["uses"]&.include?("actions/deploy-pages@v4") }).to be(true)
     end
   end
+
+  describe "frontend build" do
+    it "builds the UI from the vendored source after stats export" do
+      build = steps.find { |s| s["name"] == "Build frontend UI" }
+      expect(build).not_to be_nil
+      expect(build.dig("uses")).to eq("./.github/git-fit-actions/frontend-build")
+      expect(build.dig("with", "config")).to eq("config.json")
+      expect(build.dig("with", "out-dir")).to eq("site")
+
+      export_stats = steps.index { |s| s["name"] == "Export Stats" }
+      expect(steps.index(build)).to be > export_stats
+    end
+
+    it "uses the local frontend-build composite action" do
+      action = YAML.safe_load_file(File.expand_path("../.github/git-fit-actions/frontend-build/action.yml", __dir__))
+      expect(action.dig("runs", "using")).to eq("composite")
+      expect(action.fetch("inputs").keys).to include("config", "out-dir")
+    end
+  end
 end

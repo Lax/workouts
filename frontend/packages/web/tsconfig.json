@@ -1,0 +1,12 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "jsx": "react-jsx",
+    "verbatimModuleSyntax": true,
+    "resolveJsonModule": true,
+    "types": []
+  },
+  "include": ["src", "vite-env.d.ts"]
+}

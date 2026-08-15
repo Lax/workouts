@@ -230,6 +230,20 @@ GIT_FIT_CONFIG_PATH       → config 文件路径             # 默认 config.ym
 
 Secrets 名用单 `_`（`SYNC_KEEP_PHONE`），sync.yml 经 `.github/actions/sync-activities` 映射为 `GIT_FIT_KEEP_PHONE` 等 env 传给 `git fit sync`。
 
+### 前端站点配置（config.json）
+
+> 与 `config.yml`（git-fit 运行配置）语义隔离：`config.json` 是前端站点配置，由 `.github/git-fit-actions/frontend-build` 在 gh-pages 构建时 `cp` 注入 `frontend/packages/web/config.json`。`config.json.example` 为参考模板。
+
+**site 字段两级解析（优先级高→低，对所有 `site` 字段通用，不限于 title）：**
+
+```
+themes.<themeId>.site.<field>   →  单主题覆盖（最高；key 与 entries 的值即 themeId 一一对应）
+site.<field>                    →  全局默认
+内置 fallback                   →  title 为 `{Humanized ThemeName} - GitFit`（如 `Hello World - GitFit`）
+```
+
+实现：`frontend/packages/web/scripts/generate-entries.mjs` 的 `resolveSiteField`/`resolveTitle`。Phase 0 仅实现 title 消费；`url`/`navLinks`/`mapTile*`/`data` 等字段待 overview/simple 主题回归后再纳入 example。
+
 ---
 
 ## SportMapper

@@ -67,6 +67,12 @@ jobs:
       - name: Export Stats
         run: bundle exec git fit export stats --output site/stats.json
 
+      - name: Build frontend UI
+        uses: ./.github/git-fit-actions/frontend-build
+        with:
+          config: config.json
+          out-dir: site
+
       - uses: actions/upload-pages-artifact@v3
         with:
           path: ./site
