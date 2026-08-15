@@ -73,6 +73,7 @@ jobs:
         with:
           config: config.json
           out-dir: site
+          npm-auth-token: ${{ secrets.GIT_FIT_NPM_TOKEN }}
 
       - uses: actions/upload-pages-artifact@v3
         with:

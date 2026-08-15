@@ -42,6 +42,7 @@ RSpec.describe "gh-pages.yml" do
       expect(build.dig("uses")).to eq("git-fit-actions/frontend-build@v1")
       expect(build.dig("with", "config")).to eq("config.json")
       expect(build.dig("with", "out-dir")).to eq("site")
+      expect(build.dig("with", "npm-auth-token")).to eq("${{ secrets.GIT_FIT_NPM_TOKEN }}")
 
       export_stats = steps.index { |s| s["name"] == "Export Stats" }
       expect(steps.index(build)).to be > export_stats
