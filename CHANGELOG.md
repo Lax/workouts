@@ -17,6 +17,9 @@
 | 缓存 key 命名纪律（restore 用 `-v0-sentinel`，unarchive 用 `-v0-snapshot`，严禁合并，git-fit#51） | ✅ 已完成 |
 | DB git 兜底与回写（db-store v1.0.2）：restore `git-restore-mode: fallback` + save `save-to-git-branch`，cache miss 时从 `GitFit/db` 恢复、job 成功时 push 回（移入 action，修复 baseline 误报 changed） | ✅ 已完成 |
 | DB 路径管理单位改为目录（db-store v1.1.0）：`db-dir` + `db-name` 替代 `database-path`，新增 `db-store/paths` 推导 `dir/name/db-path`，sync / gh-pages / sync-scheduler / archive / unarchive 统一引用 `steps.db-paths.outputs.*`（git restore 目录级、db-name 防路径穿越） | ✅ 已完成 |
+| 前端包体系引入（`@lax/*` 发布至 GitHub Packages，`Lax/git-fit-web`）：core（bootstrap/registry/`useComponent`）+ shared + web-build + plugin-data-source + theme-hello-world，workouts 经 `frontend-build` 部署自有主题 | ✅ 已完成 |
+| theme-stats 统计看板（八区块：现状焦点/高光卡/四面板趋势/年度/月度/YoY 热力图/构成/坚持度，URL hash 同步 + 深浅色板；月度年份头部） | ✅ 已完成 |
+| 全站浮动导航（core `SiteNav` host 无条件挂载 + plugin-nav 纯视图，`config.plugins` shim 注入，`site.nav` 两级解析 labels/false） | ✅ 已完成 |
 
 ## 2026-07 — 数据链路与 CI 基建
 

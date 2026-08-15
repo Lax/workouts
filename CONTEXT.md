@@ -232,26 +232,64 @@ Secrets 名用单 `_`（`SYNC_KEEP_PHONE`），sync.yml 经 `.github/actions/syn
 
 ### 前端站点配置（config.json）
 
-> 与 `config.yml`（git-fit 运行配置）语义隔离：`config.json` 是前端站点配置，由 `git-fit-actions/frontend-build@v1` 在 gh-pages 构建时传给 `git-fit-web build --config`（消费方根目录，workouts 自身即是消费方）。`config.json.example` 为参考模板。
+> 与 `config.yml`（git-fit 运行配置）语义隔离：`config.json` 是前端站点配置，由 `git-fit-actions/frontend-build@v1` 在 gh-pages 构建时传给 `git-fit-web build --config`。`config.json.example` 为参考模板。
 
-**site 字段两级解析（优先级高→低，对所有 `site` 字段通用，不限于 title）：**
+```json
+{
+  "entries": { "index": "hello-world", "stats": "stats" },
+  "plugins": { "@lax/plugin-nav": {} },
+  "site": { "nav": { "labels": { "index": "首页", "stats": "统计" } } },
+  "data": { "stats": { "source": "stats.json", "optional": false } },
+  "themes": { "hello-world": { "site": { "title": "hello world" } } }
+}
+```
+
+| 字段 | 说明 |
+|---|---|
+| `entries` | 多 entry 映射：`{ key: themeId }`，每个 key 生成 `${key}.html` |
+| `plugins` | 站点级插件，键为插件包名（如 `@lax/plugin-nav`），web-build 生成 import 注入 bootstrap，对所有 entry 生效 |
+| `site.nav` | 全站浮动导航：`false` 禁用，`labels` 覆盖 entry 默认 humanize 标签 |
+| `data.<key>` | 数据源声明（如 `stats.json`），theme 经 plugin-data-source 消费 |
+| `themes.<id>.site` | 单主题 site 字段覆盖 |
+
+**site 字段两级解析（优先级高→低，对所有 `site` 字段通用）：**
 
 ```
-themes.<themeId>.site.<field>   →  单主题覆盖（最高；key 与 entries 的值即 themeId 一一对应）
+themes.<themeId>.site.<field>   →  单主题覆盖（最高；themeId 与 entries 的值一一对应）
 site.<field>                    →  全局默认
-内置 fallback                   →  title 为 `{Humanized ThemeName} - GitFit`（如 `Hello World - GitFit`）
+内置 fallback                   →  title 为 `{Humanized ThemeName} - GitFit`
 ```
 
-实现：`Lax/git-fit-web` 的 `@lax/web-build`（`bin/git-fit-web.js` → `scripts/generate-entries.mjs` 的 `resolveSiteField`/`resolveTitle`），以发布包形式消费。Phase 0 仅实现 title 消费；`url`/`navLinks`/`mapTile*`/`data` 等字段待 overview/simple 主题回归后再纳入 example。
+实现：`@lax/web-build` 的 `scripts/generate-entries.mjs`（`resolveSiteField`/`resolveTitle`），以发布包形式消费。
 
 ### 前端包与 action
 
 | 项 | 位置 |
 |---|---|
-| 前端构建包 | `Lax/git-fit-web` → GitHub Packages `@lax/{shared,core,theme-hello-world,web-build}`（0.0.x 开发期，< 0.1.0） |
+| 前端构建包 | `Lax/git-fit-web` → GitHub Packages `@lax/{shared,core,plugin-data-source,plugin-nav,theme-hello-world,theme-stats,web-build}`（0.0.x 开发期，< 0.1.0） |
 | 构建 action | `git-fit-actions/frontend-build@v1`（`npm ci` + `npx git-fit-web build`） |
-| workouts 依赖 | 根 `package.json`（`@lax/web-build` + `@lax/theme-hello-world`）+ `package-lock.json` + `.npmrc`（`@lax:registry`） |
+| workouts 依赖 | 根 `package.json`（6 个 `@lax` 包）+ `package-lock.json` + `.npmrc`（`@lax:registry`） |
 | 权限 | 私有包安装需 `packages: read`；同账号（Lax）GITHUB_TOKEN 可用，跨账号需 PAT |
+
+### 前端架构
+
+**包职责**（均发布到 GitHub Packages `@lax/*`）：
+
+| 包 | 类型 | 职责 |
+|---|---|---|
+| `@lax/shared` | 库 | 类型（Activity/Stats）+ 格式化/调色工具 |
+| `@lax/core` | 运行时 | `bootstrap` + registry + `useTheme`/`useComponent` + `SiteNav` host + ErrorBoundary |
+| `@lax/web-build` | CLI | `git-fit-web build`：读 config 生成 entry shim → vite 构建 → versions.json |
+| `@lax/plugin-data-source` | 插件 | `normalizeStats` 全量 Stats 类型 + `useStats`（baseUrl→prompt→localStorage） |
+| `@lax/plugin-nav` | 插件 | 纯视图浮动导航（右下角 + 弹层页面链接 + 🌙/☀️） |
+| `@lax/theme-hello-world` | 主题 | 依赖/工具版本总览（验证主题） |
+| `@lax/theme-stats` | 主题 | 八区块统计看板（Overview/Highlights/LinkedTimeChart/Yearly/Monthly/YoY/Composition/Consistency） |
+
+**运行机制**：`bootstrap(config, { theme, plugins })` 依次 setup 各插件的 `registerComponent`，主题 Layout 用 `useComponent(pluginId, name)` 查 registry 渲染；`config.plugins`（JSON 装不下 JS 插件）由 web-build 在 entry shim 中生成 `import pluginN from '<包名>'` 注入 bootstrap——站点级声明一次，所有 entry 含未来主题自动生效。
+
+**导航分工**（避免 core↔plugin-nav 循环依赖）：core `SiteNav` host 无条件挂载，负责读 `entries` + `detectCurrentKey`（pathname 解析）+ toggle 状态 + `config.nav` 两级解析，经 registry 查 `nav:SiteNav`——无注册则不渲染；plugin-nav 只提供纯视图（依赖单向 plugin-nav → core）。`config.nav: false` 禁用，`labels` 覆盖默认 humanize 标签。
+
+**theme-stats 主题**：数据经 plugin-data-source `useStats` 从 `stats.json` 加载；8 个 section（现状焦点 / 高光卡 / 四面板 crosshair 趋势 / 年度 / 月度明细（年份头部 `← 2026 →`）/ YoY 热力图 / 运动构成 / 坚持度）；URL hash 同步（`#year&metric&category`）+ 深浅色板。详见 [issue #14](https://github.com/Lax/workouts/issues/14)。
 
 ---
 
@@ -408,14 +446,15 @@ manage job (runs-on: ${{ vars.RUNNER_LABEL || 'ubuntu-latest' }}):
 
 ### GitHub Pages
 
-前端代码已迁移至 [Lax/running](https://github.com/Lax/running)，本仓库 Pages 仅部署数据制品供其消费。
+本仓库 Pages 同时部署**数据制品**与**自有前端主题**（`@lax/theme-*`，经 `frontend-build` 构建）。
 
 | 项 | 值 |
 |---|---|
 | Pages 源 | GitHub Actions |
-| URL | `https://lax.github.io/workouts/`（后端数据） |
-| 前端看板 | `https://lax.github.io/running/`（Lax/running 部署） |
-| 部署目录 | JSON + stats，排除 DB |
+| URL | `https://lax.github.io/workouts/` |
+| 数据制品 | `activities.json` / `tracks.json` / `stats.json`（排除 DB） |
+| 前端页面 | `index.html`（hello-world）/ `stats.html`（theme-stats 看板） |
+| 独立前端 | `https://lax.github.io/running/`（Lax/running running_page 看板，消费本仓库数据） |
 
 ---
 
