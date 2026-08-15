@@ -1,12 +1,17 @@
 {
   "entries": {
-    "index": "hello-world"
+    "index": "hello-world",
+    "stats": "stats"
+  },
+  "data": {
+    "stats": { "source": "stats.json", "optional": false }
   },
   "themes": {
     "hello-world": {
-      "site": {
-        "title": "hello world"
-      }
+      "site": { "title": "hello world" }
+    },
+    "stats": {
+      "site": { "title": "Stats" }
     }
   }
 }

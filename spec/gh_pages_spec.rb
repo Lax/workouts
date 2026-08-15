@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require "json"
+
 RSpec.describe "gh-pages.yml" do
   let(:yaml) { load_workflow("gh-pages.yml") }
   let(:on_events) { workflow_on(yaml) }
@@ -50,6 +52,23 @@ RSpec.describe "gh-pages.yml" do
 
     it "grants packages: read for installing private @lax packages" do
       expect(job.fetch("permissions")).to include("packages" => "read")
+    end
+  end
+
+  describe "config.json (site frontend config)" do
+    let(:config) { JSON.parse(File.read(File.expand_path("../config.json", __dir__))) }
+
+    it "declares the stats entry backed by theme-stats" do
+      expect(config.dig("entries", "stats")).to eq("stats")
+      expect(config.dig("entries", "index")).to eq("hello-world")
+    end
+
+    it "declares stats.json as the stats data source" do
+      expect(config.dig("data", "stats")).to eq("source" => "stats.json", "optional" => false)
+    end
+
+    it "configures a per-theme title for stats" do
+      expect(config.dig("themes", "stats", "site", "title")).to eq("Stats")
     end
   end
 end
