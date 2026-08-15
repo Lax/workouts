@@ -6,8 +6,8 @@
     "build:ui": "git-fit-web build --config config.json --out site"
   },
   "dependencies": {
-    "@lax/theme-hello-world": "~0.0.1",
-    "@lax/web-build": "~0.0.1"
+    "@lax/theme-hello-world": "^0.0.1",
+    "@lax/web-build": "^0.0.2"
   },
   "allowScripts": {
     "esbuild@0.25.12": true
