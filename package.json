@@ -7,10 +7,10 @@
   },
   "dependencies": {
     "@lax/core": "^0.0.2",
-    "@lax/plugin-data-source": "~0.0.1",
+    "@lax/plugin-data-source": "~0.0.2",
     "@lax/plugin-nav": "^0.0.1",
     "@lax/theme-hello-world": "^0.0.1",
-    "@lax/theme-stats": "^0.0.5",
+    "@lax/theme-stats": "^0.0.6",
     "@lax/web-build": "^0.0.4"
   },
   "allowScripts": {

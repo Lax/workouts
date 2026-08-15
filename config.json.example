@@ -15,7 +15,9 @@
     }
   },
   "data": {
-    "stats": { "source": "stats.json", "optional": false }
+    "stats": { "source": "stats.json", "optional": false },
+    "activities": { "source": "activities.json", "optional": true },
+    "tracks": { "source": "tracks.json", "optional": true }
   },
   "themes": {
     "hello-world": {
