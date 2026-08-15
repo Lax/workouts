@@ -220,11 +220,26 @@ GIT_FIT_CONFIG_PATH       → config 文件路径             # 默认 config.ym
 前缀 `GIT_FIT_` 后跟 key（大写 + 下划线），单 `_` 分隔（如 `garmin_cn` 保留原样）。
 `GIT_FIT_CONFIG_PATH` 为显式覆盖项，默认即根目录 `config.yml`，通常无需设置。
 
+### 环境变量文件约定
+
+| 文件 | 入库 | 内容 |
+|---|---|---|
+| `.env` | 提交 | 配置选项（非敏感），镜像 GitHub Variables（`GIT_FIT_SYNC_TIME_BUDGET` 等），本地 `source` 即得默认值 |
+| `.env.local` | gitignore | 本地凭据（各源账号密码 / OAuth seed），不入库；可覆盖 `.env` 任意 key |
+| `.env.local.example` | 提交 | `.env.local` 模板；CI 对应 GitHub Secrets（`SYNC_*`，经 sync-activities action 注入） |
+
+加载顺序（本地）：`set -a; source .env; source .env.local; set +a`（后者覆盖前者）。
+无自动加载器（workouts 与 git-fit 均无 dotenv），`.env`/`.env.local` 仅手动 source 用。
+
 ### GitHub Variables
 
 | 变量 | 作用 | 切换命令 |
 |---|---|---|
 | `vars.RUNNER_LABEL` | 控制 job 的 `runs-on`。默认 `ubuntu-latest`；设 `self-hosted` 切本地 runner（docker compose 模式） | `gh variable set RUNNER_LABEL --body self-hosted` |
+| `vars.GIT_FIT_DATABASE_PATH` | SQLite 路径（默认 `data/db/workouts.db`），对应 `.env` 的 `GIT_FIT_DATABASE_PATH` | `gh variable set GIT_FIT_DATABASE_PATH --body data/db/workouts.db` |
+| `vars.GIT_FIT_SYSTEM_TIMEZONE` | 时区（默认 `Asia/Shanghai`），对应 `.env` 的 `GIT_FIT_SYSTEM_TIMEZONE` | `gh variable set GIT_FIT_SYSTEM_TIMEZONE --body Asia/Shanghai` |
+| `vars.SYNC_TIME_BUDGET` | 单次 sync 时间预算（秒），对应 `.env` 的 `GIT_FIT_SYNC_TIME_BUDGET` | `gh variable set SYNC_TIME_BUDGET --body 30` |
+| `vars.SYNC_TOTAL_TIMEOUT` | Runner 总超时（秒），对应 `.env` 的 `GIT_FIT_SYNC_TOTAL_TIMEOUT` | `gh variable set SYNC_TOTAL_TIMEOUT --body 1500` |
 
 ### GitHub Secrets 命名
 

@@ -506,7 +506,7 @@ git fit parse activity.tcx --save
 | CSV | `site/workouts.csv` |
 | Stats | `site/stats.json` |
 
-详见 `.env.example` 和 `config.yml.example`。
+详见 `.env`、`.env.local.example` 和 `config.yml.example`。
 </details>
 
 ---

@@ -27,7 +27,7 @@ You are a CI/CD specialist for the Workouts CLI.
 - `git-fit-actions/data-store/cache/{restore,save}@v2` — node24（多源循环，内联 SHA256SUMS，无仓库脚本）
 - `git-fit-actions/db-store/{paths,cache/restore,cache/save}@v1` — composite（git 分支兜底 + save-back）
 - Summary 约定：仅 action/step 级标题（`### GitFit data-store restore` 等），不写 workflow 级标题；status 纯文本；多源用 `| Source | Status | Cache key |`，单实体用 `| Item | Value |`
-- Config injected via `GIT_FIT_*` env (see `.env.example`)
+- Config injected via `GIT_FIT_*` env (see `.env` / `.env.local.example`)
 
 ## Pipeline architecture
 ```
