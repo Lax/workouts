@@ -7,7 +7,7 @@
   },
   "dependencies": {
     "@lax/theme-hello-world": "^0.0.1",
-    "@lax/web-build": "^0.0.2"
+    "@lax/web-build": "^0.0.3"
   },
   "allowScripts": {
     "esbuild@0.25.12": true
