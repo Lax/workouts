@@ -2,29 +2,14 @@
   "name": "workouts-site",
   "private": true,
   "version": "0.0.0",
-  "workspaces": [
-    "packages/*"
-  ],
   "scripts": {
-    "build:ui": "git-fit-web build --config config.json --out site",
-    "typecheck:packages": "tsc -p packages/plugin-data-source --noEmit && tsc -p packages/theme-stats --noEmit",
-    "test:packages": "vitest run"
+    "build:ui": "git-fit-web build --config config.json --out site"
   },
   "dependencies": {
     "@lax/plugin-data-source": "~0.0.1",
     "@lax/theme-hello-world": "^0.0.1",
     "@lax/theme-stats": "~0.0.1",
     "@lax/web-build": "^0.0.3"
-  },
-  "devDependencies": {
-    "@testing-library/jest-dom": "^6.4.0",
-    "@testing-library/react": "^16.0.0",
-    "@types/node": "^22.0.0",
-    "@types/react": "^19.0.0",
-    "@types/react-dom": "^19.0.0",
-    "jsdom": "^24.0.0",
-    "typescript": "^5.5.0",
-    "vitest": "^2.0.0"
   },
   "allowScripts": {
     "esbuild@0.25.12": true

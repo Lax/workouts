@@ -1,9 +1,0 @@
-{
-  "extends": "../../tsconfig.json",
-  "compilerOptions": {
-    "jsx": "react-jsx",
-    "verbatimModuleSyntax": true,
-    "types": ["vite/client"]
-  },
-  "include": ["src", "test"]
-}
