@@ -298,6 +298,8 @@ site.<field>                    →  全局默认
 | workouts 依赖 | 根 `package.json`（7 个 `@lax` 包）+ `package-lock.json` + `.npmrc`（`@lax:registry`） |
 | 权限 | 私有包安装需 `packages: read`；同账号（Lax）GITHUB_TOKEN 可用，跨账号需 PAT |
 
+> 本地安装私有 `@lax/*` 需 GitHub Packages 认证：`.npmrc` 仅声明 registry，无 token；本地执行 `npm install` 时用 `NPM_CONFIG_USERCONFIG=~/.config/opencode/npmrc-github`（含 `//npm.pkg.github.com/:_authToken`）。本地预览未发布主题可 `npm link ../git-fit-web/packages/<pkg>`（node_modules symlink）。
+
 ### 前端架构
 
 **包职责**（均发布到 GitHub Packages `@lax/*`）：

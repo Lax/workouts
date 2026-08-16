@@ -20,6 +20,8 @@
 | 前端包体系引入（`@lax/*` 发布至 GitHub Packages，`Lax/git-fit-web`）：core（bootstrap/registry/`useComponent`）+ shared + web-build + plugin-data-source + theme-hello-world，workouts 经 `frontend-build` 部署自有主题 | ✅ 已完成 |
 | theme-stats 统计看板（八区块：现状焦点/高光卡/四面板趋势/年度/月度/YoY 热力图/构成/坚持度，URL hash 同步 + 深浅色板；月度年份头部） | ✅ 已完成 |
 | 全站浮动导航（core `SiteNav` host 无条件挂载 + plugin-nav 纯视图，`config.plugins` shim 注入，`site.nav` 两级解析 labels/false） | ✅ 已完成 |
+| theme-timeline 纵向时间线主题 0.0.1（竖直月时间轴 + 月度活动卡片 + 左侧统计/详情双态面板 + 赛事匹配；赛事数据 newbie.run 一次性迁移 → `data/events/races.json`，gh-pages `jq -c` 压缩；全项目时间规则=活动发生地时间三级回退） | ✅ 已完成 |
+| theme-timeline 0.0.2（渐进加载/月份 IO 懒挂载/骨架屏首屏提速；卡片多列网格 `minmax(260px,1fr)`；左栏 380px + 详情单列防溢出；月份切换视觉强化；卡片 hover 轨迹推近 + 选中 Ken Burns 循环） | ✅ 已完成 |
 
 ## 2026-07 — 数据链路与 CI 基建
 

@@ -78,8 +78,8 @@ This causes directional errors when terms are ambiguous in project context.
 | Scenario | Example | Action |
 |----------|---------|--------|
 | "upstream"/"original" references | "不一致与上游" | List all declared upstreams in CONTEXT.md (one per theme), ask confirmation |
-| Project name with multiple entities | "和 overview 一样" | Distinguish theme-overview vs overview view |
-| Model introduces a comparison | "对比 theme-overview 的做法" | Confirm "你同意用 theme-overview 作为参考？" first |
+| Project name with multiple entities | "和 stats 一样" | Distinguish theme-stats（包）vs 统计看板（stats 页面） |
+| Model introduces a comparison | "对比 theme-stats 的做法" | Confirm "你同意用 theme-stats 作为参考？" first |
 | Unspecified third-party reference | "按原来的方式" | Ask which implementation "原来的方式" points to |
 
 **Rules:**
