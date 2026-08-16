@@ -6,7 +6,8 @@
 - Attempt: {N}
 
 ## Decisions
-- {key decision}
+- {decision} — why {reason}
+  - Rejected alternative: {direction} (reason: {why not})
 
 ## Artifacts
 - {path}

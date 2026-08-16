@@ -71,6 +71,7 @@ Orchestrator uses `todowrite` to show live progress. Three levels:
 | KISS | Simple > clever | All phases |
 | DRY | Don't repeat existing logic | Plan, Craft |
 | YAGNI | Not implement what isn't needed | Plan |
+| PTA | Project Type Auto-detect — check Gemfile/Cargo.toml/package.json at root | Craft, Verify |
 
 ## Phase Definitions
 
@@ -160,9 +161,14 @@ todowrite("Spec: write" → pending)
 注意：只返回原始事实，不要解释 "upstream" 或 "reference"——只描述文件中实际的内容。
 ```
 
-**Pre-flight Ambiguity Scan (PFAS):**
+**Fast-lane gate:**
+以下全真 → 跳过 PFAS + spec writer，直接按任务写 01-spec.md：
+- 变更文件 < 5
+- 任务无外部引用（upstream/source/reference/original/similar）
+- 用户未提及外部项目或框架名
 
-Orchestrator 先启动一个 general agent 做消歧，再启动 spec writer：
+**Pre-flight Ambiguity Scan (PFAS):**
+仅在 fast-lane gate 不满足时运行。
 
 ```
 你是消歧员。唯一任务：找到模糊的引用。
@@ -264,12 +270,18 @@ if gate passes:
   todowrite("Spec: disambiguate" → completed)
   todowrite("Spec: write" → completed)
   todowrite("1/5 📋 Spec" → completed)
-  todowrite("2/5 📐 Plan" → in_progress)
 
-  # Level 2 — Plan sub-tasks (fixed: 3 steps)
-  todowrite("Plan: audit" → in_progress)
-  todowrite("Plan: design" → pending)
-  todowrite("Plan: approve" → pending)
+  if plan_approved flag set on entry:
+    todowrite("Plan: audit" → skipped)
+    todowrite("Plan: design" → skipped)
+    todowrite("Plan: approve" → skipped)
+    todowrite("2/5 📐 Plan" → completed)
+    jump to Craft phase todos
+  else:
+    todowrite("2/5 📐 Plan" → in_progress)
+    todowrite("Plan: audit" → in_progress)
+    todowrite("Plan: design" → pending)
+    todowrite("Plan: approve" → pending)
 
 if gate blocks:
   todowrite("1/5 📋 Spec" → blocked)
@@ -369,11 +381,12 @@ todowrite("3/5 🔨 Craft" → in_progress)
 3. 错误路径优先于正常路径（EPF），只做计划范围内的改动（MVC）
 
 所有步骤完成后：
-1. npx biome check --write .
-2. npm run typecheck
-3. npm run test -w packages/web
-4. 写入 handoff 到 {workflow_dir}/03-craft.md
-5. 更新 status.json
+1. 检测根目录项目类型：
+   - 有 Gemfile → `bundle exec rspec; bundle exec ruby -c lib/`
+   - 有 Cargo.toml → `cargo test; cargo clippy -- -D warnings`
+   - 有 package.json → `npm run test; npx biome ci .`
+2. 写入 handoff 到 {workflow_dir}/03-craft.md
+3. 更新 status.json
 ```
 
 **Orchestrator transition** (after subagent returns):
@@ -411,11 +424,11 @@ todowrite("Verify: decide" → pending)
 3. 对发现的问题分类并处理
 
 请先运行以下命令收集结果：
-- 后端测试：`bundle exec rspec`
-- 前端测试：`npm run test -w packages/web -- --reporter verbose`
-- 类型检查：`npx tsc --noEmit`
-- 代码风格：`npx biome ci .`
-- 构建验证：`npm run build`
+- 检测根目录项目类型：
+  - 有 Gemfile → `bundle exec rspec; bundle exec ruby -c lib/`
+  - 有 Cargo.toml → `cargo test; cargo clippy -- -D warnings`
+  - 有 package.json → `npm run test; npx biome ci .`
+- 扫描测试输出：`grep -i "[error]"` 找根因线索，附加到 04-verify.md
 
 然后回答以下问题：
 1. 01-spec.md 中的完成标准是否都已满足？
@@ -504,10 +517,13 @@ end
 1. 生成摘要：变更总结、影响范围、测试结果、已知问题、回滚方案。
 
 2. 暂存和提交：
+   - `git remote -v | grep origin` — 空则打印修复命令并中止交付
    - `git fetch` — 先检查远端状态
    - `git status` — 确认只有预期文件被暂存，没有合并冲突标记
    - 如果 `git status` 显示分支分叉或合并进行中 → 停止，升级
-   - `npx biome check --write . && git add -u` — 确保 lint 不会导致 CI 失败
+   - 检测根目录项目类型：
+     - 有 package.json → `npx biome check --write . && git add -u`
+     - 否则 → `git add -A`
    - 检查 .gitignore 是否包含 '/.opencode/meoworks/'（没有就报告）
    - 分类暂存文件判断是否跳过 CI：
      - `git diff --name-only --cached` → 文件列表
