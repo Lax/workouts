@@ -1,7 +1,8 @@
 {
   "entries": {
-    "index": "hello-world",
-    "stats": "stats"
+    "index": "timeline",
+    "stats": "stats",
+    "about": "hello-world"
   },
   "plugins": {
     "@lax/plugin-nav": {}
@@ -9,22 +10,29 @@
   "site": {
     "nav": {
       "labels": {
-        "index": "首页",
-        "stats": "统计"
+        "index": "时间线",
+        "stats": "统计",
+        "about": "关于"
       }
     }
   },
   "data": {
     "stats": { "source": "stats.json", "optional": false },
     "activities": { "source": "activities.json", "optional": true },
-    "tracks": { "source": "tracks.json", "optional": true }
+    "tracks": { "source": "tracks.json", "optional": true },
+    "races": { "source": "races.json", "optional": true }
   },
+  "events": [],
   "themes": {
     "hello-world": {
       "site": { "title": "hello world" }
     },
     "stats": {
       "site": { "title": "Stats" }
+    },
+    "timeline": {
+      "site": { "title": "时间线" },
+      "events": []
     }
   }
 }

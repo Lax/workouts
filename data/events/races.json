@@ -1,0 +1,511 @@
+{
+  "events": [
+    {
+      "id": "2018-11-03-mt-wuyi-trail-races",
+      "name": "2018大武夷超级山径赛",
+      "date": "2018-11-03",
+      "place": "福建省 南平市 武夷山风景区",
+      "categories": [
+        {
+          "name": "100km",
+          "itra": 5,
+          "start": "Nov 3, 2018 05:00",
+          "cutoff": "Nov 3, 2018 11:00"
+        },
+        {
+          "name": "60km",
+          "itra": 3,
+          "start": "Nov 3, 2018 07:00",
+          "cutoff": "Nov 4, 2018 01:00"
+        },
+        {
+          "name": "35km",
+          "itra": 2,
+          "start": "Nov 3, 2018 07:30",
+          "cutoff": "Nov 3, 2018 21:30"
+        }
+      ],
+      "result": {
+        "category": "35km",
+        "status": "Finisher",
+        "time": "06:58:58"
+      },
+      "links": [
+        "https://iranshao.com/races/3257"
+      ]
+    },
+    {
+      "id": "2019-01-01-xinchang-ultra",
+      "name": "2019 新昌越野赛",
+      "date": "2019-01-01",
+      "place": "浙江省 绍兴市 新昌县镜岭镇 · 穿岩十九峰景区",
+      "categories": [
+        {
+          "name": "50公里",
+          "itra": 2,
+          "start": "1 January 2019 07:00",
+          "cutoff": "1 January 2019 19:00"
+        },
+        {
+          "name": "30公里",
+          "itra": 1,
+          "start": "1 January 2019 07:00",
+          "cutoff": "1 January 2019 15:00"
+        },
+        {
+          "name": "10公里",
+          "start": "1 January 2019 07:00",
+          "cutoff": "1 January 2019 10:00"
+        }
+      ],
+      "result": {
+        "category": "50公里",
+        "status": "Finisher",
+        "time": "08:37:51"
+      },
+      "links": [
+        "https://iranshao.com/races/7227"
+      ]
+    },
+    {
+      "id": "2019-03-17-songjiang-marathon",
+      "name": "2019“G60”上海佘山国际半程马拉松",
+      "date": "2019-03-17",
+      "place": "上海市 松江区 欢乐谷",
+      "categories": [
+        {
+          "name": "半程马拉松",
+          "start": "Mar 17, 2019 08:00",
+          "cutoff": "Mar 17, 2019 11:00"
+        }
+      ],
+      "result": {
+        "category": "半程马拉松",
+        "status": "Finisher",
+        "time": "02:12:16"
+      },
+      "links": [
+        "http://www.sj-marathon.com",
+        "https://iranshao.com/races/3179"
+      ]
+    },
+    {
+      "id": "2019-03-23-trail-donghai",
+      "name": "OSPREY越野东海--2019舟山群岛穿越之旅",
+      "date": "2019-03-23",
+      "place": "浙江省 舟山市 东港湿地公园",
+      "categories": [
+        {
+          "name": "65公里精英组",
+          "itra": 3,
+          "start": "Mar 23, 2019 06:00",
+          "cutoff": "Mar 24, 2019 00:00"
+        },
+        {
+          "name": "40公里挑战组",
+          "itra": 2,
+          "start": "Mar 23, 2019 06:30",
+          "cutoff": "Mar 23, 2019 15:30"
+        },
+        {
+          "name": "15公里体验组",
+          "itra": 1,
+          "start": "Mar 23, 2019 06:30",
+          "cutoff": "Mar 23, 2019 10:30"
+        }
+      ],
+      "result": {
+        "category": "65公里精英组",
+        "status": "Finisher",
+        "time": "17:44:50"
+      },
+      "links": [
+        "https://iranshao.com/races/10804"
+      ]
+    },
+    {
+      "id": "2019-04-13-jiangnan-100-mile",
+      "name": "2019江南百英里越野大赛",
+      "date": "2019-04-13",
+      "place": "浙江 宁波 奉化 溪口",
+      "categories": [
+        {
+          "name": "168K",
+          "itra": 6,
+          "start": "Apr 12, 2019 14:00",
+          "cutoff": "Apr 14, 2019 14:00"
+        },
+        {
+          "name": "110K",
+          "itra": 5,
+          "start": "Apr 13, 2019 06:30",
+          "cutoff": "Apr 14, 2019 14:00"
+        },
+        {
+          "name": "85K",
+          "itra": 4,
+          "start": "Apr 13, 2019 06:30",
+          "cutoff": "Apr 14, 2019 06:00"
+        },
+        {
+          "name": "50K",
+          "itra": 3,
+          "start": "Apr 13, 2019 06:30",
+          "cutoff": "Apr 13, 2019 18:30"
+        }
+      ],
+      "result": {
+        "category": "50K",
+        "status": "Finisher",
+        "time": "11:00:13"
+      },
+      "links": [
+        "http://www.jn100trail.com/event?id=151043"
+      ]
+    },
+    {
+      "id": "2019-07-14-fuji100",
+      "name": "悟越野·fuji 100",
+      "date": "2019-07-14",
+      "place": "日本 静冈县 富士市",
+      "categories": [
+        {
+          "name": "100公里",
+          "start": "Jul 14, 2019 05:00",
+          "cutoff": "Jul 14, 2019 20:00"
+        },
+        {
+          "name": "42公里",
+          "start": "Jul 14, 2019 05:00",
+          "cutoff": "Jul 15, 2019 11:00"
+        }
+      ],
+      "result": {
+        "category": "42公里",
+        "status": "Finisher"
+      },
+      "links": [
+        "http://www.jn100trail.com/event?id=155334",
+        "https://iranshao.com/races/13495"
+      ]
+    },
+    {
+      "id": "2019-08-31-raramuri",
+      "name": "2019 拉拉穆里杭州仲夏夜跑赛",
+      "date": "2019-08-31",
+      "place": "浙江省 杭州市 上城区中山南路77号20幢银盐空间·浆果跑者",
+      "categories": [
+        {
+          "name": "25km组",
+          "start": "Aug 31, 2019 21:00"
+        },
+        {
+          "name": "10km组",
+          "start": "Aug 31, 2019 21:00"
+        }
+      ],
+      "result": {
+        "category": "25km组",
+        "status": "Finisher",
+        "time": "3:51:06"
+      },
+      "links": [
+        "http://iranshao.com/races/12125"
+      ]
+    },
+    {
+      "id": "2019-09-07-trail-mt-wugong",
+      "name": "2019 武功山越野赛",
+      "date": "2019-09-07",
+      "place": "江西省 萍乡市 武功山",
+      "categories": [
+        {
+          "name": "100公里组",
+          "itra": 5,
+          "start": "7 September 2019 06:00",
+          "cutoff": "8 September 2019 12:00"
+        },
+        {
+          "name": "56公里组",
+          "itra": 3,
+          "start": "7 September 2019 07:00",
+          "cutoff": "7 September 2019 23:00"
+        },
+        {
+          "name": "33公里组",
+          "itra": 1,
+          "start": "7 September 2019 07:00",
+          "cutoff": "7 September 2019 17:00"
+        }
+      ],
+      "result": {
+        "category": "56公里组",
+        "status": "DNF"
+      },
+      "links": [
+        "https://iranshao.com/races/2740"
+      ]
+    },
+    {
+      "id": "2019-10-19-maxirace-jiangshan",
+      "name": "2019 MaXi-Race China 江山100国际越野跑",
+      "date": "2019-10-19",
+      "place": "江郎山景区游客中心倒影湖广场",
+      "categories": [
+        {
+          "name": "120km组",
+          "itra": 5,
+          "start": "Oct 19, 2019 05:00"
+        },
+        {
+          "name": "105km组",
+          "itra": 5,
+          "start": "Oct 19, 2019 05:00"
+        },
+        {
+          "name": "60km组",
+          "itra": 3,
+          "start": "Oct 19, 2019 05:30"
+        },
+        {
+          "name": "30km组",
+          "itra": 2,
+          "start": "Oct 19, 2019 08:00"
+        },
+        {
+          "name": "6km组",
+          "start": "Oct 19, 2019 08:00"
+        }
+      ],
+      "result": {
+        "category": "60km组",
+        "status": "DNF"
+      },
+      "links": [
+        "https://iranshao.com/races/6812"
+      ]
+    },
+    {
+      "id": "2019-11-02-mogan",
+      "name": "2019凯乐石莫干山跑山赛",
+      "date": "2019-11-02",
+      "place": "浙江 湖州 德清 莫干山镇 庾村",
+      "categories": [
+        {
+          "name": "70K",
+          "itra": 3,
+          "start": "Nov 2, 2019 07:00",
+          "cutoff": "Nov 3, 2019 01:00"
+        },
+        {
+          "name": "30K",
+          "itra": 1,
+          "start": "Nov 2, 2019 09:00",
+          "cutoff": "Nov 2, 2019 19:00"
+        },
+        {
+          "name": "8K",
+          "start": "Nov 2, 2019 11:00",
+          "cutoff": "Nov 2, 2019 14:00"
+        }
+      ],
+      "result": {
+        "category": "70K",
+        "status": "Finisher",
+        "time": "17:13:27"
+      },
+      "links": [
+        "http://www.moganultra.com"
+      ]
+    },
+    {
+      "id": "2019-11-24-nine-peaks",
+      "name": "2019柴古唐斯九峰越野赛",
+      "date": "2019-11-24",
+      "place": "浙江 台州 黄岩 九峰公园",
+      "categories": [
+        {
+          "name": "全程组30km",
+          "itra": 2
+        }
+      ],
+      "result": {
+        "category": "全程组30km",
+        "status": "Finisher",
+        "time": "06:04:20"
+      }
+    },
+    {
+      "id": "2019-12-01-thousand-island-lake",
+      "name": "2019千岛湖马拉松",
+      "date": "2019-12-01",
+      "place": "淳安县千岛湖镇秀水广场",
+      "categories": [
+        {
+          "name": "全程马拉松",
+          "start": "Dec 1, 2019 07:00",
+          "cutoff": "Dec 1, 2019 13:00"
+        },
+        {
+          "name": "半程马拉松",
+          "start": "Dec 1, 2019 07:00",
+          "cutoff": "Dec 1, 2019 10:00"
+        },
+        {
+          "name": "湖乱跑",
+          "start": "Dec 1, 2019 07:30",
+          "cutoff": "Dec 1, 2019 09:00"
+        }
+      ],
+      "result": {
+        "category": "全程马拉松",
+        "status": "Finisher",
+        "time": "4:00:14"
+      },
+      "links": [
+        "http://qiandaohu.huluanpao.com"
+      ]
+    },
+    {
+      "id": "2020-03-15-songjiang-marathon",
+      "name": "2020“G60”上海佘山半程马拉松",
+      "date": "2020-03-15",
+      "place": "上海市松江区欢乐谷",
+      "categories": [
+        {
+          "name": "半程马拉松",
+          "start": "Mar 15, 2020 08:00:00"
+        }
+      ],
+      "result": {
+        "category": "半程马拉松"
+      },
+      "links": [
+        "http://www.sj-marathon.com",
+        "http://match.xempower.cn/match/detail/10018"
+      ]
+    },
+    {
+      "id": "2020-03-22-wuxi-marathon",
+      "name": "2020无锡马拉松",
+      "date": "2020-03-22",
+      "place": "无锡太湖大道隐秀路路口",
+      "categories": [
+        {
+          "name": "马拉松",
+          "start": "Mar 22, 2020 7:30"
+        },
+        {
+          "name": "半程马拉松",
+          "start": "Mar 22, 2020 7:30"
+        },
+        {
+          "name": "迷你马拉松",
+          "start": "Mar 22, 2020 7:30"
+        }
+      ],
+      "result": {
+        "category": "马拉松"
+      },
+      "links": [
+        "http://wuximarathon.com/",
+        "https://mp.weixin.qq.com/s/EGLdLt3zCTxjGAY-q-10kQ"
+      ]
+    },
+    {
+      "id": "2020-05-04-tnf100-beijing",
+      "name": "2020TNF100北京国际越野跑挑战赛",
+      "date": "2020-05-04",
+      "place": "北京汇通诺尔狂飚乐园",
+      "categories": [
+        {
+          "name": "100公里",
+          "itra": 4,
+          "start": "May 4, 2020 12:00",
+          "cutoff": "May 5, 2020 16:00"
+        },
+        {
+          "name": "50公里",
+          "itra": 2,
+          "start": "May 5, 2020 00:00",
+          "cutoff": "May 5, 2020 16:00"
+        },
+        {
+          "name": "25公里",
+          "itra": 1,
+          "start": "May 5, 2020 09:00",
+          "cutoff": "May 5, 2020 16:00"
+        }
+      ],
+      "result": {
+        "category": "100公里"
+      },
+      "links": [
+        "http://tnf100.ihuipao.com"
+      ]
+    },
+    {
+      "id": "2020-10-17-jiangnan-skyrace",
+      "name": "2020江南之巅天空越野赛",
+      "date": "2020-10-17",
+      "place": "浙江 丽水 龙泉 大赛村",
+      "categories": [
+        {
+          "name": "终极组100公里",
+          "start": "Oct 17, 2020 07:00",
+          "cutoff": "Oct 18, 2020 15:00"
+        },
+        {
+          "name": "高级组55公里",
+          "itra": 3,
+          "start": "Oct 17, 2020 07:00",
+          "cutoff": "Oct 17, 2020 24:00"
+        },
+        {
+          "name": "进阶组35公里",
+          "itra": 2,
+          "start": "Oct 17, 2020 07:00",
+          "cutoff": "Oct 17, 2020 20:00"
+        }
+      ],
+      "result": {
+        "category": "高级组55公里"
+      },
+      "links": [
+        "http://www.jn100trail.com/event?id=255124"
+      ]
+    },
+    {
+      "id": "2020-10-24-tsaigu-kuocang",
+      "name": "2020柴古唐斯括苍越野赛",
+      "date": "2020-10-24",
+      "place": "浙江 台州 临海 兴善门广场",
+      "categories": [
+        {
+          "name": "115K组",
+          "itra": 5,
+          "start": "Oct 24, 2020 04:00",
+          "cutoff": "Oct 25, 2020 12:00"
+        },
+        {
+          "name": "85K组",
+          "itra": 4,
+          "start": "Oct 24, 2020 06:00",
+          "cutoff": "Oct 25, 2020 06:00"
+        },
+        {
+          "name": "55K组",
+          "itra": 3,
+          "start": "Oct 24, 2020 07:00",
+          "cutoff": "Oct 24, 2020 19:00"
+        }
+      ],
+      "result": {
+        "category": "85K组"
+      },
+      "links": [
+        "http://www.tsaigu.com"
+      ]
+    }
+  ]
+}

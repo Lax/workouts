@@ -60,11 +60,13 @@ RSpec.describe "gh-pages.yml" do
 
     it "declares the stats entry backed by theme-stats" do
       expect(config.dig("entries", "stats")).to eq("stats")
-      expect(config.dig("entries", "index")).to eq("hello-world")
+      expect(config.dig("entries", "index")).to eq("timeline")
+      expect(config.dig("entries", "about")).to eq("hello-world")
     end
 
-    it "declares stats.json as the stats data source" do
+    it "declares stats/races data sources" do
       expect(config.dig("data", "stats")).to eq("source" => "stats.json", "optional" => false)
+      expect(config.dig("data", "races")).to eq("source" => "races.json", "optional" => true)
     end
 
     it "configures a per-theme title for stats" do

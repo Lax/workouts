@@ -68,6 +68,9 @@ jobs:
       - name: Export Stats
         run: bundle exec git fit export stats --output site/stats.json
 
+      - name: Stage races.json
+        run: cp data/events/races.json site/races.json
+
       - name: Build frontend UI
         uses: git-fit-actions/frontend-build@v1
         with:
