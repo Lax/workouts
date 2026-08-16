@@ -319,7 +319,7 @@ site.<field>                    →  全局默认
 
 **theme-stats 主题**：数据经 plugin-data-source `useStats` 从 `stats.json` 加载；8 个 section（现状焦点 / 高光卡 / 四面板 crosshair 趋势 / 年度 / 月度明细（年份头部 `← 2026 →`）/ YoY 热力图 / 运动构成 / 坚持度）；URL hash 同步（`#year&metric&category`）+ 深浅色板。详见 [issue #14](https://github.com/Lax/workouts/issues/14)。
 
-**theme-timeline 主题**：纵向时间线。屏幕中央竖直月时间轴，右侧每月份活动卡片（时间/距离/类型 + 小字效率 HR/步频/配速 + 轨迹背景 SVG），左侧常驻面板默认统计（总览卡 + IntersectionObserver 滚动联动当前月份），点卡片切详情标签页（总览 / 轨迹 / 赛事 / 分段占位）。赛事数据源 races.json（newbie.run 一次性迁移），三层 merge（`themes.timeline.events` > `events` > races.json，同 id 字段覆盖），活动发生地日期命中赛事当天全天（含跨午夜）→ 卡片徽章高亮（零布局位移）。URL hash `#a=<run_id>` 深链。详见 [issue #22](https://github.com/Lax/workouts/issues/22)。
+**theme-timeline 主题**：纵向时间线。屏幕中央竖直月时间轴，右侧每月份活动卡片（多列网格 `minmax(260px,1fr)` 填满整行；时间/距离/类型 + 小字效率 HR/步频/配速 + 轨迹背景 SVG；hover 轨迹推近，选中后 Ken Burns 缓慢 zoom 循环），左侧常驻面板（380px）默认统计（总览卡 + IntersectionObserver 滚动联动当前月份），点卡片切详情标签页（总览 / 轨迹 / 赛事 / 分段占位）。**性能**：渐进加载（先摘要立即渲染、后 tracks 填充轨迹）+ 月份卡片 IO 懒挂载 + 骨架屏。赛事数据源 races.json（newbie.run 一次性迁移），三层 merge（`themes.timeline.events` > `events` > races.json，同 id 字段覆盖），活动发生地日期命中赛事当天全天（含跨午夜）→ 卡片徽章高亮（零布局位移）。URL hash `#a=<run_id>` 深链。详见 [issue #22](https://github.com/Lax/workouts/issues/22)。
 
 **全项目时间规则**：活动时间一律按活动发生当地的时间展示。三级回退链（`theme-timeline/src/time.ts`）：
 1. `start_date_local` 带时区偏移（发生地时区已固化在数据）→ 直接取墙上钟（`slice`，无 TZ 转换，跨 `+08`/`+09` 时区稳定）
