@@ -138,6 +138,14 @@ todowrite("Spec: disambiguate" → pending)
 todowrite("Spec: write" → pending)
 ```
 
+**Veto context**（spec 启动前）：
+长对话/任务描述中已出现的用户否决（方向+原因），orchestrator 先行写入 `{workflow_dir}/01-ambiguity.md` 的 `vetoes` 块：
+```
+## Vetoes
+| 被拒方向 | 否决者 | 为何否决 |
+```
+规格员以 `01-ambiguity.md` 为唯一否决事实来源；否决只存在于对话而未落盘 → 视为未消歧。
+
 **explore probe:**
 ```
 你能扫描代码库，找出所有相关的文件吗？
@@ -229,9 +237,10 @@ if clear (spec.status === "in_progress"):
 请做以下事情：
 1. 你能加载 grill-with-docs，对照现有文档理解需求吗？
 2. 请定义：范围（做什么）、价值（为什么做）、完成标准（可验证）、边界情况（至少 3 个）、约束条件。
-3. 所有外部引用必须使用 01-ambiguity.md 中消歧后的定义。不要引入未经消歧的新外部引用。
-4. 写入 handoff 到 {workflow_dir}/01-spec.md
-5. 更新 {workflow_dir}/status.json phase=completed
+3. 请定义「已否决方向」表格并写入 01-spec.md。表列：`被拒方向 | 否决者（用户/现状约束/性能等） | 为何否决 | 对应约束/结论`。范围：只记有真实替代方案或用户明确否决的项（含 01-ambiguity.md 的 vetoes）；平凡回落默认（如非法配置值→默认）不记，否则噪音。每条否决必须有 why；某条约束/决策无 why 且查不到否决来源 → 标记未消歧写入开放问题，不得猜。
+4. 所有外部引用必须使用 01-ambiguity.md 中消歧后的定义。不要引入未经消歧的新外部引用。
+5. 写入 handoff 到 {workflow_dir}/01-spec.md
+6. 更新 {workflow_dir}/status.json phase=completed
 
 遵守 SAP、KISS。不要提案解决方案，不要估算时间。
 ```
@@ -245,6 +254,10 @@ if clear (spec.status === "in_progress"):
 # 3. 验证 spec 的"约束条件"部分是否与 CONTEXT.md 一致
 # 4. 如果 spec 引入了消歧结果中没有的引用 → 阻塞
 # 5. 如果 spec 与 CONTEXT.md 中任何项目声明矛盾 → 阻塞
+# 6. 验证 spec 的"已否决方向"表格：
+#    - 每条否决都有 why
+#    - 每条"约束/结论"都能追溯到一条已否决方向或明确决策（非平凡默认）
+#    缺失 why 或约束无来源 → 阻塞
 
 if gate passes:
   todowrite("Spec: scan" → completed)
@@ -564,7 +577,8 @@ Predicts CI duration from recent runs (median), sleeps predictively, delegates t
 - Attempt: {N}
 
 ## Decisions
-- {decision 1}
+- {decision} — why {原因}
+  - 被拒替代方案：{方向}（reason: {为何不可}）
 
 ## Artifacts
 - {path} — what changed
