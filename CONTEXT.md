@@ -4,9 +4,11 @@
 
 运动数据聚合 CLI 工具，多渠道同步 → SQLite 数据库 → JSON / CSV / GPX 导出。
 
-**仓库：** `github.com/Lax/workouts`（私有，付费计划）  
-**技术栈：** Ruby 3.4（核心逻辑在 git-fit gem）
-**部署：** GitHub Actions / GitHub Pages（数据制品：JSON + stats）
+**仓库：** `github.com/Lax/workouts`（私有）  
+**技术栈：** Ruby 3.4（核心逻辑在 git-fit gem）  
+**部署：** GitHub Actions / GitHub Pages（数据制品：JSON + stats + 前端主题）
+
+> 本仓库是配置 + CI/CD 壳，核心逻辑全部在 git-fit gem。设计/调研/实现细节见 wiki（文末指针表），本文件只留规则与现状摘要。
 
 ---
 
@@ -18,7 +20,7 @@
 | `git fit dedup` | 全源重跑去重匹配（覆盖已有 duplicate_info）|
 | `git fit import [--source S] [--sport S]` | 从本地目录批量导入 GPX/FIT/TCX/Apple Health |
 | `git fit export [json\|csv\|stats\|gpx]` | 导出 JSON/CSV/统计/GPX |
-| `git fit auth <garmin\|garmin_cn\|strava>` | 交互式 auth（`auth xoss/xingzhe` 被 git-fit 否决：sync 时自动认证，见 [git-fit auth-model](https://github.com/Lax/git-fit/wiki/specs/auth-model.md)）|
+| `git fit auth <garmin\|garmin_cn\|strava>` | 交互式 auth（xoss/xingzhe 在 sync 时自动认证，见 [git-fit auth-model](https://github.com/Lax/git-fit/wiki/specs/auth-model.md)）|
 | `git fit db SUBCOMMAND` | 数据库操作 |
 | `git fit geo SUBCOMMAND` | 地理行政区域检测 |
 | `git fit parse <file.gpx\|file.tcx> [--save]` | 解析 GPX/TCX |
@@ -29,169 +31,86 @@
 
 ## 架构
 
-本地仓库是配置与 CI/CD 壳，核心逻辑全部在 git-fit gem：
-
 ```
-┌─────────────────────────────────────────────────────────┐
-│  git fit (git-fit gem)                                  │
-│  sync / import / export / dedup / db / geo / parse      │
-│  init / strava / gh / install / auth                    │
-└────────────────────────┬────────────────────────────────┘
-                         │
-                ┌────────▼─────────┐
-                │   SQLite DB      │
-                │  (Sequel ORM)    │
-                └──────────────────┘
+┌──────────────────────────────────────────────┐
+│  git fit (git-fit gem)                       │
+│  sync / import / export / dedup / db / geo   │
+└────────────────────┬─────────────────────────┘
+                     ▼
+              ┌─────────────┐
+              │  SQLite DB  │  (Sequel ORM)
+              └─────────────┘
 ```
 
----
-
-## 关键技术决策
+## 关键技术决策（现状摘要；完整历史表见 wiki Architecture「关键决策」）
 
 | 决策 | 原因 |
 |---|---|
-| 默认使用系统代理（`HTTP_PROXY`/`HTTPS_PROXY`） | 不再强制绕过代理，XOSS/XingZhe 可通过代理访问中国境内服务 |
-| 内联 deploy job 而非 reusable workflow | 调用 `uses:` 在该仓库导致 `startup_failure` |
-| cron 管理拆为独立 `sync-scheduler.yml` | 唯一写 `.github/workflows/*.yml` 的工作流，集中持有 `WORKOUTS_SYNC_PAT`（workflows:write）。sync.yml 不再需要 PAT，import action 的 store-state push（SHA256SUMS 回 `GitFit/import/*` 分支）改用默认 GITHUB_TOKEN |
-| sync-scheduler 用 persist-credentials:false + bare PAT extraheader + git-auto-commit-action | 不能将 PAT 传给 `actions/checkout`（会被包装为 `x-access-token:` → GitHub App 路由）。`workflows: write` 不是 `permissions:` 块的有效值，无法通过 YAML 声明。改用 `persist-credentials: false` + 手动写入裸 PAT extraheader（不含 `x-access-token:` 前缀），服务器路由为 PAT，token 自带 `repo` 权限含 workflows:write。commit/push 交给 `stefanzweifel/git-auto-commit-action@v7`，复用 bare PAT extraheader 凭据 |
-| `__` 分隔 env var（已迁移至 git-fit，本地 config.rb 已删） | 避免与 `garmin_cn` 等 key 中的 `_` 冲突。CI 已改用 `GIT_FIT_` 前缀 env |
-| 保留 `upload-artifact` | Pages 部署稳定后再移除 |
-| Keep 用摘要数据 | Keep API 不提供 FIT，iGPSPORT 使用 mini_racer + @garmin/fitsdk 解析 FIT |
-| `data/raw/{source}/` 平面目录 | 与 running_page `GPX_OUT/` 兼容，symlink 级桥接 |
-| Keep raw 存 decrypt JSON | 保留原始 HR 序列和相对时间戳，polyline 生成可重跑 |
-| 统一列表：new_ids + missing_raw | 一次 API 调用完成 summary + raw，省 50% API 开销。**（已迁移至 git-fit）** |
-| 时间预算在循环顶部 break | 避免写了 summary 但没写 raw 的不一致状态。**（已迁移至 git-fit）** |
-| 多源并行使用队列调度 | Runner 启动 N 线程 Worker 池（默认 3），类 1 队列每 source 单元素即为分布式锁。Worker pop = acquire lock，push = release。批量 BATCH_SIZE=5 后交还，减少竞争。**（已迁移至 git-fit）** |
-| 超时采用旗标机制 | `@timed_out` 设后不再 pop 新源，但当前 batch 完整收尾。不强制退出，数据一致。**（已迁移至 git-fit）** |
-| DedupService 独立于 adapter | 所有 source 完成后统一触发，不再绑定 Strava 内部 `recheck_duplicates`。双向写入，含轨迹对比。**（已迁移至 git-fit）** |
-| temp→rename 原子写入 raw 文件 | 崩溃恢复时 `raw_file_exists?` 不误判 |
-| Per-source 独立 GH Cache | 每源独立 cache key（`GitFit-data-{source}-v0-{run_id}`），变更检测由 `git-fit-actions/data-store/cache/save@v2` 内联 `find \| sort \| xargs sha256sum` 计算 SHA256SUMS（无仓库脚本），仅变动的源写 cache。通过 `git-fit-actions/data-store/cache/{restore,save}@v2` 直连（`sources` 多源循环；save 输出 `changed`/`changed_sources`/`unchanged_sources`/`save_errors` 到 step outputs（GITHUB_OUTPUT），并写 step summary 块）。数据目录示例: `data/raw/{garmin,garmin_cn,igpsport,...}/`, `data/std/{...}/` |
+| 默认使用系统代理（`HTTP_PROXY`/`HTTPS_PROXY`） | 不再强制绕过，XOSS/XingZhe 可经代理访问境内服务 |
+| cron 管理拆独立 `sync-scheduler.yml` | 唯一写 `.github/workflows/*.yml` 的工作流，唯一持有 `WORKOUTS_SYNC_PAT`（workflows:write）；sync.yml 无 PAT |
+| sync-scheduler 用 persist-credentials:false + bare PAT extraheader + git-auto-commit-action | PAT 不能传给 `actions/checkout`（会被包装 `x-access-token:` → GitHub App 路由）；`workflows: write` 不是有效 permissions 值 |
+| `GIT_FIT_` 前缀 env var | 避免与 `garmin_cn` 等 key 中的 `_` 冲突 |
 | 导出默认路径 `data/` → `site/` | 源数据与生成制品分离，gitignored |
-| `mini_racer` + `@garmin/fitsdk` 解析 FIT | V8 引擎在 Ruby 进程中执行 JS SDK，纯 gem 依赖，无需外部运行时 |
-| local_file 适配器单类处理三种格式 | GPX/FIT/TCX 共享相同的文件扫描、L1/L2写入、DB upsert 逻辑，仅解析器不同。单类避免三份重复代码。**（已迁移至 git-fit）** |
+| Keep 用摘要数据；iGPSPORT/XOSS 用 mini_racer + @garmin/fitsdk 解析 FIT | Keep API 不提供 FIT；纯 gem 依赖无外部运行时 |
+| Per-source 独立 GH Cache | 每源独立 key（`GitFit-data-{source}-v0-{run_id}`），SHA256SUMS 检测变更仅写变动源 |
+| 多源并行队列调度 + 超时旗标 + DedupService 独立 | 均已迁移 git-fit gem |
 
 ---
 
 ## 同步适配器
 
-> **同步适配器已迁移至 git-fit gem（`git fit sync`）。** 本地仓库无 adapter 类。以下保留设计摘要。
+> 已迁移 git-fit gem（`git fit sync`），本地无 adapter 类。`run_id` = `{source_prefix}_{平台ID}`；每源 L1/L2 目录 = `data/{raw,std}/{source_prefix}/`。
 
-### 数据源
-
-| 适配器 | 源域名 | 认证 | 特点 |
+| 源 | `source_prefix` | 认证 | 特点 |
 |---|---|---|---|
-| **Keep** | api.gotokeep.com | 手机+密码 | AES-128-CBC 解密，zlib 解压，GCJ-02→WGS84，HR 最近匹配 |
-| **iGPSPORT** | prod.zh.igpsport.com | 手机+密码 | FIT 原始格式，使用 mini_racer + @garmin/fitsdk 解析 |
-| **XOSS** | backend.xoss.co (国际版) | email+JWT | FIT 下载 + mini_racer/fitsdk 解析，JWT token 缓存 7d |
-| **XingZhe** | imxingzhe.com (行者) | RSA 加密密码 + session Cookie | 行者国内版 |
-| **Garmin CN** | garmin.cn | SSO + OAuth1→OAuth2（不受 CF 影响）| token 文件持久化 + OAuth1 自动 refresh，GH Cache |
-| **Garmin Intl** | garmin.com | DI OAuth2（默认 `--auto`：策略 B Playwright primary — session cookies 365d；策略 A curl-impersonate fallback）| Playwright session cookies 365d, token GH Cache，MFA 首次后零交互 |
-| **Strava** | strava.com | OAuth2 refresh_token | 已配置，含多源去重检测。原始文件（FIT/GPX/TCX）下载已迁移至 git-fit：`git fit strava fetch`（stravaweblib gem） |
+| Keep | `keep` | 手机+密码 | AES-128-CBC 解密，zlib 解压，GCJ-02→WGS84，HR 最近匹配 |
+| iGPSPORT | `igpsport` | 手机+密码 | FIT 原始格式，mini_racer+fitsdk 解析 |
+| XOSS | `xoss` | email+JWT | FIT 下载 + fitsdk 解析，JWT 缓存 7d |
+| XingZhe | `xingzhe` | RSA 密码 + session Cookie | 行者国内版 |
+| Garmin CN | `garmin_cn` | SSO + OAuth1→OAuth2 | token 文件持久化 + OAuth1 自动 refresh |
+| Garmin Intl | `garmin` | DI OAuth2（`--auto`：策略 B Playwright primary / 策略 A curl-impersonate fallback） | session cookies 365d，MFA 首次后零交互 |
+| Strava | `strava` | OAuth2 refresh_token | 原始文件下载：`git fit strava fetch`（stravaweblib gem） |
 
-### 数据源标识
-
-`run_id` 格式为 `{source_prefix}_{平台ID}`（如 `garmin_12345`、`strava_98765`）。每个源有独立的 L1/L2 文件目录：
-
-| 适配器 | `source_prefix` | L1 `raw_dir` | L2 `std_dir` |
-|---|---|---|---|
-| Keep | `keep` | `data/raw/keep/` | `data/std/keep/` |
-| iGPSPORT | `igpsport` | `data/raw/igpsport/` | `data/std/igpsport/` |
-| XOSS | `xoss` | `data/raw/xoss/` | `data/std/xoss/` |
-| XingZhe | `xingzhe` | `data/raw/xingzhe/` | `data/std/xingzhe/` |
-| Garmin Intl | `garmin` | `data/raw/garmin/` | `data/std/garmin/` |
-| Garmin CN | `garmin_cn` | `data/raw/garmin_cn/` | `data/std/garmin_cn/` |
-| Strava | `strava` | `data/raw/strava/` | `data/std/strava/` |
-| GPX (导入) | `gpx` | `data/raw/gpx/` | `data/std/gpx/` |
-| FIT (导入) | `fit` | `data/raw/fit/` | `data/std/fit/` |
-| TCX (导入) | `tcx` | `data/raw/tcx/` | `data/std/tcx/` |
-
-每源变更检测由 `git-fit-actions/data-store/cache/save@v2` 内联 SHA256SUMS 完成：restore 阶段恢复每源目录，save 阶段通过 `sha256sum -c` 逐源校验，仅变化的源写回 cache。
-
-### Adapter 接口与调度
-
-> 已迁移至 git-fit gem（`git fit sync`），详见 git-fit 仓库。同步适配器继承 `Sync::Base`，实现 `authenticate` / `pending_ids` / `process_one`；Runner 用队列调度 Worker 池（默认 3 线程）+ BATCH_SIZE=5 分派。
-
-### 去重机制
-
-> 已迁移至 git-fit gem（`Dedup::Service`），所有 source 完成后统一触发。
-
-- **一级去重**：`run_id`（`{source}_{platform_id}`），每次同步前读 DB 已有 ID 跳过重复
-- **二级去重**：跨全源滑动窗口匹配（5 分钟窗口），时间/距离/时长/类型四因子置信度 + GPS 轨迹采样重叠（`Dedup::Trajectory`），输出 derived/duplicate/similar 写入 `duplicate_info`
-
----
+**去重**：一级 `run_id` 去重；二级跨全源滑动窗口（5 分钟）时间/距离/时长/类型四因子 + 轨迹采样重叠（`Dedup::Trajectory`），输出 derived/duplicate/similar 写 `duplicate_info`。详见 wiki Dedup。
 
 ## 导入适配器
 
-> **已迁移至 git-fit gem。** 以下保留设计摘要。
+> 已迁移 git-fit gem（`git fit import`）。文件放 `data/import/{gpx,fit,tcx,apple_health,2bulu}/`，目录不存在跳过；run_id 内容哈希去重，单文件失败继续；无网络/认证，不做二级去重。
 
-### 数据源
-
-| 适配器 | 源格式 | 认证 | 特点 |
-|---|---|---|---|
-| **Apple Health** | export.zip (XML + GPX) | 无 | 从 iOS 健康导出 zip 解析，心率从 HKQuantityTypeIdentifierHeartRate 关联，自动跳过 Strava/Keep/Garmin 等已知源。CI 经 `git-fit-actions/import@v1` action 从 `GitFit/import/apple_health` 分支拉取，检测机制用目录树哈希（`git ls-tree -r` + 过滤标志文件 + sha256sum）编码的 data_hash，精确判断数据文件内容变化。下载后对 `export.zip` 做 ZIP magic-byte 校验（`isZipArchive`，替代旧 composite 的 `file \| grep "Zip archive"`），LFS smudge 漏出或内容损坏即抛错——避免 `git fit import` 内部 rescue 后 exit 0 导致永久误跳。SHA256SUMS 保留用于跨 cache 恢复和快速校验 |
-| **LocalFile (GPX)** | .gpx 文件 | 无 | 扫描 `data/import/gpx/`，sport_category 默认 "other"，`--sport` 覆盖。多 track → 多活动 |
-| **LocalFile (FIT)** | .fit 文件 | 无 | 扫描 `data/import/fit/`，sport 从 FIT session mesg 提取（通过 decoder.js fitSport）。FIT 纪元时间戳 |
-| **LocalFile (TCX)** | .tcx 文件 | 无 | 扫描 `data/import/tcx/`，sport 从 XML Sport 属性提取。多 Activity → 多活动 |
-| **2bulu (KML + 2tk)** | .2tk + .kml 文件 | 无（本地导入） | 扫描 `data/import/2bulu/`。Parser 双格式直读：.2tk（native binary，保留分段成绩 sportinfo）+ .kml（TbuluKmlVersion2）。坐标 WGS-84 无需 GCJ-02 纠偏。run_id 用 `2bulu_{YYYYMMDD}_{sha[0,12]}`（日期前缀排序 + 内容哈希去重，规避 trackFileId 冲突）。CI 经 `git-fit-actions/import@v1` action 从 `GitFit/import/2bulu` 分支拉取，检测机制用目录树哈希（`git ls-tree -r` + 过滤标志文件 + sha256sum）编码的 data_hash，精确判断数据文件内容变化。SHA256SUMS 保留用于跨 cache 恢复和快速校验。**官方赛道 KML 不入导入统计**（参考轨迹功能另行规划）。详情见 `~/checkouts/mine/2bulu-research/` 与 [git-fit#67](https://github.com/Lax/git-fit/issues/67) |
-
-### 数据流与差异
-
-> 已迁移至 git-fit gem（`git fit import`）。文件放 `data/import/{gpx,fit,tcx,apple_health,2bulu}/`，目录不存在时跳过不报错。单线程顺序处理，run_id 用内容哈希去重（内容不变自动跳过），单文件失败打印错误继续下一文件。导入无需网络/认证，不做二级去重。
-
----
-
-### Garmin OAuth 认证机制
-
-详见 wiki [Auth](https://github.com/Lax/workouts/wiki/Auth)
-
-### Garmin Intl vs CN 目录/标识隔离
-
-两个 Garmin 源共享 `GarminBase`，通过子类覆写隔离文件目录和 DB 标识：
-
-| 属性 | Intl (`Garmin`) | CN (`GarminCN`) |
+| 适配器 | 格式 | 要点 |
 |---|---|---|
-| `raw_dir` | `data/raw/garmin/` | `data/raw/garmin_cn/` |
-| `std_dir` | `data/std/garmin/` | `data/std/garmin_cn/` |
-| `source_prefix` → `run_id` | `garmin_#{id}` | `garmin_cn_#{id}` |
-| DB `source` | `"garmin"` | `"garmin_cn"` |
+| Apple Health | export.zip (XML+GPX) | 心率 HKQuantityTypeIdentifierHeartRate 关联，自动跳过已知源；ZIP magic-byte 校验 |
+| LocalFile GPX/FIT/TCX | .gpx/.fit/.tcx | sport 分别从 GPX/XML Sport / FIT session mesg 提取；多 track/Activity → 多活动 |
+| 2bulu | .2tk + .kml | Parser 双格式直读（native binary 保留分段成绩 + TbuluKmlVersion2）；WGS-84 无需纠偏；run_id `2bulu_{YYYYMMDD}_{sha[0,12]}`；官方赛道 KML 不入统计 |
 
-`source_prefix` 方法定义在 `GarminBase`（返回 `"garmin"`），`GarminCN` 覆写返回 `"garmin_cn"`。
-`build_attrs` 通过 `source_prefix` 生成 `run_id` 和 `source`，确保 DB 层无冲突。
+## Garmin Intl vs CN 隔离
+
+两源共享 `GarminBase`，子类覆写隔离目录/标识（`GarminCN` 覆写 `source_prefix` → `"garmin_cn"`）：
+
+| 属性 | Intl | CN |
+|---|---|---|
+| `raw_dir`/`std_dir` | `data/{raw,std}/garmin/` | `data/{raw,std}/garmin_cn/` |
+| `run_id` / DB `source` | `garmin_#{id}` / `"garmin"` | `garmin_cn_#{id}` / `"garmin_cn"` |
 
 ---
 
 ## 数据库
 
-### Schema
-
 ```sql
 CREATE TABLE activities (
-  id           INTEGER PRIMARY KEY,
-  run_id       TEXT NOT NULL UNIQUE,        -- "{source}_{平台ID}"
-  name         TEXT,
-  distance     REAL,                        -- 米
-  moving_time  INTEGER,                     -- 秒
-  elapsed_time INTEGER,
-  sport_category TEXT NOT NULL DEFAULT 'run',-- run/ride/hike/walk/swim/ski/workout/other
-  sport_type   TEXT,                        -- 平台原始类型
-  start_date   TEXT,                        -- 起始时间
-  start_date_local TEXT,
-  location_country TEXT,
-  summary_polyline TEXT,                    -- Google Polyline 编码
-  average_heartrate REAL,                   -- bpm
-  max_heartrate REAL,                       -- bpm
-  average_cadence REAL,                     -- rpm
-  max_cadence REAL,                         -- rpm
-  average_power REAL,                       -- watts
-  max_power REAL,                           -- watts
-  average_temperature REAL,                 -- °C
-  calories INTEGER,                         -- kcal
-  average_speed REAL,                       -- m/s
-  elevation_gain REAL,                      -- m
-  source       TEXT,                        -- 来源标识
-  duplicate_info TEXT,                      -- 去重匹配信息（JSON 数组）
-  created_at   DATETIME,
-  updated_at   DATETIME
+  id INTEGER PRIMARY KEY, run_id TEXT NOT NULL UNIQUE,  -- "{source}_{平台ID}"
+  name TEXT, distance REAL,        -- 米
+  moving_time INTEGER, elapsed_time INTEGER,            -- 秒
+  sport_category TEXT NOT NULL DEFAULT 'run',           -- run/ride/hike/walk/swim/ski/workout/other
+  sport_type TEXT, start_date TEXT, start_date_local TEXT,
+  location_country TEXT, summary_polyline TEXT,         -- Google Polyline
+  average_heartrate REAL, max_heartrate REAL,           -- bpm
+  average_cadence REAL, max_cadence REAL,               -- rpm
+  average_power REAL, max_power REAL,                   -- watts
+  average_temperature REAL, calories INTEGER,
+  average_speed REAL, elevation_gain REAL,
+  source TEXT, duplicate_info TEXT,                     -- 去重信息（JSON 数组）
+  created_at DATETIME, updated_at DATETIME
 );
 ```
 
@@ -199,55 +118,37 @@ CREATE TABLE activities (
 
 ## 配置体系
 
-### 配置层级（优先级：高→低）
+### 层级（高→低）
 
-1. 环境变量 `GIT_FIT_*`（与 git-fit gem 一致，见 `git fit init` 模板）
-2. `` config.yml ``（仓库根目录，git-fit 默认读取；`GIT_FIT_CONFIG_PATH` 显式覆盖路径）
-3. git-fit 代码内默认值
+1. 环境变量 `GIT_FIT_*` → 2. `config.yml`（根目录；`GIT_FIT_CONFIG_PATH` 覆盖）→ 3. git-fit 默认值
 
 ### 环境变量命名
 
-```
-GIT_FIT_KEEP_PHONE        → sync.keep.phone
-GIT_FIT_GARMIN_CN_EMAIL   → sync.garmin_cn.email
-GIT_FIT_GARMIN_AUTH_SEED  → sync.garmin.auth_seed
-GIT_FIT_STRAVA_CLIENT_ID  → sync.strava.client_id
-GIT_FIT_SYNC_TIME_BUDGET  → sync.time_budget           # 全局 sync 配置
-GIT_FIT_SYNC_WORKERS      → sync.workers               # 并行 worker 数，默认 3
-GIT_FIT_CONFIG_PATH       → config 文件路径             # 默认 config.yml（根目录）
-```
-
-前缀 `GIT_FIT_` 后跟 key（大写 + 下划线），单 `_` 分隔（如 `garmin_cn` 保留原样）。
-`GIT_FIT_CONFIG_PATH` 为显式覆盖项，默认即根目录 `config.yml`，通常无需设置。
+`GIT_FIT_` 前缀 + key（大写+下划线），单 `_` 分隔（`garmin_cn` 保留原样）。例：`GIT_FIT_KEEP_PHONE → sync.keep.phone`、`GIT_FIT_SYNC_TIME_BUDGET → sync.time_budget`、`GIT_FIT_CONFIG_PATH → config 路径`。
 
 ### 环境变量文件约定
 
 | 文件 | 入库 | 内容 |
 |---|---|---|
-| `.env` | 提交 | 配置选项（非敏感），镜像 GitHub Variables（`GIT_FIT_SYNC_TIME_BUDGET` 等），本地 `source` 即得默认值 |
-| `.env.local` | gitignore | 本地凭据（各源账号密码 / OAuth seed），不入库；可覆盖 `.env` 任意 key |
-| `.env.local.example` | 提交 | `.env.local` 模板；CI 对应 GitHub Secrets（`SYNC_*`，经 sync-activities action 注入） |
+| `.env` | 提交 | 配置选项（非敏感），镜像 GitHub Variables |
+| `.env.local` | gitignore | 本地凭据，覆盖 `.env` |
+| `.env.local.example` | 提交 | 模板；CI 对应 Secrets（`SYNC_*`） |
 
-加载顺序（本地）：`set -a; source .env; source .env.local; set +a`（后者覆盖前者）。
-无自动加载器（workouts 与 git-fit 均无 dotenv），`.env`/`.env.local` 仅手动 source 用。
+加载：`set -a; source .env; source .env.local; set +a`（无自动加载器）。
 
-### GitHub Variables
+### GitHub Variables / Secrets
 
-| 变量 | 作用 | 切换命令 |
-|---|---|---|
-| `vars.RUNNER_LABEL` | 控制 job 的 `runs-on`。默认 `ubuntu-latest`；设 `self-hosted` 切本地 runner（docker compose 模式） | `gh variable set RUNNER_LABEL --body self-hosted` |
-| `vars.GIT_FIT_DATABASE_PATH` | SQLite 路径（默认 `data/db/workouts.db`），对应 `.env` 的 `GIT_FIT_DATABASE_PATH` | `gh variable set GIT_FIT_DATABASE_PATH --body data/db/workouts.db` |
-| `vars.GIT_FIT_SYSTEM_TIMEZONE` | 时区（默认 `Asia/Shanghai`），对应 `.env` 的 `GIT_FIT_SYSTEM_TIMEZONE` | `gh variable set GIT_FIT_SYSTEM_TIMEZONE --body Asia/Shanghai` |
-| `vars.SYNC_TIME_BUDGET` | 单次 sync 时间预算（秒），对应 `.env` 的 `GIT_FIT_SYNC_TIME_BUDGET` | `gh variable set SYNC_TIME_BUDGET --body 30` |
-| `vars.SYNC_TOTAL_TIMEOUT` | Runner 总超时（秒），对应 `.env` 的 `GIT_FIT_SYNC_TOTAL_TIMEOUT` | `gh variable set SYNC_TOTAL_TIMEOUT --body 1500` |
+| 变量 | 作用 |
+|---|---|
+| `vars.RUNNER_LABEL` | `runs-on`：默认 `ubuntu-latest`，设 `self-hosted` 切本地 runner |
+| `vars.GIT_FIT_DATABASE_PATH` | SQLite 路径（默认 `data/db/workouts.db`）|
+| `vars.SYNC_TIME_BUDGET` / `SYNC_TOTAL_TIMEOUT` | 单次 sync 时间预算 / Runner 总超时 |
 
-### GitHub Secrets 命名
-
-Secrets 名用单 `_`（`SYNC_KEEP_PHONE`），sync.yml 经 `.github/actions/sync-activities` 映射为 `GIT_FIT_KEEP_PHONE` 等 env 传给 `git fit sync`。
+Secrets 名单 `_`（`SYNC_KEEP_PHONE`），sync.yml 经 `.github/actions/sync-activities` 映射为 `GIT_FIT_*` env。DB 路径单一真值 = `GIT_FIT_DATABASE_PATH`，全部 workflow 经 `db-store/paths@v1` 推导 `dir/name/db-path`。
 
 ### 前端站点配置（config.json）
 
-> 与 `config.yml`（git-fit 运行配置）语义隔离：`config.json` 是前端站点配置，由 `git-fit-actions/frontend-build@v1` 在 gh-pages 构建时传给 `git-fit-web build --config`。`config.json.example` 为参考模板。
+> 与 `config.yml`（运行配置）语义隔离；由 `frontend-build@v1` 传给 `git-fit-web build --config`。
 
 ```json
 {
@@ -261,294 +162,104 @@ Secrets 名用单 `_`（`SYNC_KEEP_PHONE`），sync.yml 经 `.github/actions/syn
     "races": { "source": "races.json", "optional": true }
   },
   "events": [],
-  "themes": {
-    "timeline": { "site": { "title": "时间线" }, "events": [] },
-    "stats": { "site": { "title": "Stats" } },
-    "hello-world": { "site": { "title": "hello world" } }
-  }
+  "themes": { "timeline": { "site": { "title": "时间线" }, "events": [] } }
 }
 ```
 
-| 字段 | 说明 |
-|---|---|
-| `entries` | 多 entry 映射：`{ key: themeId }`，每个 key 生成 `${key}.html` |
-| `plugins` | 站点级插件，键为插件包名（如 `@lax/plugin-nav`），web-build 生成 import 注入 bootstrap，对所有 entry 生效 |
-| `site.nav` | 全站浮动导航：`false` 禁用，`labels` 覆盖 entry 默认 humanize 标签 |
-| `data.<key>` | 数据源声明（如 `stats.json`），theme 经 plugin-data-source 消费 |
-| `events` | 顶层手动赛事列表（`{id,name,date}`），theme-timeline 与 races.json 三层 merge |
-| `themes.<id>.site` | 单主题 site 字段覆盖 |
-| `themes.<id>.events` | 主题本地赛事列表（最高优先），覆盖顶层 `events` 与 races.json 同名条目 |
+- `entries`：key → `${key}.html`，value = themeId → `@lax/theme-${themeId}`
+- `plugins`：站点级插件（web-build 生成 import 注入 bootstrap，全 entry 生效）
+- `site.nav`：`false` 禁用，`labels` 覆盖默认标签；两级解析 `themes.<id>.site.<field>` > `site.<field>` > 内置 fallback
+- `events` / `themes.<id>.events`：手动赛事，三层 merge（见下）
 
-**site 字段两级解析（优先级高→低，对所有 `site` 字段通用）：**
+---
 
-```
-themes.<themeId>.site.<field>   →  单主题覆盖（最高；themeId 与 entries 的值一一对应）
-site.<field>                    →  全局默认
-内置 fallback                   →  title 为 `{Humanized ThemeName} - GitFit`
-```
+## 前端架构
 
-实现：`@lax/web-build` 的 `scripts/generate-entries.mjs`（`resolveSiteField`/`resolveTitle`），以发布包形式消费。
+**包**（`Lax/git-fit-web` → GitHub Packages `@lax/*`，0.0.x）：`shared`（类型/格式化/geo）/ `core`（bootstrap+registry+SiteNav host）/ `web-build`（CLI）/ `plugin-data-source`（useStats/useActivities）/ `plugin-nav` / `theme-hello-world` / `theme-stats` / `theme-timeline`。详见 wiki Frontend-Architecture 与 git-fit-web README。
 
-### 前端包与 action
+**运行机制**：`bootstrap(config,{theme,plugins})` 依次 setup 插件 `registerComponent`；`config.plugins` 由 entry shim 注入；core `SiteNav` host 无条件挂载读 entries，plugin-nav 只供纯视图（单向依赖）。
 
-| 项 | 位置 |
-|---|---|
-| 前端构建包 | `Lax/git-fit-web` → GitHub Packages `@lax/{shared,core,plugin-data-source,plugin-nav,theme-hello-world,theme-stats,theme-timeline,web-build}`（0.0.x 开发期，< 0.1.0） |
-| 构建 action | `git-fit-actions/frontend-build@v1`（`npm ci` + `npx git-fit-web build`） |
-| workouts 依赖 | 根 `package.json`（7 个 `@lax` 包）+ `package-lock.json` + `.npmrc`（`@lax:registry`） |
-| 权限 | 私有包安装需 `packages: read`；同账号（Lax）GITHUB_TOKEN 可用，跨账号需 PAT |
+**theme-timeline**：竖直月时间轴 + 右侧多列卡片（`minmax(260px,1fr)`，轨迹 SVG 背景，hover 推近 / 选中 Ken Burns）+ 左侧 380px 面板（总览卡 + IO 滚动联动月份；点卡片切详情标签页）。性能：渐进加载（先摘要后 tracks）+ 月份 IO 懒挂载 + 骨架屏。hash `#a=<run_id>` 深链。
 
-> 本地安装私有 `@lax/*` 需 GitHub Packages 认证：`.npmrc` 仅声明 registry，无 token；本地执行 `npm install` 时用 `NPM_CONFIG_USERCONFIG=~/.config/opencode/npmrc-github`（含 `//npm.pkg.github.com/:_authToken`）。本地预览未发布主题可 `npm link ../git-fit-web/packages/<pkg>`（node_modules symlink）。
+**全项目时间规则**（`theme-timeline/src/time.ts`）：
+1. `start_date_local` 带偏移 → 墙上钟 `slice`（发生地时间，无 TZ 转换）
+2. 无偏移/仅 UTC → 浏览器本地时区解析
+3. 仍无法确定 → 东八区（`Asia/Shanghai`）
 
-### 前端架构
-
-**包职责**（均发布到 GitHub Packages `@lax/*`）：
-
-| 包 | 类型 | 职责 |
-|---|---|---|
-| `@lax/shared` | 库 | 类型（Activity/Stats）+ 格式化/调色工具 |
-| `@lax/core` | 运行时 | `bootstrap` + registry + `useTheme`/`useComponent` + `SiteNav` host + ErrorBoundary |
-| `@lax/web-build` | CLI | `git-fit-web build`：读 config 生成 entry shim → vite 构建 → versions.json |
-| `@lax/plugin-data-source` | 插件 | `normalizeStats` 全量 Stats 类型 + `useStats`（baseUrl→prompt→localStorage） |
-| `@lax/plugin-nav` | 插件 | 纯视图浮动导航（右下角 + 弹层页面链接 + 🌙/☀️） |
-| `@lax/theme-hello-world` | 主题 | 依赖/工具版本总览（验证主题） |
-| `@lax/theme-stats` | 主题 | 八区块统计看板（Overview/Highlights/LinkedTimeChart/Yearly/Monthly/YoY/Composition/Consistency） |
-| `@lax/theme-timeline` | 主题 | 纵向时间线视图（月时间轴 + 活动卡片 + 左侧统计/详情双态面板 + 赛事匹配） |
-
-**运行机制**：`bootstrap(config, { theme, plugins })` 依次 setup 各插件的 `registerComponent`，主题 Layout 用 `useComponent(pluginId, name)` 查 registry 渲染；`config.plugins`（JSON 装不下 JS 插件）由 web-build 在 entry shim 中生成 `import pluginN from '<包名>'` 注入 bootstrap——站点级声明一次，所有 entry 含未来主题自动生效。
-
-**导航分工**（避免 core↔plugin-nav 循环依赖）：core `SiteNav` host 无条件挂载，负责读 `entries` + `detectCurrentKey`（pathname 解析）+ toggle 状态 + `config.nav` 两级解析，经 registry 查 `nav:SiteNav`——无注册则不渲染；plugin-nav 只提供纯视图（依赖单向 plugin-nav → core）。`config.nav: false` 禁用，`labels` 覆盖默认 humanize 标签。
-
-**theme-stats 主题**：数据经 plugin-data-source `useStats` 从 `stats.json` 加载；8 个 section（现状焦点 / 高光卡 / 四面板 crosshair 趋势 / 年度 / 月度明细（年份头部 `← 2026 →`）/ YoY 热力图 / 运动构成 / 坚持度）；URL hash 同步（`#year&metric&category`）+ 深浅色板。详见 [issue #14](https://github.com/Lax/workouts/issues/14)。
-
-**theme-timeline 主题**：纵向时间线。屏幕中央竖直月时间轴，右侧每月份活动卡片（多列网格 `minmax(260px,1fr)` 填满整行；时间/距离/类型 + 小字效率 HR/步频/配速 + 轨迹背景 SVG；hover 轨迹推近，选中后 Ken Burns 缓慢 zoom 循环），左侧常驻面板（380px）默认统计（总览卡 + IntersectionObserver 滚动联动当前月份），点卡片切详情标签页（总览 / 轨迹 / 赛事 / 分段占位）。**性能**：渐进加载（先摘要立即渲染、后 tracks 填充轨迹）+ 月份卡片 IO 懒挂载 + 骨架屏。赛事数据源 races.json（newbie.run 一次性迁移），三层 merge（`themes.timeline.events` > `events` > races.json，同 id 字段覆盖），活动发生地日期命中赛事当天全天（含跨午夜）→ 卡片徽章高亮（零布局位移）。URL hash `#a=<run_id>` 深链。详见 [issue #22](https://github.com/Lax/workouts/issues/22)。
-
-**全项目时间规则**：活动时间一律按活动发生当地的时间展示。三级回退链（`theme-timeline/src/time.ts`）：
-1. `start_date_local` 带时区偏移（发生地时区已固化在数据）→ 直接取墙上钟（`slice`，无 TZ 转换，跨 `+08`/`+09` 时区稳定）
-2. 无偏移 / 仅有 UTC `start_date` → 按浏览器本地时区解析
-3. 仍然无法确定（浏览器 TZ API 不可用等）→ 最后回退东八区（`Asia/Shanghai`）
-
-**赛事数据管道**：newbie.run `_data/people/lax/races.yml`（17 场参赛列表）+ `_data/races/{YYYY}/{MM}/{slug}.yml`（定义）经 `scripts/migrate_races.rb` 一次性迁移 → `data/events/races.json`（扁平 JSON，`{events:[{id,name,date,place,categories,result,links}]}`，git 追踪）；gh-pages.yml 构建前 `jq -c . data/events/races.json > site/races.json`（压缩单行）。无 newbie.run 运行时依赖，赛事变更时重跑脚本。
+**赛事数据管道**：newbie.run `races.yml`（17 场）+ `_data/races/*` 定义 → `scripts/migrate_races.rb` 一次性迁移 → `data/events/races.json`（git 追踪）；gh-pages `jq -c` 压缩到 site/。三层 merge：`themes.timeline.events` > `events` > races.json（同 id 字段覆盖）；`activityLocalDate === event.date` 全天匹配。
 
 ---
 
 ## SportMapper
 
-> **已迁移至 git-fit gem。** 三层回退链：① ALIASES 精确匹配 → ② KEYWORDS 正则/子串 → ③ Levenshtein（编辑距离 ≤ 3）→ ④ `"other"`。`Parser::Base#normalize_sport_type` 统一委托 `SportMapper.canonicalize`，各适配器保留自己的整数 SPORT_MAP（平台特有 code 体系不可统一）。
-
----
+> 已迁移 git-fit gem。三层回退：ALIASES 精确 → KEYWORDS 正则 → Levenshtein（≤3）→ `"other"`。各适配器保留平台 SPORT_MAP。
 
 ## 自适应同步周期
 
 ```
-sync.yml:       schedule (cron: 0 2 */N * *, 0 14 */N * *)
-sync-scheduler: workflow_dispatch (sync.yml 数据/DB 变更时触发, commit=true)
-                schedule (0 3 * * 0 每周日保底, 覆盖减速分支)
-
+sync.yml schedule (0 2 */N, 0 14 */N)；sync-scheduler 数据变更触发 / 每周日保底
 f = 最新活动距今天数
-
-f < N    → N = max(1, N-1)    → 加速
-f > 2N+1 → N = min(7, N+1)    → 减速
-其余     → N 不变
-
-加速分支依赖数据更新（数据变更触发 sync-scheduler）；减速分支只在
-数据不更新时发生（f 增长），由 sync-scheduler 自带的每周日 schedule
-保底触发。手动 workflow_dispatch 默认 commit=false 不写回。
+f < N    → N = max(1, N-1)     加速（依赖数据更新触发）
+f > 2N+1 → N = min(7, N+1)     减速（每周日保底）
+其余 → N 不变；手动 dispatch 默认 commit=false
 ```
-
----
 
 ## CI/CD
 
-### ci.yml
-
-| 触发 | 操作 |
-|---|---|
-| push/PR → master | 2 jobs：`workflow-lint`（actionlint@v2 校验 workflow 语法，shellcheck: false）、`ruby-test`（`bundle exec rspec`） |
-| Ruby 版本 | matrix `ruby-version: ["3.4"]` |
-
-### sync.yml
-
-| 触发 | 操作 |
-|---|---|
-| schedule `*/N` (自适应) | 同步 + 缓存 + 数据变更时触发 sync-scheduler / gh-pages |
-| workflow_dispatch | 手动触发同步，不改 cron |
-| `vars.RUNNER_LABEL` | 控制 runner 类型。默认 `ubuntu-latest`；设 `self-hosted` 切本地（docker compose 模式） |
-
-### sync-scheduler.yml
-
-| 触发 | 操作 |
-|---|---|
-| workflow_dispatch（sync.yml `gh workflow run`，数据/DB 变更时） | 读 N → 算 f → sed 改 sync.yml cron → commit+push（commit=true 时） |
-| schedule `0 3 * * 0`（每周日，保底） | 同上。覆盖减速分支（f > 2N+1 需在数据不更新时触发） |
-| workflow_dispatch（手动） | 读 N → 算 f，默认不写回（commit=false） |
-
-sync-scheduler 是唯一写 `.github/workflows/*.yml` 的工作流，因此唯一持有 `WORKOUTS_SYNC_PAT`（workflows:write）。sync.yml 已移除 PAT，import action 的 store-state push（SHA256SUMS 回 `GitFit/import/*` 分支）改用默认 GITHUB_TOKEN。
-
-### jobs
-
-```
-sync job (runs-on: ${{ vars.RUNNER_LABEL || 'ubuntu-latest' }}):
-  1. checkout (默认 GITHUB_TOKEN)
-  2. setup Ruby + bundle
-  3. derive DB paths (db-store/paths@v1 — 单一真值 GIT_FIT_DATABASE_PATH → dir/name/db-path，供后续所有 DB 路径引用)
-  4. restore DB cache (db-store/cache/restore@v1, db-dir + db-name, git-restore-mode: fallback — cache miss 时从 GitFit/db 分支兜底恢复，输出 git-restored-bytes + save-to-git-branch)
-  5. Import data (git-fit-actions/import@v1, sources: apple_health,2bulu, 目录树哈希检测 + store-state push)
-  6. restore per-source caches (data-store/cache/restore@v2)
-  7. Sync activities (sync-activities action — 内含 git fit sync 受 vars.SYNC_TIME_BUDGET / SYNC_TOTAL_TIMEOUT 限制 + git fit strava fetch --limit 10 continue-on-error)
-  8. save per-source caches (data-store/cache/save@v2)
-  9. Parse Geo Regions (git-fit-actions/geo-detect@v1, detect-limit 200)
-  10. [db] Checkpoint SQLite WAL
-  11. git-save-gate（if: success()，job 成功时透传 restore 的 save-to-git-branch）
-  12. save DB cache (db-store/cache/save@v1, db-dir + db-name, save-to-git-branch 透传 — job 成功 + changed 时 push 回 GitFit/db)
-  13. 数据/DB 变更时触发 sync-scheduler.yml (commit=true)
-  14. upload DB artifact
-  15. 数据/DB 变更时触发 gh-pages deploy
-```
-
-> **2026-08 issue #11（已发布）：** data-store/db-store 的 step summary 已发布（`data-store@v2`、`db-store@v1`，geo-detect `@v1`、import `@v1` 标题/格式对齐），本地 vendor 副本已删除。workflows 全部 pin 大版本引用。本地开发阶段曾临时 vendor 到 `.github/git-fit-actions/` 并切本地引用，发布后已还原。
-
-> **2026-08 默认分支改名 master→mainline：** git-fit-actions 各仓库默认分支由 `master` 更名为 `mainline`（data-store/db-store/geo-detect/import 全同，发布历史已 squash 为单 commit，无残留）。大版本 tag（`v2`/`v1`）随每次发布 force-move 前移，`@v2`/`@v1` 解析到大版本 tag；小版本用 tag（`v2.1.3`/`v1.0.2`），不可变。发布流程：改 `mainline` → `git tag -a vX.Y.Z` + `git tag -f vX`（主 tag 前移）→ push。
-
-### Step summary 约定
-
-> 所有 summary block 一律 action/step 级标题，不写 workflow 级标题（Actions 页面已提供 workflow/job 上下文）。
-
-| 项 | 约定 |
-|---|---|
-| 标题 | `### GitFit <action> <operation>`（h3）：`GitFit data-store restore/save`、`GitFit db-store restore/save`、`GitFit geo-detect`/`GitFit geo-detect cache`、`GitFit import` |
-| 状态词 | 每个状态 cell 前缀彩色 emoji（`✅` 正常产出 / `⏭️` 预料内无变化·兜底 / `❌` 失败），未知状态不加 glyph；图例行 `_✅ 正常产出 · ⏭️ 预料内无变化/兜底 · ❌ 失败_` 仅当 block 含异常状态（`miss`/`failed`/`errors`/`missing`）时追加，正常 block 不重复 |
-| 表型 | **横向布局节约纵向空间**：多源表源作列（表头一行列全部源，`Status`/`Cache key` 各一行，save 尾行 `Changed/Unchanged/Errors`）；单实体表项目作列、单值行。Cache key 去 `GitFit-data-<source>-v0-` 前缀（run-id 段保留、`snapshot` 字保留）；geo key 去前缀截 12 hex |
-| 对齐 | 按数据特征：短分类值/布尔/数字/短 token（状态、cache key、bytes、counts）**居中**（`\|:---:\|`）；路径/标签/长文本（DB path、分支名、源名列、cache files、Details）**左对齐**（`\|:---\|`） |
-| 实现 | node24 action 用 `@actions/core` summary（纯 builder 函数可单测）；composite action 用 `$GITHUB_STEP_SUMMARY` |
-| 冗余 | 不加与 action block 重复的 workflow 级块（sync.yml 原「Write DB summary」step 已删） |
-
-### gh-pages.yml
-
-```
-deploy-pages job (runs-on: ${{ vars.RUNNER_LABEL || 'ubuntu-latest' }}):
-  1. checkout (WORKOUTS_SYNC_PAT)
-  2. setup Ruby + bundle
-  3. derive DB paths (db-store/paths@v1)
-  4. restore DB cache (db-store/cache/restore@v1, db-dir + db-name)
-  5. Download fresh DB artifact (可选, artifact-run-id)
-  6. export json → site/activities.json + tracks.json
-  7. export stats → site/stats.json
-  8. upload-pages-artifact from ./site
-  10. deploy-pages@v4
-```
-
-### sync-scheduler.yml
-
-```
-manage job (runs-on: ${{ vars.RUNNER_LABEL || 'ubuntu-latest' }}):
-  1. checkout (persist-credentials: false)
-  2. setup Ruby + bundle
-  3. restore DB cache (db-store/cache/restore@v1)
-  4. Read current cron interval N (grep sync.yml)
-  5. Compute new interval (Sequel → f → adjust N)
-  6. sed sync.yml (if schedule 或 commit=true)
-  7. Configure git (bare PAT extraheader, if schedule 或 commit=true)
-  8. Commit cron change (git-auto-commit-action, [skip ci],
-     if (schedule 或 commit=true) && configured=true)
-```
-
-### git-fit-archive.yml
-
-将 GH Actions cache（GitFit-data-* key）中的 raw/std + DB 数据归档到 git-fit 分支体系。
-
-| 触发 | 操作 |
-|---|---|
-| schedule `0 4 * * 0` (每周日) | 每源 cache restore → `git add -A` → rename 检测 → 排除纯删除 → commit → push to `GitFit/data/<source>` + `GitFit/db` |
-| workflow_dispatch | 手动触发（可选单个 source） |
-
-详见 wiki [CI-CD](https://github.com/Lax/workouts/wiki/CI-CD)。
-
-#### 归档分支
-
-| 分支 | 内容 | 用途 |
+| workflow | 触发 | 作用 |
 |---|---|---|
-| `GitFit/data/<source>` | `data/{raw,std}/<source>/` | 每源独立 orphan branch，绕过 cache 7 天 LRU，git-fit cache/restore git-archive 回退层 |
-| `GitFit/db` | `data/db/workouts.db` + WAL | DB 单文件归档，gh-pages DB 回退层 |
+| `ci.yml` | push/PR → master | actionlint + `bundle exec rspec`（Ruby 3.4 matrix）|
+| `sync.yml` | schedule `*/N` + dispatch | 同步 + 缓存 + 数据变更触发 scheduler/gh-pages |
+| `sync-scheduler.yml` | 数据变更 + 每周日保底 | 读 N → 算 f → sed 改 sync.yml cron（唯一写 workflow 的持有 PAT）|
+| `gh-pages.yml` | CI 成功后 deploy | export json/stats → stage races.json → `frontend-build` → deploy-pages |
+| `git-fit-archive.yml` | 每周日 | cache → `GitFit/data/<source>` + `GitFit/db` orphan 分支（LRU 兜底）|
 
-> `_/_/<source>`（旧命名空间）已冻结保留，不再写入。
+**关键事实**：DB cache 恢复用 `db-store/cache/restore@v1`（`git-restore-mode: fallback` 从 `GitFit/db` git archive 兜底）+ `save@v1`（job 成功且 changed 时 push 回）；缓存 key 纪律（`-v0-sentinel` restore / `-v0-snapshot` unarchive，严禁合并）；data-store/db-store/geo-detect/import 均 pin 大版本 tag，默认分支 `mainline`。完整步骤见 `.github/workflows/*.yml` 与 wiki CI-CD。
 
-> **2026-08 变更：** sync 纯 cache-only，`shall-commit-data` / `shall-commit-db` 机制已移除。raw/std 数据每次 sync 写入 GHA cache（`GitFit-data-*` key），DB 写入 GHA cache；`git-fit-archive.yml` 每周将 cache 内容归档到 `GitFit/data/<source>` + `GitFit/db` 分支，作为 LRU 过期后的 git-archive 回退层。> `_/_/<source>`（旧命名空间）已冻结保留，不再写入。
-
-> **2026-08 DB git 兜底与回写（db-store v1.0.2）：** `db-store/cache/restore@v1` 新增 `git-restore-mode`（none/fallback/force）+ `git-branch`（默认 `GitFit/db`）。sync.yml 用 `fallback`：cache miss 时从 GitFit/db 分支 `git archive` 恢复 DB，并输出 `git-restored-bytes` + `save-to-git-branch`；`db-store/cache/save@v1` 新增 `save-to-git-branch` 输入，在 **job 成功**（`git-save-gate`，`if: success()`）且 DB changed 时经 detached worktree push 回 GitFit/db。原 sync.yml 内联的「Restore from archive branch」step 已移入 action（顺带修复：fallback 恢复现在位于 baseline 之前，cache miss + git 恢复的运行不再误报 changed）。push 用默认 GITHUB_TOKEN（sync.yml 已有 `contents: write`），与每周 archive-db 共用 `concurrency: workouts-db` 串行。
-
-> **2026-08 DB 路径管理单位改为目录（db-store v1.1.0）：** `database-path` 输入替换为 `db-dir` + `db-name`（完整路径内部拼接为 `db-dir/db-name`）。新增 `db-store/paths@v1` action：从单一真值 `GIT_FIT_DATABASE_PATH` 推导 `dir`/`name`/`db-path` 输出，sync / gh-pages / sync-scheduler / archive / unarchive 五个 workflow 全部统一引用 `steps.db-paths.outputs.*`，不再硬编码或拼接路径。restore 的 git archive 改为目录级恢复（严格优于旧双文件调用：分支目录部分存在也能恢复）；`db-name` 校验拒绝路径分隔符与 `.`/`..`（防路径穿越）；`save-to-git-branch` 校验与 `git-branch` 对称。yiyasasa.github.io 同步更新。
-
-> **2026-08 缓存 key 命名纪律（[`Lax/git-fit#51`](https://github.com/Lax/git-fit/issues/51)）：** restore 精确 key 用永不写入的 `-v0-sentinel` 强制前缀回退；unarchive 恢复快照写 `-v0-snapshot`（真实可读内容，可被后续 restore 前缀命中）。二者严禁合并为同一 key，否则触发 F1 粘滞阴影（unarchive 后精确命中 snapshot，永久遮蔽更新的 `-v0-{run}` sync cache）。`git-fit-actions/{data-store,db-store}` 的 `@v1` 已发布修复（v1.0.1）；workouts 侧 `git-fit-archive.yml`（archive restore）与 `git-fit-unarchive.yml`（unarchive save）已内联对齐。快照 key 追加 `-{run_number}-{run_id}` 后缀（与 sync save 格式一致），避免重复 unarchive 的 key 碰撞。
+**Step summary 约定**（git-fit-actions 写 action 时）：`### GitFit <action> <operation>` 标题；状态 cell 前缀 `✅/⏭️/❌`；横向表型、短值居中长文本左对齐。详见 wiki CI-CD。
 
 ## 部署
-
-### GitHub Pages
-
-本仓库 Pages 同时部署**数据制品**与**自有前端主题**（`@lax/theme-*`，经 `frontend-build` 构建）。
 
 | 项 | 值 |
 |---|---|
 | Pages 源 | GitHub Actions |
 | URL | `https://lax.github.io/workouts/` |
-| 数据制品 | `activities.json` / `tracks.json` / `stats.json` / `races.json`（排除 DB） |
-| 前端页面 | `index.html`（theme-timeline 时间线）/ `stats.html`（theme-stats 看板）/ `about.html`（hello-world） |
-| 独立前端 | `https://lax.github.io/running/`（Lax/running running_page 看板，消费本仓库数据） |
-
----
+| 数据制品 | `activities.json` / `tracks.json` / `stats.json` / `races.json`（排除 DB）|
+| 前端页面 | `index.html`（timeline）/ `stats.html`（stats）/ `about.html`（hello-world）|
+| 独立前端 | `https://lax.github.io/running/`（Lax/running running_page 看板）|
 
 ## 数据架构
 
-详见 wiki [Architecture](https://github.com/Lax/workouts/wiki/Architecture)
-
-L1 raw → L2 标准化 GPS → L3 SQLite 摘要 → L4 构建制品 → L5 部署。
-转换规则: 坐标归一化、时间归一化、不丢字段。
-每个新源必须实现 L1+L2+L3。
+L1 raw → L2 标准化 GPS → L3 SQLite 摘要 → L4 构建制品 → L5 部署。转换：坐标/时间归一化、不丢字段；新源必须实现 L1+L2+L3。详见 wiki Architecture。
 
 ## 文档架构
 
-> **2026-08 变更：** `docs/` 目录已归档至 GitHub Wiki（[Lax/workouts wiki](https://github.com/Lax/workouts/wiki)，主题索引见 [Home](https://github.com/Lax/workouts/wiki)）。设计/调研/实现文档统一按话题存放，不再在仓库内维护 `docs/`。
-
-### 文档分类
-
-每一个需求产出一组文档，共享前缀，后缀区分类型：
-
-| 类型 | 后缀 | 编写方式 | 内容 |
-|---|---|---|---|
-| 目标文档 | `-goal` | 用户主笔，AI 辅助 | 功能定义、验收标准、边界划分 |
-| 调研文档 | `-research` | 共同编写 | 技术调研历史、方案对比、关键决策依据 |
-| 实现文档 | `-impl` | 开发过程产出 | 遇到的问题、解决方案、注意事项、变更记录 |
-
-**命名示例：** `garmin-auth-goal.md` / `garmin-auth-research.md` / `garmin-auth-impl.md`
-
-> 历史文档（`data-architecture.md`, `garmin-auth.md` 等）已在归档时按话题合并进 wiki 页面，不保留原名。
-
-### 编写原则
-
-文档给人看也给 AI 看。
-
-| 原则 | 说明 |
-|---|---|
-| 术语一致 | 代码 / 注释 / wiki / CONTEXT.md 用同一组词。避免同义替换 |
-| 显式引用 | 跨文件引用写完整路径或 wiki URL。不写"详见上节" |
-| 结构化 > 段落 | 表格 / 列表 > 自然段。AI 解析表格比段落可靠 |
-| 约定写出来 | `__` 分隔符、`SOURCE` 占位符含义、OAuth 术语，在注释里写清 |
-| 文件锚点 | 每个 wiki 页面以 `# <topic> — <summary>` 开头 |
-| 不列测试数量 | 文档中不出现测试用例数量、耗时等数字。测试相关仅写 `测试（全 stub、零网络）` |
-| 测试不用 rm_rf | Spec 不得用 `FileUtils.rm_rf` 删除生产目录。用 `Dir.mktmpdir` 管理临时文件 |
-| 不重复 OAuth | OAuth token 管理集中在 git-fit 的 `Auth::GarminToken`，其他类不得包含 OAuth 客户端逻辑 |
+`docs/` 已归档至 [wiki](https://github.com/Lax/workouts/wiki)（主题索引 [Home](https://github.com/Lax/workouts/wiki)），仓库内不再维护 `docs/`。每个需求产出一组文档，共享前缀：`-goal`（功能定义/验收）/ `-research`（调研/方案对比）/ `-impl`（实现记录）。编写原则：术语一致、显式引用（完整路径/wiki URL）、结构化（表格 > 段落）、约定写出来、文件锚点 `# <topic> — <summary>`、不列测试数量、测试不用 `rm_rf`、OAuth 逻辑集中在 `Auth::GarminToken`。
 
 ## 错误消息约定
 
-每条 actionable 错误消息必须包含两个要素：
+每条 actionable 错误消息含两要素：
 
 | 要素 | 格式 | 示例 |
 |---|---|---|
 | 问题描述 | `<层级>: <失败原因>` | `Garmin: auth_seed decode failed — invalid Base64` |
 | 操作指引 | `  <动>: <命令>` | `  Fix: git fit auth garmin --sync` |
 
-规则：
-1. 错误不吞 — 每层至少输出一行描述，`rescue` 不加原因视为 bug
-2. 操作命令可直接复制粘贴执行（先写 `Fix:`/`Re-auth:`/`Run:` 动词）
-3. `sync` count==0 时报 `warn`（黄色），不报 `done`（绿色），避免误认为成功
-4. 区分过期类型 — HTTP 400 是数据过期（refresh_token 旋转），HTTP 401 是权限吊销（client_id）
+规则：错误不吞（`rescue` 不加原因视为 bug）；命令可复制粘贴（`Fix:`/`Re-auth:`/`Run:`）；`sync` count==0 报 `warn` 不报 `done`；区分 HTTP 400（数据过期/refresh_token 旋转）vs 401（权限吊销/client_id）。
+
+---
+
+## Wiki 指针表
+
+| 页面 | 内容 |
+|---|---|
+| [Home](https://github.com/Lax/workouts/wiki) | 主题索引 |
+| [Architecture](https://github.com/Lax/workouts/wiki/Architecture) | 产品设计、数据架构、**关键决策完整表** |
+| [Sources](https://github.com/Lax/workouts/wiki/Sources) | 数据源适配与字段标准 |
+| [Sync](https://github.com/Lax/workouts/wiki/Sync) | 同步进度展示 |
+| [Auth](https://github.com/Lax/workouts/wiki/Auth) | Garmin OAuth |
+| [CI-CD](https://github.com/Lax/workouts/wiki/CI-CD) | workflow/action 基建与 Step summary 约定 |
+| [Dedup](https://github.com/Lax/workouts/wiki/Dedup) | 跨源去重设计 |
+| [Geo](https://github.com/Lax/workouts/wiki/Geo) | 地理区域检测 |
+| [Testing](https://github.com/Lax/workouts/wiki/Testing) | 测试改进 |
+| [Frontend-Architecture](https://github.com/Lax/workouts/wiki/Frontend-Architecture) | 前端包/主题/构建/发布流程 |
