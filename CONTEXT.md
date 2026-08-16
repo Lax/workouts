@@ -251,11 +251,21 @@ Secrets 名用单 `_`（`SYNC_KEEP_PHONE`），sync.yml 经 `.github/actions/syn
 
 ```json
 {
-  "entries": { "index": "hello-world", "stats": "stats" },
+  "entries": { "index": "timeline", "stats": "stats", "about": "hello-world" },
   "plugins": { "@lax/plugin-nav": {} },
-  "site": { "nav": { "labels": { "index": "首页", "stats": "统计" } } },
-  "data": { "stats": { "source": "stats.json", "optional": false } },
-  "themes": { "hello-world": { "site": { "title": "hello world" } } }
+  "site": { "nav": { "labels": { "index": "时间线", "stats": "统计", "about": "关于" } } },
+  "data": {
+    "stats": { "source": "stats.json", "optional": false },
+    "activities": { "source": "activities.json", "optional": true },
+    "tracks": { "source": "tracks.json", "optional": true },
+    "races": { "source": "races.json", "optional": true }
+  },
+  "events": [],
+  "themes": {
+    "timeline": { "site": { "title": "时间线" }, "events": [] },
+    "stats": { "site": { "title": "Stats" } },
+    "hello-world": { "site": { "title": "hello world" } }
+  }
 }
 ```
 
@@ -265,7 +275,9 @@ Secrets 名用单 `_`（`SYNC_KEEP_PHONE`），sync.yml 经 `.github/actions/syn
 | `plugins` | 站点级插件，键为插件包名（如 `@lax/plugin-nav`），web-build 生成 import 注入 bootstrap，对所有 entry 生效 |
 | `site.nav` | 全站浮动导航：`false` 禁用，`labels` 覆盖 entry 默认 humanize 标签 |
 | `data.<key>` | 数据源声明（如 `stats.json`），theme 经 plugin-data-source 消费 |
+| `events` | 顶层手动赛事列表（`{id,name,date}`），theme-timeline 与 races.json 三层 merge |
 | `themes.<id>.site` | 单主题 site 字段覆盖 |
+| `themes.<id>.events` | 主题本地赛事列表（最高优先），覆盖顶层 `events` 与 races.json 同名条目 |
 
 **site 字段两级解析（优先级高→低，对所有 `site` 字段通用）：**
 
@@ -281,9 +293,9 @@ site.<field>                    →  全局默认
 
 | 项 | 位置 |
 |---|---|
-| 前端构建包 | `Lax/git-fit-web` → GitHub Packages `@lax/{shared,core,plugin-data-source,plugin-nav,theme-hello-world,theme-stats,web-build}`（0.0.x 开发期，< 0.1.0） |
+| 前端构建包 | `Lax/git-fit-web` → GitHub Packages `@lax/{shared,core,plugin-data-source,plugin-nav,theme-hello-world,theme-stats,theme-timeline,web-build}`（0.0.x 开发期，< 0.1.0） |
 | 构建 action | `git-fit-actions/frontend-build@v1`（`npm ci` + `npx git-fit-web build`） |
-| workouts 依赖 | 根 `package.json`（6 个 `@lax` 包）+ `package-lock.json` + `.npmrc`（`@lax:registry`） |
+| workouts 依赖 | 根 `package.json`（7 个 `@lax` 包）+ `package-lock.json` + `.npmrc`（`@lax:registry`） |
 | 权限 | 私有包安装需 `packages: read`；同账号（Lax）GITHUB_TOKEN 可用，跨账号需 PAT |
 
 ### 前端架构
@@ -299,12 +311,22 @@ site.<field>                    →  全局默认
 | `@lax/plugin-nav` | 插件 | 纯视图浮动导航（右下角 + 弹层页面链接 + 🌙/☀️） |
 | `@lax/theme-hello-world` | 主题 | 依赖/工具版本总览（验证主题） |
 | `@lax/theme-stats` | 主题 | 八区块统计看板（Overview/Highlights/LinkedTimeChart/Yearly/Monthly/YoY/Composition/Consistency） |
+| `@lax/theme-timeline` | 主题 | 纵向时间线视图（月时间轴 + 活动卡片 + 左侧统计/详情双态面板 + 赛事匹配） |
 
 **运行机制**：`bootstrap(config, { theme, plugins })` 依次 setup 各插件的 `registerComponent`，主题 Layout 用 `useComponent(pluginId, name)` 查 registry 渲染；`config.plugins`（JSON 装不下 JS 插件）由 web-build 在 entry shim 中生成 `import pluginN from '<包名>'` 注入 bootstrap——站点级声明一次，所有 entry 含未来主题自动生效。
 
 **导航分工**（避免 core↔plugin-nav 循环依赖）：core `SiteNav` host 无条件挂载，负责读 `entries` + `detectCurrentKey`（pathname 解析）+ toggle 状态 + `config.nav` 两级解析，经 registry 查 `nav:SiteNav`——无注册则不渲染；plugin-nav 只提供纯视图（依赖单向 plugin-nav → core）。`config.nav: false` 禁用，`labels` 覆盖默认 humanize 标签。
 
 **theme-stats 主题**：数据经 plugin-data-source `useStats` 从 `stats.json` 加载；8 个 section（现状焦点 / 高光卡 / 四面板 crosshair 趋势 / 年度 / 月度明细（年份头部 `← 2026 →`）/ YoY 热力图 / 运动构成 / 坚持度）；URL hash 同步（`#year&metric&category`）+ 深浅色板。详见 [issue #14](https://github.com/Lax/workouts/issues/14)。
+
+**theme-timeline 主题**：纵向时间线。屏幕中央竖直月时间轴，右侧每月份活动卡片（时间/距离/类型 + 小字效率 HR/步频/配速 + 轨迹背景 SVG），左侧常驻面板默认统计（总览卡 + IntersectionObserver 滚动联动当前月份），点卡片切详情标签页（总览 / 轨迹 / 赛事 / 分段占位）。赛事数据源 races.json（newbie.run 一次性迁移），三层 merge（`themes.timeline.events` > `events` > races.json，同 id 字段覆盖），活动发生地日期命中赛事当天全天（含跨午夜）→ 卡片徽章高亮（零布局位移）。URL hash `#a=<run_id>` 深链。详见 [issue #22](https://github.com/Lax/workouts/issues/22)。
+
+**全项目时间规则**：活动时间一律按活动发生当地的时间展示。三级回退链（`theme-timeline/src/time.ts`）：
+1. `start_date_local` 带时区偏移（发生地时区已固化在数据）→ 直接取墙上钟（`slice`，无 TZ 转换，跨 `+08`/`+09` 时区稳定）
+2. 无偏移 / 仅有 UTC `start_date` → 按浏览器本地时区解析
+3. 仍然无法确定（浏览器 TZ API 不可用等）→ 最后回退东八区（`Asia/Shanghai`）
+
+**赛事数据管道**：newbie.run `_data/people/lax/races.yml`（17 场参赛列表）+ `_data/races/{YYYY}/{MM}/{slug}.yml`（定义）经 `scripts/migrate_races.rb` 一次性迁移 → `data/events/races.json`（扁平 JSON，`{events:[{id,name,date,place,categories,result,links}]}`，git 追踪）；gh-pages.yml 构建前 `jq -c . data/events/races.json > site/races.json`（压缩单行）。无 newbie.run 运行时依赖，赛事变更时重跑脚本。
 
 ---
 
@@ -467,8 +489,8 @@ manage job (runs-on: ${{ vars.RUNNER_LABEL || 'ubuntu-latest' }}):
 |---|---|
 | Pages 源 | GitHub Actions |
 | URL | `https://lax.github.io/workouts/` |
-| 数据制品 | `activities.json` / `tracks.json` / `stats.json`（排除 DB） |
-| 前端页面 | `index.html`（hello-world）/ `stats.html`（theme-stats 看板） |
+| 数据制品 | `activities.json` / `tracks.json` / `stats.json` / `races.json`（排除 DB） |
+| 前端页面 | `index.html`（theme-timeline 时间线）/ `stats.html`（theme-stats 看板）/ `about.html`（hello-world） |
 | 独立前端 | `https://lax.github.io/running/`（Lax/running running_page 看板，消费本仓库数据） |
 
 ---
