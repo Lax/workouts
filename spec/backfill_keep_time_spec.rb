@@ -6,9 +6,11 @@ RSpec.describe "backfill-keep-time.yml" do
   let(:steps) { yaml.dig("jobs", "backfill", "steps") }
 
   describe "triggers" do
-    it "supports workflow_dispatch" do
+    it "supports workflow_dispatch with source input" do
       on = workflow_on(yaml)
-      expect(on).to have_key("workflow_dispatch")
+      inputs = on.dig("workflow_dispatch", "inputs")
+      expect(inputs).to have_key("source")
+      expect(inputs["source"]["type"]).to eq("choice")
     end
 
     it "runs weekly as a safety net" do
@@ -44,25 +46,47 @@ RSpec.describe "backfill-keep-time.yml" do
     end
   end
 
-  describe "backfill script" do
-    it "runs the backfill script" do
-      backfill = steps.find { |s| s["id"] == "backfill" }
-      expect(backfill).not_to be_nil
-      expect(backfill["run"]).to include("backfill_keep_time.rb")
-      expect(backfill["run"]).to include("--db-path")
+  describe "backfill steps" do
+    it "runs Keep backfill with --source keep" do
+      keep = steps.find { |s| s["id"] == "backfill-keep" }
+      expect(keep).not_to be_nil
+      expect(keep["run"]).to include("backfill_keep_time.rb")
+      expect(keep["run"]).to include("--source keep")
     end
 
-    it "sets GIT_FIT_SYSTEM_TIMEZONE" do
-      backfill = steps.find { |s| s["id"] == "backfill" }
-      expect(backfill.dig("env", "GIT_FIT_SYSTEM_TIMEZONE")).to include("Asia/Shanghai")
+    it "runs Strava backfill with --source strava" do
+      strava = steps.find { |s| s["id"] == "backfill-strava" }
+      expect(strava).not_to be_nil
+      expect(strava["run"]).to include("--source strava")
+    end
+
+    it "runs iGPSPORT backfill with --source igpsport" do
+      igpsport = steps.find { |s| s["id"] == "backfill-igpsport" }
+      expect(igpsport).not_to be_nil
+      expect(igpsport["run"]).to include("--source igpsport")
+    end
+
+    it "Keep backfill sets GIT_FIT_SYSTEM_TIMEZONE" do
+      keep = steps.find { |s| s["id"] == "backfill-keep" }
+      expect(keep.dig("env", "GIT_FIT_SYSTEM_TIMEZONE")).to include("Asia/Shanghai")
+    end
+  end
+
+  describe "total updates computation" do
+    it "sums updates from all backfill steps" do
+      total = steps.find { |s| s["id"] == "total" }
+      expect(total).not_to be_nil
+      expect(total["run"]).to include("backfill-keep")
+      expect(total["run"]).to include("backfill-strava")
+      expect(total["run"]).to include("backfill-igpsport")
     end
   end
 
   describe "conditional downstream" do
-    it "checkpoint runs only when updated > 0" do
+    it "checkpoint runs only when total updated > 0" do
       checkpoint = steps.find { |s| s["name"]&.downcase&.include?("checkpoint") }
       expect(checkpoint).not_to be_nil
-      expect(checkpoint["if"]).to include("steps.backfill.outputs.updated > 0")
+      expect(checkpoint["if"]).to include("steps.total.outputs.updated > 0")
     end
 
     it "DB save always runs (SHA256 handles idempotency)" do
@@ -71,16 +95,16 @@ RSpec.describe "backfill-keep-time.yml" do
       expect(save["if"]).to eq("always()")
     end
 
-    it "git save gate runs only when updated > 0" do
+    it "git save gate runs only when total updated > 0" do
       gate = steps.find { |s| s["name"]&.include?("Gate git save") }
       expect(gate).not_to be_nil
-      expect(gate["if"]).to include("steps.backfill.outputs.updated > 0")
+      expect(gate["if"]).to include("steps.total.outputs.updated > 0")
     end
 
-    it "gh-pages trigger runs only when updated > 0" do
+    it "gh-pages trigger runs only when total updated > 0" do
       trigger = steps.find { |s| s["name"]&.include?("gh-pages") }
       expect(trigger).not_to be_nil
-      expect(trigger["if"]).to include("steps.backfill.outputs.updated > 0")
+      expect(trigger["if"]).to include("steps.total.outputs.updated > 0")
     end
   end
 

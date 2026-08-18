@@ -1,7 +1,18 @@
-name: "[Backfill] Keep start_date_local"
+name: "[Backfill] datetime format"
 
 on:
   workflow_dispatch:
+    inputs:
+      source:
+        description: 'Source to backfill (empty = all)'
+        required: false
+        type: choice
+        default: ''
+        options:
+          - ''
+          - keep
+          - strava
+          - igpsport
   schedule:
     # Weekly safety net — idempotent, no side effects when nothing to fix.
     - cron: '0 4 * * 0'
@@ -48,19 +59,53 @@ jobs:
         with:
           sources: keep
 
-      # ── Backfill ──
-      - name: Backfill Keep start_date_local
-        id: backfill
+      # ── Backfill Keep (from raw files + GPS/region TZ) ──
+      - name: Backfill Keep
+        id: backfill-keep
+        if: inputs.source == '' || inputs.source == 'keep'
         shell: bash
         env:
           GIT_FIT_SYSTEM_TIMEZONE: ${{ vars.GIT_FIT_SYSTEM_TIMEZONE || 'Asia/Shanghai' }}
         run: |
           bundle exec ruby scripts/backfill_keep_time.rb \
-            --db-path "${{ steps.db-paths.outputs.db-path }}"
+            --db-path "${{ steps.db-paths.outputs.db-path }}" \
+            --source keep
+
+      # ── Backfill Strava (offset inference from start_date/start_date_local) ──
+      - name: Backfill Strava
+        id: backfill-strava
+        if: inputs.source == '' || inputs.source == 'strava'
+        shell: bash
+        run: |
+          bundle exec ruby scripts/backfill_keep_time.rb \
+            --db-path "${{ steps.db-paths.outputs.db-path }}" \
+            --source strava
+
+      # ── Backfill iGPSPORT (offset inference from start_date/start_date_local) ──
+      - name: Backfill iGPSPORT
+        id: backfill-igpsport
+        if: inputs.source == '' || inputs.source == 'igpsport'
+        shell: bash
+        run: |
+          bundle exec ruby scripts/backfill_keep_time.rb \
+            --db-path "${{ steps.db-paths.outputs.db-path }}" \
+            --source igpsport
+
+      # ── Compute total updates ──
+      - name: Compute total updates
+        id: total
+        shell: bash
+        run: |
+          keep=${{ steps.backfill-keep.outputs.updated || '0' }}
+          strava=${{ steps.backfill-strava.outputs.updated || '0' }}
+          igpsport=${{ steps.backfill-igpsport.outputs.updated || '0' }}
+          total=$((keep + strava + igpsport))
+          echo "updated=$total" >> "$GITHUB_OUTPUT"
+          echo "backfill: keep=$keep strava=$strava igpsport=$igpsport total=$total"
 
       # ── WAL checkpoint (only if changes were made) ──
       - name: '[db] Checkpoint SQLite WAL'
-        if: steps.backfill.outputs.updated > 0
+        if: steps.total.outputs.updated > 0
         shell: bash
         env:
           DB_PATH: ${{ steps.db-paths.outputs.db-path }}
@@ -75,7 +120,7 @@ jobs:
       # ── DB save ──
       - name: '[db] Gate git save on job success'
         id: git-save-gate
-        if: success() && steps.backfill.outputs.updated > 0
+        if: success() && steps.total.outputs.updated > 0
         shell: bash
         run: echo "save-to-git-branch=${{ steps.db-restore.outputs.save-to-git-branch }}" >> "$GITHUB_OUTPUT"
 
@@ -89,7 +134,7 @@ jobs:
 
       # ── Deploy (only if DB changed) ──
       - name: Trigger gh-pages deploy
-        if: steps.backfill.outputs.updated > 0
+        if: steps.total.outputs.updated > 0
         run: |
           gh workflow run gh-pages.yml --ref master
         env:
