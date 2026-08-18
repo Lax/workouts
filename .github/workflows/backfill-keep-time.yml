@@ -1,0 +1,96 @@
+name: "[Backfill] Keep start_date_local"
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Weekly safety net — idempotent, no side effects when nothing to fix.
+    - cron: '0 4 * * 0'
+
+jobs:
+  backfill:
+    concurrency:
+      group: workouts-db
+      cancel-in-progress: false
+    runs-on: ${{ vars.RUNNER_LABEL || 'ubuntu-latest' }}
+    permissions:
+      contents: write
+      actions: write
+    env:
+      GIT_FIT_DATABASE_PATH: ${{ vars.GIT_FIT_DATABASE_PATH || 'data/db/workouts.db' }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.4'
+          bundler-cache: true
+
+      # ── DB paths ──
+      - name: '[db] Derive database paths'
+        id: db-paths
+        uses: git-fit-actions/db-store/paths@v1
+        with:
+          database-path: ${{ env.GIT_FIT_DATABASE_PATH }}
+
+      # ── DB restore ──
+      - name: '[db] Restore cache'
+        id: db-restore
+        uses: git-fit-actions/db-store/cache/restore@v1
+        with:
+          db-dir: ${{ steps.db-paths.outputs.dir }}
+          db-name: ${{ steps.db-paths.outputs.name }}
+          git-restore-mode: fallback
+          git-branch: GitFit/db
+
+      # ── Keep raw data restore ──
+      - name: Restore keep data cache
+        uses: git-fit-actions/data-store/cache/restore@v2
+        with:
+          sources: keep
+
+      # ── Backfill ──
+      - name: Backfill Keep start_date_local
+        id: backfill
+        shell: bash
+        env:
+          GIT_FIT_SYSTEM_TIMEZONE: ${{ vars.GIT_FIT_SYSTEM_TIMEZONE || 'Asia/Shanghai' }}
+        run: |
+          bundle exec ruby scripts/backfill_keep_time.rb \
+            --db-path "${{ steps.db-paths.outputs.db-path }}"
+
+      # ── WAL checkpoint (only if changes were made) ──
+      - name: '[db] Checkpoint SQLite WAL'
+        if: steps.backfill.outputs.updated > 0
+        shell: bash
+        env:
+          DB_PATH: ${{ steps.db-paths.outputs.db-path }}
+        run: |
+          bundle exec ruby -e '
+            require "sequel"
+            db = Sequel.sqlite(ENV.fetch("DB_PATH"))
+            db.run("PRAGMA wal_checkpoint(TRUNCATE)")
+            print File.size(ENV.fetch("DB_PATH"))
+          '
+
+      # ── DB save ──
+      - name: '[db] Gate git save on job success'
+        id: git-save-gate
+        if: success() && steps.backfill.outputs.updated > 0
+        shell: bash
+        run: echo "save-to-git-branch=${{ steps.db-restore.outputs.save-to-git-branch }}" >> "$GITHUB_OUTPUT"
+
+      - name: '[db] Save cache'
+        if: always()
+        uses: git-fit-actions/db-store/cache/save@v1
+        with:
+          db-dir: ${{ steps.db-paths.outputs.dir }}
+          db-name: ${{ steps.db-paths.outputs.name }}
+          save-to-git-branch: ${{ steps.git-save-gate.outputs.save-to-git-branch || 'false' }}
+
+      # ── Deploy (only if DB changed) ──
+      - name: Trigger gh-pages deploy
+        if: steps.backfill.outputs.updated > 0
+        run: |
+          gh workflow run gh-pages.yml --ref master
+        env:
+          GH_TOKEN: ${{ github.token }}
