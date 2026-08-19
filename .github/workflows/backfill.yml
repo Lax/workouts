@@ -20,7 +20,6 @@ jobs:
     runs-on: ${{ vars.RUNNER_LABEL || 'ubuntu-latest' }}
     permissions:
       contents: write
-      actions: write
     env:
       GIT_FIT_DATABASE_PATH: ${{ vars.GIT_FIT_DATABASE_PATH || 'data/db/workouts.db' }}
     steps:
@@ -177,11 +176,3 @@ jobs:
           db-dir: ${{ steps.db-paths.outputs.dir }}
           db-name: ${{ steps.db-paths.outputs.name }}
           save-to-git-branch: ${{ steps.git-save-gate.outputs.save-to-git-branch || 'false' }}
-
-      # ── Deploy (only if DB changed) ──
-      - name: Trigger gh-pages deploy
-        if: steps.total.outputs.updated > 0
-        run: |
-          gh workflow run gh-pages.yml --ref master
-        env:
-          GH_TOKEN: ${{ github.token }}
