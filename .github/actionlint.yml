@@ -3,3 +3,7 @@ paths:
     ignore:
       # '' choice option is a valid "empty = all sources" value.
       - 'string should not be empty'
+  .github/workflows/git-fit-archive.yml:
+    ignore:
+      # '' choice option is a valid "empty = all sources" value.
+      - 'string should not be empty'

@@ -6,12 +6,24 @@ on:
   workflow_dispatch:
     inputs:
       source:
-        description: 'Single source to archive (empty = all)'
+        description: 'Source to archive (empty = all sources, db = DB only)'
         required: false
-        type: string
+        type: choice
+        default: ''
+        options:
+          - ''
+          - db
+          - keep
+          - igpsport
+          - xoss
+          - xingzhe
+          - garmin
+          - garmin_cn
+          - strava
 
 jobs:
   archive:
+    if: ${{ inputs.source != 'db' }}
     concurrency:
       group: archive-${{ matrix.source }}
       cancel-in-progress: false
@@ -85,6 +97,7 @@ jobs:
           git push origin "HEAD:$BRANCH"
 
   archive-db:
+    if: ${{ inputs.source == 'db' || inputs.source == '' }}
     runs-on: ${{ vars.RUNNER_LABEL || 'ubuntu-latest' }}
     permissions:
       contents: write
