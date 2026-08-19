@@ -58,7 +58,7 @@ jobs:
         if: inputs.source == '' || inputs.source == 'keep'
         uses: git-fit-actions/data-store/cache/restore@v2
         with:
-          sources: keep,strava,igpsport
+          sources: keep
 
       # ── Strava raw data restore ──
       - name: Restore strava data cache
