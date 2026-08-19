@@ -57,7 +57,7 @@ jobs:
       - name: Restore keep data cache
         uses: git-fit-actions/data-store/cache/restore@v2
         with:
-          sources: keep
+          sources: keep,strava,igpsport
 
       # ── Backfill Keep (from raw files + GPS/region TZ) ──
       - name: Backfill Keep
