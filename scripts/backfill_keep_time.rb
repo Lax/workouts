@@ -317,7 +317,14 @@ rows.each do |row|
 
   updated += 1
   if updated <= 5 || updated % 100 == 0
-    puts "  #{run_id}: #{current_sdl} -> #{targets[:start_date_local]}"
+    sd_changed = current_sd != targets[:start_date]
+    sdl_changed = current_sdl != targets[:start_date_local]
+    if sd_changed
+      puts "  #{run_id}: sd #{current_sd} -> #{targets[:start_date]}"
+    end
+    if sdl_changed
+      puts "  #{run_id}: sdl #{current_sdl} -> #{targets[:start_date_local]}"
+    end
   end
 end
 
@@ -329,7 +336,7 @@ puts "backfill [#{source}]: done"
 puts "  total:   #{rows.size}"
 puts "  updated: #{updated}"
 puts "  skipped: #{skipped}"
-puts "  missing: #{raw_missing}" if source == "keep"
+puts "  missing: #{raw_missing}" if source == "keep" || source == "strava"
 puts "  errors:  #{errors}"
 puts "  dry-run: #{dry_run}" if dry_run
 
