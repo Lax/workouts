@@ -146,10 +146,9 @@ RSpec.describe "backfill.yml" do
       expect(gate["if"]).to include("steps.total.outputs.updated > 0")
     end
 
-    it "gh-pages trigger runs only when total updated > 0" do
+    it "no gh-pages trigger step (deployment waits for next natural trigger)" do
       trigger = steps.find { |s| s["name"]&.include?("gh-pages") }
-      expect(trigger).not_to be_nil
-      expect(trigger["if"]).to include("steps.total.outputs.updated > 0")
+      expect(trigger).to be_nil
     end
   end
 
