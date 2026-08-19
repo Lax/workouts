@@ -1,6 +1,6 @@
 source "https://rubygems.org"
 
-gem "git-fit", "~> 0.15.2"
+gem "git-fit", "~> 0.15.4"
 
 group :development do
   gem "rake", "~> 13.0"
