@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
-RSpec.describe "backfill-keep-time.yml" do
-  let(:yaml) { load_workflow("backfill-keep-time.yml") }
-  let(:content) { File.read(workflow_path("backfill-keep-time.yml")) }
+RSpec.describe "backfill.yml" do
+  let(:yaml) { load_workflow("backfill.yml") }
+  let(:content) { File.read(workflow_path("backfill.yml")) }
   let(:steps) { yaml.dig("jobs", "backfill", "steps") }
 
   describe "triggers" do
@@ -59,6 +59,20 @@ RSpec.describe "backfill-keep-time.yml" do
       expect(igpsport_restore.dig("with", "sources")).to eq("igpsport")
       expect(igpsport_restore["if"]).to include("inputs.source")
     end
+
+    it "restores garmin data when source=garmin" do
+      garmin_restore = steps.find { |s| s["name"]&.include?("Restore garmin data") }
+      expect(garmin_restore).not_to be_nil
+      expect(garmin_restore.dig("with", "sources")).to eq("garmin")
+      expect(garmin_restore["if"]).to include("inputs.source")
+    end
+
+    it "restores garmin_cn data when source=garmin_cn" do
+      garmin_cn_restore = steps.find { |s| s["name"]&.include?("Restore garmin_cn data") }
+      expect(garmin_cn_restore).not_to be_nil
+      expect(garmin_cn_restore.dig("with", "sources")).to eq("garmin_cn")
+      expect(garmin_cn_restore["if"]).to include("inputs.source")
+    end
   end
 
   describe "backfill steps" do
@@ -85,6 +99,20 @@ RSpec.describe "backfill-keep-time.yml" do
       keep = steps.find { |s| s["id"] == "backfill-keep" }
       expect(keep.dig("env", "GIT_FIT_SYSTEM_TIMEZONE")).to include("Asia/Shanghai")
     end
+
+    it "runs Garmin backfill with --source garmin" do
+      garmin = steps.find { |s| s["id"] == "backfill-garmin" }
+      expect(garmin).not_to be_nil
+      expect(garmin["run"]).to include("backfill_garmin_temperature.rb")
+      expect(garmin["run"]).to include("--source garmin")
+    end
+
+    it "runs Garmin CN backfill with --source garmin_cn" do
+      garmin_cn = steps.find { |s| s["id"] == "backfill-garmin-cn" }
+      expect(garmin_cn).not_to be_nil
+      expect(garmin_cn["run"]).to include("backfill_garmin_temperature.rb")
+      expect(garmin_cn["run"]).to include("--source garmin_cn")
+    end
   end
 
   describe "total updates computation" do
@@ -94,6 +122,8 @@ RSpec.describe "backfill-keep-time.yml" do
       expect(total["run"]).to include("backfill-keep")
       expect(total["run"]).to include("backfill-strava")
       expect(total["run"]).to include("backfill-igpsport")
+      expect(total["run"]).to include("backfill-garmin")
+      expect(total["run"]).to include("backfill-garmin-cn")
     end
   end
 

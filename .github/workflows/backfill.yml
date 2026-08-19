@@ -1,4 +1,4 @@
-name: "[Backfill] datetime format"
+name: "[Backfill] datetime + temperature"
 
 on:
   workflow_dispatch:
@@ -69,6 +69,20 @@ jobs:
         with:
           sources: igpsport
 
+      # ── Garmin raw data restore ──
+      - name: Restore garmin data cache
+        if: inputs.source == 'all' || inputs.source == 'garmin'
+        uses: git-fit-actions/data-store/cache/restore@v2
+        with:
+          sources: garmin
+
+      # ── Garmin CN raw data restore ──
+      - name: Restore garmin_cn data cache
+        if: inputs.source == 'all' || inputs.source == 'garmin_cn'
+        uses: git-fit-actions/data-store/cache/restore@v2
+        with:
+          sources: garmin_cn
+
       # ── Backfill Keep (from raw files + GPS/region TZ) ──
       - name: Backfill Keep
         id: backfill-keep
@@ -101,6 +115,26 @@ jobs:
             --db-path "${{ steps.db-paths.outputs.db-path }}" \
             --source igpsport
 
+      # ── Backfill Garmin (temperature from raw detail.json summaryDTO) ──
+      - name: Backfill Garmin
+        id: backfill-garmin
+        if: inputs.source == 'all' || inputs.source == 'garmin'
+        shell: bash
+        run: |
+          bundle exec ruby scripts/backfill_garmin_temperature.rb \
+            --db-path "${{ steps.db-paths.outputs.db-path }}" \
+            --source garmin
+
+      # ── Backfill Garmin CN (temperature from raw detail.json summaryDTO) ──
+      - name: Backfill Garmin CN
+        id: backfill-garmin-cn
+        if: inputs.source == 'all' || inputs.source == 'garmin_cn'
+        shell: bash
+        run: |
+          bundle exec ruby scripts/backfill_garmin_temperature.rb \
+            --db-path "${{ steps.db-paths.outputs.db-path }}" \
+            --source garmin_cn
+
       # ── Compute total updates ──
       - name: Compute total updates
         id: total
@@ -109,9 +143,11 @@ jobs:
           keep=${{ steps.backfill-keep.outputs.updated || '0' }}
           strava=${{ steps.backfill-strava.outputs.updated || '0' }}
           igpsport=${{ steps.backfill-igpsport.outputs.updated || '0' }}
-          total=$((keep + strava + igpsport))
+          garmin=${{ steps.backfill-garmin.outputs.updated || '0' }}
+          garmin_cn=${{ steps.backfill-garmin-cn.outputs.updated || '0' }}
+          total=$((keep + strava + igpsport + garmin + garmin_cn))
           echo "updated=$total" >> "$GITHUB_OUTPUT"
-          echo "backfill: keep=$keep strava=$strava igpsport=$igpsport total=$total"
+          echo "backfill: keep=$keep strava=$strava igpsport=$igpsport garmin=$garmin garmin_cn=$garmin_cn total=$total"
 
       # ── WAL checkpoint (only if changes were made) ──
       - name: '[db] Checkpoint SQLite WAL'
