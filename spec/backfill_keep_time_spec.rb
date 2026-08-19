@@ -38,11 +38,25 @@ RSpec.describe "backfill-keep-time.yml" do
     end
   end
 
-  describe "Keep data restore" do
-    it "restores only keep source" do
-      data_restore = steps.find { |s| s["uses"]&.include?("data-store/cache/restore") }
+  describe "data restore" do
+    it "restores only keep source when source=keep" do
+      data_restore = steps.find { |s| s["name"]&.include?("Restore keep") }
       expect(data_restore).not_to be_nil
-      expect(data_restore.dig("with", "sources")).to eq("keep")
+      expect(data_restore["if"]).to include("inputs.source")
+    end
+
+    it "restores strava data when source=strava" do
+      strava_restore = steps.find { |s| s["name"]&.include?("Restore strava") }
+      expect(strava_restore).not_to be_nil
+      expect(strava_restore.dig("with", "sources")).to eq("strava")
+      expect(strava_restore["if"]).to include("inputs.source")
+    end
+
+    it "restores igpsport data when source=igpsport" do
+      igpsport_restore = steps.find { |s| s["name"]&.include?("Restore igpsport") }
+      expect(igpsport_restore).not_to be_nil
+      expect(igpsport_restore.dig("with", "sources")).to eq("igpsport")
+      expect(igpsport_restore["if"]).to include("inputs.source")
     end
   end
 

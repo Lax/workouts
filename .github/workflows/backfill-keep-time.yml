@@ -4,12 +4,12 @@ on:
   workflow_dispatch:
     inputs:
       source:
-        description: 'Source to backfill (all|keep|strava|igpsport)'
+        description: 'Source to backfill (empty = all)'
         required: false
         type: choice
-        default: all
+        default: ''
         options:
-          - all
+          - ''
           - keep
           - strava
           - igpsport
@@ -55,14 +55,29 @@ jobs:
 
       # ── Keep raw data restore ──
       - name: Restore keep data cache
+        if: inputs.source == '' || inputs.source == 'keep'
         uses: git-fit-actions/data-store/cache/restore@v2
         with:
           sources: keep,strava,igpsport
 
+      # ── Strava raw data restore ──
+      - name: Restore strava data cache
+        if: inputs.source == '' || inputs.source == 'strava'
+        uses: git-fit-actions/data-store/cache/restore@v2
+        with:
+          sources: strava
+
+      # ── iGPSPORT raw data restore ──
+      - name: Restore igpsport data cache
+        if: inputs.source == '' || inputs.source == 'igpsport'
+        uses: git-fit-actions/data-store/cache/restore@v2
+        with:
+          sources: igpsport
+
       # ── Backfill Keep (from raw files + GPS/region TZ) ──
       - name: Backfill Keep
         id: backfill-keep
-        if: inputs.source == 'all' || inputs.source == 'keep'
+        if: inputs.source == '' || inputs.source == 'keep'
         shell: bash
         env:
           GIT_FIT_SYSTEM_TIMEZONE: ${{ vars.GIT_FIT_SYSTEM_TIMEZONE || 'Asia/Shanghai' }}
@@ -71,10 +86,10 @@ jobs:
             --db-path "${{ steps.db-paths.outputs.db-path }}" \
             --source keep
 
-      # ── Backfill Strava (offset inference from start_date/start_date_local) ──
+      # ── Backfill Strava (from raw archive + timezone field) ──
       - name: Backfill Strava
         id: backfill-strava
-        if: inputs.source == 'all' || inputs.source == 'strava'
+        if: inputs.source == '' || inputs.source == 'strava'
         shell: bash
         run: |
           bundle exec ruby scripts/backfill_keep_time.rb \
@@ -84,7 +99,7 @@ jobs:
       # ── Backfill iGPSPORT (offset inference from start_date/start_date_local) ──
       - name: Backfill iGPSPORT
         id: backfill-igpsport
-        if: inputs.source == 'all' || inputs.source == 'igpsport'
+        if: inputs.source == '' || inputs.source == 'igpsport'
         shell: bash
         run: |
           bundle exec ruby scripts/backfill_keep_time.rb \
