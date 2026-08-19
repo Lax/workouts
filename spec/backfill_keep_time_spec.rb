@@ -10,7 +10,8 @@ RSpec.describe "backfill-keep-time.yml" do
       on = workflow_on(yaml)
       inputs = on.dig("workflow_dispatch", "inputs")
       expect(inputs).to have_key("source")
-      expect(inputs["source"]["type"]).to eq("choice")
+      expect(inputs["source"]["type"]).to eq("string")
+      expect(inputs["source"]["default"]).to eq("all")
     end
 
     it "runs weekly as a safety net" do
