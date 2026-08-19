@@ -103,14 +103,14 @@ RSpec.describe "backfill.yml" do
     it "runs Garmin backfill with --source garmin" do
       garmin = steps.find { |s| s["id"] == "backfill-garmin" }
       expect(garmin).not_to be_nil
-      expect(garmin["run"]).to include("backfill_garmin_temperature.rb")
+      expect(garmin["run"]).to include("backfill_garmin_sensors.rb")
       expect(garmin["run"]).to include("--source garmin")
     end
 
     it "runs Garmin CN backfill with --source garmin_cn" do
       garmin_cn = steps.find { |s| s["id"] == "backfill-garmin-cn" }
       expect(garmin_cn).not_to be_nil
-      expect(garmin_cn["run"]).to include("backfill_garmin_temperature.rb")
+      expect(garmin_cn["run"]).to include("backfill_garmin_sensors.rb")
       expect(garmin_cn["run"]).to include("--source garmin_cn")
     end
   end

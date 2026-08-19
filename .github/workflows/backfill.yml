@@ -115,23 +115,23 @@ jobs:
             --db-path "${{ steps.db-paths.outputs.db-path }}" \
             --source igpsport
 
-      # ── Backfill Garmin (temperature from raw detail.json summaryDTO) ──
+      # ── Backfill Garmin (temperature/cadence/power from raw detail.json) ──
       - name: Backfill Garmin
         id: backfill-garmin
         if: inputs.source == 'all' || inputs.source == 'garmin'
         shell: bash
         run: |
-          bundle exec ruby scripts/backfill_garmin_temperature.rb \
+          bundle exec ruby scripts/backfill_garmin_sensors.rb \
             --db-path "${{ steps.db-paths.outputs.db-path }}" \
             --source garmin
 
-      # ── Backfill Garmin CN (temperature from raw detail.json summaryDTO) ──
+      # ── Backfill Garmin CN (temperature/cadence/power from raw detail.json) ──
       - name: Backfill Garmin CN
         id: backfill-garmin-cn
         if: inputs.source == 'all' || inputs.source == 'garmin_cn'
         shell: bash
         run: |
-          bundle exec ruby scripts/backfill_garmin_temperature.rb \
+          bundle exec ruby scripts/backfill_garmin_sensors.rb \
             --db-path "${{ steps.db-paths.outputs.db-path }}" \
             --source garmin_cn
 
