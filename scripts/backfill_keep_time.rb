@@ -5,8 +5,13 @@
 #
 # Sources supported:
 #   keep     — reads raw JSON files, recomputes from epoch ms + GPS/region TZ
-#   strava   — computes offset from start_date (UTC) - start_date_local (naive)
+#   strava   — reads raw archive JSON, uses start_date (UTC) + timezone field
 #   igpsport — computes offset from start_date (UTC) - start_date_local (naive)
+#
+# For Strava, the raw archive (data/raw/strava/<id>.json) contains the original
+# API response with correct start_date (UTC) and timezone field. The old gem
+# stored start_date_local with a wrong "Z" suffix (claiming UTC when it's local
+# wall clock), and the DB stripped the marker, leaving naive strings.
 #
 # This script only writes when the DB value differs. Repeated runs with no
 # changes produce zero updates (verified: db-store SHA256 checksums stay identical).
@@ -123,7 +128,47 @@ def compute_keep_targets(raw_data, keep_id, std_dir, finder, default_tz)
   {start_date: target_start_date, start_date_local: target_start_date_local}
 end
 
-# --- Strava / iGPSPORT helpers (offset inference) ---
+# --- Strava helpers (raw archive) ---
+
+def parse_tz_offset(tz_str)
+  return nil unless tz_str
+
+  # "(GMT+08:00) Asia/Shanghai" → "+08:00"
+  match = tz_str.match(/GMT([+-]\d{2}:\d{2})/)
+  return match[1] if match
+
+  nil
+end
+
+def compute_strava_targets_from_raw(raw_path)
+  return nil unless File.exist?(raw_path)
+
+  raw_data = JSON.parse(File.read(raw_path))
+  detail = raw_data["detail"]
+  return nil unless detail
+
+  sd = detail["start_date"]
+  sdl = detail["start_date_local"]
+  tz = detail["timezone"]
+  return nil unless sd && sdl && tz
+
+  offset_str = parse_tz_offset(tz)
+  return nil unless offset_str
+
+  # start_date is already correct ISO 8601 UTC
+  target_start_date = sd
+
+  # start_date_local in raw has wrong "Z" suffix — extract wall clock and
+  # reformat with the correct offset from the timezone field.
+  wall_clock = sdl.sub(/Z$/, "")
+  target_start_date_local = "#{wall_clock}#{offset_str}"
+
+  {start_date: target_start_date, start_date_local: target_start_date_local}
+rescue JSON::ParserError
+  nil
+end
+
+# --- iGPSPORT helpers (offset inference) ---
 
 def parse_utc(sd)
   return nil if sd.nil? || sd.empty?
@@ -240,7 +285,15 @@ rows.each do |row|
     end
     raw_data = JSON.parse(File.read(raw_path))
     compute_keep_targets(raw_data, platform_id, options[:std_dir], finder, default_tz)
-  when "strava", "igpsport"
+  when "strava"
+    platform_id = run_id.to_s.sub(/\Astrava_/, "")
+    raw_path = File.join(options[:raw_dir], "#{platform_id}.json")
+    unless File.exist?(raw_path)
+      raw_missing += 1
+      next
+    end
+    compute_strava_targets_from_raw(raw_path)
+  when "igpsport"
     compute_offset_targets(row)
   end
 
