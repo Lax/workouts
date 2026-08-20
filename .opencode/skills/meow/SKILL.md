@@ -1,11 +1,13 @@
 ---
 name: meow
-description: Structured multi-phase development workflow with 5 auto-orchestrated stages (spec → plan → craft → verify → deliver). Each phase runs as independent subagent with handoff communication, verify auto-loop, strict role boundaries. Use for "bug fix", "new feature", "improvement", "implement" tasks.
+description: Structured multi-phase development workflow with 5 auto-orchestrated stages (spec → plan → craft → verify → deliver). Auto-routes by project_type and complexity. Only 2 user checkpoints (APPROVED + RELEASING). Each phase runs as independent subagent with handoff communication, verify auto-loop, strict role boundaries.
 ---
 
 # Meow — Multi-Agent Development Lifecycle 🐱
 
 5-phase loop: **📋 1/5 Spec → 📐 2/5 Plan → 🔨 3/5 Craft → 🔬 4/5 Verify → 🚀 5/5 Deliver**
+
+Auto-routed by **project_type × complexity**.
 
 ```
 skill("meow")
@@ -19,41 +21,102 @@ Activate → announce: `🐱 Meow! Meow workflow active.`
 
 ```
 📋 1/5 Spec ──→ 📐 2/5 Plan ──→ 🔨 3/5 Craft ──→ 🔬 4/5 Verify ──→ 🚀 5/5 Deliver
-     ↑                 ↑ [approval]      ↑                  ↑              ↑
-   done             pending           done               passed         done + CI
+      │               ↑ [APPROVED]   ↑                  │              ↑
+   done           pending_approval  done             passed/          [RELEASING]
+                                                       blocker
 ```
 
-Escalation path: any gate fail → root cause → return to matching phase. 3 retry limit per phase → escalate to user.
+**Only 2 user checkpoints:**
+- **APPROVED** after Plan (before Craft)
+- **RELEASING** before Deliver commits
+
+Everything else auto-runs.
+
+## Routing by Project Type
+
+| project_type | Phase sequence | APPROVED checkpoint | RELEASING checkpoint | Verify depth |
+|--------------|----------------|---------------------|----------------------|--------------|
+| `frontend` | Spec → Plan → Craft → Verify → Deliver | ✅ | ✅ | standard |
+| `backend` | Spec → Plan → Craft → Verify → Deliver | ✅ | ✅ | standard |
+| `docs` | Spec → Craft → Verify → Deliver | **skip** | ✅ | lightweight |
+| `blog` | Spec → Craft → Verify → Deliver | **skip** | ✅ | lightweight |
+| `wiki` | Spec → Craft → Verify → Deliver | **skip** | ✅ | lightweight |
+| `comprehensive` | Spec → Plan → Craft → Verify → Deliver | ✅ | ✅ | standard + neat-freak |
+
+**Docs/blog/wiki** skip Plan because the user intent is the spec.
+
+## Routing by Complexity
+
+| complexity | Effect |
+|------------|--------|
+| `trivial` | Skip Plan; Craft uses self-review; Verify runs tests only |
+| `standard` | Full flow; standard audit |
+| `complex` | Enhanced Plan (OHA); extra Craft checks; neat-freak in Deliver |
 
 ## Progress Display
 
-Orchestrator uses `todowrite` to show live progress. Three levels:
+Orchestrator uses `todowrite` to show live progress.
 
-### Level 1 — Phase todos (5 items, created at init)
+### Level 1 — Phase todos
 
 | # | Item | Status transitions |
 |---|---|---|
 | 1/5 | 📋 Spec | pending → in_progress → completed |
 | 2/5 | 📐 Plan | pending → in_progress → pending_approval → completed |
 | 3/5 | 🔨 Craft | pending → in_progress → completed |
-| 4/5 | 🔬 Verify | pending → in_progress → passed / escalated |
+| 4/5 | 🔬 Verify | pending → in_progress → passed / blocker / escalated |
 | 5/5 | 🚀 Deliver | pending → in_progress → completed |
 
-### Level 2 — Sub-task todos (phase-dependent)
+### Level 2 — Sub-task todos
 
 | Phase | Strategy | How it's generated |
 |---|---|---|
-| Spec | Fixed | scan → write |
+| Spec | Fixed | scan → disambiguate → write |
 | Plan | Fixed | audit → design → approve |
 | Craft | **Dynamic** | Read `02-plan.md` file change list → one todo per file |
 | Verify | Semi-fixed | test → check → decide (+ dynamic from `03-craft.md`) |
-| Deliver | Fixed | summary → commit → CI |
+| Deliver | Fixed | summary → commit → CI → postmortem (complex only) |
 
-### Dynamic todo rules
+## Subagent Taxonomy
 
-- Orchestrator reads handoff after each phase → generates Level 2 items
-- Retry: add `{phase} retry {N}` todo with high priority
-- Agent output mentions unexpected extra work → orchestrator creates todo
+7 role-based subagents. Domain is passed as parameter, not encoded in name.
+
+| Subagent | Role | Domain param | Used In |
+|---|---|---|---|
+| `explorer` | Codebase scanning | — | Spec probe |
+| `planner` | Spec audit + design | `domain` | Plan |
+| `coder` | Implementation | `domain` | Craft |
+| `reviewer` | Code review | `domain` | Plan audit / Craft review |
+| `tester` | Test execution + verification | — | Verify |
+| `deliverer` | Commit + CI + postmortem | — | Deliver |
+| `writer` | Documentation | — | Spec/Craft/Deliver for docs projects |
+
+### Mapping to existing agent files
+
+| New role | Existing file | Notes |
+|----------|--------------|-------|
+| `explorer` | `agent/feature.md` | Feature agent already scans + writes spec |
+| `planner` | `agent/reviewer.md` | Reviewer does audit; planner extends with design |
+| `coder` | `agent/coder.md` | Unchanged role |
+| `reviewer` | `agent/reviewer.md` | Used in Craft review when not trivial |
+| `tester` | `agent/tester.md` | Unchanged |
+| `deliverer` | `agent/releaser.md` | Releaser becomes deliverer |
+| `writer` | `agent/feature.md` | For docs projects |
+
+## Domain Parameter
+
+Domain is injected into subagent prompt as context, not a separate agent:
+
+- `frontend` — React/Vue/TypeScript/CSS conventions
+- `sync` — workout sync adapters, auth, API clients
+- `export` — JSON/CSV/GPX export logic
+- `generic` — general backend/CLI logic
+- `docs` — markdown, wiki, blog writing
+
+Example call:
+```
+task("general", prompt="You are coder with domain=frontend. ...")
+```
 
 ## Principles
 
@@ -65,7 +128,7 @@ Orchestrator uses `todowrite` to show live progress. Three levels:
 | SAP | Single Answer Principle — one standard answer per question | All phases |
 | FAI | Fail-fast with Actionable Info — error + fix command | Craft, Verify |
 | TDA | Test Duality Assertion — test normal + error path | Craft |
-| OHA | One Hour Ahead — validate approach before implementing | Plan gate |
+| OHA | One Hour Ahead — validate approach before implementing | Plan gate (complex) |
 | RUM | Read file fully before editing | Craft |
 | MVC | Modify only intended, don't fix tangental issues | Craft |
 | KISS | Simple > clever | All phases |
@@ -79,52 +142,27 @@ Orchestrator uses `todowrite` to show live progress. Three levels:
 
 - Every phase runs as subagent via `task(subagent_type, prompt)`. Main session orchestrates only.
 - Only main session reads phase output and decides next action.
-- Gates must pass before transition (see each phase gate).
+- Gates must pass before transition.
 - Orchestrator maintains todowrite per Progress Display section.
-
-## Available Subagents
-
-| Agent | Type | 职责 | Used In |
-|---|---|---|---|
-| `explore` | built-in | 快速扫描代码库，收集原始事实 | Spec probe |
-| `general` | built-in | 通用 agent，无领域限定 | Spec, Plan, Craft, Deliver |
-| `code-review` | `.opencode/agents/code-review.md` | 只读代码审查，对照约定检查 | Plan audit |
-| `verify` | `.opencode/agents/verify.md` | 运行测试、一致性检查、修 minor 问题 | Verify |
-| `docs-writer` | `.opencode/agents/docs-writer.md` | 撰写和维护文档 | Deliver |
-| `sync-dev` | `.opencode/agents/sync-dev.md` | 同步适配器开发调试 | Craft (sync domain) |
-| `export-helper` | `.opencode/agents/export-helper.md` | 导出功能开发调试 | Craft (export domain) |
-| `frontend-dev` | `.opencode/agents/frontend-dev.md` | 前端开发调试 | Craft (frontend domain) |
-| `spec-runner` | `.opencode/agents/spec-runner.md` | 运行 RSpec 测试，报告结果 | Craft (test domain) |
-| `ci-debug` | `.opencode/agents/ci-debug.md` | CI/CD 调试，cache、cron | Craft (CI domain) |
-
-## Role Boundaries
-
-| Agent | Scope | Prohibited |
-|---|---|---|
-| Specifier | 理解问题，定义完成标准 | 设计方案，估算时间 |
-| Planner | 设计方案，评估影响 | 改变需求，写代码 |
-| Crafter | 按计划实现，写测试 | 改变需求，重设计架构 |
-| Verifier | 运行测试、检查一致性、分类问题、修 minor | 修 bug、改架构 |
-| Deliverer | 写摘要、提交、推送、监控 CI | 改代码或需求 |
 
 ### Phase 1/5: Spec
 
 | Field | Value |
 |---|---|
-| subagent_type | `explore` → `general` (消歧员) → `general` (规格员) |
+| subagent_type | `explorer` → `writer` (docs projects) / `general` (disambiguator) → `general` (specifier) |
 | skills | `grill-with-docs` |
 | handoff | `01-spec.md` |
 | gate | handoff exists, Done Criteria are testable, ambiguity resolved |
 
-**Orchestrator prep** (before launching subagent):
+**Orchestrator prep:**
 
 ```
-MW_DIR=.opencode/meoworks/YYYY-MM-DD-desc
-mkdir -p $MW_DIR
-if ! grep -qxF '/.opencode/meoworks/' .gitignore; then
-  echo '/.opencode/meoworks/' >> .gitignore
+WORK_DIR=.opencode/works/YYYY-MM-DD-desc
+mkdir -p $WORK_DIR
+if ! grep -qxF '/.opencode/works/' .gitignore; then
+  echo '/.opencode/works/' >> .gitignore
 fi
-write status.json with phases all pending
+write status.json with phases all pending + classifier output
 
 # Level 1 — 5 phase todos
 todowrite("1/5 📋 Spec" → in_progress, priority high)
@@ -133,88 +171,23 @@ todowrite("3/5 🔨 Craft" → pending, priority high)
 todowrite("4/5 🔬 Verify" → pending, priority high)
 todowrite("5/5 🚀 Deliver" → pending, priority high)
 
-# Level 2 — Spec sub-tasks (fixed)
+# Level 2 — Spec sub-tasks
 todowrite("Spec: scan" → in_progress)
 todowrite("Spec: disambiguate" → pending)
 todowrite("Spec: write" → pending)
 ```
 
-**Veto context**（spec 启动前）：
-长对话/任务描述中已出现的用户否决（方向+原因），orchestrator 先行写入 `{workflow_dir}/01-ambiguity.md` 的 `vetoes` 块：
-```
-## Vetoes
-| 被拒方向 | 否决者 | 为何否决 |
-```
-规格员以 `01-ambiguity.md` 为唯一否决事实来源；否决只存在于对话而未落盘 → 视为未消歧。
-
-**explore probe:**
-```
-你能扫描代码库，找出所有相关的文件吗？
-
-任务描述：{task}
-
-请告诉我：
-- 找到了哪些文件？
-- 它们各自的功能是什么？
-- 涉及哪些关键类型和函数？
-
-注意：只返回原始事实，不要解释 "upstream" 或 "reference"——只描述文件中实际的内容。
-```
-
 **Fast-lane gate:**
+
 以下全真 → 跳过 PFAS + spec writer，直接按任务写 01-spec.md：
 - 变更文件 < 5
 - 任务无外部引用（upstream/source/reference/original/similar）
 - 用户未提及外部项目或框架名
+- project_type ∈ {docs, blog, wiki}
 
 **Pre-flight Ambiguity Scan (PFAS):**
-仅在 fast-lane gate 不满足时运行。
 
-```
-你是消歧员。唯一任务：找到模糊的引用。
-不要设计方案、不写规格、不估算工作量。
-
-输入：
-- 用户任务：{task description}
-- 代码库扫描结果：{explore output}
-- CONTEXT.md：CONTEXT.md
-
-请按以下步骤处理：
-
-1. 从用户任务中提取所有"被引用的外部概念"。
-   外部概念包括："上游"、"upstream"、"reference implementation"、
-   "来源"、"参考"、"源头"、"original"、"like X"、"similar to X"。
-   也包括提到的具体项目、框架或主题名。
-
-2. 对每个外部概念，在 CONTEXT.md 中找到所有声明：
-   每个项目/主题可能声明自己的上游来源。如果用户说"上游"但存在多个上游声明，那就是模糊。
-
-3. 交叉对照：用户的表述和 CONTEXT.md 的一致吗？
-   - 用户说 X → CONTEXT.md 说 Y → ⛔ 模糊
-   - 用户没说具体 → CONTEXT.md 对当前上下文明确定义了 Y → ✅ 隐含（用 Y）
-   - 用户说 X → CONTEXT.md 也说 X → ✅ 清晰
-
-4. 如果发现任何模糊：
-   - 写入 {workflow_dir}/01-ambiguity.md，包含：
-     - 每个模糊术语
-     - 冲突定义（用户 vs CONTEXT.md）
-     - 需要澄清的问题
-   - 设置 status.json spec.status = "blocked"
-   - 停止。不要继续写 spec。
-
-5. 如果没有模糊：
-   - 写入 {workflow_dir}/01-ambiguity.md，包含：
-     - "status": "clear"
-     - 已确认的术语列表和定义
-   - 设置 status.json spec.status = "in_progress"（让 spec writer 继续）
-   - 返回 "CLEAR"
-
-严格规则：
-- 不要猜测。不确定就标记模糊。
-- 不要假设用户意图等于某个方便的比较对象。
-- 不要静默合并多个上游定义。
-- SAP：每个概念只有一个答案。有多个就阻塞。
-```
+仅在 fast-lane gate 不满足时运行。规则同原版 meow。
 
 **Orchestrator transition after PFAS:**
 
@@ -232,19 +205,22 @@ if clear (spec.status === "in_progress"):
 ```
 
 **spec writer prompt:**
+
 ```
 你是规格员。
 
 输入：
 - 任务：{task description}
+- 项目类型：{project_type}
+- 领域上下文：{domain}
 - 代码库扫描：{explore output}
 - 模糊消歧结果：{workflow_dir}/01-ambiguity.md
 
 请做以下事情：
-1. 你能加载 grill-with-docs，对照现有文档理解需求吗？
-2. 请定义：范围（做什么）、价值（为什么做）、完成标准（可验证）、边界情况（至少 3 个）、约束条件。
-3. 请定义「已否决方向」表格并写入 01-spec.md。表列：`被拒方向 | 否决者（用户/现状约束/性能等） | 为何否决 | 对应约束/结论`。范围：只记有真实替代方案或用户明确否决的项（含 01-ambiguity.md 的 vetoes）；平凡回落默认（如非法配置值→默认）不记，否则噪音。每条否决必须有 why；某条约束/决策无 why 且查不到否决来源 → 标记未消歧写入开放问题，不得猜。
-4. 所有外部引用必须使用 01-ambiguity.md 中消歧后的定义。不要引入未经消歧的新外部引用。
+1. 加载 grill-with-docs，对照现有文档理解需求。
+2. 定义：范围（做什么）、价值（为什么做）、完成标准（可验证）、边界情况（至少 3 个）、约束条件。
+3. 定义「已否决方向」表格并写入 01-spec.md。
+4. 所有外部引用必须使用 01-ambiguity.md 中消歧后的定义。
 5. 写入 handoff 到 {workflow_dir}/01-spec.md
 6. 更新 {workflow_dir}/status.json phase=completed
 
@@ -254,29 +230,19 @@ if clear (spec.status === "in_progress"):
 **Orchestrator transition** (after spec writer returns):
 
 ```
-# Consistency Gate — 确保 spec→plan 一致性
-# 1. 读取 01-spec.md
-# 2. 读取 01-ambiguity.md，确认所有引用都正确使用
-# 3. 验证 spec 的"约束条件"部分是否与 CONTEXT.md 一致
-# 4. 如果 spec 引入了消歧结果中没有的引用 → 阻塞
-# 5. 如果 spec 与 CONTEXT.md 中任何项目声明矛盾 → 阻塞
-# 6. 验证 spec 的"已否决方向"表格：
-#    - 每条否决都有 why
-#    - 每条"约束/结论"都能追溯到一条已否决方向或明确决策（非平凡默认）
-#    缺失 why 或约束无来源 → 阻塞
-
+# Consistency Gate
 if gate passes:
   todowrite("Spec: scan" → completed)
   todowrite("Spec: disambiguate" → completed)
   todowrite("Spec: write" → completed)
   todowrite("1/5 📋 Spec" → completed)
 
-  if plan_approved flag set on entry:
+  if complexity == "trivial" or project_type ∈ {docs, blog, wiki}:
+    todowrite("2/5 📐 Plan" → skipped)
     todowrite("Plan: audit" → skipped)
     todowrite("Plan: design" → skipped)
     todowrite("Plan: approve" → skipped)
-    todowrite("2/5 📐 Plan" → completed)
-    jump to Craft phase todos
+    todowrite("3/5 🔨 Craft" → in_progress)
   else:
     todowrite("2/5 📐 Plan" → in_progress)
     todowrite("Plan: audit" → in_progress)
@@ -293,12 +259,13 @@ if gate blocks:
 
 | Field | Value |
 |---|---|
-| subagent_type | `code-review` → `general` |
+| subagent_type | `reviewer` (audit) → `planner` (design) |
 | skills | `caveman`, `grill-with-docs` |
 | handoff | `02-plan.md` |
 | gate | status=pending_approval, user confirmed y |
 
-**code-review audit:**
+**audit prompt:**
+
 ```
 你能对 {workflow_dir}/01-spec.md 做只读审计吗？
 
@@ -311,13 +278,14 @@ if gate blocks:
 返回：审计笔记 + 读取的文件内容（供 planner 参考）。
 ```
 
-**general prompt:**
+**planner prompt:**
+
 ```
-你是方案员。
+你是方案员。项目类型：{project_type}，领域：{domain}。
 
 输入：
 - Spec：{workflow_dir}/01-spec.md
-- 审计结果：{code-review output}
+- 审计结果：{reviewer output}
 
 请设计方案，回答以下问题：
 1. 需要新增、修改、删除哪些文件？
@@ -325,119 +293,125 @@ if gate blocks:
 3. 实现步骤：按依赖关系排序，每步应该是可独立交付的单元。
 4. 测试策略：每层应该测试什么？
 
-请用 grill-with-docs 对 spec 做交叉审查，用 caveman 风格压缩表达。
-
-需要验证的原则：KISS、DRY、YAGNI、PFC、OHA（实现不超过 1 小时）。
-如果计划涉及超过 5 个文件，orchestrator 会拆成多个周期，请确保每步独立可交付。
+如果 complexity == "complex"，额外验证 OHA（实现不超过 1 小时）。
+如果 OHA 不通过 → 标记 escalate，停止 plan，上报 orchestrator。
 
 不要改变需求，不要写代码。
 写入 handoff，更新 status.json 为 pending_approval，等待用户确认。
 ```
 
-**Orchestrator transition** (after subagent returns):
+**Orchestrator transition** (after planner returns):
 
 ```
-todowrite("Plan: audit" → completed)
-todowrite("Plan: design" → completed)
-todowrite("Plan: approve" → completed)
-todowrite("2/5 📐 Plan" → completed)
-todowrite("3/5 🔨 Craft" → in_progress)
+if status == "pending_approval":
+  todowrite("Plan: audit" → completed)
+  todowrite("Plan: design" → completed)
+  todowrite("Plan: approve" → completed)
+  todowrite("2/5 📐 Plan" → pending_approval)
+  
+  # APPROVED checkpoint — only user stop
+  Prompt user: "Plan ready. Approve to continue? (y/n)"
+  if y:
+    state.sh approve <feature>
+    todowrite("2/5 📐 Plan" → completed)
+    todowrite("3/5 🔨 Craft" → in_progress)
+    # Level 2 — Craft sub-tasks dynamic from 02-plan.md file list
+  else:
+    todowrite("2/5 📐 Plan" → in_progress)
+    todowrite("Plan: design" → in_progress)
 
-# Level 2 — Craft sub-tasks (dynamic from 02-plan.md file change list)
-# Parse each file change entry → one todo per entry
-# Set first item in_progress, rest pending
-# Example:
-#   todowrite("+ lib/workouts/cli/export.rb" → in_progress)
-#   todowrite("~ spec/export_spec.rb" → pending)
+if status == "escalated":
+  todowrite("2/5 📐 Plan" → escalated)
+  Report to user: "OHA failed / plan too large. Need user decision."
 ```
 
 ### Phase 3/5: Craft
 
 | Field | Value |
 |---|---|
-| subagent_type | per task: `sync-dev` / `export-helper` / `spec-runner` / `frontend-dev` / `general` |
-| skill | `caveman` |
+| subagent_type | `coder` (with domain param) |
+| skills | `caveman` |
 | handoff | `03-craft.md` |
-| gate | biome + test + build pass |
+| gate | tests + build pass |
 
-**Orchestrator prep** (before launching subagent):
+**Orchestrator prep:**
 
 ```
 # Level 2 craft todos already created in Phase 2 transition
-# Process them sequentially as subagent completes each step
+# For trivial: create single "Craft: implement" todo
 ```
 
-**general prompt:**
+**coder prompt:**
+
 ```
-你是实现员。
+你是实现员。项目类型：{project_type}，领域：{domain}，复杂度：{complexity}。
 
 输入：
-- 计划：{workflow_dir}/02-plan.md
-- 已批准
+- 计划：{workflow_dir}/02-plan.md（standard/complex）或 Spec：{workflow_dir}/01-spec.md（trivial/docs）
 
 请按步骤实现：
-1. 你能先完全读取文件，理解周围的代码约定吗？（RUM）
-2. 实现顺序：类型 → 纯函数 → 组件 + 测试（BIF、TDA）
-3. 错误路径优先于正常路径（EPF），只做计划范围内的改动（MVC）
+1. 先完全读取文件，理解周围的代码约定（RUM）。
+2. 实现顺序：类型 → 纯函数 → 组件 + 测试（BIF、TDA）。
+3. 错误路径优先于正常路径（EPF），只做计划范围内的改动（MVC）。
+
+如果 complexity == "complex"：
+- 额外检查边界条件
+- 额外检查向后兼容性
+- 记录所有兼容性问题到 03-craft.md
 
 所有步骤完成后：
-1. 检测根目录项目类型：
-   - 有 Gemfile → `bundle exec rspec; bundle exec ruby -c lib/`
-   - 有 Cargo.toml → `cargo test; cargo clippy -- -D warnings`
-   - 有 package.json → `npm run test; npx biome ci .`
-2. 写入 handoff 到 {workflow_dir}/03-craft.md
-3. 更新 status.json
+1. runner.sh 会注入正确的 test command（基于 project_type）。
+2. 如果 complexity == "trivial"，执行 self-review checklist，写入 03-craft.md。
+3. 写入 handoff 到 {workflow_dir}/03-craft.md
+4. 更新 status.json
 ```
 
 **Orchestrator transition** (after subagent returns):
 
 ```
-# Mark craft sub-tasks completed (orchestrator tracks per-step progress)
+# Mark craft sub-tasks completed
 todowrite("3/5 🔨 Craft" → completed)
 todowrite("4/5 🔬 Verify" → in_progress)
 
-# Level 2 — Verify sub-tasks (semi-fixed skeleton)
+# Level 2 — Verify sub-tasks
 todowrite("Verify: run tests" → in_progress)
 todowrite("Verify: check" → pending)
 todowrite("Verify: decide" → pending)
-
-# Dynamic: if 03-craft.md mentions extra concerns
-# todowrite("Verify: check {specific concern}" → pending)
 ```
 
 ### Phase 4/5: Verify
 
 | Field | Value |
 |---|---|
-| subagent_type | `verify` |
+| subagent_type | `tester` |
 | skill | `grillme` |
 | handoff | `04-verify.md` |
 | decision | passed / blocker / escalated |
 
 **verify prompt:**
-```
-你是验证员。
 
-你的工作是：
+```
+你是验证员。项目类型：{project_type}，复杂度：{complexity}。
+
+你的工作：
 1. 运行所有测试，检查代码质量
 2. 对照 spec 和 plan 做一致性检查
 3. 对发现的问题分类并处理
 
-请先运行以下命令收集结果：
-- 检测根目录项目类型：
-  - 有 Gemfile → `bundle exec rspec; bundle exec ruby -c lib/`
-  - 有 Cargo.toml → `cargo test; cargo clippy -- -D warnings`
-  - 有 package.json → `npm run test; npx biome ci .`
-- 扫描测试输出：`grep -i "[error]"` 找根因线索，附加到 04-verify.md
+runner.sh 已注入 test command：
+{test_command}
 
-然后回答以下问题：
+如果 project_type ∈ {docs, blog, wiki}：
+- 只做 lightweight verify：链接检查 + 语法检查
+- 无需跑测试
+
+然后回答：
 1. 01-spec.md 中的完成标准是否都已满足？
-2. 实现和 02-plan.md 是否一致？（文件列表、范围？）
+2. 实现和 02-plan.md 是否一致？（文件列表、范围）
 3. 实现是否引入了计划外的改动？
 4. 质量方面：错误路径有处理吗？有硬编码值吗？有 FAI 错误信息吗？
 
 问题分类与处理：
-
 | 严重度 | 定义 | 处理方式 |
 |---|---|---|
 | blocker | 测试/类型/构建失败 | 标记 blocker，返回 craft 阶段重做 |
@@ -445,7 +419,6 @@ todowrite("Verify: decide" → pending)
 | minor | 风格/命名/小问题 | 直接修复，重跑相关测试确认 |
 
 决策逻辑：
-
 | 测试 | Plan 匹配 | Spec 匹配 | 结果 |
 |---|---|---|---|
 | 通过 | 是 | 是 | passed → 交付 |
@@ -453,11 +426,8 @@ todowrite("Verify: decide" → pending)
 | 通过 | 否 | 是 | blocker → 回 craft |
 | 通过 | 否 | 否 | escalated |
 | 失败 | 任意 | 任意 | blocker → 回 craft |
-| 失败 x3 | 任意 | 任意 | escalated |
 
-根因路由：craft≠plan → 回 craft；plan≠spec → 升级；多阶段 → 升级。
-
-完成后写入 04-verify.md handoff 文件，更新 status.json。
+完成后写入 04-verify.md，更新 status.json。
 ```
 
 **Orchestrator transition** (after subagent returns):
@@ -471,16 +441,26 @@ case {verify_decision}
 when "passed"
   todowrite("4/5 🔬 Verify" → passed)
   todowrite("5/5 🚀 Deliver" → in_progress)
-  # Level 2 — Deliver sub-tasks (fixed)
   todowrite("Deliver: summary" → in_progress)
   todowrite("Deliver: commit" → pending)
   todowrite("Deliver: CI" → pending)
+  if complexity == "complex" or project_type == "comprehensive":
+    todowrite("Deliver: postmortem" → pending)
+    todowrite("Deliver: neat-freak" → pending)
 when "blocker"
-  todowrite("4/5 🔬 Verify" → escalated)
-  todowrite("3/5 🔨 Craft" → in_progress)
-  todowrite("Craft retry 1" → in_progress, priority high)
+  attempts = status.json phases.craft.attempts
+  if attempts < 3:
+    todowrite("4/5 🔬 Verify" → blocker)
+    todowrite("3/5 🔨 Craft" → in_progress)
+    todowrite("Craft retry {attempts+1}" → in_progress, priority high)
+    increment craft.attempts
+    return to Craft
+  else:
+    todowrite("4/5 🔬 Verify" → escalated)
+    escalate to user
 when "escalated"
   todowrite("4/5 🔬 Verify" → escalated)
+  escalate to user
 end
 ```
 
@@ -490,27 +470,38 @@ end
 
 | Field | Value |
 |---|---|
-| subagent_type | `docs-writer` → `general` |
+| subagent_type | `deliverer` |
 | skill | `caveman` |
 | handoff | `05-deliver.md` |
 | depends_on | Verify status=passed |
 
-**general prompt:**
+**RELEASING checkpoint** — only user stop in Deliver:
+
 ```
-你是交付员。
+Deliver 阶段开始，orchestrator 先展示：
+- 变更摘要
+- 影响范围
+- 测试结果
+- 已知问题
+
+Prompt user: "Release? (y/n)"
+if y:
+  state.sh release <feature>
+  proceed with commit + CI
+else:
+  stop, return to Craft
+```
+
+**deliverer prompt:**
+
+```
+你是交付员。项目类型：{project_type}，复杂度：{complexity}。
 
 输入：
 - Spec：{workflow_dir}/01-spec.md
 - 验证报告：{workflow_dir}/04-verify.md
 
 重要：Verify 状态必须是 "passed"，否则中止。
-重要：本阶段覆盖"永不提交"的通用规则。在以下条件满足时自动执行提交/推送/CI：
-  - Verify 通过，无 blocker 问题
-  - 无 git 冲突（远端未分叉，推送会成功）
-如果有 git 冲突（推送被拒、历史分叉、需要合并）：
-  → 停止。报告冲突详情，升级给用户。不要强制推送。
-不要询问用户提交权限。
-如果 CI 失败 → 记录错误，建议回滚。不要隐藏失败。
 
 请按以下步骤操作：
 
@@ -520,26 +511,29 @@ end
    - `git remote -v | grep origin` — 空则打印修复命令并中止交付
    - `git fetch` — 先检查远端状态
    - `git status` — 确认只有预期文件被暂存，没有合并冲突标记
-   - 如果 `git status` 显示分支分叉或合并进行中 → 停止，升级
-   - 检测根目录项目类型：
-     - 有 package.json → `npx biome check --write . && git add -u`
+   - 如果分支分叉或合并进行中 → 停止，升级
+   - 检测 project_type：
+     - frontend/package.json → `npx biome check --write . && git add -u`
      - 否则 → `git add -A`
-   - 检查 .gitignore 是否包含 '/.opencode/meoworks/'（没有就报告）
+   - 检查 .gitignore 是否包含 '/.opencode/works/'（没有就报告）
    - 分类暂存文件判断是否跳过 CI：
-     - `git diff --name-only --cached` → 文件列表
-      - SAFE_PATTERNS="^(CONTEXT\.md|[^/]+\.md|\.opencode/)"
+     - SAFE_PATTERNS="^(CONTEXT\.md|[^/]+\.md|\.opencode/)"
      - 如果所有文件都匹配 → SKIP_CI=true
      - 否则 → SKIP_CI=false
    - 提交（说 WHY 不是 WHAT），`git push`（SKIP_CI 时追加 "[skip ci]"）
    - 如果推送被拒 → 停止，报告分叉，升级。不要强制推送。
 
 3. 监控 CI（SKIP_CI 时跳过）：
-   - `gh run-watch --compact --exit-status` ← gh extension（已装在用户目录）
+   - `gh run-watch --compact --exit-status`
    - 如果失败 → 记录错误，建议回滚
    - 如果成功 → 确认交付完成
 
-4. 写入 handoff，更新 status.json 为 completed。
-5. 提交最终报告。
+4. 如果 complexity == "complex" or project_type == "comprehensive":
+   - 写入 postmortem：实际 vs Plan 偏差、retry 记录、未预见边界、决策回顾
+   - 调用 neat-freak（graduation only）：把本次会话中稳定的 memory 毕业进 docs
+
+5. 写入 handoff，更新 status.json 为 completed。
+6. 提交最终报告。
 
 CI 检查是不可妥协的门禁。
 ```
@@ -550,24 +544,47 @@ CI 检查是不可妥协的门禁。
 todowrite("Deliver: summary" → completed)
 todowrite("Deliver: commit" → completed)
 todowrite("Deliver: CI" → completed)
+if complexity == "complex" or project_type == "comprehensive":
+  todowrite("Deliver: postmortem" → completed)
+  todowrite("Deliver: neat-freak" → completed)
 todowrite("5/5 🚀 Deliver" → completed)
 ```
+
+## Test Command Lookup
+
+runner.sh 根据 `project_type` + 根目录文件检测注入测试命令：
+
+| project_type | 检测文件 | test_command |
+|---|---|---|
+| `frontend` | package.json | `npm run test; npx biome ci .` |
+| `backend` (Ruby) | Gemfile | `bundle exec rspec; bundle exec ruby -c lib/` |
+| `backend` (Rust) | Cargo.toml | `cargo test; cargo clippy -- -D warnings` |
+| `backend` (Node) | package.json（无前端框架） | `npm run test` |
+| `docs` | *.md | `echo "docs lightweight verify"` |
+| `blog` | 博客生成器配置 | `echo "blog lightweight verify"` |
+| `wiki` | wiki/ 或 *.md | `echo "wiki lightweight verify"` |
+| `comprehensive` | 按主项目类型选择 | 组合命令 |
 
 ## Dependencies
 
 | Tool | Phase | Install |
 |---|---|---|
-| `gh-run-watch` | 5/5 CI monitoring | 已安装为 gh extension（`~/.local/share/gh/extensions/gh-run-watch/`），仓库内无副本 |
-
-Predicts CI duration from recent runs (median), sleeps predictively, delegates to `gh run watch`. Supports `--compact`, `--exit-status`.
+| `gh-run-watch` | 5/5 CI monitoring | 已安装为 gh extension |
 
 ## Status.json
 
 ```json
 {
   "id": "YYYY-MM-DD-desc",
+  "project_type": "backend",
+  "complexity": "standard",
+  "domain": "generic",
+  "model_tier": "mid-high",
+  "subagent": "coder",
   "status": "in_progress / completed / escalated / terminated",
-  "current_phase": "phase_name",
+  "current_phase": "spec",
+  "approved": false,
+  "released": false,
   "created": "ISO datetime",
   "updated": "ISO datetime",
   "phases": {
@@ -613,7 +630,7 @@ Predicts CI duration from recent runs (median), sleeps predictively, delegates t
 ## Workflow Directory Convention
 
 ```
-.opencode/meoworks/YYYY-MM-DD-task-desc/
+.opencode/works/YYYY-MM-DD-task-desc/
   status.json
   01-spec.md
   02-plan.md
@@ -622,4 +639,4 @@ Predicts CI duration from recent runs (median), sleeps predictively, delegates t
   05-deliver.md
 ```
 
-Created at start. Agents read/write from `{workflow_dir}` = this directory. Automatically gitignored via `/.opencode/meoworks/` in `.gitignore`.
+Created at start. Agents read/write from `{workflow_dir}` = this directory. Automatically gitignored via `/.opencode/works/` in `.gitignore`.
