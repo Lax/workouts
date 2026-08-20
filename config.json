@@ -1,6 +1,7 @@
 {
   "entries": {
     "index": "timeline",
+    "footprint": "footprint",
     "stats": "stats",
     "about": "hello-world"
   },
@@ -11,6 +12,7 @@
     "nav": {
       "labels": {
         "index": "时间线",
+        "footprint": "足迹",
         "stats": "统计",
         "about": "关于"
       }
@@ -33,6 +35,10 @@
     "timeline": {
       "site": { "title": "时间线" },
       "events": []
+    },
+    "footprint": {
+      "site": { "title": "足迹" },
+      "palette": "footprint"
     }
   }
 }
