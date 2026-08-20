@@ -11,7 +11,7 @@
     "@lax/plugin-nav": "^0.0.1",
     "@lax/theme-hello-world": "^0.0.1",
     "@lax/theme-stats": "^0.0.10",
-    "@lax/theme-timeline": "~0.0.24",
+    "@lax/theme-timeline": "~0.0.25",
     "@lax/web-build": "^0.0.4"
   },
   "allowScripts": {
