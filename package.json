@@ -14,7 +14,7 @@
     "@lax/theme-timeline": "~0.0.26",
     "@lax/web-build": "^0.0.4",
     "@lax/plugin-ui-chart": "^0.0.1",
-    "@lax/plugin-ui-map": "^0.0.2",
+    "@lax/plugin-ui-map": "^0.0.3",
     "@lax/theme-footprint": "^0.0.2",
     "@lax/shared": "^0.0.2"
   },
