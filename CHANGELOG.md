@@ -23,6 +23,18 @@
 | theme-timeline 纵向时间线主题 0.0.1（竖直月时间轴 + 月度活动卡片 + 左侧统计/详情双态面板 + 赛事匹配；赛事数据 newbie.run 一次性迁移 → `data/events/races.json`，gh-pages `jq -c` 压缩；全项目时间规则=活动发生地时间三级回退） | ✅ 已完成 |
 | theme-timeline 0.0.2（渐进加载/月份 IO 懒挂载/骨架屏首屏提速；卡片多列网格 `minmax(260px,1fr)`；左栏 380px + 详情单列防溢出；月份切换视觉强化；卡片 hover 轨迹推近 + 选中 Ken Burns 循环） | ✅ 已完成 |
 
+## 2026-08 — 详情面板与性能优化
+
+| Item | Status |
+|---|---|
+| Backfill 修复 Strava/iGPSPORT/Keep naive datetime（`scripts/backfill_keep_time.rb` + `backfill.yml`，幂等 0 更新） | ✅ 已完成（#28） |
+| 数据层 max_power / avg_max_power（git-fit 0.14.3→0.15.0，plugin-data-source 0.0.5→0.0.6，theme-timeline 0.0.22 / theme-stats 0.0.10 双功率指标） | ✅ 已完成 |
+| RouteBgSVG `requestIdleCallback` + `MapLRU100` 缓存（theme-timeline 0.0.23，#24） | ✅ 已完成 |
+| `@lax/shared` `sideEffects:false` tree-shaking 验证（index 35.9k/gzip11.4k，haversine/geo-boundaries 0 打包，#25） | ✅ 已完成 |
+| DOM 节点评估（100/200/500 真实视口 388/488/788 <5000，#26） | ✅ 已完成 |
+| Douglas-Peucker 0.0001 简化 15044→167 点（theme-timeline 0.0.24，#27） | ✅ 已完成 |
+| DetailPanel 优化：总览顶部轨迹缩略图 + 5 组语义卡片（表现/心肺·功率/节奏/地形/环境，补 elevation_loss/min/max/steps）+ 轨迹交互地图（RouteMap: wheel/drag/双击重置，`stroke-dasharray` 2s，起终点标记，`prefers-reduced-motion` 禁用，theme-timeline 0.0.25） | ✅ 已完成 |
+
 ## 2026-07 — 数据链路与 CI 基建
 
 | Item | Status |

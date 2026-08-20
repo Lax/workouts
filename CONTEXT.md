@@ -180,7 +180,7 @@ Secrets 名单 `_`（`SYNC_KEEP_PHONE`），sync.yml 经 `.github/actions/sync-a
 
 **运行机制**：`bootstrap(config,{theme,plugins})` 依次 setup 插件 `registerComponent`；`config.plugins` 由 entry shim 注入；core `SiteNav` host 无条件挂载读 entries，plugin-nav 只供纯视图（单向依赖）。
 
-**theme-timeline**：竖直月时间轴 + 右侧多列卡片（`minmax(260px,1fr)`，轨迹 SVG 背景，hover 推近 / 选中 Ken Burns）+ 左侧 380px 面板（总览卡 + IO 滚动联动月份；点卡片切详情标签页）。性能：渐进加载（先摘要后 tracks）+ 轨迹共享 observer 懒加载（进视口才解码 polyline）+ 固定卡高（`--tl-card-h:128px, overflow:hidden`）三态卡片（border 文字版/text 文字版/detail 详细版），点选/跳转月份触发文字版，入视口停稳（≈150ms 防抖）触发详细版，滚出视口回归 border。即时跳转 + 一帧校正 + C 位黄金偏上落点（`monthScroll.ts`）。hash `#a=<run_id>` / `#m=<month>` / `#v=<view>` 深链。
+**theme-timeline**：竖直月时间轴 + 右侧多列卡片（`minmax(260px,1fr)`，轨迹 SVG 背景，hover 推近 / 选中 Ken Burns）+ 左侧 380px 面板（总览卡 + IO 滚动联动月份；点卡片切详情标签页，详情含总览顶部轨迹缩略图 + 5 组语义卡片、轨迹交互地图）。性能：渐进加载（先摘要后 tracks）+ 轨迹共享 observer 懒加载（进视口才解码）+ `RouteBgSVG` `requestIdleCallback` + `MapLRU100` 缓存 + `Douglas-Peucker 0.0001` 简化（15044→167 点，`@lax/shared sideEffects:false` tree-shaking 已验证，DOM 真实视口 <5000）+ 固定卡高三态卡片（border/text/detail，150ms settled）。即时跳转 + 一帧校正 + C 位落点（`monthScroll.ts`），轨迹交互地图支持 wheel 缩放/drag 平移/双击重置 + `stroke-dasharray` 2s 绘制（`prefers-reduced-motion` 禁用）+ 起点/终点标记。hash `#a=<run_id>` / `#m=<month>` / `#v=<view>` 深链。
 
 **全项目时间规则**（`theme-timeline/src/time.ts`）：
 1. `start_date_local` 带偏移 → 墙上钟 `slice`（发生地时间，无 TZ 转换）
