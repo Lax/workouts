@@ -2,6 +2,14 @@
 
 > 核心逻辑（sync / import / export / dedup / db / geo / parse）已迁移至 git-fit gem，本仓库仅保留配置与 CI/CD。下述条目中标注「git-fit」的已迁移，详细实现见 git-fit 仓库。
 
+## 2026-08 — footprint 主题视觉定稿
+
+| Item | Status |
+|---|---|
+| theme-footprint 0.0.1 接入（全屏足迹地图 + 左侧抽屉列表/筛选/图表覆层） | ✅ 已完成 |
+| theme-footprint 0.0.2：锐利高对比红橙轨迹（Steplife 风格，`plugin-ui-map` edge+core 双线，暗色 edge `#ff3b30` + core `#ff9f0a`，亮色 edge `#c41e3a` + core `#f97316`，统一配色，无 ride 区分/无白点/无 star；`workouts` 升级至 `^0.0.2`） | ✅ 已完成 |
+| plugin-ui-map 0.0.4：双线 polyline 渲染 + 深浅色板支持（`workouts` 升级至 `^0.0.4`） | ✅ 已完成 |
+
 ## 2026-08 — thin-shell 迁移
 
 | Item | Status |
