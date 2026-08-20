@@ -4,7 +4,7 @@
 
 数据流：`多渠道同步 → SQLite → GitHub Pages 仪表盘`
 
-> 在线预览：[lax.github.io/workouts/](https://lax.github.io/workouts/) — 时间线（theme-timeline）· [lax.github.io/workouts/stats.html](https://lax.github.io/workouts/stats.html) — 统计看板 · [lax.github.io/running/](https://lax.github.io/running/) — 交互式地图 + 统计图表（Lax/running），每日自动更新
+> 在线预览：[lax.github.io/workouts/](https://lax.github.io/workouts/) — 时间线（theme-timeline）· [lax.github.io/workouts/footprint.html](https://lax.github.io/workouts/footprint.html) — 足迹（theme-footprint）· [lax.github.io/workouts/stats.html](https://lax.github.io/workouts/stats.html) — 统计看板 · [lax.github.io/running/](https://lax.github.io/running/) — 交互式地图 + 统计图表（Lax/running），每日自动更新
 
 ---
 
@@ -18,7 +18,7 @@
 | [git-fit-actions/data-store](https://github.com/git-fit-actions/data-store) | 每源数据缓存 action（cache restore/save v2） |
 | [git-fit-actions/db-store](https://github.com/git-fit-actions/db-store) | SQLite DB 缓存 action（paths + cache restore/save + git 兜底） |
 | [git-fit-actions/geo-detect](https://github.com/git-fit-actions/geo-detect) | 地理行政区域检测 action（已迁自本地 action） |
-| [Lax/git-fit-web](https://github.com/Lax/git-fit-web) | 前端包/主题/插件（`@lax/*`：core、shared、plugin-data-source、plugin-nav、theme-stats、theme-timeline、web-build，本仓库 Pages 消费） |
+| [Lax/git-fit-web](https://github.com/Lax/git-fit-web) | 前端包/主题/插件（`@lax/*`：core、shared、plugin-data-source、plugin-nav、plugin-ui-map、plugin-ui-chart、theme-stats、theme-timeline、theme-footprint、web-build，本仓库 Pages 消费） |
 | [Lax/running](https://github.com/Lax/running) | 独立前端可视化仪表盘（消费本仓库 Pages 数据制品） |
 | [yihong0618/running_page](https://github.com/yihong0618/running_page) | 数据目录兼容参考（`data/raw/` ↔ `GPX_OUT/`） |
 
@@ -478,7 +478,7 @@ git fit parse activity.tcx --save
 
 - Settings → Pages → Source = "GitHub Actions"
 - Actions → Sync Workouts 最后一次运行绿色通过
-- 数据后端：访问 `https://<你的用户名>.github.io/workouts/`（本仓库产物，JSON 数据 + `stats.html` 统计看板 + `index.html`）
+- 数据后端：访问 `https://<你的用户名>.github.io/workouts/`（本仓库产物，JSON 数据 + `index.html` + `footprint.html` 足迹 + `stats.html` 统计看板）
 - 前端看板：访问 `https://<你的用户名>.github.io/running/`（需另行部署 [Lax/running](https://github.com/Lax/running)）
 
 之后每天自动同步、构建、部署，零维护。
