@@ -16,7 +16,7 @@
     "@lax/plugin-ui-chart": "^0.0.1",
     "@lax/plugin-ui-map": "^0.0.1",
     "@lax/theme-footprint": "^0.0.1",
-    "@lax/shared": "^0.0.1"
+    "@lax/shared": "^0.0.2"
   },
   "allowScripts": {
     "esbuild@0.25.12": true
