@@ -17,7 +17,6 @@ jobs:
     runs-on: ${{ vars.RUNNER_LABEL || 'ubuntu-latest' }}
     env:
       GIT_FIT_DATABASE_PATH: ${{ vars.GIT_FIT_DATABASE_PATH || 'data/db/workouts.db' }}
-      GIT_FIT_GITHUB_USERNAME: ${{ vars.GIT_FIT_GITHUB_USERNAME || github.repository_owner }}
     permissions:
       actions: read
       pages: write
