@@ -81,7 +81,7 @@
 |---|---|---|
 | Apple Health | export.zip (XML+GPX) | 心率 HKQuantityTypeIdentifierHeartRate 关联，自动跳过已知源；ZIP magic-byte 校验 |
 | LocalFile GPX/FIT/TCX | .gpx/.fit/.tcx | sport 分别从 GPX/XML Sport / FIT session mesg 提取；多 track/Activity → 多活动 |
-| 2bulu | .2tk + .kml | Parser 双格式直读（native binary 保留分段成绩 + TbuluKmlVersion2）；WGS-84 无需纠偏；run_id `2bulu_{YYYYMMDD}_{sha[0,12]}`；官方赛道 KML 不入统计 |
+| 2bulu | .2tk + .kml | Parser 双格式直读（native binary 保留分段成绩 + TbuluKmlVersion2）；WGS-84 无需纠偏；run_id `2bulu_{YYYYMMDD}_{sha[0,12]}`；官方赛道 KML 不入统计；爬升/下降取 2tk header `totalup/totaldown`（GPS altitude 未校准，点阵重算虚高 ~76%，#79 实证）；距离/时长仍为点阵重算（#85 待改 header 优先） |
 
 ## Garmin Intl vs CN 隔离
 
