@@ -6,17 +6,12 @@
     "build:ui": "node scripts/validate-config.js && git-fit-web build --config config.json --out site"
   },
   "dependencies": {
-    "@lax/core": "^0.0.2",
-    "@lax/plugin-data-source": "^0.0.6",
     "@lax/plugin-nav": "^0.0.1",
     "@lax/theme-hello-world": "^0.0.1",
-    "@lax/theme-stats": "^0.0.15",
-    "@lax/theme-timeline": "~0.0.32",
-    "@lax/web-build": "^0.0.4",
-    "@lax/plugin-ui-chart": "^0.0.1",
-    "@lax/plugin-ui-map": "^0.0.4",
+    "@lax/theme-stats": "^0.0.16",
+    "@lax/theme-timeline": "~0.0.33",
     "@lax/theme-footprint": "^0.0.2",
-    "@lax/shared": "^0.0.2"
+    "@lax/web-build": "^0.0.4"
   },
   "allowScripts": {
     "esbuild@0.25.12": true
