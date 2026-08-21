@@ -25,6 +25,7 @@
     "races": { "source": "races.json", "optional": true }
   },
   "events": [],
+  "profile": { "birthYear": 1984, "birthMonth": 6 },
   "themes": {
     "hello-world": {
       "site": { "title": "hello world" }
