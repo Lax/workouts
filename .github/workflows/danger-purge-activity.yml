@@ -116,19 +116,19 @@ jobs:
           DB_PATH: ${{ steps.db-paths.outputs.db-path }}
           RUN_ID: ${{ inputs.run_id }}
         run: |
-          bundle exec ruby -e '
+          bundle exec ruby <<'RUBY'
             require "sequel"
             require "json"
             db = Sequel.sqlite(ENV.fetch("DB_PATH"))
             row = db[:activities].where(run_id: ENV.fetch("RUN_ID")).first
             abort "::error::Not found: #{ENV["RUN_ID"]}" unless row
             File.write("purge-record.json", JSON.pretty_generate(row))
-          '
+          RUBY
           {
             echo "### Full DB record \`${{ inputs.run_id }}\`"
-            echo '\''```json'\''
+            echo '```json'
             cat purge-record.json
-            echo '\''```'\''
+            echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
 
       # Always preview the target row + files; RecordNotFound / invalid source fails fast here.
