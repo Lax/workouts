@@ -1,0 +1,118 @@
+name: "[DB] Dangerous backfill elevation"
+
+on:
+  workflow_dispatch:
+    inputs:
+      source:
+        description: "Source to backfill"
+        type: choice
+        default: "all"
+        options:
+          - all
+          - igpsport
+          - xoss
+          - strava
+          - garmin
+          - garmin_cn
+      force:
+        description: "Overwrite existing elevation values (default: only fill NULLs)"
+        type: boolean
+        default: false
+
+env:
+  GIT_FIT_DATABASE_PATH: data/db/workouts.db
+
+jobs:
+  backfill-elevation:
+    name: "Backfill elevation"
+    concurrency:
+      group: workouts-db
+      cancel-in-progress: false
+    runs-on: ${{ vars.RUNNER_LABEL || 'ubuntu-latest' }}
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.4"
+          bundler-cache: true
+
+      - name: Detect paths
+        id: paths
+        uses: ./.github/actions/db-store/paths
+        with:
+          db-path: ${{ env.GIT_FIT_DATABASE_PATH }}
+
+      - name: Restore DB (fallback GitFit/db)
+        uses: ./.github/actions/db-store/cache/restore
+        with:
+          db-path: ${{ steps.paths.outputs.db-path }}
+          git-restore-mode: fallback
+
+      - name: Restore data store
+        uses: ./.github/actions/data-store/cache/restore
+        with:
+          sources: igpsport,xoss,strava,garmin,garmin_cn
+
+      - name: Run elevation backfill
+        id: backfill
+        run: |
+          SOURCE="${{ inputs.source }}"
+          FORCE="${{ inputs.force }}"
+
+          args=""
+          if [ "$SOURCE" != "all" ]; then
+            args="$args $SOURCE"
+          fi
+          if [ "$FORCE" = "true" ]; then
+            args="$args --force"
+          fi
+
+          set -o pipefail
+          bundle exec git fit elevation backfill $args 2>&1 | tee backfill.out
+
+          if ! grep -q 'Elevation backfill:' backfill.out; then
+            echo "::error::Elevation backfill command produced no summary line"
+            exit 1
+          fi
+
+          UPDATED=$(grep -oP '\d+(?= updated)' backfill.out | head -1)
+          SKIPPED=$(grep -oP '\d+(?= skipped)' backfill.out | head -1)
+          FAILED=$(grep -oP '\d+(?= failed)' backfill.out | head -1)
+
+          echo "updated=$UPDATED" >> $GITHUB_OUTPUT
+          echo "skipped=$SKIPPED" >> $GITHUB_OUTPUT
+          echo "failed=$FAILED" >> $GITHUB_OUTPUT
+
+      - name: Save DB cache
+        if: always()
+        uses: ./.github/actions/db-store/cache/save
+        with:
+          db-path: ${{ steps.paths.outputs.db-path }}
+          save-to-git-branch: false
+
+      - name: Summary
+        run: |
+          echo "### GitFit elevation backfill" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Field | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Source | \`${{ inputs.source }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Force | \`${{ inputs.force }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Updated | \`${{ steps.backfill.outputs.updated || 0 }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Skipped | \`${{ steps.backfill.outputs.skipped || 0 }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Failed | \`${{ steps.backfill.outputs.failed || 0 }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          WARNINGS=$(grep '^Elevation backfill \[' backfill.out 2>/dev/null || true)
+          if [ -n "$WARNINGS" ]; then
+            echo "### Warnings" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            echo "$WARNINGS" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+          fi
