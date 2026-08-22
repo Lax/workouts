@@ -1,4 +1,4 @@
-name: "[Backfill] datetime + temperature"
+name: "[DB] Dangerous backfill datetime + temperature"
 
 on:
   workflow_dispatch:
@@ -8,9 +8,6 @@ on:
         required: false
         type: string
         default: all
-  schedule:
-    # Weekly safety net — idempotent, no side effects when nothing to fix.
-    - cron: '0 4 * * 0'
 
 jobs:
   backfill:
@@ -162,17 +159,11 @@ jobs:
             print File.size(ENV.fetch("DB_PATH"))
           '
 
-      # ── DB save ──
-      - name: '[db] Gate git save on job success'
-        id: git-save-gate
-        if: success() && steps.total.outputs.updated > 0
-        shell: bash
-        run: echo "save-to-git-branch=${{ steps.db-restore.outputs.save-to-git-branch }}" >> "$GITHUB_OUTPUT"
-
+      # ── DB save (cache-only) ──
       - name: '[db] Save cache'
         if: always()
         uses: git-fit-actions/db-store/cache/save@v1
         with:
           db-dir: ${{ steps.db-paths.outputs.dir }}
           db-name: ${{ steps.db-paths.outputs.name }}
-          save-to-git-branch: ${{ steps.git-save-gate.outputs.save-to-git-branch || 'false' }}
+          save-to-git-branch: false

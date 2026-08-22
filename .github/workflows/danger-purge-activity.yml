@@ -85,21 +85,14 @@ jobs:
           echo "deleted=$n" >> "$GITHUB_OUTPUT"
           echo "deleted=$n"
 
-      # Force persistence: previous runs left GitFit/db stale because the gate
-      # forwarded restore's save-to-git-branch (false). A destructive purge must push.
-      - name: "[db] Gate git save on successful delete"
-        id: gate
-        if: success() && steps.purge.outputs.deleted != '0'
-        shell: bash
-        run: echo "save-to-git-branch=true" >> "$GITHUB_OUTPUT"
-
+      # ── DB save (cache-only) ──
       - name: "[db] Save cache"
         if: always()
         uses: git-fit-actions/db-store/cache/save@v1
         with:
           db-dir: ${{ steps.db-paths.outputs.dir }}
           db-name: ${{ steps.db-paths.outputs.name }}
-          save-to-git-branch: ${{ steps.gate.outputs.save-to-git-branch || 'false' }}
+          save-to-git-branch: false
 
       - name: Trigger gh-pages
         if: success() && steps.purge.outputs.deleted != '0'

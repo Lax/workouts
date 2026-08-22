@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
-RSpec.describe "backfill.yml" do
-  let(:yaml) { load_workflow("backfill.yml") }
-  let(:content) { File.read(workflow_path("backfill.yml")) }
+RSpec.describe "danger-backfill.yml" do
+  let(:yaml) { load_workflow("danger-backfill.yml") }
+  let(:content) { File.read(workflow_path("danger-backfill.yml")) }
   let(:steps) { yaml.dig("jobs", "backfill", "steps") }
 
   describe "triggers" do
@@ -14,11 +14,9 @@ RSpec.describe "backfill.yml" do
       expect(inputs["source"]["default"]).to eq("all")
     end
 
-    it "runs weekly as a safety net" do
+    it "has no schedule trigger (manual only)" do
       on = workflow_on(yaml)
-      schedule = on["schedule"]
-      expect(schedule).to be_an(Array)
-      expect(schedule.first["cron"]).to eq("0 4 * * 0")
+      expect(on["schedule"]).to be_nil
     end
   end
 
@@ -140,10 +138,12 @@ RSpec.describe "backfill.yml" do
       expect(save["if"]).to eq("always()")
     end
 
-    it "git save gate runs only when total updated > 0" do
+    it "DB save is cache-only (no git push)" do
+      save = steps.find { |s| s["name"]&.include?("Save cache") }
+      expect(save).not_to be_nil
+      expect(save.dig("with", "save-to-git-branch")).to eq(false)
       gate = steps.find { |s| s["name"]&.include?("Gate git save") }
-      expect(gate).not_to be_nil
-      expect(gate["if"]).to include("steps.total.outputs.updated > 0")
+      expect(gate).to be_nil
     end
 
     it "no gh-pages trigger step (deployment waits for next natural trigger)" do
