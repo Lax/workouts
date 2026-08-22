@@ -35,9 +35,10 @@ RSpec.describe "danger-backfill-elevation.yml" do
 
   describe "DB cache restore" do
     it "restores from GitFit/db branch in fallback mode" do
-      restore = steps.find { |s| s["name"]&.include?("Restore DB") }
+      restore = steps.find { |s| s["name"]&.include?("[db] Restore cache") }
       expect(restore).not_to be_nil
       expect(restore.dig("with", "git-restore-mode")).to eq("fallback")
+      expect(restore.dig("with", "git-branch")).to eq("GitFit/db")
     end
   end
 
@@ -71,32 +72,40 @@ RSpec.describe "danger-backfill-elevation.yml" do
 
   describe "conditional downstream" do
     it "DB save always runs (if: always())" do
-      save = steps.find { |s| s["name"]&.include?("Save DB cache") }
+      save = steps.find { |s| s["name"]&.include?("[db] Save cache") }
       expect(save).not_to be_nil
       expect(save["if"]).to eq("always()")
     end
 
     it "DB save is cache-only (no git push)" do
-      save = steps.find { |s| s["name"]&.include?("Save DB cache") }
+      save = steps.find { |s| s["name"]&.include?("[db] Save cache") }
       expect(save).not_to be_nil
       expect(save.dig("with", "save-to-git-branch")).to eq(false)
+      expect(save.dig("with", "db-dir")).to include("steps.db-paths.outputs.dir")
+      expect(save.dig("with", "db-name")).to include("steps.db-paths.outputs.name")
     end
 
     it "no gh-pages trigger step" do
       trigger = steps.find { |s| s["name"]&.include?("gh-pages") }
       expect(trigger).to be_nil
     end
+
+    it "checkpoint runs only when updated > 0" do
+      checkpoint = steps.find { |s| s["name"]&.include?("[db] Checkpoint") }
+      expect(checkpoint).not_to be_nil
+      expect(checkpoint["if"]).to include("steps.backfill.outputs.updated > 0")
+    end
   end
 
   describe "action version pins" do
-    it "pins actions to major tags or local paths" do
+    it "pins actions to major tags" do
       uses = steps.map { |s| s["uses"] }.compact
-      expect(uses).to include("actions/checkout@v4")
+      expect(uses).to include("actions/checkout@v6")
       expect(uses).to include("ruby/setup-ruby@v1")
-      expect(uses).to include("./.github/actions/db-store/paths")
-      expect(uses).to include("./.github/actions/db-store/cache/restore")
-      expect(uses).to include("./.github/actions/db-store/cache/save")
-      expect(uses).to include("./.github/actions/data-store/cache/restore")
+      expect(uses).to include("git-fit-actions/db-store/paths@v1")
+      expect(uses).to include("git-fit-actions/db-store/cache/restore@v1")
+      expect(uses).to include("git-fit-actions/db-store/cache/save@v1")
+      expect(uses).to include("git-fit-actions/data-store/cache/restore@v2")
     end
   end
 

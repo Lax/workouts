@@ -19,43 +19,41 @@ on:
         type: boolean
         default: false
 
-env:
-  GIT_FIT_DATABASE_PATH: data/db/workouts.db
-
 jobs:
   backfill-elevation:
     name: "Backfill elevation"
+    runs-on: ${{ vars.RUNNER_LABEL || 'ubuntu-latest' }}
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    env:
+      GIT_FIT_DATABASE_PATH: ${{ vars.GIT_FIT_DATABASE_PATH || 'data/db/workouts.db' }}
     concurrency:
       group: workouts-db
       cancel-in-progress: false
-    runs-on: ${{ vars.RUNNER_LABEL || 'ubuntu-latest' }}
-    timeout-minutes: 10
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          persist-credentials: false
+      - uses: actions/checkout@v6
 
-      - name: Setup Ruby
-        uses: ruby/setup-ruby@v1
+      - uses: ruby/setup-ruby@v1
         with:
-          ruby-version: "3.4"
+          ruby-version: '3.4'
           bundler-cache: true
 
-      - name: Detect paths
-        id: paths
-        uses: ./.github/actions/db-store/paths
+      - id: db-paths
+        uses: git-fit-actions/db-store/paths@v1
         with:
-          db-path: ${{ env.GIT_FIT_DATABASE_PATH }}
+          database-path: ${{ env.GIT_FIT_DATABASE_PATH }}
 
-      - name: Restore DB (fallback GitFit/db)
-        uses: ./.github/actions/db-store/cache/restore
+      - name: '[db] Restore cache'
+        uses: git-fit-actions/db-store/cache/restore@v1
         with:
-          db-path: ${{ steps.paths.outputs.db-path }}
+          db-dir: ${{ steps.db-paths.outputs.dir }}
+          db-name: ${{ steps.db-paths.outputs.name }}
           git-restore-mode: fallback
+          git-branch: GitFit/db
 
-      - name: Restore data store
-        uses: ./.github/actions/data-store/cache/restore
+      - name: 'Restore data store'
+        uses: git-fit-actions/data-store/cache/restore@v2
         with:
           sources: igpsport,xoss,strava,garmin,garmin_cn
 
@@ -89,11 +87,22 @@ jobs:
           echo "skipped=$SKIPPED" >> $GITHUB_OUTPUT
           echo "failed=$FAILED" >> $GITHUB_OUTPUT
 
-      - name: Save DB cache
+      - name: '[db] Checkpoint'
+        if: steps.backfill.outputs.updated > 0
+        run: |
+          bundle exec ruby -e '
+            require "sequel"
+            db = Sequel.sqlite(ENV.fetch("DB_PATH"))
+            db.run("PRAGMA wal_checkpoint(TRUNCATE)")
+            print File.size(ENV.fetch("DB_PATH"))
+          '
+
+      - name: '[db] Save cache'
         if: always()
-        uses: ./.github/actions/db-store/cache/save
+        uses: git-fit-actions/db-store/cache/save@v1
         with:
-          db-path: ${{ steps.paths.outputs.db-path }}
+          db-dir: ${{ steps.db-paths.outputs.dir }}
+          db-name: ${{ steps.db-paths.outputs.name }}
           save-to-git-branch: false
 
       - name: Summary
