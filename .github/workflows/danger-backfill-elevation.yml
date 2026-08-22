@@ -89,6 +89,8 @@ jobs:
 
       - name: '[db] Checkpoint'
         if: steps.backfill.outputs.updated > 0
+        env:
+          DB_PATH: ${{ steps.db-paths.outputs.db-path }}
         run: |
           bundle exec ruby -e '
             require "sequel"
