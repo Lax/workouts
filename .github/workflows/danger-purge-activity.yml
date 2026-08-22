@@ -12,6 +12,16 @@ on:
         required: false
         type: boolean
         default: true
+      delete_raw:
+        description: "Also delete data/raw/{source}/{id}.* (v0.17.1)"
+        required: false
+        type: boolean
+        default: false
+      delete_std:
+        description: "Also delete data/std/{source}/{id}.json (v0.17.1)"
+        required: false
+        type: boolean
+        default: false
       confirm:
         description: 'Type "DELETE" to confirm destructive delete'
         required: true
@@ -56,6 +66,41 @@ jobs:
           git-restore-mode: fallback
           git-branch: GitFit/db
 
+      - name: "[data] Derive source + build flags"
+        id: meta
+        shell: bash
+        env:
+          RUN_ID: ${{ inputs.run_id }}
+          DELETE_RAW: ${{ inputs.delete_raw }}
+          DELETE_STD: ${{ inputs.delete_std }}
+        run: |
+          rid="$RUN_ID"
+          if [[ "$rid" == garmin_cn_* ]]; then
+            src=garmin_cn
+          else
+            src="${rid%%_*}"
+          fi
+          echo "source=$src" >> "$GITHUB_OUTPUT"
+          flags=""
+          [ "$DELETE_RAW" = "true" ] && flags="$flags --delete-raw"
+          [ "$DELETE_STD" = "true" ] && flags="$flags --delete-std"
+          # trim leading space
+          flags="${flags# }"
+          echo "flags=$flags" >> "$GITHUB_OUTPUT"
+          echo "derived source=$src flags='$flags'"
+          if [ "$DELETE_RAW" = "true" ] || [ "$DELETE_STD" = "true" ]; then
+            case "$src" in
+              keep|igpsport|xoss|xingzhe|garmin|garmin_cn|strava) ;;
+              *) echo "::error::delete flags require source in [keep,igpsport,xoss,xingzhe,garmin,garmin_cn,strava]; derived '$src' from run_id='$rid' is invalid" >&2; exit 1 ;;
+            esac
+          fi
+
+      - name: "[data] Restore cache"
+        if: inputs.delete_raw == true || inputs.delete_std == true
+        uses: git-fit-actions/data-store/cache/restore@v2
+        with:
+          sources: ${{ steps.meta.outputs.source }}
+
       - name: Guard confirm
         shell: bash
         run: |
@@ -63,14 +108,39 @@ jobs:
             echo "::error::Must type DELETE to confirm. Got: ${{ inputs.confirm }}"
             exit 1
           fi
-          echo "confirm ok (run_id=${{ inputs.run_id }} dry_run=${{ inputs.dry_run }})"
+          echo "confirm ok (run_id=${{ inputs.run_id }} dry_run=${{ inputs.dry_run }} delete_raw=${{ inputs.delete_raw }} delete_std=${{ inputs.delete_std }})"
 
-      # Always preview the target row; RecordNotFound fails fast here.
+      - name: "[db] Dump full record"
+        id: dump
+        shell: bash
+        env:
+          DB_PATH: ${{ steps.db-paths.outputs.db-path }}
+          RUN_ID: ${{ inputs.run_id }}
+        run: |
+          bundle exec ruby -e '
+            require "sequel"
+            require "json"
+            db = Sequel.sqlite(ENV.fetch("DB_PATH"))
+            row = db[:activities].where(run_id: ENV.fetch("RUN_ID")).first
+            abort "::error::Not found: #{ENV["RUN_ID"]}" unless row
+            File.write("purge-record.json", JSON.pretty_generate(row))
+          '
+          {
+            echo "### Full DB record \`${{ inputs.run_id }}\`"
+            echo '\''```json'\''
+            cat purge-record.json
+            echo '\''```'\''
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # Always preview the target row + files; RecordNotFound / invalid source fails fast here.
       - name: Preview target (dry-run)
         shell: bash
         env:
           RUN_ID: ${{ inputs.run_id }}
-        run: bundle exec git fit purge activity "$RUN_ID" --dry-run
+          FLAGS: ${{ steps.meta.outputs.flags }}
+        run: |
+          set -o pipefail
+          bundle exec git fit purge activity "$RUN_ID" --dry-run $FLAGS | tee preview.out
 
       - name: Purge activity
         id: purge
@@ -78,9 +148,10 @@ jobs:
         shell: bash
         env:
           RUN_ID: ${{ inputs.run_id }}
+          FLAGS: ${{ steps.meta.outputs.flags }}
         run: |
           set -o pipefail
-          bundle exec git fit purge activity "$RUN_ID" | tee purge.out
+          bundle exec git fit purge activity "$RUN_ID" $FLAGS | tee purge.out
           n=$(grep -oE 'Removed [0-9]+' purge.out | grep -oE '[0-9]+' || echo 0)
           echo "deleted=$n" >> "$GITHUB_OUTPUT"
           echo "deleted=$n"
@@ -94,6 +165,12 @@ jobs:
           db-name: ${{ steps.db-paths.outputs.name }}
           save-to-git-branch: false
 
+      - name: "[data] Save cache"
+        if: success() && inputs.dry_run == false && (inputs.delete_raw == true || inputs.delete_std == true)
+        uses: git-fit-actions/data-store/cache/save@v2
+        with:
+          sources: ${{ steps.meta.outputs.source }}
+
       - name: Trigger gh-pages
         if: success() && steps.purge.outputs.deleted != '0'
         shell: bash
@@ -105,4 +182,15 @@ jobs:
         if: always()
         shell: bash
         run: |
-          echo "### Dangerous purge activity \`${{ inputs.run_id }}\` ${{ inputs.dry_run == true && 'dry-run' || 'LIVE' }}: deleted=${{ steps.purge.outputs.deleted || '0' }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "### Dangerous purge activity \`${{ inputs.run_id }}\` ${{ inputs.dry_run == true && 'dry-run' || 'LIVE' }}: deleted=${{ steps.purge.outputs.deleted || '0' }} ${{ steps.meta.outputs.flags && format('flags={0}', steps.meta.outputs.flags) || '' }}" >> "$GITHUB_STEP_SUMMARY"
+          if [ -f purge-record.json ]; then
+            echo '```json' >> "$GITHUB_STEP_SUMMARY"
+            cat purge-record.json >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+          fi
+          for f in preview.out purge.out; do
+            if [ -s "$f" ] && grep -qE 'Would delete|Removed|No (raw|std) files' "$f"; then
+              echo "#### $f" >> "$GITHUB_STEP_SUMMARY"
+              grep -E 'Would delete|Removed|No (raw|std) files' "$f" >> "$GITHUB_STEP_SUMMARY"
+            fi
+          done
