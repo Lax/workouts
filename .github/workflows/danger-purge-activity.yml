@@ -1,16 +1,14 @@
-name: "[DB] Dangerous Purge source"
+name: "[DB] Dangerous purge activity"
 
 on:
   workflow_dispatch:
     inputs:
-      source:
-        description: "Source to delete (activities.source)"
+      run_id:
+        description: "run_id to delete (e.g. keep_9223370467197600022)"
         required: true
-        type: choice
-        default: "2bulu"
-        options: ["2bulu", "apple_health"]
+        type: string
       dry_run:
-        description: "Dry-run (count only, no DELETE)"
+        description: "Dry-run (preview only, no DELETE)"
         required: false
         type: boolean
         default: true
@@ -65,53 +63,35 @@ jobs:
             echo "::error::Must type DELETE to confirm. Got: ${{ inputs.confirm }}"
             exit 1
           fi
-          echo "confirm ok (source=${{ inputs.source }} dry_run=${{ inputs.dry_run }})"
+          echo "confirm ok (run_id=${{ inputs.run_id }} dry_run=${{ inputs.dry_run }})"
 
-      - name: Purge source via SQLite
+      # Always preview the target row; RecordNotFound fails fast here.
+      - name: Preview target (dry-run)
+        shell: bash
+        env:
+          RUN_ID: ${{ inputs.run_id }}
+        run: bundle exec git fit purge activity "$RUN_ID" --dry-run
+
+      - name: Purge activity
         id: purge
+        if: inputs.dry_run == false
         shell: bash
         env:
-          DB_PATH: ${{ steps.db-paths.outputs.db-path }}
-          SOURCE: ${{ inputs.source }}
-          DRY_RUN: ${{ inputs.dry_run }}
+          RUN_ID: ${{ inputs.run_id }}
         run: |
-          bundle exec ruby -e '
-            require "sequel"
-            db = Sequel.sqlite(ENV.fetch("DB_PATH"))
-            src = ENV.fetch("SOURCE")
-            dry = ENV.fetch("DRY_RUN") == "true"
-            before = db[:activities].where(source: src).count
-            deleted = 0
-            unless dry
-              deleted = db[:activities].where(source: src).delete
-            end
-            File.open(ENV.fetch("GITHUB_OUTPUT"), "a") do |f|
-              f.puts "matched=#{before}"
-              f.puts "deleted=#{deleted}"
-            end
-            puts "matched=#{before} deleted=#{deleted} dry=#{dry}"
-          '
+          set -o pipefail
+          bundle exec git fit purge activity "$RUN_ID" | tee purge.out
+          n=$(grep -oE 'Removed [0-9]+' purge.out | grep -oE '[0-9]+' || echo 0)
+          echo "deleted=$n" >> "$GITHUB_OUTPUT"
+          echo "deleted=$n"
 
-      - name: "[db] Checkpoint SQLite WAL"
-        if: steps.purge.outputs.deleted != '0'
-        shell: bash
-        env:
-          DB_PATH: ${{ steps.db-paths.outputs.db-path }}
-        run: |
-          bytes=$(bundle exec ruby -e '
-            require "sequel"
-            db = Sequel.sqlite(ENV.fetch("DB_PATH"))
-            db.run("PRAGMA wal_checkpoint(TRUNCATE)")
-            print File.size(ENV.fetch("DB_PATH"))
-          ')
-          echo "db_size=$bytes" >> "$GITHUB_OUTPUT"
-          echo "checkpoint done size=$bytes"
-
-      - name: "[db] Gate git save on job success"
+      # Force persistence: previous runs left GitFit/db stale because the gate
+      # forwarded restore's save-to-git-branch (false). A destructive purge must push.
+      - name: "[db] Gate git save on successful delete"
         id: gate
         if: success() && steps.purge.outputs.deleted != '0'
         shell: bash
-        run: echo "save-to-git-branch=${{ steps.db-restore.outputs.save-to-git-branch }}" >> "$GITHUB_OUTPUT"
+        run: echo "save-to-git-branch=true" >> "$GITHUB_OUTPUT"
 
       - name: "[db] Save cache"
         if: always()
@@ -132,5 +112,4 @@ jobs:
         if: always()
         shell: bash
         run: |
-          echo "### Dangerous DB purge \`${{ inputs.source }}\` ${{ inputs.dry_run == true && 'dry-run' || 'LIVE' }}: matched=${{ steps.purge.outputs.matched }} deleted=${{ steps.purge.outputs.deleted }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "confirm=${{ inputs.confirm }} source=${{ inputs.source }} dry_run=${{ inputs.dry_run }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "### Dangerous purge activity \`${{ inputs.run_id }}\` ${{ inputs.dry_run == true && 'dry-run' || 'LIVE' }}: deleted=${{ steps.purge.outputs.deleted || '0' }}" >> "$GITHUB_STEP_SUMMARY"
