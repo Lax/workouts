@@ -26,7 +26,6 @@ concurrency:
 
 permissions:
   contents: write
-  actions: write
 
 env:
   GIT_FIT_DATABASE_PATH: ${{ vars.GIT_FIT_DATABASE_PATH || 'data/db/workouts.db' }}
@@ -115,13 +114,6 @@ jobs:
           db-dir: ${{ steps.db-paths.outputs.dir }}
           db-name: ${{ steps.db-paths.outputs.name }}
           save-to-git-branch: false
-
-      - name: Trigger gh-pages
-        if: success() && steps.purge.outputs.deleted != '0'
-        shell: bash
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: gh workflow run gh-pages.yml --ref ${{ github.ref_name }}
 
       - name: Summary
         if: always()
