@@ -66,7 +66,7 @@
 | Keep | `keep` | 手机+密码 | AES-128-CBC 解密，zlib 解压，GCJ-02→WGS84，HR 最近匹配 |
 | iGPSPORT | `igpsport` | 手机+密码 | FIT 原始格式，mini_racer+fitsdk 解析 |
 | XOSS | `xoss` | email+JWT | FIT 下载 + fitsdk 解析，JWT 缓存 7d |
-| XingZhe | `xingzhe` | RSA 密码 + session Cookie | 行者国内版 |
+| XingZhe | `xingzhe` | RSA 密码 + session Cookie | 行者国内版 — L1: `{id}/stream.json+detail.json+*.gpx[+*.fit]` per-activity 目录化 2026-08-23（git-fit#86，前端 chunk67 深析见 git-fit.wiki/xingzhe-api.md） |
 | Garmin CN | `garmin_cn` | SSO + OAuth1→OAuth2 | token 文件持久化 + OAuth1 自动 refresh |
 | Garmin Intl | `garmin` | DI OAuth2（`--auto`：策略 B Playwright primary / 策略 A curl-impersonate fallback） | session cookies 365d，MFA 首次后零交互 |
 | Strava | `strava` | OAuth2 refresh_token | 原始文件下载：`git fit strava fetch`（stravaweblib gem） |
