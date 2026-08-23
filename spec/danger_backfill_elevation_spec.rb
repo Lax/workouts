@@ -12,7 +12,7 @@ RSpec.describe "danger-backfill-elevation.yml" do
       expect(inputs).to have_key("source")
       expect(inputs["source"]["type"]).to eq("choice")
       expect(inputs["source"]["default"]).to eq("all")
-      expect(inputs["source"]["options"]).to eq(%w[all igpsport xoss strava garmin garmin_cn])
+      expect(inputs["source"]["options"]).to eq(%w[all igpsport xoss strava garmin garmin_cn xingzhe])
 
       expect(inputs).to have_key("force")
       expect(inputs["force"]["type"]).to eq("boolean")
@@ -47,7 +47,7 @@ RSpec.describe "danger-backfill-elevation.yml" do
       data_restore = steps.find { |s| s["name"]&.include?("Restore data store") }
       expect(data_restore).not_to be_nil
       sources = data_restore.dig("with", "sources")
-      expect(sources.split(",")).to match_array(%w[igpsport xoss strava garmin garmin_cn])
+      expect(sources.split(",")).to match_array(%w[igpsport xoss strava garmin garmin_cn xingzhe])
     end
   end
 
