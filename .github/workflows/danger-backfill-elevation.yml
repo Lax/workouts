@@ -14,6 +14,7 @@ on:
           - strava
           - garmin
           - garmin_cn
+          - xingzhe
       force:
         description: "Overwrite existing elevation values (default: only fill NULLs)"
         type: boolean
@@ -55,7 +56,7 @@ jobs:
       - name: 'Restore data store'
         uses: git-fit-actions/data-store/cache/restore@v2
         with:
-          sources: igpsport,xoss,strava,garmin,garmin_cn
+          sources: igpsport,xoss,strava,garmin,garmin_cn,xingzhe
 
       - name: Run elevation backfill
         id: backfill
