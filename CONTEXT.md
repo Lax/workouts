@@ -216,6 +216,8 @@ f > 2N+1 → N = min(7, N+1)     减速（每周日保底）
 | `sync-scheduler.yml` | 数据变更 + 每周日保底 | 读 N → 算 f → sed 改 sync.yml cron（唯一写 workflow 的持有 PAT）|
 | `gh-pages.yml` | CI 成功后 deploy | export json/stats → stage races.json → `frontend-build` → deploy-pages |
 | `git-fit-archive.yml` | 每周日 | cache → `GitFit/data/<source>` + `GitFit/db` orphan 分支（LRU 兜底）|
+| `danger-backfill-elevation.yml` | dispatch | `git fit elevation backfill` 写 raw `elevation_*`（6 源 L2，cache-only save）|
+| `danger-correct-elevation.yml` | dispatch（source/force/dem） | `git fit elevation correct [--dem]` 写 `elevation_*_terrain`；DEM 缓存独立 key `GitFit-dem-v0-*`（仅 actions/cache，不入 git 归档）|
 
 **关键事实**：DB cache 恢复用 `db-store/cache/restore@v1`（`git-restore-mode: fallback` 从 `GitFit/db` git archive 兜底）+ `save@v1`（job 成功且 changed 时 push 回）；缓存 key 纪律（`-v0-sentinel` restore / `-v0-snapshot` unarchive，严禁合并）；data-store/db-store/geo-detect/import 均 pin 大版本 tag，默认分支 `mainline`。完整步骤见 `.github/workflows/*.yml` 与 wiki CI-CD。
 
