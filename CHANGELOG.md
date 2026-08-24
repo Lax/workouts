@@ -2,6 +2,13 @@
 
 > 核心逻辑（sync / import / export / dedup / db / geo / parse）已迁移至 git-fit gem，本仓库仅保留配置与 CI/CD。下述条目中标注「git-fit」的已迁移，详细实现见 git-fit 仓库。
 
+## 2026-08 — elevation 两段式流水线接入
+
+| Item | Status |
+|---|---|
+| `danger-correct-elevation.yml` 新增：`git fit elevation correct [--dem]` 写 `elevation_*_terrain`（git-fit 0.21），DEM 缓存独立 key `GitFit-dem-v0-*` 仅 actions/cache | ✅ 已完成 |
+| git-fit 依赖 `~> 0.18.5` → `~> 0.21`；导出自动优先 `_terrain \|\| raw`，gh-pages 无需改动 | ✅ 已完成 |
+
 ## 2026-08 — footprint 主题视觉定稿
 
 | Item | Status |

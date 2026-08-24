@@ -110,6 +110,10 @@ CREATE TABLE activities (
   average_temperature REAL, calories INTEGER,
   average_speed REAL, elevation_gain REAL, elevation_loss REAL,
   elevation_min REAL, elevation_max REAL, steps INTEGER,
+  -- git-fit >= 0.21: strategy-corrected values (elevation correct [--dem])，
+  -- 导出优先 _terrain，NULL 回退 raw
+  elevation_gain_terrain REAL, elevation_loss_terrain REAL,
+  elevation_min_terrain REAL, elevation_max_terrain REAL,
   source TEXT, duplicate_info TEXT,                     -- 去重信息（JSON 数组）
   created_at DATETIME, updated_at DATETIME
 );

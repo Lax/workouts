@@ -527,6 +527,8 @@ git fit parse activity.tcx --save
 | `git fit export json` | 导出 JSON |
 | `git fit export csv` | 导出 CSV |
 | `git fit export stats` | 导出统计摘要 |
+| `git fit elevation backfill [SOURCE]` | 回填原始海拔（设备/API 值 → `elevation_*`）|
+| `git fit elevation correct [SOURCE] [--dem]` | 策略校正海拔（自适应滞回 + 可选 DEM → `elevation_*_terrain`，导出优先用）|
 | `git fit dedup` | 全源去重匹配 |
 | `git fit auth garmin` | Garmin 国际版认证（支持 `-A`/`-B`/`--auto`/`--sync`/`--mfa-code`）|
 | `git fit auth garmin_cn` | Garmin CN 认证 |
