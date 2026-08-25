@@ -59,7 +59,7 @@ RSpec.describe "danger-correct-elevation.yml" do
     it "restores data/cache/dem* with independent prefix key" do
       restore = steps.find { |s| s["name"] == "Restore DEM cache" }
       expect(restore).not_to be_nil
-      expect(restore["uses"]).to eq("actions/cache/restore@v4")
+      expect(restore["uses"]).to eq("actions/cache/restore@v6")
       paths = restore.dig("with", "path").split("\n").map(&:strip)
       expect(paths).to contain_exactly("data/cache/dem", "data/cache/dem_fit")
       expect(restore.dig("with", "key")).to start_with("GitFit-dem-v0-")
@@ -69,7 +69,7 @@ RSpec.describe "danger-correct-elevation.yml" do
     it "saves DEM cache always() with the same key namespace" do
       save = steps.find { |s| s["name"] == "Save DEM cache" }
       expect(save).not_to be_nil
-      expect(save["uses"]).to eq("actions/cache/save@v4")
+      expect(save["uses"]).to eq("actions/cache/save@v6")
       expect(save["if"]).to eq("always()")
       expect(save.dig("with", "key")).to include("github.run_id")
     end
@@ -144,8 +144,8 @@ RSpec.describe "danger-correct-elevation.yml" do
       expect(uses).to include("git-fit-actions/db-store/cache/restore@v1")
       expect(uses).to include("git-fit-actions/db-store/cache/save@v1")
       expect(uses).to include("git-fit-actions/data-store/cache/restore@v2")
-      expect(uses).to include("actions/cache/restore@v4")
-      expect(uses).to include("actions/cache/save@v4")
+      expect(uses).to include("actions/cache/restore@v6")
+      expect(uses).to include("actions/cache/save@v6")
     end
   end
 

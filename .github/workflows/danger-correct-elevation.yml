@@ -63,7 +63,7 @@ jobs:
           sources: igpsport,xoss,strava,garmin,garmin_cn,xingzhe
 
       - name: 'Restore DEM cache'
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           path: |
             data/cache/dem
@@ -109,7 +109,7 @@ jobs:
 
       - name: 'Save DEM cache'
         if: always()
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v6
         with:
           path: |
             data/cache/dem
