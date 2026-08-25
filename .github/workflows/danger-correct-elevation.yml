@@ -10,11 +10,14 @@ on:
         options:
           - all
           - igpsport
+          - keep
           - xoss
           - strava
           - garmin
           - garmin_cn
           - xingzhe
+          - 2bulu
+          - apple_health
       force:
         description: "Recompute existing _terrain values (default: only fill NULLs)"
         type: boolean
@@ -60,7 +63,7 @@ jobs:
       - name: 'Restore data store'
         uses: git-fit-actions/data-store/cache/restore@v2
         with:
-          sources: igpsport,xoss,strava,garmin,garmin_cn,xingzhe
+          sources: igpsport,keep,xoss,strava,garmin,garmin_cn,xingzhe,2bulu,apple_health
 
       - name: 'Restore DEM cache'
         uses: actions/cache/restore@v6
