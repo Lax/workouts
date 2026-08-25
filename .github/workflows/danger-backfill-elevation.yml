@@ -10,6 +10,7 @@ on:
         options:
           - all
           - igpsport
+          - keep
           - xoss
           - strava
           - garmin
@@ -56,7 +57,7 @@ jobs:
       - name: 'Restore data store'
         uses: git-fit-actions/data-store/cache/restore@v2
         with:
-          sources: igpsport,xoss,strava,garmin,garmin_cn,xingzhe
+          sources: igpsport,keep,xoss,strava,garmin,garmin_cn,xingzhe
 
       - name: Run elevation backfill
         id: backfill
