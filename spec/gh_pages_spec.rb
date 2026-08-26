@@ -33,7 +33,7 @@ RSpec.describe "gh-pages.yml" do
       names = steps.map { |s| s["name"] }
       expect(names).to include("Export JSON")
       expect(names).to include("Export Stats")
-      expect(steps.any? { |s| s["uses"]&.include?("actions/deploy-pages@v4") }).to be(true)
+      expect(steps.any? { |s| s["uses"]&.include?("actions/deploy-pages@v5") }).to be(true)
     end
   end
 
