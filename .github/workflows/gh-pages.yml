@@ -29,7 +29,7 @@ jobs:
       group: deploy-gh-pages
       cancel-in-progress: true
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           ref: ${{ github.event.workflow_run.head_sha || github.ref }}
           token: ${{ secrets.WORKOUTS_SYNC_PAT }}
@@ -52,7 +52,7 @@ jobs:
       - name: Download fresh DB artifact
         if: inputs.artifact-run-id != ''
         continue-on-error: true
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v6
         with:
           name: workouts-db
           path: ${{ steps.db-paths.outputs.dir }}
@@ -78,9 +78,9 @@ jobs:
           out-dir: site
           npm-auth-token: ${{ secrets.GIT_FIT_NPM_TOKEN }}
 
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v4
         with:
           path: ./site
 
       - id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
