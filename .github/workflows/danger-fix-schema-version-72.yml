@@ -1,0 +1,77 @@
+name: "[DB] Dangerous fix schema version 72"
+
+on:
+  workflow_dispatch:
+
+jobs:
+  fix-schema-version-72:
+    concurrency:
+      group: workouts-db
+      cancel-in-progress: false
+    runs-on: ${{ vars.RUNNER_LABEL || 'ubuntu-latest' }}
+    permissions:
+      contents: write
+    env:
+      GIT_FIT_DATABASE_PATH: ${{ vars.GIT_FIT_DATABASE_PATH || 'data/db/workouts.db' }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: '[db] Derive database paths'
+        id: db-paths
+        uses: git-fit-actions/db-store/paths@v1
+        with:
+          database-path: ${{ env.GIT_FIT_DATABASE_PATH }}
+
+      - name: '[db] Restore cache'
+        uses: git-fit-actions/db-store/cache/restore@v1
+        with:
+          db-dir: ${{ steps.db-paths.outputs.dir }}
+          db-name: ${{ steps.db-paths.outputs.name }}
+          git-restore-mode: fallback
+          git-branch: GitFit/db
+
+      - name: Fix schema_info version → 1
+        id: fix
+        shell: bash
+        env:
+          DB_PATH: ${{ steps.db-paths.outputs.db-path }}
+        run: |
+          set -e
+          if [ ! -f "$DB_PATH" ]; then
+            echo "DB not found: $DB_PATH — nothing to fix"
+            echo "before=" >> "$GITHUB_OUTPUT"
+            echo "after=" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          BEFORE=$(sqlite3 "$DB_PATH" "SELECT version FROM schema_info" 2>/dev/null || echo "")
+          echo "before=$BEFORE" >> "$GITHUB_OUTPUT"
+          echo "schema_info.version before: ${BEFORE:-<no table/row>}"
+          if [ -n "$BEFORE" ] && [ "$BEFORE" != "1" ]; then
+            sqlite3 "$DB_PATH" "UPDATE schema_info SET version=1"
+            echo "updated version $BEFORE → 1"
+          else
+            echo "no change needed"
+          fi
+          AFTER=$(sqlite3 "$DB_PATH" "SELECT version FROM schema_info" 2>/dev/null || echo "")
+          echo "after=$AFTER" >> "$GITHUB_OUTPUT"
+          echo "schema_info.version after: ${AFTER:-<no table/row>}"
+
+      - name: '[db] Save cache'
+        if: always()
+        uses: git-fit-actions/db-store/cache/save@v1
+        with:
+          db-dir: ${{ steps.db-paths.outputs.dir }}
+          db-name: ${{ steps.db-paths.outputs.name }}
+          save-to-git-branch: false
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "### Fix schema version 72" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Field | Value |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|-------|-------|" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Before | \`${{ steps.fix.outputs.before || '<none>' }}\` |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| After | \`${{ steps.fix.outputs.after || '<none>' }}\` |" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "One-time migration for git-fit 0.21.5 squash (001-004 → 001). Disable this workflow after first success." >> "$GITHUB_STEP_SUMMARY"
