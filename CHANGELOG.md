@@ -9,6 +9,10 @@
 | `danger-correct-elevation.yml` 新增：`git fit elevation correct [--dem]` 写 `elevation_*_terrain`（git-fit 0.21），DEM 缓存独立 key `GitFit-dem-v0-*` 仅 actions/cache | ✅ 已完成 |
 | git-fit 依赖 `~> 0.18.5` → `~> 0.21`；导出自动优先 `_terrain \|\| raw`，gh-pages 无需改动 | ✅ 已完成 |
 | Gemfile.lock 锁定 git-fit 0.21.1：DEM API 改独立限速 pacing（free tier ~1 req/s），冷缓存 dispatch 不再触发 OpenTopography 429 | ✅ 已完成 |
+| git-fit 0.21.2（#91）：correct 九源覆盖（`positionLat` 别名 + workflow sources 补 keep/2bulu/apple_health）；keep 809 行 `_terrain` 分批补齐 | ✅ 已完成 |
+| git-fit 0.21.3（#84）：stats.json 上线 `unique_total_*` 去重口径；总爬升/下降比回落 1.03，[#36](https://github.com/Lax/workouts/issues/36) 验关闭合 | ✅ 已完成 |
+| git-fit 0.21.4（#78）：backfill 补 keep raw（809 行，L2 std threshold=0） | ✅ 已完成 |
+| git-fit 0.21.5（#72）：migrations squash `001–004 → 001`；一次性 `danger-fix-schema-version-72` 将缓存 DB version 4→1 后 disable | ✅ 已完成 |
 
 ## 2026-08 — footprint 主题视觉定稿
 
