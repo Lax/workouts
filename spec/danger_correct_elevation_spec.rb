@@ -138,7 +138,7 @@ RSpec.describe "danger-correct-elevation.yml" do
   describe "action version pins" do
     it "pins actions to major tags" do
       uses = steps.map { |s| s["uses"] }.compact
-      expect(uses).to include("actions/checkout@v6")
+      expect(uses).to include("actions/checkout@v7")
       expect(uses).to include("ruby/setup-ruby@v1")
       expect(uses).to include("git-fit-actions/db-store/paths@v1")
       expect(uses).to include("git-fit-actions/db-store/cache/restore@v1")

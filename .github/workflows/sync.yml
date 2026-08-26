@@ -18,7 +18,7 @@ jobs:
     env:
       GIT_FIT_DATABASE_PATH: ${{ vars.GIT_FIT_DATABASE_PATH || 'data/db/workouts.db' }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - uses: ruby/setup-ruby@v1
         with:
@@ -138,7 +138,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
 
       - name: Upload DB artifact
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         if: steps.db-save.outputs.changed == 'true' || steps.data-save.outputs.changed == 'true'
         with:
           name: workouts-db
