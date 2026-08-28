@@ -44,7 +44,7 @@
       "palette": "footprint"
     },
     "running-page": {
-      "site": { "title": "Running", "nav": false, "palette": "warm" }
+      "site": { "title": "Running", "logo": "https://github.com/Lax.png", "nav": false, "palette": "warm" }
     }
   }
 }
