@@ -6,11 +6,11 @@
 
 ## 触发条件
 
-由 runner.sh 在以下情况调用：
+由 orchestrator 在以下情况调用：
 
 1. Reviewer 返回 `NEEDS_REFINE`
 2. Tester 报告 `blocker` 类问题
-3. Retry count < 3（由 runner.sh 维护）
+3. Retry count < 3（由 orchestrator 维护）
 
 ## 输入
 
@@ -75,9 +75,9 @@
 - 只处理反馈指出的问题，不要引入新改动
 - 优先确保 P0 全部修复，P1 尽量处理
 - 如果某问题因 scope 或技术原因无法修复，必须标注原因
-- 修复完成后，由 runner.sh 自动重跑 Verify，不需要手动更新 status.json
-- 如 retry 超过 3 次仍未通过，runner.sh 会触发 `major` 升级，暂停并请求用户决策
+- 修复完成后，由 orchestrator 重新触发 Verify 并更新 status.json
+- 如 retry 超过 3 次仍未通过，orchestrator 触发 `major` 升级，暂停并请求用户决策
 
 ## Model
 
-运行时从 `status.json` 的 `model_tier` 推导，默认 `high`。
+模型由 `opencode.json` 中该 agent 的配置决定；`status.json` 的 `model_tier` 供 orchestrator 参考。

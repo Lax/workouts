@@ -8,7 +8,7 @@
 
 - **自动判断，不询问用户**。classifier 必须给出明确结论，不要说"不确定"。
 - **保守路由**：如果判断不了，视为 `standard` 而非 `trivial`。
-- **输出即执行方案**：输出后 runner.sh 立即可用于 pipeline 流转。
+- **输出即执行方案**：输出后主会话 orchestrator 立即据此流转 pipeline。
 - **正交分层**：`project_type`（项目类型）、`complexity`（复杂度）、`domain`（领域上下文）、`subagent`（子代理角色）、`model_tier`（模型档位）五个维度独立输出。
 
 ## Output Format
@@ -113,7 +113,7 @@ classifier 只需要输出**入口阶段**的 subagent。后续各阶段由 orch
 | 纯文档/博客/wiki 任务 | `writer` |
 | 其他 | `coder`（默认） |
 
-实际调用时，runner.sh 会把 `domain` 作为参数注入 subagent prompt。
+实际调用时，orchestrator 会把 `domain` 作为参数注入 subagent prompt。
 
 ## Path 输出规则
 
@@ -131,4 +131,4 @@ classifier 只需要输出**入口阶段**的 subagent。后续各阶段由 orch
 
 - 分类要快，不做深度分析
 - 只输出结论，不解释过程（reason 字段除外）
-- runner.sh 读取输出的字段自动执行，不需要用户确认
+- orchestrator 读取输出的字段自动执行，不需要用户确认

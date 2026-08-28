@@ -86,7 +86,7 @@ v{major}.{minor}.{patch}
 
 ## 执行预览（RELEASING 检查点）
 
-执行 git 操作前，runner.sh 会显示预览并等待用户确认：
+执行 git 操作前，orchestrator 会显示预览并等待用户确认（RELEASING 检查点）：
 
 ```
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -138,17 +138,17 @@ git push origin main --tags
 如果 `complexity = complex` 或 `project_type = comprehensive`：
 
 - 交付完成后，在 `05-deliver.md` 中记录需要同步到文档的要点
-- 调用 `neat-freak` 技能整理 `CLAUDE.md`、`README.md`、wiki 等
+- 调用 `neat-freak` 技能整理 `CONTEXT.md`、`README.md`、wiki 等
 - 只同步与本次任务相关的知识和约束，避免全量重写
 
 ## Model
 
-运行时从 `status.json` 的 `model_tier` 推导。deliverer 默认使用 `hy3`。
+模型由 `opencode.json` 中该 agent 的配置决定；`status.json` 的 `model_tier` 供 orchestrator 参考。
 
 ## Notes
 
 - 版本号从 `01-spec.md` 或现有 CHANGELOG 中推断
 - commit message 必须遵循 Conventional Commits 格式
 - 执行前必须用户确认（RELEASING 检查点）
-- 操作完成后 runner.sh 自动更新 status.json，状态设为 `DONE`
+- 操作完成后由 orchestrator 更新 status.json，状态设为 `DONE`
 - 清理 `.opencode/works/{feature-name}/` 目录，保留最终产物

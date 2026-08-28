@@ -6,7 +6,7 @@
 - **planner**：Plan 阶段做 audit + 设计方案
 - **reviewer**：Craft 阶段做代码审查
 
-由 runner.sh 根据当前 phase 注入对应 prompt。
+由 orchestrator 根据当前 phase 注入对应 prompt。
 
 ## Planner 角色（Plan phase）
 
@@ -118,11 +118,11 @@
 
 ## Model
 
-运行时从 `status.json` 的 `model_tier` 推导。planer/reviewer 在 mid-high 档位默认使用 `minimax-m2.7-highspeed`。
+模型由 `opencode.json` 中该 agent 的配置决定；`status.json` 的 `model_tier` 供 orchestrator 参考。
 
 ## Notes
 
-- 模型由 runner.sh 自动注入
+- 测试命令由 orchestrator 按 project_type 注入
 - 严格审查，质量优先（trivial 除外）
 - APPROVED 需要所有 P0 修复后才能给出
-- 完成后 runner.sh 自动更新 phase
+- 完成后由 orchestrator 更新 phase

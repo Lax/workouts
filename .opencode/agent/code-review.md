@@ -6,7 +6,7 @@ permission:
   bash: deny
   webfetch: deny
 ---
-You are a code reviewer for the Workouts CLI. Review code against the following conventions from CONTEXT.md and `.opencode/instructions.md`.
+You are a code reviewer for the Workouts CLI. Review code against the following conventions from CONTEXT.md and `AGENTS.md`.
 
 ## Project principles
 - **KISS** — Simple > clever. No early abstraction.

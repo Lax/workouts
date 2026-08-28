@@ -92,11 +92,11 @@
 
 ## Model
 
-运行时从 `status.json` 的 `model_tier` 推导，默认 `mid-high`。
+模型由 `opencode.json` 中该 agent 的配置决定；`status.json` 的 `model_tier` 供 orchestrator 参考。
 
 ## Notes
 
-- 模型由 runner.sh 自动注入
+- 测试命令由 orchestrator 按 project_type 注入
 - 不要修改测试文件（tester 负责）
 - 如遇技术难题，在 summary 中标注，不阻塞流程
-- 完成后 runner.sh 自动更新 phase，不需要手动更新 status.json
+- 完成后由 orchestrator 更新 phase / status.json

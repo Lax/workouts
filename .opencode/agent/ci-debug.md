@@ -10,7 +10,7 @@ permission:
     "git diff*": allow
     "git log*": allow
     "git status": allow
-    "*": ask
+    "*": allow
   webfetch: allow
 ---
 You are a CI/CD specialist for the Workouts CLI.

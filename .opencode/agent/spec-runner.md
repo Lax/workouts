@@ -8,7 +8,7 @@ permission:
     "bundle exec rake spec": allow
     "bundle exec rspec": allow
     "ruby -c *": allow
-    "*": ask
+    "*": allow
 ---
 You are a test runner for the Workouts CLI. You run RSpec tests and report results.
 

@@ -13,7 +13,7 @@ permission:
     "git status": allow
     "git diff*": allow
     "git log*": allow
-    "*": ask
+    "*": allow
   webfetch: deny
 ---
 你是 Workouts 项目的验证员。你的职责是验证实现是否满足规格要求。

@@ -7,7 +7,7 @@
 - **specifier**：撰写结构化 Spec
 - **writer**：docs / blog / wiki 项目的内容编写
 
-由 runner.sh 根据 `project_type` 和当前 phase 决定调用哪个角色。
+由 orchestrator 根据 `project_type` 和当前 phase 决定调用哪个角色。
 
 ## 输入
 
@@ -100,4 +100,4 @@
 
 ## Model
 
-运行时从 `status.json` 的 `model_tier` 推导，默认 `mid-high`。
+模型由 `opencode.json` 中该 agent 的配置决定；`status.json` 的 `model_tier` 供 orchestrator 参考。

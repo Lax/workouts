@@ -8,7 +8,7 @@ permission:
     "git diff*": allow
     "git log*": allow
     "git mv *": allow
-    "*": ask
+    "*": allow
   webfetch: allow
 ---
 You are a technical writer for the Workouts CLI. Write clear, structured documentation.

@@ -159,9 +159,6 @@ task("general", prompt="You are coder with domain=frontend. ...")
 ```
 WORK_DIR=.opencode/works/YYYY-MM-DD-desc
 mkdir -p $WORK_DIR
-if ! grep -qxF '/.opencode/works/' .gitignore; then
-  echo '/.opencode/works/' >> .gitignore
-fi
 write status.json with phases all pending + classifier output
 
 # Level 1 — 5 phase todos
@@ -312,7 +309,7 @@ if status == "pending_approval":
   # APPROVED checkpoint — only user stop
   Prompt user: "Plan ready. Approve to continue? (y/n)"
   if y:
-    state.sh approve <feature>
+    mark status.json approved = true
     todowrite("2/5 📐 Plan" → completed)
     todowrite("3/5 🔨 Craft" → in_progress)
     # Level 2 — Craft sub-tasks dynamic from 02-plan.md file list
@@ -360,7 +357,7 @@ if status == "escalated":
 - 记录所有兼容性问题到 03-craft.md
 
 所有步骤完成后：
-1. runner.sh 会注入正确的 test command（基于 project_type）。
+1. orchestrator 按 project_type 注入正确的 test command（查表见「Test Command Lookup」）。
 2. 如果 complexity == "trivial"，执行 self-review checklist，写入 03-craft.md。
 3. 写入 handoff 到 {workflow_dir}/03-craft.md
 4. 更新 status.json
@@ -398,7 +395,7 @@ todowrite("Verify: decide" → pending)
 2. 对照 spec 和 plan 做一致性检查
 3. 对发现的问题分类并处理
 
-runner.sh 已注入 test command：
+orchestrator 已注入 test command：
 {test_command}
 
 如果 project_type ∈ {docs, blog, wiki}：
@@ -486,7 +483,7 @@ Deliver 阶段开始，orchestrator 先展示：
 
 Prompt user: "Release? (y/n)"
 if y:
-  state.sh release <feature>
+  mark status.json released = true
   proceed with commit + CI
 else:
   stop, return to Craft
@@ -515,11 +512,10 @@ else:
    - 检测 project_type：
      - frontend/package.json → `npx biome check --write . && git add -u`
      - 否则 → `git add -A`
-   - 检查 .gitignore 是否包含 '/.opencode/works/'（没有就报告）
-   - 分类暂存文件判断是否跳过 CI：
-     - SAFE_PATTERNS="^(CONTEXT\.md|[^/]+\.md|\.opencode/)"
-     - 如果所有文件都匹配 → SKIP_CI=true
-     - 否则 → SKIP_CI=false
+    - 分类暂存文件判断是否跳过 CI：
+      - SAFE_PATTERNS="^(CONTEXT\.md|[^/]+\.md|\.opencode/)"
+      - 如果所有文件都匹配 → SKIP_CI=true
+      - 否则 → SKIP_CI=false
    - 提交（说 WHY 不是 WHAT），`git push`（SKIP_CI 时追加 "[skip ci]"）
    - 如果推送被拒 → 停止，报告分叉，升级。不要强制推送。
 
@@ -552,7 +548,7 @@ todowrite("5/5 🚀 Deliver" → completed)
 
 ## Test Command Lookup
 
-runner.sh 根据 `project_type` + 根目录文件检测注入测试命令：
+orchestrator 根据 `project_type` + 根目录文件检测注入测试命令：
 
 | project_type | 检测文件 | test_command |
 |---|---|---|

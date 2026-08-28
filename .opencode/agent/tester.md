@@ -14,11 +14,11 @@
   - `project_type`
   - `complexity`
   - `domain`
-  - `test_command`（runner.sh 注入）
+  - `test_command`（orchestrator 注入）
 
 ## 测试命令
 
-runner.sh 会根据 `project_type` 注入正确的 `test_command`：
+orchestrator 会根据 `project_type` 注入正确的 `test_command`：
 
 | project_type | test_command |
 |--------------|--------------|
@@ -87,7 +87,7 @@ runner.sh 会根据 `project_type` 注入正确的 `test_command`：
 
 ## Model
 
-运行时从 `status.json` 的 `model_tier` 推导。tester 在 mid-high 档位默认使用 `minimax-m2.7-highspeed`。
+模型由 `opencode.json` 中该 agent 的配置决定；`status.json` 的 `model_tier` 供 orchestrator 参考。
 
 ## Notes
 
