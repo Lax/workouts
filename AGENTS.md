@@ -9,6 +9,33 @@
 2. 产品/开发文档在两个 wiki：`workouts.wiki`（本仓库集成层）、`git-fit.wiki`（git-fit gem）；关键页面指针表见 CONTEXT.md 文末。
 3. opencode 会话可使用 `.opencode/` 下的 agent 编排与 meow skill；其他工具手动遵循同样的 phase 与 checkpoint，不要跳过 verify。
 
+## 模型分级使用规则
+
+> 单一真源：`~/.config/opencode/opencode.json`（历史 `opencode.jsonc` 已归档为 `.bak-*`；`model-router` 动态路由插件已移入 `plugins-disabled/`）。ollama 位于 `/srv/ollama`（docker compose，模型 `qwen2.5:3b/7b`，32k ctx）。
+
+### 状态 A（当前：opencode-go 烧月期，不续费）
+
+| 档 | 任务 | 模型 |
+|---|---|---|
+| 主力 | main / Craft / Plan / 日常问答 | `opencode-go/deepseek-v4-flash`（配额用完为止，不设节约纪律） |
+| L1 | verify / docs / CI YAML | `zhipuai glm-5.3-flash`（bigmodel Lite 周 10k 积分，周清零不用白不用） |
+| L0 | small_model（title/摘要） | `ollama qwen2.5:3b` |
+| 兜底 | explore 等云端便宜任务 | `opencode/deepseek-v4-flash-free` |
+
+### 状态 B（opencode-go 用尽后，一次性切换）
+
+| 档 | 模型 |
+|---|---|
+| 主力 main / Craft | `minimax-cn-coding-plan/MiniMax-M2.7`（年付大池） |
+| 深设计 / 大范围 audit | `MiniMax-M3`（1M ctx） |
+| L1 verify / docs | `glm-5.3-flash`（周配额） |
+| L0 small_model | `ollama qwen2.5:3b` |
+| 兜底 explore | `opencode/deepseek-v4-flash-free` |
+
+**切换动作**：opencode-go 报配额错或用户确认用完 → 删除 `opencode-go` provider 块 + `model` 改 `minimax-cn-coding-plan/MiniMax-M2.7`。
+
+**L0 纪律**：ollama 只承担 small_model；小模型不做 agentic explore（工具调用不可靠）；compaction 走主模型，与 small_model 无关。
+
 ## Principles
 
 | 缩写 | 全称 | 说明 |
