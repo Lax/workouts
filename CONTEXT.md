@@ -10,6 +10,24 @@
 
 > 本仓库是配置 + CI/CD 壳，核心逻辑全部在 git-fit gem。设计/调研/实现细节见 wiki（文末指针表），本文件只留规则与现状摘要。
 
+## 仓库族
+
+| 仓库 | 角色 | 修改策略 |
+|---|---|---|
+| `Lax/workouts` | 集成主仓：配置 + CI/CD 壳 + 数据制品部署（本仓库）| 直接修改 |
+| `Lax/git-fit` | 核心数据功能库（git-fit gem）：sync/import/export/dedup/db/geo CLI 逻辑与测试 | GitHub Issue，不提 PR |
+| `Lax/git-fit-web` | 数据展示前端（`@lax/*` 包，GitHub Packages）| GitHub Issue，不提 PR |
+| `git-fit-actions/*` | 复用 GitHub Actions（import / geo-detect / data-store / db-store 等）| GitHub Issue，不提 PR |
+| `Lax/running` | POC 验证仓，功能已逐渐迁往 git-fit / git-fit-web | 只读参考 |
+| `yihong0618/running_page` | 早期参考项目（上游）| 只读，不修改、不提 issue |
+
+## 文档位置
+
+| 位置 | 内容 |
+|---|---|
+| [workouts.wiki](https://github.com/Lax/workouts/wiki) | 本仓库产品设计、CI/CD、Dedup、Geo、前端架构（指针表见文末）|
+| [git-fit.wiki](https://github.com/Lax/git-fit/wiki) | git-fit gem 设计/调研/实现细节（如 specs/auth-model.md、xingzhe-api.md）|
+
 ---
 
 ## CLI 命令

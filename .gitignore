@@ -27,8 +27,6 @@ node_modules/
 .githooks/
 .env.local
 
-# Meow workflow artifacts
-/.opencode/meoworks/
 data/avatars/
 data/import/
 data/*.bak*
