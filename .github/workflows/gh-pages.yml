@@ -17,8 +17,6 @@ jobs:
     runs-on: ${{ vars.RUNNER_LABEL || 'ubuntu-latest' }}
     env:
       GIT_FIT_DATABASE_PATH: ${{ vars.GIT_FIT_DATABASE_PATH || 'data/db/workouts.db' }}
-      VITE__MAPBOX__TOKEN: ${{ secrets.MAPBOX_TOKEN }}
-      VITE__MAPTILER__TOKEN: ${{ secrets.MAPTILER_TOKEN }}
     permissions:
       actions: read
       pages: write
@@ -73,12 +71,25 @@ jobs:
       - name: Stage races.json
         run: jq -c . data/events/races.json > site/races.json
 
+      - name: Create frontend build config
+        env:
+          MAPTILER_TOKEN: ${{ secrets.MAPTILER_TOKEN }}
+        run: |
+          jq --arg token "$MAPTILER_TOKEN" '
+            .themes["running-page"].site.mapTileVendor = "maptiler" |
+            .themes["running-page"].site.mapTileStyle = "outdoor-v2" |
+            .themes["running-page"].site.mapTileToken = $token
+          ' config.json > config.build.json
+
       - name: Build frontend UI
         uses: git-fit-actions/frontend-build@v1
         with:
-          config: config.json
+          config: config.build.json
           out-dir: site
           npm-auth-token: ${{ secrets.GIT_FIT_NPM_TOKEN }}
+
+      - name: Remove generated frontend build config
+        run: rm -f config.build.json
 
       - uses: actions/upload-pages-artifact@v5
         with:
