@@ -72,13 +72,10 @@ jobs:
         run: jq -c . data/events/races.json > site/races.json
 
       - name: Create frontend build config
-        env:
-          MAPTILER_TOKEN: ${{ secrets.MAPTILER_TOKEN }}
         run: |
-          jq --arg token "$MAPTILER_TOKEN" '
-            .themes["running-page"].site.mapTileVendor = "maptiler" |
-            .themes["running-page"].site.mapTileStyle = "outdoor-v2" |
-            .themes["running-page"].site.mapTileToken = $token
+          jq '
+            .themes["running-page"].site.mapTileVendor = "mapcn" |
+            .themes["running-page"].site |= del(.mapTileStyle, .mapTileToken)
           ' config.json > config.build.json
 
       - name: Build frontend UI

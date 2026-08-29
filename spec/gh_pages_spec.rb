@@ -50,13 +50,12 @@ RSpec.describe "gh-pages.yml" do
       expect(steps.index(build)).to be > export_stats
     end
 
-    it "injects the running map key through a temporary build config" do
+    it "selects the running_page-compatible mapcn style through a temporary build config" do
       create = steps.find { |s| s["name"] == "Create frontend build config" }
       expect(create).not_to be_nil
-      expect(create.dig("env", "MAPTILER_TOKEN")).to eq("${{ secrets.MAPTILER_TOKEN }}")
       expect(create["run"]).to include("config.build.json")
-      expect(create["run"]).to include("mapTileVendor = \"maptiler\"")
-      expect(create["run"]).to include("mapTileToken = $token")
+      expect(create["run"]).to include("mapTileVendor = \"mapcn\"")
+      expect(create["run"]).to include("del(.mapTileStyle, .mapTileToken)")
 
       build = steps.find { |s| s["name"] == "Build frontend UI" }
       expect(steps.index(create)).to be < steps.index(build)
