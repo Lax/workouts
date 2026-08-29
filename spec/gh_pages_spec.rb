@@ -42,12 +42,27 @@ RSpec.describe "gh-pages.yml" do
       build = steps.find { |s| s["name"] == "Build frontend UI" }
       expect(build).not_to be_nil
       expect(build.dig("uses")).to eq("git-fit-actions/frontend-build@v1")
-      expect(build.dig("with", "config")).to eq("config.json")
+      expect(build.dig("with", "config")).to eq("config.build.json")
       expect(build.dig("with", "out-dir")).to eq("site")
       expect(build.dig("with", "npm-auth-token")).to eq("${{ secrets.GIT_FIT_NPM_TOKEN }}")
 
       export_stats = steps.index { |s| s["name"] == "Export Stats" }
       expect(steps.index(build)).to be > export_stats
+    end
+
+    it "injects the running map key through a temporary build config" do
+      create = steps.find { |s| s["name"] == "Create frontend build config" }
+      expect(create).not_to be_nil
+      expect(create.dig("env", "MAPTILER_TOKEN")).to eq("${{ secrets.MAPTILER_TOKEN }}")
+      expect(create["run"]).to include("config.build.json")
+      expect(create["run"]).to include("mapTileVendor = \"maptiler\"")
+      expect(create["run"]).to include("mapTileToken = $token")
+
+      build = steps.find { |s| s["name"] == "Build frontend UI" }
+      expect(steps.index(create)).to be < steps.index(build)
+
+      cleanup = steps.find { |s| s["name"] == "Remove generated frontend build config" }
+      expect(cleanup["run"]).to include("rm -f config.build.json")
     end
 
     it "grants packages: read for installing private @lax packages" do
@@ -71,6 +86,10 @@ RSpec.describe "gh-pages.yml" do
 
     it "configures a per-theme title for stats" do
       expect(config.dig("themes", "stats", "site", "title")).to eq("Stats")
+    end
+
+    it "does not commit a map tile token" do
+      expect(config.dig("themes", "running-page", "site")).not_to have_key("mapTileToken")
     end
   end
 end
