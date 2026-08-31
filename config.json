@@ -4,6 +4,7 @@
     "footprint": "footprint",
     "running": "running-page",
     "stats": "stats",
+    "ai": "ai",
     "about": "hello-world"
   },
   "plugins": {
@@ -16,6 +17,7 @@
         "footprint": "足迹",
         "running": "Running",
         "stats": "统计",
+        "ai": "AI 分析",
         "about": "关于"
       }
     }

@@ -7,6 +7,7 @@
   },
   "dependencies": {
     "@lax/plugin-nav": "^0.0.1",
+    "@lax/theme-ai": "^0.0.1",
     "@lax/theme-footprint": "^0.0.2",
     "@lax/theme-hello-world": "^0.0.1",
     "@lax/theme-running-page": "~0.0.6",
