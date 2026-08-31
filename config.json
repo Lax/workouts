@@ -4,7 +4,7 @@
     "footprint": "footprint",
     "running": "running-page",
     "stats": "stats",
-    "ai": "ai",
+    "ai": "ai-insights",
     "about": "hello-world"
   },
   "plugins": {
@@ -17,37 +17,68 @@
         "footprint": "足迹",
         "running": "Running",
         "stats": "统计",
-        "ai": "AI 分析",
+        "ai": "AI 洞察",
         "about": "关于"
       }
     }
   },
   "data": {
-    "stats": { "source": "stats.json", "optional": false },
-    "activities": { "source": "activities.json", "optional": true },
-    "tracks": { "source": "tracks.json", "optional": true },
-    "races": { "source": "races.json", "optional": true },
-    "ai": { "source": "insights.json", "optional": true }
+    "stats": {
+      "source": "stats.json",
+      "optional": false
+    },
+    "activities": {
+      "source": "activities.json",
+      "optional": true
+    },
+    "tracks": {
+      "source": "tracks.json",
+      "optional": true
+    },
+    "races": {
+      "source": "races.json",
+      "optional": true
+    },
+    "ai": {
+      "source": "insights.json",
+      "optional": true
+    }
   },
   "events": [],
-  "profile": { "birthYear": 1984, "birthMonth": 6 },
+  "profile": {
+    "birthYear": 1984,
+    "birthMonth": 6
+  },
   "themes": {
     "hello-world": {
-      "site": { "title": "hello world" }
+      "site": {
+        "title": "hello world"
+      }
     },
     "stats": {
-      "site": { "title": "Stats" }
+      "site": {
+        "title": "Stats"
+      }
     },
     "timeline": {
-      "site": { "title": "时间线" },
+      "site": {
+        "title": "时间线"
+      },
       "events": []
     },
     "footprint": {
-      "site": { "title": "足迹" },
+      "site": {
+        "title": "足迹"
+      },
       "palette": "footprint"
     },
     "running-page": {
-      "site": { "title": "Running", "logo": "https://github.com/Lax.png", "nav": false, "palette": "warm" }
+      "site": {
+        "title": "Running",
+        "logo": "https://github.com/Lax.png",
+        "nav": false,
+        "palette": "warm"
+      }
     }
   }
 }
