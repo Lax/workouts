@@ -3,8 +3,8 @@
     "index": "timeline",
     "footprint": "footprint",
     "running": "running-page",
-    "stats": "stats",
     "ai": "ai-insights",
+    "stats": "stats",
     "about": "hello-world"
   },
   "plugins": {
@@ -16,8 +16,8 @@
         "index": "时间线",
         "footprint": "足迹",
         "running": "Running",
-        "stats": "统计",
         "ai": "AI 洞察",
+        "stats": "统计",
         "about": "关于"
       }
     }
