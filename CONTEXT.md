@@ -72,6 +72,7 @@
 | Keep 用摘要数据；iGPSPORT/XOSS 用 mini_racer + @garmin/fitsdk 解析 FIT | Keep API 不提供 FIT；纯 gem 依赖无外部运行时 |
 | Per-source 独立 GH Cache | 每源独立 key（`GitFit-data-{source}-v0-{run_id}`），SHA256SUMS 检测变更仅写变动源 |
 | 多源并行队列调度 + 超时旗标 + DedupService 独立 | 均已迁移 git-fit gem |
+| AI 接入：构建期 `export ai` → insights.json + 前端 BYOK chat 双通道；LLM client 留 git-fit（OpenAI-compatible，不单独 gem）；前端不内置厂商 key | provider 不绑死；client 消费者单一（PFC）；静态站内置 key 必泄露。设计见 wiki/AI，拆解 #41–#43 + git-fit#92/#93 |
 
 ---
 
@@ -292,3 +293,4 @@ L1 raw → L2 标准化 GPS → L3 SQLite 摘要 → L4 构建制品 → L5 部�
 | [Geo](https://github.com/Lax/workouts/wiki/Geo) | 地理区域检测 |
 | [Testing](https://github.com/Lax/workouts/wiki/Testing) | 测试改进 |
 | [Frontend-Architecture](https://github.com/Lax/workouts/wiki/Frontend-Architecture) | 前端包/主题/构建/发布流程 |
+| [AI](https://github.com/Lax/workouts/wiki/AI) | AI Native 改造设计（insights 生成 + 前端 BYOK 分析，#40） |
