@@ -75,8 +75,8 @@ jobs:
         continue-on-error: true
         env:
           GIT_FIT_AI_ENABLED: 'true'
-          GIT_FIT_AI_ENDPOINT: ${{ vars.AI_ENDPOINT || 'https://open.bigmodel.cn/api/coding/paas/v4' }}
-          GIT_FIT_AI_MODEL: ${{ vars.AI_MODEL || 'glm-4-flash' }}
+          GIT_FIT_AI_ENDPOINT: ${{ vars.AI_ENDPOINT || 'https://opencode.ai/zen/v1' }}
+          GIT_FIT_AI_MODEL: ${{ vars.AI_MODEL || 'mimo-v2.5-free' }}
           GIT_FIT_AI_API_KEY_ENV: AI_API_KEY
           AI_API_KEY: ${{ secrets.AI_API_KEY }}
         run: bundle exec git fit export ai --output site/insights.json
