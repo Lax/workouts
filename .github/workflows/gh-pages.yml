@@ -17,6 +17,8 @@ jobs:
     runs-on: ${{ vars.RUNNER_LABEL || 'ubuntu-latest' }}
     env:
       GIT_FIT_DATABASE_PATH: ${{ vars.GIT_FIT_DATABASE_PATH || 'data/db/workouts.db' }}
+      # secrets 不可用于 step 级 if（actionlint 验证）——经 job env 间接传递
+      AI_API_KEY_PRESENT: ${{ secrets.AI_API_KEY != '' }}
     permissions:
       actions: read
       pages: write
@@ -67,6 +69,17 @@ jobs:
 
       - name: Export Stats
         run: bundle exec git fit export stats --output site/stats.json
+
+      - name: Export AI insights
+        if: env.AI_API_KEY_PRESENT == 'true'
+        continue-on-error: true
+        env:
+          GIT_FIT_AI_ENABLED: 'true'
+          GIT_FIT_AI_ENDPOINT: ${{ vars.AI_ENDPOINT || 'https://open.bigmodel.cn/api/coding/paas/v4' }}
+          GIT_FIT_AI_MODEL: ${{ vars.AI_MODEL || 'glm-4-flash' }}
+          GIT_FIT_AI_API_KEY_ENV: AI_API_KEY
+          AI_API_KEY: ${{ secrets.AI_API_KEY }}
+        run: bundle exec git fit export ai --output site/insights.json
 
       - name: Stage races.json
         run: jq -c . data/events/races.json > site/races.json
