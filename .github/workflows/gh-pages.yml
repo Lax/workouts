@@ -78,6 +78,8 @@ jobs:
           GIT_FIT_AI_ENDPOINT: ${{ vars.AI_ENDPOINT || 'https://opencode.ai/zen/v1' }}
           GIT_FIT_AI_MODEL: ${{ vars.AI_MODEL || 'mimo-v2.5-free' }}
           GIT_FIT_AI_API_KEY_ENV: AI_API_KEY
+          # 免费档模型在 ~43KB stats prompt 下常见 >60s（2026-08-31 insights 场景 60s 超时实测），放宽到 180s
+          GIT_FIT_AI_TIMEOUT: '180'
           AI_API_KEY: ${{ secrets.AI_API_KEY }}
         run: bundle exec git fit export ai --output site/insights.json
 
