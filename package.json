@@ -14,7 +14,7 @@
     "@lax/theme-timeline": "~0.0.33",
     "@lax/web-build": "^0.0.4",
     "@lax/theme-ai-insights": "~0.0.3",
-    "@lax/plugin-ai-chat": "~0.0.4"
+    "@lax/plugin-ai-chat": "~0.0.5"
   },
   "allowScripts": {
     "esbuild@0.25.12": true
