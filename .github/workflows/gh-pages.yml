@@ -70,7 +70,16 @@ jobs:
       - name: Export Stats
         run: bundle exec git fit export stats --output site/stats.json
 
+      - name: '[ai] Restore cache'
+        uses: actions/cache/restore@v4
+        with:
+          path: site/insights.json
+          key: GitFit-ai-insights-v0-sentinel
+          restore-keys: |
+            GitFit-ai-insights-v0-
+
       - name: Export AI insights
+        id: ai-export
         if: env.AI_API_KEY_PRESENT == 'true'
         continue-on-error: true
         env:
@@ -81,7 +90,18 @@ jobs:
           # 免费档模型在 ~43KB stats prompt 下常见 >60s（2026-08-31 insights 场景 60s 超时实测），放宽到 180s
           GIT_FIT_AI_TIMEOUT: '180'
           AI_API_KEY: ${{ secrets.AI_API_KEY }}
-        run: bundle exec git fit export ai --output site/insights.json
+        run: |
+          before=$(sha256sum site/insights.json 2>/dev/null | cut -d' ' -f1 || echo none)
+          bundle exec git fit export ai --output site/insights.json
+          after=$(sha256sum site/insights.json 2>/dev/null | cut -d' ' -f1 || echo none)
+          if [ "$before" != "$after" ]; then echo "changed=true" >> "$GITHUB_OUTPUT"; fi
+
+      - name: '[ai] Save cache'
+        if: steps.ai-export.outputs.changed == 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: site/insights.json
+          key: GitFit-ai-insights-v0-${{ github.run_id }}
 
       - name: Stage races.json
         run: jq -c . data/events/races.json > site/races.json
