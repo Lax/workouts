@@ -108,18 +108,18 @@ jobs:
 
       - name: Verify map tile token
         env:
-          MAPBOX_TOKEN: ${{ secrets.MAPBOX_TOKEN }}
+          MAPTILER_TOKEN: ${{ secrets.MAPTILER_TOKEN }}
         run: |
-          if [ -z "$MAPBOX_TOKEN" ]; then
+          if [ -z "$MAPTILER_TOKEN" ]; then
             status="missing"
             http="n/a"
           else
             http="000"
-            for style in dark-v11 light-v11; do
+            for style in darkmatter bright-v2; do
               for attempt in 1 2 3; do
                 http=$(curl -s -o /dev/null -w "%{http_code}" --max-time 15 \
-                  -H "Referer: https://lax.github.io/workouts/running.html" \
-                  "https://api.mapbox.com/styles/v1/mapbox/${style}/tiles/0/0/0@2x?access_token=${MAPBOX_TOKEN}")
+                  -H "Referer: https://liulantao.com/" \
+                  "https://api.maptiler.com/maps/${style}/0/0/0.png?key=${MAPTILER_TOKEN}")
                 [ "$http" = "200" ] && break
                 [ "$attempt" -lt 3 ] && sleep 5
               done
@@ -134,23 +134,23 @@ jobs:
             echo "| Status | HTTP | Token |"
             echo "|---|---|---|"
             case "$status" in
-              ok)           echo "| ✅ mapbox verified (dark-v11 + light-v11) | 200 | present |" ;;
-              missing)      echo "| ❌ mapbox token missing — map shows error tiles | $http | absent |" ;;
-              smoke-failed) echo "| ❌ mapbox smoke check failed on ${style_failed:-tile} — map may show error tiles | $http | present |" ;;
+              ok)           echo "| ✅ maptiler verified (darkmatter + bright-v2) | 200 | present |" ;;
+              missing)      echo "| ❌ maptiler token missing — map shows error tiles | $http | absent |" ;;
+              smoke-failed) echo "| ❌ maptiler smoke check failed on ${style_failed:-tile} — map may show error tiles | $http | present |" ;;
             esac
             echo ""
-            echo "Fix: update MAPBOX_TOKEN secret (https://account.mapbox.com/access-tokens/)"
+            echo "Fix: update MAPTILER_TOKEN secret (https://cloud.maptiler.com/account/keys/)"
           } >> "$GITHUB_STEP_SUMMARY"
           if [ "$status" != "ok" ]; then
-            echo "::warning::Mapbox token $status (HTTP $http) — running-page map shows error tiles. Fix: update MAPBOX_TOKEN secret (https://account.mapbox.com/access-tokens/)"
+            echo "::warning::MapTiler token $status (HTTP $http) — running-page map shows error tiles. Fix: update MAPTILER_TOKEN secret (https://cloud.maptiler.com/account/keys/)"
           fi
 
       - name: Create frontend build config
         env:
-          MAPBOX_TOKEN: ${{ secrets.MAPBOX_TOKEN }}
+          MAPTILER_TOKEN: ${{ secrets.MAPTILER_TOKEN }}
         run: |
-          jq --arg token "$MAPBOX_TOKEN" '
-            .themes["running-page"].site.mapTileVendor = "mapbox" |
+          jq --arg token "$MAPTILER_TOKEN" '
+            .themes["running-page"].site.mapTileVendor = "maptiler" |
             .themes["running-page"].site.mapTileToken = $token |
             .themes["running-page"].site |= del(.mapTileStyle)
           ' config.json > config.build.json

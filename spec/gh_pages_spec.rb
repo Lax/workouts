@@ -50,15 +50,15 @@ RSpec.describe "gh-pages.yml" do
       expect(steps.index(build)).to be > export_stats
     end
 
-    it "selects the mapbox vendor with a secret-injected token through a temporary build config" do
+    it "selects the maptiler vendor with a secret-injected token through a temporary build config" do
       create = steps.find { |s| s["name"] == "Create frontend build config" }
       expect(create).not_to be_nil
       expect(create["run"]).to include("config.build.json")
-      expect(create["run"]).to include("mapTileVendor = \"mapbox\"")
+      expect(create["run"]).to include("mapTileVendor = \"maptiler\"")
       expect(create["run"]).to include("mapTileToken = $token")
       expect(create["run"]).to include("del(.mapTileStyle)")
       expect(create["run"]).not_to include("del(.mapTileToken)")
-      expect(create.dig("env", "MAPBOX_TOKEN")).to eq("${{ secrets.MAPBOX_TOKEN }}")
+      expect(create.dig("env", "MAPTILER_TOKEN")).to eq("${{ secrets.MAPTILER_TOKEN }}")
 
       build = steps.find { |s| s["name"] == "Build frontend UI" }
       expect(steps.index(create)).to be < steps.index(build)
@@ -67,13 +67,17 @@ RSpec.describe "gh-pages.yml" do
       expect(cleanup["run"]).to include("rm -f config.build.json")
     end
 
-    it "smoke-checks the Mapbox token with degrade-and-report semantics before the build config" do
+    it "smoke-checks the MapTiler token with browser-accurate referer and degrade-and-report semantics" do
       smoke = steps.find { |s| s["name"] == "Verify map tile token" }
       expect(smoke).not_to be_nil
-      expect(smoke["run"]).to include("api.mapbox.com")
-      expect(smoke["run"]).to include("dark-v11")
-      expect(smoke["run"]).to include("light-v11")
-      expect(smoke.dig("env", "MAPBOX_TOKEN")).to eq("${{ secrets.MAPBOX_TOKEN }}")
+      expect(smoke["run"]).to include("api.maptiler.com")
+      expect(smoke["run"]).to include("darkmatter")
+      expect(smoke["run"]).to include("bright-v2")
+      # MapTiler keys are domain-locked: keyless curls 403, and browsers send
+      # origin-only Referer for cross-origin tile <img> requests — so the smoke
+      # check must replicate that exact header shape.
+      expect(smoke["run"]).to include("Referer: https://liulantao.com/")
+      expect(smoke.dig("env", "MAPTILER_TOKEN")).to eq("${{ secrets.MAPTILER_TOKEN }}")
 
       # Degrade, don't block: the deploy must proceed when the token is
       # missing/invalid so the rest of the site (activities/stats) stays fresh.
