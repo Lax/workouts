@@ -106,11 +106,49 @@ jobs:
       - name: Stage races.json
         run: jq -c . data/events/races.json > site/races.json
 
-      - name: Create frontend build config
+      - name: Verify map tile token
+        env:
+          MAPTILER_TOKEN: ${{ secrets.MAPTILER_TOKEN }}
         run: |
-          jq '
-            .themes["running-page"].site.mapTileVendor = "mapcn" |
-            .themes["running-page"].site |= del(.mapTileStyle, .mapTileToken)
+          if [ -z "$MAPTILER_TOKEN" ]; then
+            status="missing"
+            http="n/a"
+          else
+            http="000"
+            for attempt in 1 2 3; do
+              http=$(curl -s -o /dev/null -w "%{http_code}" --max-time 15 \
+                "https://api.maptiler.com/maps/dark-v2/0/0/0.png?key=${MAPTILER_TOKEN}")
+              [ "$http" = "200" ] && break
+              [ "$attempt" -lt 3 ] && sleep 5
+            done
+            status="ok"
+            [ "$http" = "200" ] || status="smoke-failed"
+          fi
+          {
+            echo "### Map tile source (running-page)"
+            echo ""
+            echo "| Status | HTTP | Token |"
+            echo "|---|---|---|"
+            case "$status" in
+              ok)           echo "| ✅ maptiler verified | $http | present |" ;;
+              missing)      echo "| ❌ maptiler token missing — map shows error tiles | $http | absent |" ;;
+              smoke-failed) echo "| ❌ maptiler smoke check failed — map may show error tiles | $http | present |" ;;
+            esac
+            echo ""
+            echo "Fix: update MAPTILER_TOKEN secret (https://cloud.maptiler.com/account/keys/)"
+          } >> "$GITHUB_STEP_SUMMARY"
+          if [ "$status" != "ok" ]; then
+            echo "::warning::MapTiler token $status (HTTP $http) — running-page map shows error tiles. Fix: update MAPTILER_TOKEN secret (https://cloud.maptiler.com/account/keys/)"
+          fi
+
+      - name: Create frontend build config
+        env:
+          MAPTILER_TOKEN: ${{ secrets.MAPTILER_TOKEN }}
+        run: |
+          jq --arg token "$MAPTILER_TOKEN" '
+            .themes["running-page"].site.mapTileVendor = "maptiler" |
+            .themes["running-page"].site.mapTileToken = $token |
+            .themes["running-page"].site |= del(.mapTileStyle)
           ' config.json > config.build.json
 
       - name: Build frontend UI

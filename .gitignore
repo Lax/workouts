@@ -14,6 +14,7 @@ data/*.checksum
 build/
 target/
 site/
+config.build.json
 *.bak
 *.gem
 /config.yml

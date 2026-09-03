@@ -50,18 +50,39 @@ RSpec.describe "gh-pages.yml" do
       expect(steps.index(build)).to be > export_stats
     end
 
-    it "selects the running_page-compatible mapcn style through a temporary build config" do
+    it "selects the maptiler vendor with a secret-injected token through a temporary build config" do
       create = steps.find { |s| s["name"] == "Create frontend build config" }
       expect(create).not_to be_nil
       expect(create["run"]).to include("config.build.json")
-      expect(create["run"]).to include("mapTileVendor = \"mapcn\"")
-      expect(create["run"]).to include("del(.mapTileStyle, .mapTileToken)")
+      expect(create["run"]).to include("mapTileVendor = \"maptiler\"")
+      expect(create["run"]).to include("mapTileToken = $token")
+      expect(create["run"]).to include("del(.mapTileStyle)")
+      expect(create["run"]).not_to include("del(.mapTileToken)")
+      expect(create.dig("env", "MAPTILER_TOKEN")).to eq("${{ secrets.MAPTILER_TOKEN }}")
 
       build = steps.find { |s| s["name"] == "Build frontend UI" }
       expect(steps.index(create)).to be < steps.index(build)
 
       cleanup = steps.find { |s| s["name"] == "Remove generated frontend build config" }
       expect(cleanup["run"]).to include("rm -f config.build.json")
+    end
+
+    it "smoke-checks the MapTiler token with degrade-and-report semantics before the build config" do
+      smoke = steps.find { |s| s["name"] == "Verify map tile token" }
+      expect(smoke).not_to be_nil
+      expect(smoke["run"]).to include("api.maptiler.com")
+      expect(smoke.dig("env", "MAPTILER_TOKEN")).to eq("${{ secrets.MAPTILER_TOKEN }}")
+
+      # Degrade, don't block: the deploy must proceed when the token is
+      # missing/invalid so the rest of the site (activities/stats) stays fresh.
+      expect(smoke["run"]).to include("GITHUB_STEP_SUMMARY")
+      expect(smoke["run"]).to include("::warning::")
+      expect(smoke["run"]).not_to include("exit 1")
+
+      races = steps.index { |s| s["name"] == "Stage races.json" }
+      create = steps.index { |s| s["name"] == "Create frontend build config" }
+      expect(steps.index(smoke)).to be > races
+      expect(steps.index(smoke)).to be < create
     end
 
     it "grants packages: read for installing private @lax packages" do
