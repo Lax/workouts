@@ -47,7 +47,8 @@
   "events": [],
   "profile": {
     "birthYear": 1984,
-    "birthMonth": 6
+    "birthMonth": 6,
+    "ytd_goal_km": 1500
   },
   "themes": {
     "hello-world": {
