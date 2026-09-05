@@ -51,6 +51,14 @@ sync:
   #   session_path: ""                           # env: GIT_FIT_XINGZHE_SESSION_PATH
   #                                              # default data/auth/xingzhe/session.json
 
+  # codoon:                                      # env: GIT_FIT_CODOON_PHONE
+  #   phone: ""                                  # env: GIT_FIT_CODOON_PASSWORD
+  #   password: ""                               # 咕咚；gem >= 0.24
+
+  # joyrun:                                      # env: GIT_FIT_JOYRUN_UID
+  #   uid: ""                                    # env: GIT_FIT_JOYRUN_SID
+  #   sid: ""                                    # `git fit auth joyrun` 生成；gem >= 0.24
+
 export:
   json:
     path: site/activities.json

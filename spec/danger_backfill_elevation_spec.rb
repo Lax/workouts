@@ -43,11 +43,11 @@ RSpec.describe "danger-backfill-elevation.yml" do
   end
 
   describe "data restore" do
-    it "restores all seven elevation backfill sources" do
+    it "restores all nine elevation backfill sources" do
       data_restore = steps.find { |s| s["name"]&.include?("Restore data store") }
       expect(data_restore).not_to be_nil
       sources = data_restore.dig("with", "sources")
-      expect(sources.split(",")).to match_array(%w[igpsport keep xoss strava garmin garmin_cn xingzhe])
+      expect(sources.split(",")).to match_array(%w[igpsport keep xoss strava garmin garmin_cn xingzhe codoon joyrun])
     end
   end
 

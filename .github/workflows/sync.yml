@@ -54,7 +54,7 @@ jobs:
       # ── Data restore ──
       - uses: git-fit-actions/data-store/cache/restore@v2
         with:
-          sources: keep,igpsport,xoss,xingzhe,garmin,garmin_cn,strava
+          sources: keep,igpsport,xoss,xingzhe,garmin,garmin_cn,strava,codoon,joyrun
 
       - name: Sync activities
         uses: ./.github/actions/sync-activities
@@ -75,6 +75,10 @@ jobs:
           strava-client-secret: ${{ secrets.SYNC_STRAVA_CLIENT_SECRET }}
           strava-refresh-token: ${{ secrets.SYNC_STRAVA_REFRESH_TOKEN }}
           strava-web-auth-seed: ${{ secrets.SYNC_STRAVA_WEB_AUTH_SEED }}
+          codoon-phone: ${{ secrets.SYNC_CODOON_PHONE }}
+          codoon-password: ${{ secrets.SYNC_CODOON_PASSWORD }}
+          joyrun-uid: ${{ secrets.SYNC_JOYRUN_UID }}
+          joyrun-sid: ${{ secrets.SYNC_JOYRUN_SID }}
           timezone: ${{ vars.GIT_FIT_SYSTEM_TIMEZONE || 'Asia/Shanghai' }}
           db-path: ${{ steps.db-paths.outputs.db-path }}
 
@@ -82,7 +86,7 @@ jobs:
         if: always()
         uses: git-fit-actions/data-store/cache/save@v2
         with:
-          sources: keep,igpsport,xoss,xingzhe,garmin,garmin_cn,strava
+          sources: keep,igpsport,xoss,xingzhe,garmin,garmin_cn,strava,codoon,joyrun
 
       - name: Parse Geo Regions
         uses: git-fit-actions/geo-detect@v1

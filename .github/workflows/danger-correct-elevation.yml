@@ -18,6 +18,8 @@ on:
           - xingzhe
           - 2bulu
           - apple_health
+          - codoon
+          - joyrun
       force:
         description: "Recompute existing _terrain values (default: only fill NULLs)"
         type: boolean
@@ -63,7 +65,7 @@ jobs:
       - name: 'Restore data store'
         uses: git-fit-actions/data-store/cache/restore@v2
         with:
-          sources: igpsport,keep,xoss,strava,garmin,garmin_cn,xingzhe,2bulu,apple_health
+          sources: igpsport,keep,xoss,strava,garmin,garmin_cn,xingzhe,2bulu,apple_health,codoon,joyrun
 
       - name: 'Restore DEM cache'
         uses: actions/cache/restore@v6

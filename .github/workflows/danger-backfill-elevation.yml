@@ -57,7 +57,7 @@ jobs:
       - name: 'Restore data store'
         uses: git-fit-actions/data-store/cache/restore@v2
         with:
-          sources: igpsport,keep,xoss,strava,garmin,garmin_cn,xingzhe
+          sources: igpsport,keep,xoss,strava,garmin,garmin_cn,xingzhe,codoon,joyrun
 
       - name: Run elevation backfill
         id: backfill

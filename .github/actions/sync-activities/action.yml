@@ -53,6 +53,22 @@ inputs:
     description: Strava web auth JWT seed (base64) for original file fetch
     required: false
     default: ''
+  codoon-phone:
+    description: Codoon phone
+    required: false
+    default: ''
+  codoon-password:
+    description: Codoon password
+    required: false
+    default: ''
+  joyrun-uid:
+    description: Joyrun uid (from `git fit auth joyrun`)
+    required: false
+    default: ''
+  joyrun-sid:
+    description: Joyrun sid (from `git fit auth joyrun`)
+    required: false
+    default: ''
   timezone:
     description: Git-Fit framework timezone (system.timezone) for display formatting
     required: false
@@ -86,6 +102,10 @@ runs:
         GIT_FIT_STRAVA_CLIENT_ID: ${{ inputs.strava-client-id }}
         GIT_FIT_STRAVA_CLIENT_SECRET: ${{ inputs.strava-client-secret }}
         GIT_FIT_STRAVA_REFRESH_TOKEN: ${{ inputs.strava-refresh-token }}
+        GIT_FIT_CODOON_PHONE: ${{ inputs.codoon-phone }}
+        GIT_FIT_CODOON_PASSWORD: ${{ inputs.codoon-password }}
+        GIT_FIT_JOYRUN_UID: ${{ inputs.joyrun-uid }}
+        GIT_FIT_JOYRUN_SID: ${{ inputs.joyrun-sid }}
         GIT_FIT_DATABASE_PATH: ${{ inputs.db-path }}
       run: bundle exec git fit sync
 

@@ -12,7 +12,7 @@ RSpec.describe "danger-correct-elevation.yml" do
       expect(inputs).to have_key("source")
       expect(inputs["source"]["type"]).to eq("choice")
       expect(inputs["source"]["default"]).to eq("all")
-      expect(inputs["source"]["options"]).to eq(%w[all igpsport keep xoss strava garmin garmin_cn xingzhe 2bulu apple_health])
+      expect(inputs["source"]["options"]).to eq(%w[all igpsport keep xoss strava garmin garmin_cn xingzhe 2bulu apple_health codoon joyrun])
 
       expect(inputs).to have_key("force")
       expect(inputs["force"]["type"]).to eq("boolean")
@@ -47,11 +47,11 @@ RSpec.describe "danger-correct-elevation.yml" do
   end
 
   describe "data restore" do
-    it "restores all nine elevation sources" do
+    it "restores all eleven elevation sources" do
       data_restore = steps.find { |s| s["name"]&.include?("Restore data store") }
       expect(data_restore).not_to be_nil
       sources = data_restore.dig("with", "sources")
-      expect(sources.split(",")).to match_array(%w[igpsport keep xoss strava garmin garmin_cn xingzhe 2bulu apple_health])
+      expect(sources.split(",")).to match_array(%w[igpsport keep xoss strava garmin garmin_cn xingzhe 2bulu apple_health codoon joyrun])
     end
   end
 
