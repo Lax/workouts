@@ -22,6 +22,11 @@
       }
     }
   },
+  "ai": {
+    "activity": {
+      "systemPrompt": ""
+    }
+  },
   "data": {
     "stats": {
       "source": "stats.json",
