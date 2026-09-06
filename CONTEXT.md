@@ -72,7 +72,7 @@
 | Keep 用摘要数据；iGPSPORT/XOSS 用 mini_racer + @garmin/fitsdk 解析 FIT | Keep API 不提供 FIT；纯 gem 依赖无外部运行时 |
 | Per-source 独立 GH Cache | 每源独立 key（`GitFit-data-{source}-v0-{run_id}`），SHA256SUMS 检测变更仅写变动源 |
 | 多源并行队列调度 + 超时旗标 + DedupService 独立 | 均已迁移 git-fit gem |
-| AI 接入：构建期 `export ai` → insights.json + 前端 BYOK chat 双通道；LLM client 留 git-fit（OpenAI-compatible，不单独 gem）；前端不内置厂商 key | provider 不绑死；client 消费者单一（PFC）；静态站内置 key 必泄露。设计见 wiki/AI，拆解 #41–#43 + git-fit#92/#93 |
+| AI 接入：构建期 `export ai` → insights.json + 前端 BYOK 双通道（chat + 单活动分析）；LLM client 留 git-fit（OpenAI-compatible，不单独 gem）；前端不内置厂商 key | provider 不绑死；client 消费者单一（PFC）；静态站内置 key 必泄露。设计见 wiki/AI，拆解 #41–#43 + git-fit#92/#93 + #48 |
 
 ---
 
@@ -179,6 +179,7 @@ Secrets 名单 `_`（`SYNC_KEEP_PHONE`），sync.yml 经 `.github/actions/sync-a
   "entries": { "index": "timeline", "footprint": "footprint", "stats": "stats", "about": "hello-world" },
   "plugins": { "@lax/plugin-nav": {} },
   "site": { "nav": { "labels": { "index": "时间线", "footprint": "足迹", "stats": "统计", "about": "关于" } } },
+  "ai": { "activity": { "systemPrompt": "" } },
   "data": {
     "stats": { "source": "stats.json", "optional": false },
     "activities": { "source": "activities.json", "optional": true },
@@ -194,16 +195,17 @@ Secrets 名单 `_`（`SYNC_KEEP_PHONE`），sync.yml 经 `.github/actions/sync-a
 - `plugins`：站点级插件（web-build 生成 import 注入 bootstrap，全 entry 生效）
 - `site.nav`：`false` 禁用，`labels` 覆盖默认标签；两级解析 `themes.<id>.site.<field>` > `site.<field>` > 内置 fallback
 - `events` / `themes.<id>.events`：手动赛事，三层 merge（见下）
+- `ai.activity.systemPrompt`：单活动 AI 分析 system prompt 覆盖（空 = 内置教练人设，见 wiki/AI P4）
 
 ---
 
 ## 前端架构
 
-**包**（`Lax/git-fit-web` → GitHub Packages `@lax/*`，0.0.x）：`shared`（类型/格式化/geo/footprint 调色）/ `core`（bootstrap+registry+SiteNav host）/ `web-build`（CLI）/ `plugin-data-source`（useStats/useActivities）/ `plugin-nav` / `plugin-ui-map`（Leaflet 地图）/ `plugin-ui-chart`（ECharts 图表）/ `theme-hello-world` / `theme-stats` / `theme-timeline` / `theme-footprint`（足迹·锐利高对比红橙轨迹）/ `theme-running-page`（running_page 风格看板）。详见 wiki Frontend-Architecture 与 git-fit-web README。
+**包**（`Lax/git-fit-web` → GitHub Packages `@lax/*`，0.0.x）：`shared`（类型/格式化/geo/footprint 调色）/ `core`（bootstrap+registry+SiteNav host）/ `web-build`（CLI）/ `plugin-data-source`（useStats/useActivities）/ `plugin-nav` / `plugin-ai-chat`（BYOK chat + 单活动分析）/ `plugin-ui-map`（Leaflet 地图）/ `plugin-ui-chart`（ECharts 图表）/ `theme-hello-world` / `theme-stats` / `theme-timeline` / `theme-ai-insights`（insights 报告 + 问答独立页）/ `theme-footprint`（足迹·锐利高对比红橙轨迹）/ `theme-running-page`（running_page 风格看板）。详见 wiki Frontend-Architecture 与 git-fit-web README。
 
 **运行机制**：`bootstrap(config,{theme,plugins})` 依次 setup 插件 `registerComponent`；`config.plugins` 由 entry shim 注入；core `SiteNav` host 无条件挂载读 entries，plugin-nav 只供纯视图（单向依赖）。
 
-**theme-timeline**：竖直月时间轴 + 右侧多列卡片（`minmax(260px,1fr)`，轨迹 SVG 背景，hover 推近 / 选中 Ken Burns）+ 左侧 380px 面板（总览卡 + IO 滚动联动月份；点卡片切详情标签页，详情含总览顶部轨迹缩略图 + 5 组语义卡片、轨迹交互地图）。性能：渐进加载（先摘要后 tracks）+ 轨迹共享 observer 懒加载（进视口才解码）+ `RouteBgSVG` `requestIdleCallback` + `MapLRU100` 缓存 + `Douglas-Peucker 0.0001` 简化（15044→167 点，`@lax/shared sideEffects:false` tree-shaking 已验证，DOM 真实视口 <5000）+ 固定卡高三态卡片（border/text/detail，150ms settled）。即时跳转 + 一帧校正 + C 位落点（`monthScroll.ts`），轨迹交互地图支持 wheel 缩放/drag 平移/双击重置 + `stroke-dasharray` 2s 绘制（`prefers-reduced-motion` 禁用）+ 起点/终点标记。hash `#a=<run_id>` / `#m=<month>` / `#v=<view>` 深链。
+**theme-timeline**：竖直月时间轴 + 右侧多列卡片（`minmax(260px,1fr)`，轨迹 SVG 背景，hover 推近 / 选中 Ken Burns）+ 左侧 380px 面板（总览卡 + IO 滚动联动月份；点卡片切详情标签页：总览 / 轨迹 / 分段 / AI 分析，详情含总览顶部轨迹缩略图 + 5 组语义卡片、轨迹交互地图；AI 分析 tab 复用 `@lax/plugin-ai-chat` BYOK，单活动 digest + SSE 流式，见 wiki/AI P4）。性能：渐进加载（先摘要后 tracks）+ 轨迹共享 observer 懒加载（进视口才解码）+ `RouteBgSVG` `requestIdleCallback` + `MapLRU100` 缓存 + `Douglas-Peucker 0.0001` 简化（15044→167 点，`@lax/shared sideEffects:false` tree-shaking 已验证，DOM 真实视口 <5000）+ 固定卡高三态卡片（border/text/detail，150ms settled）。即时跳转 + 一帧校正 + C 位落点（`monthScroll.ts`），轨迹交互地图支持 wheel 缩放/drag 平移/双击重置 + `stroke-dasharray` 2s 绘制（`prefers-reduced-motion` 禁用）+ 起点/终点标记。hash `#a=<run_id>` / `#m=<month>` / `#v=<view>` 深链。
 
 **theme-footprint**：全屏足迹地图 + 锐利高对比红橙轨迹（Steplife 风格，`plugin-ui-map` edge+core 双线，暗色 edge `#ff3b30` + core `#ff9f0a`，亮色 edge `#c41e3a` + core `#f97316`，统一配色，无 ride 区分/无白点/无 star）+ 左侧抽屉（活动列表 + 筛选 + 图表覆层）。地图 `HeroMap` 由 `plugin-ui-map` 提供，图表由 `plugin-ui-chart` 提供。
 

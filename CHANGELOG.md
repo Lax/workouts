@@ -2,6 +2,13 @@
 
 > 核心逻辑（sync / import / export / dedup / db / geo / parse）已迁移至 git-fit gem，本仓库仅保留配置与 CI/CD。下述条目中标注「git-fit」的已迁移，详细实现见 git-fit 仓库。
 
+## 2026-09 — AI native 落地 + 单活动 AI 分析
+
+| Item | Status |
+|---|---|
+| AI native：LLM client（git-fit#92）+ `export ai` → insights.json（git-fit#93，0.22）、theme-stats「AI 洞察」section（#41，theme-stats 0.0.17+）、前端 BYOK chat（#42，plugin-ai-chat 0.0.x / theme-ai-insights）、gh-pages export ai 接线（#43） | ✅ 已完成 |
+| #48 单活动 AI 分析：theme-timeline 详情新增「AI 分析」tab（ActivityAiPanel，plugin-ai-chat 0.0.8 / theme-timeline 0.0.39，tag v0.0.78）；活动 digest 客户端推导（几何 / PB / 当月），polyline 原文不进 prompt；`config.json ai.activity.systemPrompt` 覆盖口子 | ✅ 已完成 |
+
 ## 2026-08 — elevation 两段式流水线接入
 
 | Item | Status |
