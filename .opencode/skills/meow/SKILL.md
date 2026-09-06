@@ -257,7 +257,7 @@ if gate blocks:
 | Field | Value |
 |---|---|
 | subagent_type | `reviewer` (audit) → `planner` (design) |
-| skills | `caveman`, `grill-with-docs` |
+| skills | `caveman`, `grill-with-docs`, `ponytail` |
 | handoff | `02-plan.md` |
 | gate | status=pending_approval, user confirmed y |
 
@@ -289,6 +289,8 @@ if gate blocks:
 2. 架构决策：为什么选这个方案？拒绝了哪些替代方案？
 3. 实现步骤：按依赖关系排序，每步应该是可独立交付的单元。
 4. 测试策略：每层应该测试什么？
+
+先加载 skill('ponytail')（full 强度）：设计只包含任务真正需要的部分，不用投机性架构/过早抽象/单一实现接口（ladder rung 1-2）；只砍多余的，不砍需求。
 
 如果 complexity == "complex"，额外验证 OHA（实现不超过 1 小时）。
 如果 OHA 不通过 → 标记 escalate，停止 plan，上报 orchestrator。
@@ -327,7 +329,7 @@ if status == "escalated":
 | Field | Value |
 |---|---|
 | subagent_type | `coder` (with domain param) |
-| skills | `caveman` |
+| skills | `caveman`, `ponytail` |
 | handoff | `03-craft.md` |
 | gate | tests + build pass |
 
@@ -345,6 +347,8 @@ if status == "escalated":
 
 输入：
 - 计划：{workflow_dir}/02-plan.md（standard/complex）或 Spec：{workflow_dir}/01-spec.md（trivial/docs）
+
+先加载 skill('ponytail')（full 强度）：按最小可工作 ladder 实现（已有代码 → 标准库 → 原生能力 → 一行 → 最小实现），不写投机性抽象/样板；安全不动：信任边界校验、数据丢失防护、安全、可访问性。
 
 请按步骤实现：
 1. 先完全读取文件，理解周围的代码约定（RUM）。
