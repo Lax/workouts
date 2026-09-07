@@ -9,7 +9,7 @@
     "@lax/plugin-nav": "^0.0.1",
     "@lax/theme-footprint": "^0.0.2",
     "@lax/theme-hello-world": "^0.0.1",
-    "@lax/theme-running-page": "~0.0.8",
+    "@lax/theme-running-page": "~0.0.9",
     "@lax/theme-stats": "~0.0.24",
     "@lax/theme-timeline": "~0.0.41",
     "@lax/web-build": "^0.0.4",
