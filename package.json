@@ -11,10 +11,10 @@
     "@lax/theme-hello-world": "^0.0.1",
     "@lax/theme-running-page": "~0.0.8",
     "@lax/theme-stats": "~0.0.22",
-    "@lax/theme-timeline": "~0.0.40",
+    "@lax/theme-timeline": "~0.0.41",
     "@lax/web-build": "^0.0.4",
-    "@lax/theme-ai-insights": "~0.0.3",
-    "@lax/plugin-ai-chat": "~0.0.9"
+    "@lax/theme-ai-insights": "~0.0.4",
+    "@lax/plugin-ai-chat": "~0.0.10"
   },
   "allowScripts": {
     "esbuild@0.25.12": true
