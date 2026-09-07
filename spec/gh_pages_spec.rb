@@ -35,6 +35,16 @@ RSpec.describe "gh-pages.yml" do
       expect(names).to include("Export Stats")
       expect(steps.any? { |s| s["uses"]&.include?("actions/deploy-pages@v5") }).to be(true)
     end
+
+    it "exports ability snapshots after stats, ungated (no LLM needed)" do
+      ability = steps.find { |s| s["name"] == "Export ability snapshots" }
+      expect(ability).not_to be_nil
+      expect(ability["run"]).to include("git fit ability compute --output site/ability.json")
+      expect(ability["if"]).to be_nil
+
+      export_stats = steps.index { |s| s["name"] == "Export Stats" }
+      expect(steps.index(ability)).to be > export_stats
+    end
   end
 
   describe "frontend build" do

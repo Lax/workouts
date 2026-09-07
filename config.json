@@ -47,6 +47,10 @@
     "ai": {
       "source": "insights.json",
       "optional": true
+    },
+    "ability": {
+      "source": "ability.json",
+      "optional": true
     }
   },
   "events": [],

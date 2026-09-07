@@ -70,6 +70,11 @@ jobs:
       - name: Export Stats
         run: bundle exec git fit export stats --output site/stats.json
 
+      # 能力画像快照（wiki/Ability）——纯本地派生无 LLM，确定性重算无需缓存；
+      # insights digest 在 gem 内已指纹 ability，digest-skip 联动无需 CI 侧缓存键
+      - name: Export ability snapshots
+        run: bundle exec git fit ability compute --output site/ability.json
+
       - name: '[ai] Restore cache'
         uses: actions/cache/restore@v4
         with:
