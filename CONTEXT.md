@@ -41,9 +41,9 @@
 | `git fit auth <garmin\|garmin_cn\|strava>` | 交互式 auth（xoss/xingzhe 在 sync 时自动认证，见 [git-fit auth-model](https://github.com/Lax/git-fit/wiki/specs/auth-model.md)）|
 | `git fit db SUBCOMMAND` | 数据库操作 |
 | `git fit geo SUBCOMMAND` | 地理行政区域检测 |
+| `git fit ability compute [--as-of DATE]` | 能力画像两层快照 → ability.json（wiki/Ability，≥0.25）|
 | `git fit parse <file.gpx\|file.tcx> [--save]` | 解析 GPX/TCX |
-| `git fit init` | 生成默认 config.yml |
-| `git fit version` | 版本号 |
+| `git fit init` / `git fit version` | 生成默认 config.yml / 版本号 |
 
 ---
 
@@ -149,7 +149,7 @@ CREATE TABLE activities (
 
 ### 环境变量命名
 
-`GIT_FIT_` 前缀 + key（大写+下划线），单 `_` 分隔（`garmin_cn` 保留原样）。例：`GIT_FIT_KEEP_PHONE → sync.keep.phone`、`GIT_FIT_SYNC_TIME_BUDGET → sync.time_budget`、`GIT_FIT_CONFIG_PATH → config 路径`。
+`GIT_FIT_` 前缀 + key（大写+下划线），单 `_` 分隔（`garmin_cn` 保留原样）。例：`GIT_FIT_KEEP_PHONE → sync.keep.phone`、`GIT_FIT_SYNC_TIME_BUDGET → sync.time_budget`、`GIT_FIT_ABILITY_DISABLED → ai.ability_disabled`、`GIT_FIT_CONFIG_PATH → config 路径`。
 
 ### 环境变量文件约定
 
@@ -185,7 +185,9 @@ Secrets 名单 `_`（`SYNC_KEEP_PHONE`），sync.yml 经 `.github/actions/sync-a
     "stats": { "source": "stats.json", "optional": false },
     "activities": { "source": "activities.json", "optional": true },
     "tracks": { "source": "tracks.json", "optional": true },
-    "races": { "source": "races.json", "optional": true }
+    "races": { "source": "races.json", "optional": true },
+    "ai": { "source": "insights.json", "optional": true },
+    "ability": { "source": "ability.json", "optional": true }
   },
   "events": [],
   "themes": { "timeline": { "site": { "title": "时间线" }, "events": [] } }
@@ -257,7 +259,7 @@ f > 2N+1 → N = min(7, N+1)     减速（每周日保底）
 |---|---|
 | Pages 源 | GitHub Actions |
 | URL | `https://lax.github.io/workouts/` |
-| 数据制品 | `activities.json` / `tracks.json` / `stats.json` / `races.json`（排除 DB）|
+| 数据制品 | `activities.json` / `tracks.json` / `stats.json` / `races.json` / `insights.json` / `ability.json`（排除 DB）|
 | 前端页面 | `index.html`（timeline）/ `footprint.html`（footprint）/ `running.html`（running-page）/ `stats.html`（stats）/ `about.html`（hello-world）|
 | 独立前端 | `https://lax.github.io/running/`（Lax/running running_page 看板）|
 
