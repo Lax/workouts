@@ -77,6 +77,8 @@ No unsolicited files or actions.
 - rebase: `EDITOR=true git rebase -i HEAD~N`
 - tag: `git tag -a v1.0 -m "msg"`
 
+**Gem 发版**：一律走 `gem-release` skill（bump → push → annotated tag 含**系列回顾**段 → `git ls-remote` 同步确认；rubygems publish 需 WebAuthn 浏览器确认，用 `setsid --fork script -qfec` 后台推送 + 轮询 API 验证）。已推 tag 永不重写，漏段自担。
+
 **Push 纪律：**
 
 - 已 push 的 commit 禁止 amend，需要修正就发新 commit
