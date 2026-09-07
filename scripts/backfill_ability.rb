@@ -17,6 +17,7 @@
 require "json"
 require "fileutils"
 require "optparse"
+require "shellwords"
 
 options = {
   output: "site/ability.json",
