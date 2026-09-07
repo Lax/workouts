@@ -8,6 +8,7 @@
 |---|---|
 | AI native：LLM client（git-fit#92）+ `export ai` → insights.json（git-fit#93，0.22）、theme-stats「AI 洞察」section（#41，theme-stats 0.0.17+）、前端 BYOK chat（#42，plugin-ai-chat 0.0.x / theme-ai-insights）、gh-pages export ai 接线（#43） | ✅ 已完成 |
 | #48 单活动 AI 分析：theme-timeline 详情新增「AI 分析」tab（ActivityAiPanel，plugin-ai-chat 0.0.8 / theme-timeline 0.0.39，tag v0.0.78）；活动 digest 客户端推导（几何 / PB / 当月），polyline 原文不进 prompt；`config.json ai.activity.systemPrompt` 覆盖口子 | ✅ 已完成 |
+| 能力画像设计定稿（[#49](https://github.com/Lax/workouts/issues/49)–[#53](https://github.com/Lax/workouts/issues/53) + [git-fit#95](https://github.com/Lax/git-fit/issues/95)/[#96](https://github.com/Lax/git-fit/issues/96)）：`ability.json` 两层（fitness 基础体能 + sports 分项）、因果窗口 `--as-of`、chat `@时间锚`、dedup 组内中位数口径、confidence 三档；7 个 issue 自包含正文（代码锚点已核实）+ wiki/Ability 设计页 + 回填脚本 | 🚧 设计完成，开发进行中 |
 
 ## 2026-08 — elevation 两段式流水线接入
 
