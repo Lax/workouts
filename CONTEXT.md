@@ -135,6 +135,7 @@ CREATE TABLE activities (
   elevation_gain_terrain REAL, elevation_loss_terrain REAL,
   elevation_min_terrain REAL, elevation_max_terrain REAL,
   source TEXT, duplicate_info TEXT,                     -- 去重信息（JSON 数组）
+  device TEXT, app TEXT, lineage TEXT,                  -- git-fit >= 0.26: 硬件/App/血缘链（lineage = device → app → source，仅展示）
   created_at DATETIME, updated_at DATETIME
 );
 ```
