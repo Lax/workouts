@@ -16,7 +16,7 @@
 |---|---|---|
 | `Lax/workouts` | 集成主仓：配置 + CI/CD 壳 + 数据制品部署（本仓库）| 直接修改 |
 | `Lax/git-fit` | 核心数据功能库（git-fit gem）：sync/import/export/dedup/db/geo CLI 逻辑与测试 | GitHub Issue，不提 PR |
-| `Lax/git-fit-web` | 数据展示前端（`@lax/*` 包，GitHub Packages）| GitHub Issue，不提 PR |
+| `Lax/git-fit-web` | 数据展示前端（`@lax/*` 包，GitHub Packages）| GitHub Issue（该仓 issues 禁用，**提至 Lax/workouts** 并注明代码落点），不提 PR |
 | `git-fit-actions/*` | 复用 GitHub Actions（import / geo-detect / data-store / db-store 等）| GitHub Issue，不提 PR |
 | `Lax/running` | POC 验证仓，功能已逐渐迁往 git-fit / git-fit-web | 只读参考 |
 | `yihong0618/running_page` | 早期参考项目（上游）| 只读，不修改、不提 issue |
