@@ -19,6 +19,8 @@
 #   --db-path PATH   SQLite database path (default: data/db/workouts.db)
 #   --raw-dir DIR    Raw data root (default: data/raw)
 #   --source SOURCE  Restrict to one source (default: all)
+#   --force          Re-run already backfilled rows of the selected source
+#                    (e.g. after a device model mapping lands); all+force refused
 #   --dry-run        Report only, do not write
 #
 # Outputs (GitHub Actions):
@@ -38,6 +40,7 @@ options = {
   db_path: DEFAULT_DB,
   raw_dir: DEFAULT_RAW,
   source: "all",
+  force: false,
   dry_run: false
 }
 
@@ -45,8 +48,14 @@ OptionParser.new do |opts|
   opts.on("--db-path PATH") { |v| options[:db_path] = v }
   opts.on("--raw-dir DIR") { |v| options[:raw_dir] = v }
   opts.on("--source SOURCE") { |v| options[:source] = v }
+  opts.on("--force") { options[:force] = true }
   opts.on("--dry-run") { options[:dry_run] = true }
 end.parse!
+
+if options[:force] && options[:source] == "all"
+  warn "backfill: --force requires --source (refusing to reset all sources)"
+  exit 1
+end
 
 unless File.exist?(options[:db_path])
   warn "backfill: database not found: #{options[:db_path]}"
@@ -55,8 +64,14 @@ unless File.exist?(options[:db_path])
 end
 
 db = Sequel.sqlite(options[:db_path])
-ds = db[:activities].where(lineage: nil)
-ds = ds.where(source: options[:source]) unless options[:source] == "all"
+ds = db[:activities]
+ds = if options[:force]
+  ds.where(source: options[:source])
+elsif options[:source] == "all"
+  ds.where(lineage: nil)
+else
+  ds.where(lineage: nil, source: options[:source])
+end
 
 stats = Hash.new(0)
 dry_run = options[:dry_run]
