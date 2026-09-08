@@ -12,7 +12,7 @@
     "@lax/theme-running-page": "~0.0.10",
     "@lax/theme-stats": "~0.0.25",
     "@lax/theme-timeline": "~0.0.42",
-    "@lax/web-build": "~0.0.5",
+    "@lax/web-build": "~0.0.6",
     "@lax/theme-ai-insights": "~0.0.5",
     "@lax/plugin-ai-chat": "~0.0.12"
   },
