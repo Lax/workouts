@@ -99,6 +99,9 @@ jobs:
           detect-strategy: proportional
           detect-time: 300
 
+      - name: Backfill device/app/lineage (workouts#37, idempotent)
+        run: bundle exec ruby scripts/backfill_device_app.rb --db-path ${{ steps.db-paths.outputs.db-path }}
+
       - name: '[db] Checkpoint SQLite WAL'
         id: db-checkpoint
         if: always()
