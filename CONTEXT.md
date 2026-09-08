@@ -197,6 +197,7 @@ Secrets 名单 `_`（`SYNC_KEEP_PHONE`），sync.yml 经 `.github/actions/sync-a
 - `entries`：key → `${key}.html`，value = themeId → `@lax/theme-${themeId}`
 - `plugins`：站点级插件（web-build 生成 import 注入 bootstrap，全 entry 生效）
 - `site.nav`：`false` 禁用，`labels` 覆盖默认标签；两级解析 `themes.<id>.site.<field>` > `site.<field>` > 内置 fallback
+- `site.logo` / `themes.<id>.site.logo`：literal HTTP(S) URL 原样透传；`github:current-user` 由 `@lax/web-build` 在构建期解析成 `https://github.com/<owner>.png`。owner 优先级为 `--github-user` > `site.githubUser` > `GIT_FIT_GITHUB_USER` > `VITE_GITHUB_USER` > `GITHUB_REPOSITORY` owner；本地无法解析时由 `@lax/core` 只对 `*.github.io` 做 runtime fallback，custom domain 必须显式指定 owner
 - `events` / `themes.<id>.events`：手动赛事，三层 merge（见下）
 - `ai.activity.systemPrompt`：单活动 AI 分析 system prompt 覆盖（空 = 内置教练人设，见 wiki/AI P4）
 

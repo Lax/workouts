@@ -11,6 +11,7 @@
     "@lax/plugin-nav": {}
   },
   "site": {
+    "logo": "github:current-user",
     "nav": {
       "labels": {
         "index": "时间线",
@@ -85,7 +86,6 @@
     "running-page": {
       "site": {
         "title": "Running",
-        "logo": "https://github.com/Lax.png",
         "nav": false,
         "palette": "warm"
       }

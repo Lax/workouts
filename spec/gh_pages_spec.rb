@@ -127,5 +127,10 @@ RSpec.describe "gh-pages.yml" do
     it "does not commit a map tile token" do
       expect(config.dig("themes", "running-page", "site")).not_to have_key("mapTileToken")
     end
+
+    it "uses the generic current-user logo token without a user-specific committed avatar" do
+      expect(config.dig("site", "logo")).to eq("github:current-user")
+      expect(config.dig("themes", "running-page", "site")).not_to have_key("logo")
+    end
   end
 end

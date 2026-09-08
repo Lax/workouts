@@ -10,6 +10,7 @@
     "@lax/plugin-nav": {}
   },
   "site": {
+    "logo": "github:current-user",
     "nav": {
       "labels": {
         "index": "时间线",
@@ -45,7 +46,7 @@
       "palette": "footprint"
     },
     "running-page": {
-      "site": { "title": "Running", "logo": "https://github.com/your-name.png", "nav": false, "palette": "warm" }
+      "site": { "title": "Running", "nav": false, "palette": "warm" }
     }
   }
 }
