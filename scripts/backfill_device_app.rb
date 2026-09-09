@@ -32,6 +32,7 @@ require "optparse"
 require "git-fit"
 require "git_fit/fit/decoder"
 require "git_fit/sync/strava"
+require "git_fit/sync/garmin_base"
 
 DEFAULT_DB = "data/db/workouts.db"
 DEFAULT_RAW = "data/raw"
@@ -78,17 +79,14 @@ dry_run = options[:dry_run]
 raw_dir = options[:raw_dir]
 updated = 0
 
-# garmin / garmin_cn: FIT device_info creator message → garminProduct label
+# garmin / garmin_cn: FIT device_info → device label via the gem's single
+# lookup (GARMIN_PRODUCT_SUPPLEMENT → garminProduct token → "Garmin <pk>")
 garmin_device = lambda do |activity_id, source|
   per_dir = File.join(raw_dir, source, activity_id, "activity.fit")
   fit_path = File.exist?(per_dir) ? per_dir : File.join(raw_dir, source, "#{activity_id}.fit")
   return [nil, nil] unless File.exist?(fit_path)
 
-  infos = GitFit::FIT::Decoder.device_info(fit_path)
-  info = infos.find { |d| d["deviceIndex"] == "creator" } || infos.first
-  return [nil, nil] unless info && info["garminProduct"]
-
-  [GitFit::Sync::GarminBase.format_garmin_device(info["garminProduct"]), nil]
+  [GitFit::Sync::GarminBase.device_label(GitFit::FIT::Decoder.device_info(fit_path)), nil]
 rescue => e
   warn "backfill: FIT decode failed for #{source}/#{activity_id}: #{e.message}"
   [nil, nil]
