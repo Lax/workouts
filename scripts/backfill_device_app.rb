@@ -64,6 +64,14 @@ unless File.exist?(options[:db_path])
   exit 1
 end
 
+# Fail fast: device_label lookup landed in git-fit 0.26.4; running with an
+# older gem would NoMethodError inside the rescue and silently nil out devices
+unless GitFit::Sync::GarminBase.respond_to?(:device_label)
+  warn "backfill: git-fit >= 0.26.4 required — GarminBase.device_label missing"
+  warn "  Fix: bundle update git-fit && commit Gemfile.lock"
+  exit 1
+end
+
 db = Sequel.sqlite(options[:db_path])
 ds = db[:activities]
 ds = if options[:force]
