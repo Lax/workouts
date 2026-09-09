@@ -77,7 +77,13 @@ No unsolicited files or actions.
 - rebase: `EDITOR=true git rebase -i HEAD~N`
 - tag: `git tag -a v1.0 -m "msg"`
 
-**Gem 发版**：一律走 `gem-release` skill（bump → push → annotated tag 含**系列回顾**段 → `git ls-remote` 同步确认；rubygems publish 需 WebAuthn 浏览器确认，用 `setsid --fork script -qfec` 后台推送 + 轮询 API 验证）。已推 tag 永不重写，漏段自担。
+**Gem 发版（Lax/git-fit）**：一律走 `gem-release` skill（bump version.rb → push → annotated tag 含**系列回顾**段 → `git ls-remote` 同步确认）。push tag 后 `rubygems-release.yml` 经 `git-fit-actions/release-gem@v1` 自动发布 rubygems——**禁止本地 gem build/push**（无需 WebAuthn；`gh run watch` + rubygems API 轮询确认即可）。已推 tag 永不重写，漏段自担。
+
+**npm 包发版（Lax/git-fit-web，@lax/\*）**：
+
+- 版本号语义：每个 workspace 包独立维护 `package.json` version（= 对外 npm 版本）；项目 tag 按 patch 顺序递增，**唯一作用是触发 `release.yml`**，与包版本无对应关系；minor 预留给多包统一发布大改动
+- 流程：bump 本轮改动包 → `npm install --package-lock-only` 刷 lock → push → 打下一个顺序 tag → CI 全包幂等 publish（`publish-if-missing`，未 bump 的包自动跳过）
+- **禁止本地 npm publish**
 
 **Push 纪律：**
 
