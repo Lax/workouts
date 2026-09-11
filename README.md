@@ -478,12 +478,12 @@ git fit parse activity.tcx --save
 
 - Settings → Pages → Source = "GitHub Actions"
 - Actions → Sync Workouts 最后一次运行绿色通过
-- 数据后端：访问 `https://<你的用户名>.github.io/workouts/`（本仓库产物，JSON 数据 + `index.html` + `footprint.html` 足迹 + `stats.html` 统计看板）
+- 数据后端：访问 `https://<你的用户名>.github.io/workouts/`（本仓库产物，JSON 数据 + `index.html` 时间线 + `footprint.html` 足迹 + `running.html` Running 看板 + `ai.html` AI 洞察 + `stats.html` 统计看板）
 - 前端看板：访问 `https://<你的用户名>.github.io/running/`（需另行部署 [Lax/running](https://github.com/Lax/running)）
 
 之后每天自动同步、构建、部署，零维护。
 
-> 在线示例（本项目实时部署）：时间线 [lax.github.io/workouts/](https://lax.github.io/workouts/) · 统计看板 [lax.github.io/workouts/stats.html](https://lax.github.io/workouts/stats.html) · 看板 [lax.github.io/running/](https://lax.github.io/running/) · 数据 [lax.github.io/workouts/](https://lax.github.io/workouts/)（[activities.json](https://lax.github.io/workouts/activities.json)）
+> 在线示例（本项目实时部署）：时间线 [lax.github.io/workouts/](https://lax.github.io/workouts/) · 足迹 [lax.github.io/workouts/footprint.html](https://lax.github.io/workouts/footprint.html) · 统计看板 [lax.github.io/workouts/stats.html](https://lax.github.io/workouts/stats.html) · AI 洞察 [lax.github.io/workouts/ai.html](https://lax.github.io/workouts/ai.html) · 看板 [lax.github.io/running/](https://lax.github.io/running/) · 数据 [lax.github.io/workouts/](https://lax.github.io/workouts/)（[activities.json](https://lax.github.io/workouts/activities.json)）
 
 ---
 
@@ -505,6 +505,9 @@ git fit parse activity.tcx --save
 | JSON | `site/activities.json`（摘要）+ `site/tracks.json`（polyline 映射，可选） |
 | CSV | `site/workouts.csv` |
 | Stats | `site/stats.json` |
+| GPX | `site/gpx_out/` |
+
+`insights.json` / `ability.json`（AI 洞察与能力画像）由 gh-pages 构建期经 `git fit export ai` / `git fit ability compute` 生成，不走本地 export。
 
 详见 `.env`、`.env.local.example` 和 `config.yml.example`。
 </details>
@@ -527,6 +530,10 @@ git fit parse activity.tcx --save
 | `git fit export json` | 导出 JSON |
 | `git fit export csv` | 导出 CSV |
 | `git fit export stats` | 导出统计摘要 |
+| `git fit export gpx` | 导出 GPX |
+| `git fit db SUBCOMMAND` | 数据库操作（子命令见 `git fit db --help`） |
+| `git fit geo SUBCOMMAND` | 地理行政区域检测（子命令见 `git fit geo --help`） |
+| `git fit ability compute [--as-of DATE]` | 能力画像两层快照 → ability.json |
 | `git fit elevation backfill [SOURCE]` | 回填原始海拔（设备/API 值 → `elevation_*`）|
 | `git fit elevation correct [SOURCE] [--dem]` | 策略校正海拔（自适应滞回 + 可选 DEM → `elevation_*_terrain`，导出优先用）|
 | `git fit dedup` | 全源去重匹配 |

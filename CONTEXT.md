@@ -178,9 +178,9 @@ Secrets 名单 `_`（`SYNC_KEEP_PHONE`），sync.yml 经 `.github/actions/sync-a
 
 ```json
 {
-  "entries": { "index": "timeline", "footprint": "footprint", "stats": "stats", "about": "hello-world" },
+  "entries": { "index": "timeline", "footprint": "footprint", "running": "running-page", "ai": "ai-insights", "stats": "stats", "about": "hello-world" },
   "plugins": { "@lax/plugin-nav": {} },
-  "site": { "nav": { "labels": { "index": "时间线", "footprint": "足迹", "stats": "统计", "about": "关于" } } },
+  "site": { "logo": "github:current-user", "nav": { "labels": { "index": "时间线", "footprint": "足迹", "running": "Running", "ai": "AI 洞察", "stats": "统计", "about": "关于" } } },
   "ai": { "activity": { "systemPrompt": "" } },
   "data": {
     "stats": { "source": "stats.json", "optional": false },
@@ -191,6 +191,7 @@ Secrets 名单 `_`（`SYNC_KEEP_PHONE`），sync.yml 经 `.github/actions/sync-a
     "ability": { "source": "ability.json", "optional": true }
   },
   "events": [],
+  "profile": { "birthYear": 1984, "birthMonth": 6, "ytd_goal_km": 1500 },
   "themes": { "timeline": { "site": { "title": "时间线" }, "events": [] } }
 }
 ```
@@ -201,6 +202,7 @@ Secrets 名单 `_`（`SYNC_KEEP_PHONE`），sync.yml 经 `.github/actions/sync-a
 - `site.logo` / `themes.<id>.site.logo`：literal HTTP(S) URL 原样透传；`github:current-user` 由 `@lax/web-build` 在构建期解析成 `https://github.com/<owner>.png`。owner 优先级为 `--github-user` > `site.githubUser` > `GIT_FIT_GITHUB_USER` > `VITE_GITHUB_USER` > `GITHUB_REPOSITORY` owner；本地无法解析时由 `@lax/core` 只对 `*.github.io` 做 runtime fallback，custom domain 必须显式指定 owner
 - `events` / `themes.<id>.events`：手动赛事，三层 merge（见下）
 - `ai.activity.systemPrompt`：单活动 AI 分析 system prompt 覆盖（空 = 内置教练人设，见 wiki/AI P4）
+- `profile`：用户画像原始事实（`birthYear`/`birthMonth` 生日、`ytd_goal_km` 年度目标），由 `@lax/shared` activity-snapshot 与 theme 消费；只存事实，派生指标一律不进此段
 
 ---
 
@@ -251,6 +253,7 @@ f > 2N+1 → N = min(7, N+1)     减速（每周日保底）
 | `danger-backfill-elevation.yml` | dispatch | `git fit elevation backfill` 写 raw `elevation_*`（7 源 L2 含 keep，cache-only save）|
 | `danger-correct-elevation.yml` | dispatch（source/force/dem） | `git fit elevation correct [--dem]` 写 `elevation_*_terrain`；DEM 缓存独立 key `GitFit-dem-v0-*`（仅 actions/cache，不入 git 归档）|
 | `danger-backfill-device.yml` | dispatch（source/force/dry-run） | `scripts/backfill_device_app.rb` 回填 device/app/lineage；`--force` 重跑单源已回填行（device label 映射更新后用）；updated>0 自动触发 gh-pages 重导出。脚本对 gem 版本 fail-fast（需 ≥0.26.4 `device_label`）|
+| 其余 dispatch-only 工具流 | dispatch | `danger-backfill.yml`（回填日期/温度）、`danger-purge-activity.yml` / `danger-purge-by-source.yml`（删行）、`git-fit-archive/unarchive.yml`（orphan 分支存档↔缓存回灌）、`probe-pat-permissions.yml`（PAT 权限探测）；一次性 `danger-fix-schema-version-72.yml` 已用毕 |
 
 **关键事实**：DB cache 恢复用 `db-store/cache/restore@v1`（`git-restore-mode: fallback` 从 `GitFit/db` git archive 兜底）+ `save@v1`（job 成功且 changed 时 push 回）；缓存 key 纪律（`-v0-sentinel` restore / `-v0-snapshot` unarchive，严禁合并）；data-store/db-store/geo-detect/import 均 pin 大版本 tag，默认分支 `mainline`。完整步骤见 `.github/workflows/*.yml` 与 wiki CI-CD。
 
@@ -263,7 +266,7 @@ f > 2N+1 → N = min(7, N+1)     减速（每周日保底）
 | Pages 源 | GitHub Actions |
 | URL | `https://lax.github.io/workouts/` |
 | 数据制品 | `activities.json` / `tracks.json` / `stats.json` / `races.json` / `insights.json` / `ability.json`（排除 DB）|
-| 前端页面 | `index.html`（timeline）/ `footprint.html`（footprint）/ `running.html`（running-page）/ `stats.html`（stats）/ `about.html`（hello-world）|
+| 前端页面 | `index.html`（timeline）/ `footprint.html`（footprint）/ `running.html`（running-page）/ `ai.html`（ai-insights）/ `stats.html`（stats）/ `about.html`（hello-world）|
 | 独立前端 | `https://lax.github.io/running/`（Lax/running running_page 看板）|
 
 ## 数据架构

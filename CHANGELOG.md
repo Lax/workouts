@@ -9,6 +9,16 @@
 | AI native：LLM client（git-fit#92）+ `export ai` → insights.json（git-fit#93，0.22）、theme-stats「AI 洞察」section（#41，theme-stats 0.0.17+）、前端 BYOK chat（#42，plugin-ai-chat 0.0.x / theme-ai-insights）、gh-pages export ai 接线（#43） | ✅ 已完成 |
 | #48 单活动 AI 分析：theme-timeline 详情新增「AI 分析」tab（ActivityAiPanel，plugin-ai-chat 0.0.8 / theme-timeline 0.0.39，tag v0.0.78）；活动 digest 客户端推导（几何 / PB / 当月），polyline 原文不进 prompt；`config.json ai.activity.systemPrompt` 覆盖口子 | ✅ 已完成 |
 | 能力画像全链路交付（[#49](https://github.com/Lax/workouts/issues/49)–[#53](https://github.com/Lax/workouts/issues/53) + [git-fit#95](https://github.com/Lax/git-fit/issues/95)/[#96](https://github.com/Lax/git-fit/issues/96)，git-fit v0.25.0 + git-fit-web v0.0.80/81）：`ability.json` 两层（fitness 基础体能 + sports 分项）、因果窗口 `--as-of`、chat `@时间锚`、单活动 as-of 基线、stats 能力趋势 section、dedup 组内中位数口径、confidence 三档 | ✅ 已完成 |
+| `scripts/backfill_ability.rb` 幂等回填 ability 快照（[#49](https://github.com/Lax/workouts/issues/49)） | ✅ 已完成 |
+
+## 2026-09 — device/app/lineage 血缘链 + 前端杂项
+
+| Item | Status |
+|---|---|
+| git-fit 0.26.1–0.26.4：activities 补 `device`/`app`/`lineage` 三列（lineage = device → app → source，仅展示；[#37](https://github.com/Lax/workouts/issues/37)）、CSV 导出同三列（[#58](https://github.com/Lax/workouts/issues/58)）、`device_label` 映射（#59 依赖） | ✅ 已完成 |
+| `scripts/backfill_device_app.rb` + `danger-backfill-device.yml` workflow（dispatch source/force/dry-run；脚本对 gem 版本 fail-fast，需 ≥0.26.4；[#59](https://github.com/Lax/workouts/issues/59)） | ✅ 已完成 |
+| sync.yml 移除 db save 前 backfill step——存量已收敛，新活动 lineage 由 upsert 自带（[#37](https://github.com/Lax/workouts/issues/37)） | ✅ 已完成 |
+| `@lax/theme-running-page` 0.0.9 接入（#54）+ `@lax/web-build` 0.0.6（#55）：`site.logo: github:current-user` 构建期解析为 `https://github.com/<owner>.png` | ✅ 已完成 |
 
 ## 2026-08 — elevation 两段式流水线接入
 
