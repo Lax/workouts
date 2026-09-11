@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 RSpec.describe "probe-pat-permissions.yml" do
+  include_examples "a dispatch-only workflow"
+
   let(:yaml) { load_workflow("probe-pat-permissions.yml") }
   let(:job) { yaml.fetch("jobs").fetch("probe") }
 

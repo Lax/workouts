@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 RSpec.describe "danger-correct-elevation.yml" do
+  include_examples "a dispatch-only workflow"
+
   let(:yaml) { load_workflow("danger-correct-elevation.yml") }
   let(:job) { yaml.dig("jobs", "correct-elevation") }
   let(:steps) { job["steps"] }
@@ -21,10 +23,6 @@ RSpec.describe "danger-correct-elevation.yml" do
       expect(inputs).to have_key("dem")
       expect(inputs["dem"]["type"]).to eq("boolean")
       expect(inputs["dem"]["default"]).to eq(true)
-    end
-
-    it "has no schedule trigger (manual only)" do
-      expect(workflow_on(yaml)["schedule"]).to be_nil
     end
   end
 

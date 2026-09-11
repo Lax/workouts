@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 RSpec.describe "danger-backfill.yml" do
+  include_examples "a dispatch-only workflow"
+
   let(:yaml) { load_workflow("danger-backfill.yml") }
   let(:job) { yaml.dig("jobs", "backfill") }
   let(:steps) { job["steps"] }
@@ -12,10 +14,6 @@ RSpec.describe "danger-backfill.yml" do
       expect(inputs).to have_key("source")
       expect(inputs["source"]["type"]).to eq("string")
       expect(inputs["source"]["default"]).to eq("all")
-    end
-
-    it "has no schedule trigger (manual only)" do
-      expect(workflow_on(yaml)["schedule"]).to be_nil
     end
   end
 

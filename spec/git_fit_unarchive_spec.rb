@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 RSpec.describe "git-fit-unarchive.yml" do
+  include_examples "a dispatch-only workflow"
+
   let(:yaml) { load_workflow("git-fit-unarchive.yml") }
   let(:jobs) { yaml.fetch("jobs") }
 

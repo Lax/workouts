@@ -14,6 +14,16 @@ module WorkflowLoader
   def workflow_on(yaml)
     yaml.key?(true) ? yaml[true] : yaml["on"]
   end
+
+  RSpec.shared_examples "a dispatch-only workflow" do |*job_names|
+    it "has no schedule trigger (manual only)" do
+      expect(workflow_on(yaml)["schedule"]).to be_nil
+    end
+
+    it "declares workflow_dispatch" do
+      expect(workflow_on(yaml)).to have_key("workflow_dispatch")
+    end
+  end
 end
 
 RSpec.configure do |config|
