@@ -19,6 +19,8 @@
 | `scripts/backfill_device_app.rb` + `danger-backfill-device.yml` workflow（dispatch source/force/dry-run；脚本对 gem 版本 fail-fast，需 ≥0.26.4；[#59](https://github.com/Lax/workouts/issues/59)） | ✅ 已完成 |
 | sync.yml 移除 db save 前 backfill step——存量已收敛，新活动 lineage 由 upsert 自带（[#37](https://github.com/Lax/workouts/issues/37)） | ✅ 已完成 |
 | `@lax/theme-running-page` 0.0.9 接入（#54）+ `@lax/web-build` 0.0.6（#55）：`site.logo: github:current-user` 构建期解析为 `https://github.com/<owner>.png` | ✅ 已完成 |
+| danger 系 workflow 骨架去重复：`.github/actions/danger-db-run` composite 收敛 7 个 dispatch 工作流 + `scripts/wal_checkpoint.rb` 共享 helper；spec 重塑为 composite 契约断言 | ✅ 已完成 |
+| 薄壳再减：删一次性脚本（`migrate_races.rb`/`backfill_ability.rb`/`fetch_keep_raw_*.rb`）、`Rakefile` 与 Gemfile `rake`/`pry`（CI 直跑 `bundle exec rspec`） | ✅ 已完成 |
 
 ## 2026-08 — elevation 两段式流水线接入
 

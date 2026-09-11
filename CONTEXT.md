@@ -223,7 +223,7 @@ Secrets 名单 `_`（`SYNC_KEEP_PHONE`），sync.yml 经 `.github/actions/sync-a
 2. 无偏移/仅 UTC → 浏览器本地时区解析
 3. 仍无法确定 → 东八区（`Asia/Shanghai`）
 
-**赛事数据管道**：newbie.run `races.yml`（17 场）+ `_data/races/*` 定义 → `scripts/migrate_races.rb` 一次性迁移 → `data/events/races.json`（git 追踪）；gh-pages `jq -c` 压缩到 site/。三层 merge：`themes.timeline.events` > `events` > races.json（同 id 字段覆盖）；`activityLocalDate === event.date` 全天匹配。
+**赛事数据管道**：newbie.run `races.yml`（17 场）+ `_data/races/*` 定义一次性迁移（2025 完成，脚本已删，历史见 git log）→ `data/events/races.json`（git 追踪）；gh-pages `jq -c` 压缩到 site/。三层 merge：`themes.timeline.events` > `events` > races.json（同 id 字段覆盖）；`activityLocalDate === event.date` 全天匹配。
 
 ---
 
