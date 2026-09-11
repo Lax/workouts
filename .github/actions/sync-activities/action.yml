@@ -82,7 +82,39 @@ runs:
   using: composite
   steps:
     - name: Restore token caches
-      uses: ./.github/actions/tokens-cache/restore
+      uses: actions/cache/restore@v6.1.0
+      with:
+        path: data/auth/garmin_cn
+        key: tokens-v0-garmin_cn-auth-${{ github.run_id }}
+        restore-keys: tokens-v0-garmin_cn-auth-
+
+    - name: Restore Garmin Intl token caches
+      uses: actions/cache/restore@v6.1.0
+      with:
+        path: data/auth/garmin
+        key: tokens-v0-garmin-auth-${{ github.run_id }}
+        restore-keys: tokens-v0-garmin-auth-
+
+    - name: Restore XOSS token caches
+      uses: actions/cache/restore@v6.1.0
+      with:
+        path: data/auth/xoss
+        key: tokens-v0-xoss-auth-${{ github.run_id }}
+        restore-keys: tokens-v0-xoss-auth-
+
+    - name: Restore XingZhe session cache
+      uses: actions/cache/restore@v6.1.0
+      with:
+        path: data/auth/xingzhe
+        key: tokens-v0-xingzhe-auth-${{ github.run_id }}
+        restore-keys: tokens-v0-xingzhe-auth-
+
+    - name: Restore Strava web session cache
+      uses: actions/cache/restore@v6.1.0
+      with:
+        path: data/auth/strava
+        key: tokens-v0-strava-web-auth-${{ github.run_id }}
+        restore-keys: tokens-v0-strava-web-auth-
 
     - name: Run sync
       shell: bash
@@ -118,6 +150,37 @@ runs:
         GIT_FIT_SYSTEM_TIMEZONE: ${{ inputs.timezone }}
       run: bundle exec git fit strava fetch --limit 10
 
-    - name: Save token caches
+    - name: Save Garmin Intl token caches
       if: always()
-      uses: ./.github/actions/tokens-cache/save
+      uses: actions/cache/save@v6.1.0
+      with:
+        path: data/auth/garmin
+        key: tokens-v0-garmin-auth-${{ github.run_id }}
+
+    - name: Save Garmin CN token caches
+      if: always()
+      uses: actions/cache/save@v6.1.0
+      with:
+        path: data/auth/garmin_cn
+        key: tokens-v0-garmin_cn-auth-${{ github.run_id }}
+
+    - name: Save Strava web session cache
+      if: always()
+      uses: actions/cache/save@v6.1.0
+      with:
+        path: data/auth/strava
+        key: tokens-v0-strava-web-auth-${{ github.run_id }}
+
+    - name: Save XingZhe session cache
+      if: always()
+      uses: actions/cache/save@v6.1.0
+      with:
+        path: data/auth/xingzhe
+        key: tokens-v0-xingzhe-auth-${{ github.run_id }}
+
+    - name: Save XOSS token caches
+      if: always()
+      uses: actions/cache/save@v6.1.0
+      with:
+        path: data/auth/xoss
+        key: tokens-v0-xoss-auth-${{ github.run_id }}
