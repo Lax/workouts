@@ -34,92 +34,51 @@ jobs:
       group: workouts-db
       cancel-in-progress: false
     steps:
-      - uses: actions/checkout@v7
-
-      - uses: ruby/setup-ruby@v1
+      - id: run
+        uses: ./.github/actions/danger-db-run
         with:
-          ruby-version: '3.4'
-          bundler-cache: true
+          data-sources: igpsport,keep,xoss,strava,garmin,garmin_cn,xingzhe,codoon,joyrun
+          operation: |
+            SOURCE="${{ inputs.source }}"
+            FORCE="${{ inputs.force }}"
 
-      - id: db-paths
-        uses: git-fit-actions/db-store/paths@v1
-        with:
-          database-path: ${{ env.GIT_FIT_DATABASE_PATH }}
+            args=""
+            if [ "$SOURCE" != "all" ]; then
+              args="$args $SOURCE"
+            fi
+            if [ "$FORCE" = "true" ]; then
+              args="$args --force"
+            fi
 
-      - name: '[db] Restore cache'
-        uses: git-fit-actions/db-store/cache/restore@v1
-        with:
-          db-dir: ${{ steps.db-paths.outputs.dir }}
-          db-name: ${{ steps.db-paths.outputs.name }}
-          git-restore-mode: fallback
-          git-branch: GitFit/db
+            bundle exec git fit elevation backfill $args 2>&1 | tee backfill.out
 
-      - name: 'Restore data store'
-        uses: git-fit-actions/data-store/cache/restore@v2
-        with:
-          sources: igpsport,keep,xoss,strava,garmin,garmin_cn,xingzhe,codoon,joyrun
+            if ! grep -q 'Elevation backfill:' backfill.out; then
+              echo "::error::Elevation backfill command produced no summary line"
+              exit 1
+            fi
 
-      - name: Run elevation backfill
-        id: backfill
-        run: |
-          SOURCE="${{ inputs.source }}"
-          FORCE="${{ inputs.force }}"
+            UPDATED=$(grep -oP '\d+(?= updated)' backfill.out | head -1)
+            SKIPPED=$(grep -oP '\d+(?= skipped)' backfill.out | head -1)
+            FAILED=$(grep -oP '\d+(?= failed)' backfill.out | head -1)
 
-          args=""
-          if [ "$SOURCE" != "all" ]; then
-            args="$args $SOURCE"
-          fi
-          if [ "$FORCE" = "true" ]; then
-            args="$args --force"
-          fi
-
-          set -o pipefail
-          bundle exec git fit elevation backfill $args 2>&1 | tee backfill.out
-
-          if ! grep -q 'Elevation backfill:' backfill.out; then
-            echo "::error::Elevation backfill command produced no summary line"
-            exit 1
-          fi
-
-          UPDATED=$(grep -oP '\d+(?= updated)' backfill.out | head -1)
-          SKIPPED=$(grep -oP '\d+(?= skipped)' backfill.out | head -1)
-          FAILED=$(grep -oP '\d+(?= failed)' backfill.out | head -1)
-
-          echo "updated=$UPDATED" >> $GITHUB_OUTPUT
-          echo "skipped=$SKIPPED" >> $GITHUB_OUTPUT
-          echo "failed=$FAILED" >> $GITHUB_OUTPUT
-
-      - name: '[db] Checkpoint'
-        if: steps.backfill.outputs.updated > 0
-        env:
-          DB_PATH: ${{ steps.db-paths.outputs.db-path }}
-        run: |
-          bundle exec ruby -e '
-            require "sequel"
-            db = Sequel.sqlite(ENV.fetch("DB_PATH"))
-            db.run("PRAGMA wal_checkpoint(TRUNCATE)")
-            print File.size(ENV.fetch("DB_PATH"))
-          '
-
-      - name: '[db] Save cache'
-        if: always()
-        uses: git-fit-actions/db-store/cache/save@v1
-        with:
-          db-dir: ${{ steps.db-paths.outputs.dir }}
-          db-name: ${{ steps.db-paths.outputs.name }}
-          save-to-git-branch: false
+            echo "updated=$UPDATED" >> $GITHUB_OUTPUT
+            echo "result={\"skipped\":${SKIPPED:-0},\"failed\":${FAILED:-0}}" >> $GITHUB_OUTPUT
+            if [ "$UPDATED" -gt 0 ]; then
+              echo "mutated=true" >> $GITHUB_OUTPUT
+              bundle exec ruby scripts/wal_checkpoint.rb "$DB_PATH"
+            fi
 
       - name: Summary
         run: |
           echo "### GitFit elevation backfill" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Field | Value |" >> $GITHUB_STEP_SUMMARY
-          echo "|-------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|-------|"
           echo "| Source | \`${{ inputs.source }}\` |" >> $GITHUB_STEP_SUMMARY
           echo "| Force | \`${{ inputs.force }}\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| Updated | \`${{ steps.backfill.outputs.updated || 0 }}\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| Skipped | \`${{ steps.backfill.outputs.skipped || 0 }}\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| Failed | \`${{ steps.backfill.outputs.failed || 0 }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Updated | \`${{ steps.run.outputs.updated || 0 }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Skipped | \`${{ fromJSON(steps.run.outputs.result || '{}').skipped || 0 }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Failed | \`${{ fromJSON(steps.run.outputs.result || '{}').failed || 0 }}\` |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
           WARNINGS=$(grep '^Elevation backfill \[' backfill.out 2>/dev/null || true)

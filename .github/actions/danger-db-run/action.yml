@@ -1,0 +1,102 @@
+name: Danger DB Run
+description: >-
+  Shared skeleton for manual DB-mutating workflows: checkout + setup-ruby +
+  DB paths/cache restore + optional data/DEM restore + business operation +
+  optional DEM/DB cache save. Job-level inputs/permissions/concurrency/timeout
+  stay in the caller workflow.
+inputs:
+  operation:
+    description: >-
+      Business bash run after cache restores. Must source after `set -o
+      pipefail`; write caller-visible outputs via $GITHUB_OUTPUT:
+      updated=N (row/type count), mutated=true/false (DB actually changed),
+      result=<json> (extra summary fields). DB_PATH env holds the SQLite path.
+    required: true
+  save:
+    description: "'true' = always() DB cache save (default); pass false to skip (dry-run)"
+    required: false
+    default: 'true'
+  data-sources:
+    description: Data-store cache sources to restore before operation (empty = skip)
+    required: false
+    default: ''
+  dem:
+    description: "'true' = restore + save DEM cache around the operation (correct-elevation)"
+    required: false
+    default: 'false'
+outputs:
+  updated:
+    description: Operation row count written by the business script
+    value: ${{ steps.operation.outputs.updated }}
+  mutated:
+    description: "true when the DB actually changed (caller forgot to set it on dry-run/no-op)"
+    value: ${{ steps.operation.outputs.mutated }}
+  result:
+    description: JSON blob with extra summary fields (skipped/failed/before/after/...)
+    value: ${{ steps.operation.outputs.result }}
+runs:
+  using: composite
+  steps:
+    - uses: actions/checkout@v7
+
+    - uses: ruby/setup-ruby@v1
+      with:
+        ruby-version: '3.4'
+        bundler-cache: true
+
+    - name: '[db] Derive database paths'
+      id: db-paths
+      uses: git-fit-actions/db-store/paths@v1
+      with:
+        database-path: ${{ env.GIT_FIT_DATABASE_PATH || 'data/db/workouts.db' }}
+
+    - name: '[db] Restore cache'
+      id: db-restore
+      uses: git-fit-actions/db-store/cache/restore@v1
+      with:
+        db-dir: ${{ steps.db-paths.outputs.dir }}
+        db-name: ${{ steps.db-paths.outputs.name }}
+        git-restore-mode: fallback
+        git-branch: GitFit/db
+
+    - name: '[data] Restore cache'
+      if: inputs.data-sources != ''
+      uses: git-fit-actions/data-store/cache/restore@v2
+      with:
+        sources: ${{ inputs.data-sources }}
+
+    - name: '[dem] Restore cache'
+      if: inputs.dem == 'true'
+      uses: actions/cache/restore@v6
+      with:
+        path: |
+          data/cache/dem
+          data/cache/dem_fit
+        key: GitFit-dem-v0-${{ github.run_id }}-${{ github.run_attempt }}
+        restore-keys: GitFit-dem-v0-
+
+    - name: Operation
+      id: operation
+      shell: bash
+      env:
+        DB_PATH: ${{ steps.db-paths.outputs.db-path }}
+      run: |
+        set -o pipefail
+        ${{ inputs.operation }}
+
+    - name: '[dem] Save cache'
+      if: always() && inputs.dem == 'true'
+      uses: actions/cache/save@v6
+      with:
+        path: |
+          data/cache/dem
+          data/cache/dem_fit
+        key: GitFit-dem-v0-${{ github.run_id }}-${{ github.run_attempt }}
+
+    - name: '[db] Save cache'
+      if: always() && inputs.save == 'true'
+      uses: git-fit-actions/db-store/cache/save@v1
+      with:
+        db-dir: ${{ steps.db-paths.outputs.dir }}
+        db-name: ${{ steps.db-paths.outputs.name }}
+        save-to-git-branch: false

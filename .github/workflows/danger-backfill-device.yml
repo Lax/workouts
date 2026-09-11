@@ -42,68 +42,29 @@ jobs:
       group: workouts-db
       cancel-in-progress: false
     steps:
-      - uses: actions/checkout@v7
-
-      - uses: ruby/setup-ruby@v1
+      - id: run
+        uses: ./.github/actions/danger-db-run
         with:
-          ruby-version: '3.4'
-          bundler-cache: true
+          save: ${{ !inputs.dry_run }}
+          data-sources: igpsport,keep,xoss,strava,garmin,garmin_cn,xingzhe,codoon,joyrun
+          operation: |
+            bundle exec ruby scripts/backfill_device_app.rb \
+              --db-path "$DB_PATH" \
+              --source "${{ inputs.source }}" \
+              ${{ inputs.force && '--force' || '' }} \
+              ${{ inputs.dry_run && '--dry-run' || '' }} \
+              2>&1 | tee backfill.out
 
-      - id: db-paths
-        uses: git-fit-actions/db-store/paths@v1
-        with:
-          database-path: ${{ env.GIT_FIT_DATABASE_PATH }}
-
-      - name: '[db] Restore cache'
-        uses: git-fit-actions/db-store/cache/restore@v1
-        with:
-          db-dir: ${{ steps.db-paths.outputs.dir }}
-          db-name: ${{ steps.db-paths.outputs.name }}
-          git-restore-mode: fallback
-          git-branch: GitFit/db
-
-      - name: 'Restore data store'
-        uses: git-fit-actions/data-store/cache/restore@v2
-        with:
-          sources: igpsport,keep,xoss,strava,garmin,garmin_cn,xingzhe,codoon,joyrun
-
-      - name: Run device/app/lineage backfill
-        id: backfill
-        run: |
-          set -o pipefail
-          bundle exec ruby scripts/backfill_device_app.rb \
-            --db-path "${{ steps.db-paths.outputs.db-path }}" \
-            --source "${{ inputs.source }}" \
-            ${{ inputs.force && '--force' || '' }} \
-            ${{ inputs.dry_run && '--dry-run' || '' }} \
-            2>&1 | tee backfill.out
-
-          COUNT=$(grep -oP '(would update=|updated=)\K[0-9]+' backfill.out | head -1)
-          [ -n "$COUNT" ] || { echo "::error::backfill produced no summary line"; exit 1; }
-          echo "updated=$COUNT" >> $GITHUB_OUTPUT
-
-      - name: '[db] Checkpoint'
-        if: steps.backfill.outputs.updated > 0 && !inputs.dry_run
-        env:
-          DB_PATH: ${{ steps.db-paths.outputs.db-path }}
-        run: |
-          bundle exec ruby -e '
-            require "sequel"
-            db = Sequel.sqlite(ENV.fetch("DB_PATH"))
-            db.run("PRAGMA wal_checkpoint(TRUNCATE)")
-            print File.size(ENV.fetch("DB_PATH"))
-          '
-
-      - name: '[db] Save cache'
-        if: always() && !inputs.dry_run
-        uses: git-fit-actions/db-store/cache/save@v1
-        with:
-          db-dir: ${{ steps.db-paths.outputs.dir }}
-          db-name: ${{ steps.db-paths.outputs.name }}
-          save-to-git-branch: false
+            COUNT=$(grep -oP '(would update=|updated=)\K[0-9]+' backfill.out | head -1)
+            [ -n "$COUNT" ] || { echo "::error::backfill produced no summary line"; exit 1; }
+            echo "updated=$COUNT" >> $GITHUB_OUTPUT
+            if [ "$COUNT" -gt 0 ] && [ "${{ inputs.dry_run }}" != "true" ]; then
+              echo "mutated=true" >> $GITHUB_OUTPUT
+              bundle exec ruby scripts/wal_checkpoint.rb "$DB_PATH"
+            fi
 
       - name: 'Trigger gh-pages deploy'
-        if: steps.backfill.outputs.updated > 0 && !inputs.dry_run
+        if: steps.run.outputs.updated > 0 && !inputs.dry_run
         run: gh workflow run gh-pages.yml --ref master
         env:
           GH_TOKEN: ${{ github.token }}
@@ -118,7 +79,7 @@ jobs:
             echo "| Source | \`${{ inputs.source }}\` |"
             echo "| Force | \`${{ inputs.force }}\` |"
             echo "| Dry-run | \`${{ inputs.dry_run }}\` |"
-            echo "| ✅ Updated | \`${{ steps.backfill.outputs.updated || 0 }}\` |"
+            echo "| ✅ Updated | \`${{ steps.run.outputs.updated || 0 }}\` |"
             echo ""
           } >> $GITHUB_STEP_SUMMARY
 

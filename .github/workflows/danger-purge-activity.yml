@@ -43,28 +43,6 @@ jobs:
     runs-on: ${{ vars.RUNNER_LABEL || 'ubuntu-latest' }}
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v7
-
-      - uses: ruby/setup-ruby@v1
-        with:
-          ruby-version: "3.4"
-          bundler-cache: true
-
-      - name: "[db] Derive database paths"
-        id: db-paths
-        uses: git-fit-actions/db-store/paths@v1
-        with:
-          database-path: ${{ env.GIT_FIT_DATABASE_PATH }}
-
-      - name: "[db] Restore cache"
-        id: db-restore
-        uses: git-fit-actions/db-store/cache/restore@v1
-        with:
-          db-dir: ${{ steps.db-paths.outputs.dir }}
-          db-name: ${{ steps.db-paths.outputs.name }}
-          git-restore-mode: fallback
-          git-branch: GitFit/db
-
       - name: "[data] Derive source + build flags"
         id: meta
         shell: bash
@@ -94,12 +72,6 @@ jobs:
             esac
           fi
 
-      - name: "[data] Restore cache"
-        if: inputs.delete_raw == true || inputs.delete_std == true
-        uses: git-fit-actions/data-store/cache/restore@v2
-        with:
-          sources: ${{ steps.meta.outputs.source }}
-
       - name: Guard confirm
         shell: bash
         run: |
@@ -109,60 +81,43 @@ jobs:
           fi
           echo "confirm ok (run_id=${{ inputs.run_id }} dry_run=${{ inputs.dry_run }} delete_raw=${{ inputs.delete_raw }} delete_std=${{ inputs.delete_std }})"
 
-      - name: "[db] Dump full record"
-        id: dump
-        shell: bash
-        env:
-          DB_PATH: ${{ steps.db-paths.outputs.db-path }}
-          RUN_ID: ${{ inputs.run_id }}
-        run: |
-          bundle exec ruby <<'RUBY'
-            require "sequel"
-            require "json"
-            db = Sequel.sqlite(ENV.fetch("DB_PATH"))
-            row = db[:activities].where(run_id: ENV.fetch("RUN_ID")).first
-            abort "::error::Not found: #{ENV["RUN_ID"]}" unless row
-            File.write("purge-record.json", JSON.pretty_generate(row))
-          RUBY
-          {
-            echo "### Full DB record \`${{ inputs.run_id }}\`"
-            echo '```json'
-            cat purge-record.json
-            echo '```'
-          } >> "$GITHUB_STEP_SUMMARY"
-
-      # Always preview the target row + files; RecordNotFound / invalid source fails fast here.
-      - name: Preview target (dry-run)
-        shell: bash
-        env:
-          RUN_ID: ${{ inputs.run_id }}
-          FLAGS: ${{ steps.meta.outputs.flags }}
-        run: |
-          set -o pipefail
-          bundle exec git fit purge activity "$RUN_ID" --dry-run $FLAGS | tee preview.out
-
-      - name: Purge activity
-        id: purge
-        if: inputs.dry_run == false
-        shell: bash
-        env:
-          RUN_ID: ${{ inputs.run_id }}
-          FLAGS: ${{ steps.meta.outputs.flags }}
-        run: |
-          set -o pipefail
-          bundle exec git fit purge activity "$RUN_ID" $FLAGS | tee purge.out
-          n=$(grep -oE 'Removed [0-9]+' purge.out | grep -oE '[0-9]+' || echo 0)
-          echo "deleted=$n" >> "$GITHUB_OUTPUT"
-          echo "deleted=$n"
-
-      # ── DB save (cache-only) ──
-      - name: "[db] Save cache"
-        if: always()
-        uses: git-fit-actions/db-store/cache/save@v1
+      - id: run
+        uses: ./.github/actions/danger-db-run
         with:
-          db-dir: ${{ steps.db-paths.outputs.dir }}
-          db-name: ${{ steps.db-paths.outputs.name }}
-          save-to-git-branch: false
+          data-sources: ${{ (inputs.delete_raw == true || inputs.delete_std == true) && steps.meta.outputs.source || '' }}
+          operation: |
+            RUN_ID="${{ inputs.run_id }}"
+            FLAGS="${{ steps.meta.outputs.flags }}"
+
+            export RUN_ID FLAGS
+            bundle exec ruby <<'RUBY'
+              require "sequel"
+              require "json"
+              db = Sequel.sqlite(ENV.fetch("DB_PATH"))
+              row = db[:activities].where(run_id: ENV["RUN_ID"]).first
+              abort "::error::Not found: #{ENV["RUN_ID"]}" unless row
+              File.write("purge-record.json", JSON.pretty_generate(row))
+            RUBY
+            {
+              echo "### Full DB record \`${{ inputs.run_id }}\`"
+              echo '```json'
+              cat purge-record.json
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+
+            set -o pipefail
+            bundle exec git fit purge activity "$RUN_ID" --dry-run $FLAGS | tee preview.out
+
+            deleted=0
+            if [ "${{ inputs.dry_run }}" != "true" ]; then
+              bundle exec git fit purge activity "$RUN_ID" $FLAGS | tee purge.out
+              deleted=$(grep -oE 'Removed [0-9]+' purge.out | grep -oE '[0-9]+' || echo 0)
+              echo "mutated=true" >> $GITHUB_OUTPUT
+            else
+              echo "mutated=false" >> $GITHUB_OUTPUT
+            fi
+            echo "updated=$deleted" >> $GITHUB_OUTPUT
+            echo "result={\"deleted\":${deleted:-0}}" >> $GITHUB_OUTPUT
 
       - name: "[data] Save cache"
         if: success() && inputs.dry_run == false && (inputs.delete_raw == true || inputs.delete_std == true)
@@ -174,7 +129,7 @@ jobs:
         if: always()
         shell: bash
         run: |
-          echo "### Dangerous purge activity \`${{ inputs.run_id }}\` ${{ inputs.dry_run == true && 'dry-run' || 'LIVE' }}: deleted=${{ steps.purge.outputs.deleted || '0' }} ${{ steps.meta.outputs.flags && format('flags={0}', steps.meta.outputs.flags) || '' }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "### Dangerous purge activity \`${{ inputs.run_id }}\` ${{ inputs.dry_run == true && 'dry-run' || 'LIVE' }}: deleted=${{ fromJSON(steps.run.outputs.result || '{}').deleted || 0 }} ${{ steps.meta.outputs.flags && format('flags={0}', steps.meta.outputs.flags) || '' }}" >> "$GITHUB_STEP_SUMMARY"
           if [ -f purge-record.json ]; then
             echo '```json' >> "$GITHUB_STEP_SUMMARY"
             cat purge-record.json >> "$GITHUB_STEP_SUMMARY"

@@ -20,150 +20,51 @@ jobs:
     env:
       GIT_FIT_DATABASE_PATH: ${{ vars.GIT_FIT_DATABASE_PATH || 'data/db/workouts.db' }}
     steps:
-      - uses: actions/checkout@v7
-
-      - uses: ruby/setup-ruby@v1
+      - id: run
+        uses: ./.github/actions/danger-db-run
         with:
-          ruby-version: '3.4'
-          bundler-cache: true
+          data-sources: ${{ inputs.source == 'all' && 'keep,strava,igpsport,garmin,garmin_cn' || inputs.source }}
+          operation: |
+            SOURCE="${{ inputs.source }}"
 
-      # ── DB paths ──
-      - name: '[db] Derive database paths'
-        id: db-paths
-        uses: git-fit-actions/db-store/paths@v1
-        with:
-          database-path: ${{ env.GIT_FIT_DATABASE_PATH }}
+            # Each script appends "updated=N" to $GITHUB_OUTPUT (last-wins);
+            # capture per-source stdout "updated:" count and sum for the total.
+            run_script() {
+              bundle exec ruby scripts/backfill_keep_time.rb --db-path "$DB_PATH" --source "$1" 2>&1 | tee "/tmp/bf_$1.out"
+              n=$(grep -oP 'updated:\s*\K\d+' "/tmp/bf_$1.out" | head -1)
+              echo "$1 updated=$n"
+            }
 
-      # ── DB restore ──
-      - name: '[db] Restore cache'
-        id: db-restore
-        uses: git-fit-actions/db-store/cache/restore@v1
-        with:
-          db-dir: ${{ steps.db-paths.outputs.dir }}
-          db-name: ${{ steps.db-paths.outputs.name }}
-          git-restore-mode: fallback
-          git-branch: GitFit/db
+            total=0
+            for src in keep strava igpsport; do
+              if [ "$SOURCE" = "all" ] || [ "$SOURCE" = "$src" ]; then
+                [ "$src" = "keep" ] && export GIT_FIT_SYSTEM_TIMEZONE="${{ vars.GIT_FIT_SYSTEM_TIMEZONE || 'Asia/Shanghai' }}"
+                run_script "$src"
+                n=$(grep -oP 'updated:\s*\K\d+' "/tmp/bf_$src.out" | head -1)
+                total=$((total + ${n:-0}))
+              fi
+            done
+            for src in garmin garmin_cn; do
+              if [ "$SOURCE" = "all" ] || [ "$SOURCE" = "$src" ]; then
+                bundle exec ruby scripts/backfill_garmin_sensors.rb --db-path "$DB_PATH" --source "$src" 2>&1 | tee "/tmp/bf_$src.out"
+                n=$(grep -oP 'updated:\s*\K\d+' "/tmp/bf_$src.out" | head -1)
+                total=$((total + ${n:-0}))
+              fi
+            done
 
-      # ── Keep raw data restore ──
-      - name: Restore keep data cache
-        if: inputs.source == 'all' || inputs.source == 'keep'
-        uses: git-fit-actions/data-store/cache/restore@v2
-        with:
-          sources: keep
+            echo "updated=$total" >> $GITHUB_OUTPUT
+            if [ "$total" -gt 0 ]; then
+              echo "mutated=true" >> $GITHUB_OUTPUT
+              bundle exec ruby scripts/wal_checkpoint.rb "$DB_PATH"
+            else
+              echo "updated=0" >> $GITHUB_OUTPUT
+            fi
 
-      # ── Strava raw data restore ──
-      - name: Restore strava data cache
-        if: inputs.source == 'all' || inputs.source == 'strava'
-        uses: git-fit-actions/data-store/cache/restore@v2
-        with:
-          sources: strava
-
-      # ── iGPSPORT raw data restore ──
-      - name: Restore igpsport data cache
-        if: inputs.source == 'all' || inputs.source == 'igpsport'
-        uses: git-fit-actions/data-store/cache/restore@v2
-        with:
-          sources: igpsport
-
-      # ── Garmin raw data restore ──
-      - name: Restore garmin data cache
-        if: inputs.source == 'all' || inputs.source == 'garmin'
-        uses: git-fit-actions/data-store/cache/restore@v2
-        with:
-          sources: garmin
-
-      # ── Garmin CN raw data restore ──
-      - name: Restore garmin_cn data cache
-        if: inputs.source == 'all' || inputs.source == 'garmin_cn'
-        uses: git-fit-actions/data-store/cache/restore@v2
-        with:
-          sources: garmin_cn
-
-      # ── Backfill Keep (from raw files + GPS/region TZ) ──
-      - name: Backfill Keep
-        id: backfill-keep
-        if: inputs.source == 'all' || inputs.source == 'keep'
-        shell: bash
-        env:
-          GIT_FIT_SYSTEM_TIMEZONE: ${{ vars.GIT_FIT_SYSTEM_TIMEZONE || 'Asia/Shanghai' }}
+      - name: Summary
         run: |
-          bundle exec ruby scripts/backfill_keep_time.rb \
-            --db-path "${{ steps.db-paths.outputs.db-path }}" \
-            --source keep
-
-      # ── Backfill Strava (from raw archive + timezone field) ──
-      - name: Backfill Strava
-        id: backfill-strava
-        if: inputs.source == 'all' || inputs.source == 'strava'
-        shell: bash
-        run: |
-          bundle exec ruby scripts/backfill_keep_time.rb \
-            --db-path "${{ steps.db-paths.outputs.db-path }}" \
-            --source strava
-
-      # ── Backfill iGPSPORT (offset inference from start_date/start_date_local) ──
-      - name: Backfill iGPSPORT
-        id: backfill-igpsport
-        if: inputs.source == 'all' || inputs.source == 'igpsport'
-        shell: bash
-        run: |
-          bundle exec ruby scripts/backfill_keep_time.rb \
-            --db-path "${{ steps.db-paths.outputs.db-path }}" \
-            --source igpsport
-
-      # ── Backfill Garmin (temperature/cadence/power from raw detail.json) ──
-      - name: Backfill Garmin
-        id: backfill-garmin
-        if: inputs.source == 'all' || inputs.source == 'garmin'
-        shell: bash
-        run: |
-          bundle exec ruby scripts/backfill_garmin_sensors.rb \
-            --db-path "${{ steps.db-paths.outputs.db-path }}" \
-            --source garmin
-
-      # ── Backfill Garmin CN (temperature/cadence/power from raw detail.json) ──
-      - name: Backfill Garmin CN
-        id: backfill-garmin-cn
-        if: inputs.source == 'all' || inputs.source == 'garmin_cn'
-        shell: bash
-        run: |
-          bundle exec ruby scripts/backfill_garmin_sensors.rb \
-            --db-path "${{ steps.db-paths.outputs.db-path }}" \
-            --source garmin_cn
-
-      # ── Compute total updates ──
-      - name: Compute total updates
-        id: total
-        shell: bash
-        run: |
-          keep=${{ steps.backfill-keep.outputs.updated || '0' }}
-          strava=${{ steps.backfill-strava.outputs.updated || '0' }}
-          igpsport=${{ steps.backfill-igpsport.outputs.updated || '0' }}
-          garmin=${{ steps.backfill-garmin.outputs.updated || '0' }}
-          garmin_cn=${{ steps.backfill-garmin-cn.outputs.updated || '0' }}
-          total=$((keep + strava + igpsport + garmin + garmin_cn))
-          echo "updated=$total" >> "$GITHUB_OUTPUT"
-          echo "backfill: keep=$keep strava=$strava igpsport=$igpsport garmin=$garmin garmin_cn=$garmin_cn total=$total"
-
-      # ── WAL checkpoint (only if changes were made) ──
-      - name: '[db] Checkpoint SQLite WAL'
-        if: steps.total.outputs.updated > 0
-        shell: bash
-        env:
-          DB_PATH: ${{ steps.db-paths.outputs.db-path }}
-        run: |
-          bundle exec ruby -e '
-            require "sequel"
-            db = Sequel.sqlite(ENV.fetch("DB_PATH"))
-            db.run("PRAGMA wal_checkpoint(TRUNCATE)")
-            print File.size(ENV.fetch("DB_PATH"))
-          '
-
-      # ── DB save (cache-only) ──
-      - name: '[db] Save cache'
-        if: always()
-        uses: git-fit-actions/db-store/cache/save@v1
-        with:
-          db-dir: ${{ steps.db-paths.outputs.dir }}
-          db-name: ${{ steps.db-paths.outputs.name }}
-          save-to-git-branch: false
+          echo "### GitFit datetime + temperature backfill" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Field | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|-------|"
+          echo "| Source | \`${{ inputs.source }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Updated | \`${{ steps.run.outputs.updated || 0 }}\` |" >> $GITHUB_STEP_SUMMARY

@@ -35,28 +35,6 @@ jobs:
     runs-on: ${{ vars.RUNNER_LABEL || 'ubuntu-latest' }}
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v7
-
-      - uses: ruby/setup-ruby@v1
-        with:
-          ruby-version: "3.4"
-          bundler-cache: true
-
-      - name: "[db] Derive database paths"
-        id: db-paths
-        uses: git-fit-actions/db-store/paths@v1
-        with:
-          database-path: ${{ env.GIT_FIT_DATABASE_PATH }}
-
-      - name: "[db] Restore cache"
-        id: db-restore
-        uses: git-fit-actions/db-store/cache/restore@v1
-        with:
-          db-dir: ${{ steps.db-paths.outputs.dir }}
-          db-name: ${{ steps.db-paths.outputs.name }}
-          git-restore-mode: fallback
-          git-branch: GitFit/db
-
       - name: Guard confirm
         shell: bash
         run: |
@@ -66,58 +44,30 @@ jobs:
           fi
           echo "confirm ok (source=${{ inputs.source }} dry_run=${{ inputs.dry_run }})"
 
-      - name: Purge source via SQLite
-        id: purge
-        shell: bash
-        env:
-          DB_PATH: ${{ steps.db-paths.outputs.db-path }}
-          SOURCE: ${{ inputs.source }}
-          DRY_RUN: ${{ inputs.dry_run }}
-        run: |
-          bundle exec ruby -e '
-            require "sequel"
-            db = Sequel.sqlite(ENV.fetch("DB_PATH"))
-            src = ENV.fetch("SOURCE")
-            dry = ENV.fetch("DRY_RUN") == "true"
-            before = db[:activities].where(source: src).count
-            deleted = 0
-            unless dry
-              deleted = db[:activities].where(source: src).delete
-            end
-            File.open(ENV.fetch("GITHUB_OUTPUT"), "a") do |f|
-              f.puts "matched=#{before}"
-              f.puts "deleted=#{deleted}"
-            end
-            puts "matched=#{before} deleted=#{deleted} dry=#{dry}"
-          '
-
-      - name: "[db] Checkpoint SQLite WAL"
-        if: steps.purge.outputs.deleted != '0'
-        shell: bash
-        env:
-          DB_PATH: ${{ steps.db-paths.outputs.db-path }}
-        run: |
-          bytes=$(bundle exec ruby -e '
-            require "sequel"
-            db = Sequel.sqlite(ENV.fetch("DB_PATH"))
-            db.run("PRAGMA wal_checkpoint(TRUNCATE)")
-            print File.size(ENV.fetch("DB_PATH"))
-          ')
-          echo "db_size=$bytes" >> "$GITHUB_OUTPUT"
-          echo "checkpoint done size=$bytes"
-
-      # ── DB save (cache-only) ──
-      - name: "[db] Save cache"
-        if: always()
-        uses: git-fit-actions/db-store/cache/save@v1
+      - id: run
+        uses: ./.github/actions/danger-db-run
         with:
-          db-dir: ${{ steps.db-paths.outputs.dir }}
-          db-name: ${{ steps.db-paths.outputs.name }}
-          save-to-git-branch: false
+          operation: |
+            DRY="${{ inputs.dry_run }}"
+            SRC="${{ inputs.source }}"
+            before=$(sqlite3 "$DB_PATH" "SELECT COUNT(*) FROM activities WHERE source='$SRC'")
+            deleted=0
+            if [ "$DRY" != "true" ]; then
+              deleted=$(sqlite3 "$DB_PATH" "DELETE FROM activities WHERE source='$SRC'; SELECT changes()")
+            fi
+            echo "matched=$before deleted=$deleted dry=$DRY"
+            echo "updated=$deleted" >> $GITHUB_OUTPUT
+            echo "result={\"matched\":$before,\"deleted\":$deleted,\"dry\":\"$DRY\"}" >> $GITHUB_OUTPUT
+            if [ "$deleted" != 0 ]; then
+              echo "mutated=true" >> $GITHUB_OUTPUT
+              bytes=$(bundle exec ruby scripts/wal_checkpoint.rb "$DB_PATH")
+              echo "checkpoint done size=$bytes"
+            else
+              echo "mutated=false" >> $GITHUB_OUTPUT
+            fi
 
       - name: Summary
         if: always()
-        shell: bash
         run: |
-          echo "### Dangerous DB purge \`${{ inputs.source }}\` ${{ inputs.dry_run == true && 'dry-run' || 'LIVE' }}: matched=${{ steps.purge.outputs.matched }} deleted=${{ steps.purge.outputs.deleted }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "### Dangerous DB purge \`${{ inputs.source }}\` ${{ inputs.dry_run == true && 'dry-run' || 'LIVE' }}: matched=${{ fromJSON(steps.run.outputs.result || '{}').matched || 0 }} deleted=${{ fromJSON(steps.run.outputs.result || '{}').deleted || 0 }}" >> "$GITHUB_STEP_SUMMARY"
           echo "confirm=${{ inputs.confirm }} source=${{ inputs.source }} dry_run=${{ inputs.dry_run }}" >> "$GITHUB_STEP_SUMMARY"

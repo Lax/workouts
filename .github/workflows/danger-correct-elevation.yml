@@ -42,118 +42,59 @@ jobs:
       group: workouts-db
       cancel-in-progress: false
     steps:
-      - uses: actions/checkout@v7
-
-      - uses: ruby/setup-ruby@v1
+      - id: run
+        uses: ./.github/actions/danger-db-run
         with:
-          ruby-version: '3.4'
-          bundler-cache: true
+          data-sources: igpsport,keep,xoss,strava,garmin,garmin_cn,xingzhe,2bulu,apple_health,codoon,joyrun
+          dem: ${{ inputs.dem }}
+          operation: |
+            SOURCE="${{ inputs.source }}"
+            FORCE="${{ inputs.force }}"
+            DEM="${{ inputs.dem }}"
 
-      - id: db-paths
-        uses: git-fit-actions/db-store/paths@v1
-        with:
-          database-path: ${{ env.GIT_FIT_DATABASE_PATH }}
+            args=""
+            if [ "$SOURCE" != "all" ]; then
+              args="$args $SOURCE"
+            fi
+            if [ "$FORCE" = "true" ]; then
+              args="$args --force"
+            fi
+            if [ "$DEM" != "true" ]; then
+              args="$args --no-dem"
+            fi
 
-      - name: '[db] Restore cache'
-        uses: git-fit-actions/db-store/cache/restore@v1
-        with:
-          db-dir: ${{ steps.db-paths.outputs.dir }}
-          db-name: ${{ steps.db-paths.outputs.name }}
-          git-restore-mode: fallback
-          git-branch: GitFit/db
+            bundle exec git fit elevation correct $args 2>&1 | tee correct.out
 
-      - name: 'Restore data store'
-        uses: git-fit-actions/data-store/cache/restore@v2
-        with:
-          sources: igpsport,keep,xoss,strava,garmin,garmin_cn,xingzhe,2bulu,apple_health,codoon,joyrun
+            if ! grep -q 'Elevation correct:' correct.out; then
+              echo "::error::Elevation correct command produced no summary line"
+              exit 1
+            fi
 
-      - name: 'Restore DEM cache'
-        uses: actions/cache/restore@v6
-        with:
-          path: |
-            data/cache/dem
-            data/cache/dem_fit
-          key: GitFit-dem-v0-${{ github.run_id }}-${{ github.run_attempt }}
-          restore-keys: GitFit-dem-v0-
+            UPDATED=$(grep -oP '\d+(?= updated)' correct.out | head -1)
+            SKIPPED=$(grep -oP '\d+(?= skipped)' correct.out | head -1)
+            FAILED=$(grep -oP '\d+(?= failed)' correct.out | head -1)
+            NO_MODEL=$(grep -oP '\d+(?= no_model)' correct.out | head -1)
 
-      - name: Run elevation correct
-        id: correct
-        run: |
-          SOURCE="${{ inputs.source }}"
-          FORCE="${{ inputs.force }}"
-          DEM="${{ inputs.dem }}"
-
-          args=""
-          if [ "$SOURCE" != "all" ]; then
-            args="$args $SOURCE"
-          fi
-          if [ "$FORCE" = "true" ]; then
-            args="$args --force"
-          fi
-          if [ "$DEM" != "true" ]; then
-            args="$args --no-dem"
-          fi
-
-          set -o pipefail
-          bundle exec git fit elevation correct $args 2>&1 | tee correct.out
-
-          if ! grep -q 'Elevation correct:' correct.out; then
-            echo "::error::Elevation correct command produced no summary line"
-            exit 1
-          fi
-
-          UPDATED=$(grep -oP '\d+(?= updated)' correct.out | head -1)
-          SKIPPED=$(grep -oP '\d+(?= skipped)' correct.out | head -1)
-          FAILED=$(grep -oP '\d+(?= failed)' correct.out | head -1)
-          NO_MODEL=$(grep -oP '\d+(?= no_model)' correct.out | head -1)
-
-          echo "updated=$UPDATED" >> $GITHUB_OUTPUT
-          echo "skipped=$SKIPPED" >> $GITHUB_OUTPUT
-          echo "failed=$FAILED" >> $GITHUB_OUTPUT
-          echo "no_model=$NO_MODEL" >> $GITHUB_OUTPUT
-
-      - name: 'Save DEM cache'
-        if: always()
-        uses: actions/cache/save@v6
-        with:
-          path: |
-            data/cache/dem
-            data/cache/dem_fit
-          key: GitFit-dem-v0-${{ github.run_id }}-${{ github.run_attempt }}
-
-      - name: '[db] Checkpoint'
-        if: steps.correct.outputs.updated > 0
-        env:
-          DB_PATH: ${{ steps.db-paths.outputs.db-path }}
-        run: |
-          bundle exec ruby -e '
-            require "sequel"
-            db = Sequel.sqlite(ENV.fetch("DB_PATH"))
-            db.run("PRAGMA wal_checkpoint(TRUNCATE)")
-            print File.size(ENV.fetch("DB_PATH"))
-          '
-
-      - name: '[db] Save cache'
-        if: always()
-        uses: git-fit-actions/db-store/cache/save@v1
-        with:
-          db-dir: ${{ steps.db-paths.outputs.dir }}
-          db-name: ${{ steps.db-paths.outputs.name }}
-          save-to-git-branch: false
+            echo "updated=$UPDATED" >> $GITHUB_OUTPUT
+            echo "result={\"skipped\":${SKIPPED:-0},\"failed\":${FAILED:-0},\"no_model\":${NO_MODEL:-0}}" >> $GITHUB_OUTPUT
+            if [ "$UPDATED" -gt 0 ]; then
+              echo "mutated=true" >> $GITHUB_OUTPUT
+              bundle exec ruby scripts/wal_checkpoint.rb "$DB_PATH"
+            fi
 
       - name: Summary
         run: |
           echo "### GitFit elevation correct" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Field | Value |" >> $GITHUB_STEP_SUMMARY
-          echo "|-------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|-------|"
           echo "| Source | \`${{ inputs.source }}\` |" >> $GITHUB_STEP_SUMMARY
           echo "| Force | \`${{ inputs.force }}\` |" >> $GITHUB_STEP_SUMMARY
           echo "| Dem | \`${{ inputs.dem }}\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| Updated | \`${{ steps.correct.outputs.updated || 0 }}\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| Skipped | \`${{ steps.correct.outputs.skipped || 0 }}\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| Failed | \`${{ steps.correct.outputs.failed || 0 }}\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| No model (DEM fallback) | \`${{ steps.correct.outputs.no_model || 0 }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Updated | \`${{ steps.run.outputs.updated || 0 }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Skipped | \`${{ fromJSON(steps.run.outputs.result || '{}').skipped || 0 }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Failed | \`${{ fromJSON(steps.run.outputs.result || '{}').failed || 0 }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| No model (DEM fallback) | \`${{ fromJSON(steps.run.outputs.result || '{}').no_model || 0 }}\` |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
           WARNINGS=$(grep '^Elevation correct \[' correct.out 2>/dev/null || true)
