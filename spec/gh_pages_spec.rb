@@ -115,6 +115,23 @@ RSpec.describe "gh-pages.yml" do
       expect(config.dig("entries", "about")).to eq("hello-world")
     end
 
+    it "declares the console entry backed by theme-console between stats and ai" do
+      keys = config.fetch("entries").keys
+      expect(config.dig("entries", "console")).to eq("console")
+      expect(keys.index("console")).to be > keys.index("stats")
+      expect(keys.index("console")).to be < keys.index("ai")
+    end
+
+    it "configures a per-theme title for console" do
+      expect(config.dig("themes", "console", "site", "title")).to eq("控制台")
+      expect(config.dig("themes", "console", "site", "nav")).to eq(false)
+      expect(config.dig("themes", "console", "site", "palette")).to eq("mono")
+    end
+
+    it "adds a console nav label" do
+      expect(config.dig("site", "nav", "labels", "console")).to eq("控制台")
+    end
+
     it "declares stats/races data sources" do
       expect(config.dig("data", "stats")).to eq("source" => "stats.json", "optional" => false)
       expect(config.dig("data", "races")).to eq("source" => "races.json", "optional" => true)

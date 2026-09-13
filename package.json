@@ -12,6 +12,7 @@
     "@lax/theme-running-page": "~0.0.13",
     "@lax/theme-stats": "~0.0.28",
     "@lax/theme-timeline": "~0.0.44",
+    "@lax/theme-console": "~0.0.1",
     "@lax/web-build": "~0.0.6",
     "@lax/theme-ai-insights": "~0.0.5",
     "@lax/plugin-ai-chat": "~0.0.12"

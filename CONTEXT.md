@@ -208,7 +208,7 @@ Secrets 名单 `_`（`SYNC_KEEP_PHONE`），sync.yml 经 `.github/actions/sync-a
 
 ## 前端架构
 
-**包**（`Lax/git-fit-web` → GitHub Packages `@lax/*`，0.0.x）：`shared`（类型/格式化/geo/footprint 调色）/ `core`（bootstrap+registry+SiteNav host）/ `web-build`（CLI）/ `plugin-data-source`（useStats/useActivities）/ `plugin-nav` / `plugin-ai-chat`（BYOK chat + 单活动分析）/ `plugin-ui-map`（Leaflet 地图）/ `plugin-ui-chart`（ECharts 图表）/ `theme-hello-world` / `theme-stats` / `theme-timeline` / `theme-ai-insights`（insights 报告 + 问答独立页）/ `theme-footprint`（足迹·锐利高对比红橙轨迹）/ `theme-running-page`（running_page 风格看板）。详见 wiki Frontend-Architecture 与 git-fit-web README。
+**包**（`Lax/git-fit-web` → GitHub Packages `@lax/*`，0.0.x）：`shared`（类型/格式化/geo/footprint 调色）/ `core`（bootstrap+registry+SiteNav host）/ `web-build`（CLI）/ `plugin-data-source`（useStats/useActivities）/ `plugin-nav` / `plugin-ai-chat`（BYOK chat + 单活动分析）/ `plugin-ui-map`（Leaflet 地图）/ `plugin-ui-chart`（ECharts 图表）/ `theme-hello-world` / `theme-stats` / `theme-timeline` / `theme-ai-insights`（insights 报告 + 问答独立页）/ `theme-footprint`（足迹·锐利高对比红橙轨迹）/ `theme-running-page`（running_page 风格看板）/ `theme-console`（btop 风格终端仪表盘）。详见 wiki Frontend-Architecture 与 git-fit-web README。
 
 **运行机制**：`bootstrap(config,{theme,plugins})` 依次 setup 插件 `registerComponent`；`config.plugins` 由 entry shim 注入；core `SiteNav` host 无条件挂载读 entries，plugin-nav 只供纯视图（单向依赖）。
 
@@ -217,6 +217,8 @@ Secrets 名单 `_`（`SYNC_KEEP_PHONE`），sync.yml 经 `.github/actions/sync-a
 **theme-footprint**：全屏足迹地图 + 锐利高对比红橙轨迹（Steplife 风格，`plugin-ui-map` edge+core 双线，暗色 edge `#ff3b30` + core `#ff9f0a`，亮色 edge `#c41e3a` + core `#f97316`，统一配色，无 ride 区分/无白点/无 star）+ 左侧抽屉（活动列表 + 筛选 + 图表覆层）。地图 `HeroMap` 由 `plugin-ui-map` 提供，图表由 `plugin-ui-chart` 提供。
 
 **theme-running-page**：复刻 `yihong0618/running_page` 首页的 Header + 左侧年度统计 + 右侧 Leaflet 地图布局；年份切换、Run Table 排序、活动 hover/select/map 联动、Total 视图热力图与路线 grid、`#run_<run_id>` 深链。该页面关闭全局 SiteNav，由主题 Header 消费 config labels/navLinks。
+
+**theme-console**：btop 风格高密度终端仪表盘（极客彩蛋，正式统计仍在 stats 页）。btop 区块映射：月距离 12 柱（分类分色）↔ CPU、YTD 目标 gauge ↔ MEM、运动类型分布 ↔ DISK、周爬升/配速双线 ↔ NET、活动表 ↔ 进程表。图表全部手写 SVG/CSS（零 echarts 依赖；月柱/日趋势/双线从 activities.json 聚合，stats.monthly 无分类别拆分）；`palette: "mono"` + 主题自有终端绿变量、直角 1px 边框、等宽栈；nav:false 自管 Header（含 setInterval 时钟 + 数据摘要行）；1080p 密度指标 ≥150 数据点；三档 viewport 断点 grid-areas 重排（Mobile 折叠 waves/ability 到表后，删项不删格）；活动表 ≥15 行 6 列排序筛选，行点击深链 `timeline.html#a=<run_id>`；ability 缺失显示 `-- disabled --` 保高。命名考察后定 `console`（勿用 btop 商标/hud/cockpit）。
 
 **全项目时间规则**（`theme-timeline/src/time.ts`）：
 1. `start_date_local` 带偏移 → 墙上钟 `slice`（发生地时间，无 TZ 转换）
@@ -266,7 +268,7 @@ f > 2N+1 → N = min(7, N+1)     减速（每周日保底）
 | Pages 源 | GitHub Actions |
 | URL | `https://lax.github.io/workouts/` |
 | 数据制品 | `activities.json` / `tracks.json` / `stats.json` / `races.json` / `insights.json` / `ability.json`（排除 DB）|
-| 前端页面 | `index.html`（timeline）/ `footprint.html`（footprint）/ `running.html`（running-page）/ `ai.html`（ai-insights）/ `stats.html`（stats）/ `about.html`（hello-world）|
+| 前端页面 | `index.html`（timeline）/ `footprint.html`（footprint）/ `running.html`（running-page）/ `ai.html`（ai-insights）/ `stats.html`（stats）/ `console.html`（console）/ `about.html`（hello-world）|
 | 独立前端 | `https://lax.github.io/running/`（Lax/running running_page 看板）|
 
 ## 数据架构

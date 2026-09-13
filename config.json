@@ -3,8 +3,9 @@
     "index": "timeline",
     "footprint": "footprint",
     "running": "running-page",
-    "ai": "ai-insights",
     "stats": "stats",
+    "console": "console",
+    "ai": "ai-insights",
     "about": "hello-world"
   },
   "plugins": {
@@ -17,8 +18,9 @@
         "index": "时间线",
         "footprint": "足迹",
         "running": "Running",
-        "ai": "AI 洞察",
         "stats": "统计",
+        "console": "控制台",
+        "ai": "AI 洞察",
         "about": "关于"
       }
     }
@@ -88,6 +90,13 @@
         "title": "Running",
         "nav": false,
         "palette": "warm"
+      }
+    },
+    "console": {
+      "site": {
+        "title": "控制台",
+        "nav": false,
+        "palette": "mono"
       }
     }
   }
