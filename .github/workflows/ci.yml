@@ -76,3 +76,59 @@ jobs:
             echo "- rspec: ${{ steps.tests.outcome }}"
             echo "- Ruby: ${{ matrix.ruby-version }}"
           } >> "$GITHUB_STEP_SUMMARY"
+
+  # CI 成功不再无条件触发 pages 重建（原 gh-pages.yml workflow_run）：
+  # 只有站点相关路径变化才 dispatch deploy。deploy 总是 checkout 最新 master，
+  # 故快速连续 push 不会漏部署；[skip ci] push 不产生 CI run，天然跳过。
+  deploy-gate:
+    needs: [workflow-lint, ruby-test]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      actions: write
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Detect site-affecting changes
+        id: gate
+        shell: bash
+        env:
+          BEFORE: ${{ github.event.before }}
+        run: |
+          # push 含多 commit 时 before..after 才是完整变更集；
+          # before 全零（首推/force-push）或不可达时回退 HEAD^
+          base="$BEFORE"
+          if [ -z "$base" ] || [[ "$base" =~ ^0+$ ]] || ! git cat-file -e "$base" 2>/dev/null; then
+            base="HEAD^"
+          fi
+          pattern='^(config\.json|config\.yml|package(-lock)?\.json|Gemfile\.lock|\.env|data/events/|\.github/workflows/gh-pages\.yml)'
+          if git diff --name-only "$base" "$GITHUB_SHA" | tee /tmp/deploy-gate-changes | grep -Eq "$pattern"; then
+            echo "deploy=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "deploy=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Trigger pages deploy
+        if: steps.gate.outputs.deploy == 'true'
+        shell: bash
+        run: gh workflow run gh-pages.yml --ref master
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Write deploy-gate summary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "### deploy-gate result"
+            echo "- Job status: ${{ job.status }}"
+            echo "- Deploy triggered: ${{ steps.gate.outputs.deploy || 'false' }}"
+            echo "- Changed files:"
+            echo '```'
+            cat /tmp/deploy-gate-changes 2>/dev/null || echo "(none)"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

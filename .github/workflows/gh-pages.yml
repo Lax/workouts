@@ -1,10 +1,9 @@
 name: Deploy (Github Pages)
 
+# 触发只有 workflow_dispatch：sync 数据变更 / CI deploy-gate（站点相关路径命中）
+# / backfill-device 自动重导出 / 手动。原先 CI 成功即全量重建的 workflow_run
+# 触发已改为 ci.yml deploy-gate 的路径闸。
 on:
-  workflow_run:
-    workflows: ["CI"]
-    types: [completed]
-    branches: [master]
   workflow_dispatch:
     inputs:
       artifact-run-id:
@@ -13,7 +12,6 @@ on:
 
 jobs:
   deploy-pages:
-    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ${{ vars.RUNNER_LABEL || 'ubuntu-latest' }}
     env:
       GIT_FIT_DATABASE_PATH: ${{ vars.GIT_FIT_DATABASE_PATH || 'data/db/workouts.db' }}
@@ -33,7 +31,6 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
-          ref: ${{ github.event.workflow_run.head_sha || github.ref }}
           token: ${{ secrets.WORKOUTS_SYNC_PAT }}
 
       - uses: ruby/setup-ruby@v1
