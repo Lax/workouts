@@ -10,7 +10,9 @@ jobs:
   workflow-lint:
     # raven-actions/actionlint shells out to `npm`; the self-hosted runner
     # image has no node/npm on PATH, so lint stays on the hosted image.
-    runs-on: ubuntu-latest
+    # Pinned (not ubuntu-latest): 2026-10-19 the label migrates to Ubuntu 26,
+    # unvalidated for this repo — same freeze as vars.RUNNER_LABEL elsewhere.
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
     concurrency:
