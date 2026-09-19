@@ -30,8 +30,6 @@ jobs:
       cancel-in-progress: true
     steps:
       - uses: actions/checkout@v7
-        with:
-          token: ${{ secrets.WORKOUTS_SYNC_PAT }}
 
       - uses: ruby/setup-ruby@v1
         with:
