@@ -76,7 +76,7 @@ jobs:
         run: bundle exec git fit ability compute --output site/ability.json
 
       - name: '[ai] Restore cache'
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           path: site/insights.json
           key: GitFit-ai-insights-v0-sentinel
@@ -103,7 +103,7 @@ jobs:
 
       - name: '[ai] Save cache'
         if: steps.ai-export.outputs.changed == 'true'
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v6
         with:
           path: site/insights.json
           key: GitFit-ai-insights-v0-${{ github.run_id }}

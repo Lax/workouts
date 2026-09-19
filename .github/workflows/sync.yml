@@ -121,7 +121,7 @@ jobs:
       # git-save-gate: 仅 job 成功时透传 restore 的 save-to-git-branch 建议，失败时 save 侧不 push。
       - name: '[ai] Restore cache'
         if: success()
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           path: site/insights.json
           key: GitFit-ai-insights-v0-sentinel
@@ -150,7 +150,7 @@ jobs:
 
       - name: '[ai] Save cache'
         if: success() && steps.ai-export.outputs.changed == 'true'
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v6
         with:
           path: site/insights.json
           key: GitFit-ai-insights-v0-${{ github.run_id }}
