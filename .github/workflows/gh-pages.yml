@@ -19,6 +19,7 @@ jobs:
       AI_API_KEY_PRESENT: ${{ secrets.AI_API_KEY != '' }}
     permissions:
       actions: read
+      contents: read
       pages: write
       id-token: write
       packages: read

@@ -24,6 +24,10 @@ RSpec.describe "gh-pages.yml" do
       expect(checkout["with"]).to be_nil
       expect(File.read(workflow_path("gh-pages.yml"))).not_to include("WORKOUTS_SYNC_PAT")
     end
+
+    it "grants contents: read — default-token checkout 404s without it (PAT masked this before)" do
+      expect(job.fetch("permissions")).to include("contents" => "read")
+    end
   end
 
   describe "export and deploy" do
