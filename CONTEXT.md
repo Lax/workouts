@@ -166,7 +166,7 @@ CREATE TABLE activities (
 
 | 变量 | 作用 |
 |---|---|
-| `vars.RUNNER_LABEL` | `runs-on`：默认 `ubuntu-latest`，设 `self-hosted` 切本地 runner |
+| `vars.RUNNER_LABEL` | `runs-on`：当前 `ubuntu-24.04`（钉住，防 2026-10-19 ubuntu-latest→26 未验证迁移；解除前先在 26 冒烟），设 `self-hosted` 切本地 runner |
 | `vars.GIT_FIT_DATABASE_PATH` | SQLite 路径（默认 `data/db/workouts.db`）|
 | `vars.SYNC_TIME_BUDGET` / `SYNC_TOTAL_TIMEOUT` | 单次 sync 时间预算 / Runner 总超时 |
 
@@ -247,10 +247,10 @@ f > 2N+1 → N = min(7, N+1)     减速（每周日保底）
 
 | workflow | 触发 | 作用 |
 |---|---|---|
-| `ci.yml` | push/PR → master | actionlint + `bundle exec rspec`（Ruby 3.4 matrix）|
+| `ci.yml` | push/PR → master | actionlint + `bundle exec rspec`（Ruby 3.4）+ `deploy-gate`：push 且站点相关路径命中（config/package/Gemfile.lock/.env/data events/gh-pages.yml 自身）才 dispatch gh-pages，spec/scripts 类推送不再全量重建 |
 | `sync.yml` | schedule `*/N` + dispatch | 同步 + 缓存 + 数据变更触发 scheduler/gh-pages |
 | `sync-scheduler.yml` | 数据变更 + 每周日保底 | 读 N → 算 f → sed 改 sync.yml cron（唯一写 workflow 的持有 PAT）|
-| `gh-pages.yml` | CI 成功后 deploy | export json/stats → stage races.json → `frontend-build` → deploy-pages |
+| `gh-pages.yml` | dispatch-only（sync 数据变更 / CI `deploy-gate` 路径命中 / backfill-device 回填后 / 手动） | export json/stats → stage races.json → `frontend-build` → deploy-pages；checkout 用默认 GITHUB_TOKEN（`contents: read`，PAT 唯一持有者仍是 sync-scheduler）|
 | `git-fit-archive.yml` | 每周日 | cache → `GitFit/data/<source>` + `GitFit/db` orphan 分支（LRU 兜底）|
 | `danger-backfill-elevation.yml` | dispatch | `git fit elevation backfill` 写 raw `elevation_*`（7 源 L2 含 keep，cache-only save）|
 | `danger-correct-elevation.yml` | dispatch（source/force/dem） | `git fit elevation correct [--dem]` 写 `elevation_*_terrain`；DEM 缓存独立 key `GitFit-dem-v0-*`（仅 actions/cache，不入 git 归档）|
