@@ -9,22 +9,20 @@ RSpec.describe "gh-pages.yml" do
   let(:steps) { job.fetch("steps") }
 
   describe "trigger" do
-    it "runs after the CI workflow completes" do
-      expect(on_events.dig("workflow_run", "workflows")).to eq(["CI"])
-      expect(on_events.dig("workflow_run", "types")).to eq(["completed"])
-    end
+    it_behaves_like "a dispatch-only workflow"
 
-    it "gates deploy on manual dispatch or a successful CI run" do
-      expect(job["if"]).to eq("${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}")
+    it "no longer auto-runs on CI completion — deploy gating lives in ci.yml deploy-gate" do
+      expect(on_events).not_to have_key("workflow_run")
+      expect(job["if"]).to be_nil
     end
   end
 
   describe "checkout" do
-    it "uses the PAT and the triggering workflow head sha" do
+    it "uses the default token and master head — PAT holder stays sync-scheduler only" do
       checkout = steps.find { |s| s["uses"]&.start_with?("actions/checkout") }
       expect(checkout).not_to be_nil
-      expect(checkout.dig("with", "token")).to eq("${{ secrets.WORKOUTS_SYNC_PAT }}")
-      expect(checkout.dig("with", "ref")).to include("workflow_run.head_sha")
+      expect(checkout["with"]).to be_nil
+      expect(File.read(workflow_path("gh-pages.yml"))).not_to include("WORKOUTS_SYNC_PAT")
     end
   end
 

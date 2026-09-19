@@ -87,6 +87,10 @@ jobs:
     permissions:
       contents: read
       actions: write
+    concurrency:
+      # 排队而非取消：后一个无关 push 不得取消前一个命中路径、尚未 dispatch 的 gate（漏部署）
+      group: ci-${{ github.ref }}-deploy-gate
+      cancel-in-progress: false
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v7
