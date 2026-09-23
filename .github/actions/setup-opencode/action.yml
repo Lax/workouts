@@ -1,0 +1,29 @@
+name: 'Setup opencode CLI'
+description: 'Install opencode CLI (official installer + binary cache), pin optional version'
+inputs:
+  version:
+    description: 'Version to install (e.g. 1.18.31); empty = latest'
+    required: false
+    default: '1.18.31'
+runs:
+  using: 'composite'
+  steps:
+    - id: cache
+      uses: actions/cache/restore@v4
+      with:
+        path: ~/.opencode/bin/opencode
+        key: opencode-bin-${{ inputs.version }}
+    - shell: bash
+      run: |
+        if [ -x "$HOME/.opencode/bin/opencode" ]; then
+          echo "opencode restored from cache"
+        else
+          curl -fsSL https://opencode.ai/install | bash -s -- --version "${{ inputs.version }}"
+        fi
+        "$HOME/.opencode/bin/opencode" --version
+        echo "$HOME/.opencode/bin" >> "$GITHUB_PATH"
+    - uses: actions/cache/save@v4
+      if: steps.cache.outputs.cache-hit != 'true'
+      with:
+        path: ~/.opencode/bin/opencode
+        key: opencode-bin-${{ inputs.version }}

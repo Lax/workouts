@@ -17,6 +17,7 @@ jobs:
       GIT_FIT_DATABASE_PATH: ${{ vars.GIT_FIT_DATABASE_PATH || 'data/db/workouts.db' }}
       # secrets 不可用于 step 级 if（actionlint 验证）——经 job env 间接传递
       AI_API_KEY_PRESENT: ${{ secrets.AI_API_KEY != '' }}
+      AI_TRANSPORT: ${{ vars.AI_TRANSPORT || 'opencode' }}
     permissions:
       actions: read
       contents: read
@@ -79,14 +80,21 @@ jobs:
           restore-keys: |
             GitFit-ai-insights-v0-
 
+      - name: '[ai] Setup opencode CLI'
+        if: env.AI_TRANSPORT == 'opencode'
+        uses: ./.github/actions/setup-opencode
+
       - name: Export AI insights
         id: ai-export
-        if: env.AI_API_KEY_PRESENT == 'true'
+        # opencode transport 零凭据必跑；openai transport 才要求 key 存在
+        if: env.AI_TRANSPORT != 'openai' || env.AI_API_KEY_PRESENT == 'true'
         continue-on-error: true
         env:
           GIT_FIT_AI_ENABLED: 'true'
-          GIT_FIT_AI_ENDPOINT: ${{ vars.AI_ENDPOINT || 'https://opencode.ai/zen/v1' }}
-          GIT_FIT_AI_MODEL: ${{ vars.AI_MODEL || 'mimo-v2.5-free' }}
+          GIT_FIT_AI_TRANSPORT: ${{ env.AI_TRANSPORT }}
+          # AI_MODEL 语义 = 当前 transport 的 model id；openai transport 时需同时设置 AI_ENDPOINT
+          GIT_FIT_AI_MODEL: ${{ vars.AI_MODEL || 'opencode/big-pickle' }}
+          GIT_FIT_AI_ENDPOINT: ${{ vars.AI_ENDPOINT }}
           GIT_FIT_AI_API_KEY_ENV: AI_API_KEY
           # 免费档模型在 ~43KB stats prompt 下常见 >60s（2026-08-31 insights 场景 60s 超时实测），放宽到 180s
           GIT_FIT_AI_TIMEOUT: '180'
