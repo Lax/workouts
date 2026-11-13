@@ -9,7 +9,7 @@ runs:
   using: 'composite'
   steps:
     - id: cache
-      uses: actions/cache/restore@v4
+      uses: actions/cache/restore@v6
       with:
         path: ~/.opencode/bin/opencode
         key: opencode-bin-${{ inputs.version }}
@@ -22,7 +22,7 @@ runs:
         fi
         "$HOME/.opencode/bin/opencode" --version
         echo "$HOME/.opencode/bin" >> "$GITHUB_PATH"
-    - uses: actions/cache/save@v4
+    - uses: actions/cache/save@v6
       if: steps.cache.outputs.cache-hit != 'true'
       with:
         path: ~/.opencode/bin/opencode
