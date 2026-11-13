@@ -44,6 +44,18 @@ RSpec.describe "sync.yml" do
     end
   end
 
+  describe "timeouts" do
+    it "bounds the job runtime so a hung step cannot burn the default 6h billing budget" do
+      expect(yaml.dig("jobs", "sync", "timeout-minutes")).to eq(45)
+    end
+
+    it "bounds the AI export step so continue-on-error stays effective against a hang" do
+      ai = steps.find { |s| s["name"] == "[ai] Export insights (digest-skip aware)" }
+      expect(ai["timeout-minutes"]).to eq(20)
+      expect(ai["continue-on-error"]).to be(true)
+    end
+  end
+
   describe "PAT removal" do
     it "does not reference WORKOUTS_SYNC_PAT" do
       expect(content).not_to include("WORKOUTS_SYNC_PAT")

@@ -13,6 +13,10 @@ on:
 jobs:
   deploy-pages:
     runs-on: ${{ vars.RUNNER_LABEL || 'ubuntu-latest' }}
+    # 账单保险丝（同 sync.yml）：2026-11 AI export 挂死烧穿 6h 默认上限打穿 spending
+    # limit；常态 ~2min（2026-11 实测），AI 步骤 20min 封顶 + frontend-build 冷缓存
+    # 联合最坏 ~32min，40min 留余量
+    timeout-minutes: 40
     env:
       GIT_FIT_DATABASE_PATH: ${{ vars.GIT_FIT_DATABASE_PATH || 'data/db/workouts.db' }}
       # secrets 不可用于 step 级 if（actionlint 验证）——经 job env 间接传递
@@ -89,6 +93,10 @@ jobs:
         # opencode transport 零凭据必跑；openai transport 才要求 key 存在
         if: env.AI_TRANSPORT != 'openai' || env.AI_API_KEY_PRESENT == 'true'
         continue-on-error: true
+        # continue-on-error 只防「失败」不防「挂死」：gem 侧 180s 超时失效时由步骤级
+        # 超时强杀，保住后续 deploy 链路（watchdog 缺陷根因见 git-fit#98）；20min ≥
+        # gem 修复后合法最坏 3 场景×2 重试×180s=18min
+        timeout-minutes: 20
         env:
           GIT_FIT_AI_ENABLED: 'true'
           GIT_FIT_AI_TRANSPORT: ${{ env.AI_TRANSPORT }}

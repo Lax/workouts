@@ -30,6 +30,18 @@ RSpec.describe "gh-pages.yml" do
     end
   end
 
+  describe "timeouts" do
+    it "bounds the job runtime so a hung step cannot burn the default 6h billing budget" do
+      expect(job["timeout-minutes"]).to eq(40)
+    end
+
+    it "bounds the AI export step so continue-on-error stays effective against a hang" do
+      ai = steps.find { |s| s["name"] == "Export AI insights" }
+      expect(ai["timeout-minutes"]).to eq(20)
+      expect(ai["continue-on-error"]).to be(true)
+    end
+  end
+
   describe "export and deploy" do
     it "exports JSON/Stats and deploys pages" do
       names = steps.map { |s| s["name"] }
