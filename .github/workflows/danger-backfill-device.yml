@@ -17,6 +17,7 @@ on:
           - garmin_cn
           - xingzhe
           - codoon
+          - joyrun
           - 2bulu
           - apple_health
       force:

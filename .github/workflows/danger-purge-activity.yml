@@ -67,8 +67,8 @@ jobs:
           echo "derived source=$src flags='$flags'"
           if [ "$DELETE_RAW" = "true" ] || [ "$DELETE_STD" = "true" ]; then
             case "$src" in
-              keep|igpsport|xoss|xingzhe|garmin|garmin_cn|strava) ;;
-              *) echo "::error::delete flags require source in [keep,igpsport,xoss,xingzhe,garmin,garmin_cn,strava]; derived '$src' from run_id='$rid' is invalid" >&2; exit 1 ;;
+              keep|igpsport|xoss|xingzhe|garmin|garmin_cn|strava|codoon|joyrun) ;;
+              *) echo "::error::delete flags require source in [keep,igpsport,xoss,xingzhe,garmin,garmin_cn,strava,codoon,joyrun]; derived '$src' from run_id='$rid' is invalid" >&2; exit 1 ;;
             esac
           fi
 

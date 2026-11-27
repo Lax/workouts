@@ -16,6 +16,8 @@ on:
           - garmin
           - garmin_cn
           - xingzhe
+          - codoon
+          - joyrun
       force:
         description: "Overwrite existing elevation values (default: only fill NULLs)"
         type: boolean

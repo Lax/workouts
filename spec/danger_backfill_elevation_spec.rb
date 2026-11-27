@@ -14,7 +14,7 @@ RSpec.describe "danger-backfill-elevation.yml" do
       expect(inputs).to have_key("source")
       expect(inputs["source"]["type"]).to eq("choice")
       expect(inputs["source"]["default"]).to eq("all")
-      expect(inputs["source"]["options"]).to eq(%w[all igpsport keep xoss strava garmin garmin_cn xingzhe])
+      expect(inputs["source"]["options"]).to eq(%w[all igpsport keep xoss strava garmin garmin_cn xingzhe codoon joyrun])
 
       expect(inputs).to have_key("force")
       expect(inputs["force"]["type"]).to eq("boolean")

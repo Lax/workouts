@@ -20,6 +20,8 @@ on:
           - garmin
           - garmin_cn
           - strava
+          - codoon
+          - joyrun
 
 jobs:
   archive:
@@ -30,7 +32,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        source: ${{ fromJson(github.event_name == 'workflow_dispatch' && inputs.source != '' && format('["{0}"]', inputs.source) || '["keep","igpsport","xoss","xingzhe","garmin","garmin_cn","strava"]') }}
+        source: ${{ fromJson(github.event_name == 'workflow_dispatch' && inputs.source != '' && format('["{0}"]', inputs.source) || '["keep","igpsport","xoss","xingzhe","garmin","garmin_cn","strava","codoon","joyrun"]') }}
     runs-on: ${{ vars.RUNNER_LABEL || 'ubuntu-latest' }}
     permissions:
       contents: write

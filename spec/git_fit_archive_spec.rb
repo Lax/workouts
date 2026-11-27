@@ -8,10 +8,10 @@ RSpec.describe "git-fit-archive.yml" do
     let(:job) { jobs.fetch("archive") }
     let(:steps) { job.fetch("steps") }
 
-    it "archives all 7 sources by default with fail-fast off" do
+    it "archives all 9 sources by default with fail-fast off" do
       expect(job.dig("strategy", "fail-fast")).to be(false)
       matrix = job.dig("strategy", "matrix", "source")
-      expect(matrix).to include('["keep","igpsport","xoss","xingzhe","garmin","garmin_cn","strava"]')
+      expect(matrix).to include('["keep","igpsport","xoss","xingzhe","garmin","garmin_cn","strava","codoon","joyrun"]')
     end
 
     it "serializes per-source via archive-<source> concurrency" do
