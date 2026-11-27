@@ -2,8 +2,8 @@ name: Sync Workouts
 on:
   schedule:
     # NOTE: */N not * — sed below matches /\d+ \* \* to update interval
-    - cron: '0 2 */5 * *'
-    - cron: '0 14 */5 * *'
+    - cron: '0 2 */6 * *'
+    - cron: '0 14 */6 * *'
   workflow_dispatch:
 
 jobs:
