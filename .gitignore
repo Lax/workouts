@@ -32,3 +32,8 @@ data/avatars/
 data/import/
 data/*.bak*
 /.opencode/meoworks/
+
+# 本地工具产物（2026-11-27 防误提交）
+/.v2c/
+/.video_agent/
+/.zcode/
