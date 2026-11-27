@@ -4,7 +4,7 @@
 
 运动数据聚合 CLI 工具，多渠道同步 → SQLite 数据库 → JSON / CSV / GPX 导出。
 
-**仓库：** `github.com/Lax/workouts`（私有）  
+**仓库：** `github.com/Lax/workouts`（已公开，2026-11-27）  
 **技术栈：** Ruby 3.4（核心逻辑在 git-fit gem）  
 **部署：** GitHub Actions / GitHub Pages（数据制品：JSON + stats + 前端主题）
 

@@ -361,8 +361,9 @@ git fit sync --source garmin
 健康 App → 右上角头像 → 导出所有健康数据 → export.zip
 
 ⚠️ export.zip 包含全量健康数据（心率、睡眠、血氧等），
-   远不止运动记录。仓库私有则分支也私有。
-   如需对外分享仓库，导入后建议删除该分支。
+   远不止运动记录。本仓库已公开（2026-11-27），
+   `GitFit/import/apple_health` 分支已随之删除；
+   如重新导入 Apple Health，请勿把该分支推送到本仓库。
 
 #### 2. 存入专用分支
 
