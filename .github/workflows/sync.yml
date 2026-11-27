@@ -12,9 +12,10 @@ jobs:
       group: workouts-db
       cancel-in-progress: false
     runs-on: ${{ vars.RUNNER_LABEL || 'ubuntu-latest' }}
-    # 账单保险丝：正常全程 ~2min（2026-10 实测），45min 已含 geo-detect 增量余量；
-    # 2026-11 AI export 挂死连续烧满 6h 默认上限打穿 spending limit，全管道停摆 8 天
-    timeout-minutes: 45
+    # 账单保险丝：纯数据管道（AI 导出已拆至 ai-insights.yml），正常全程 ~2min
+    # （2026-10 实测），geo-detect 5min 总预算 + 余量 → 30min；
+    # 2026-11 AI export 挂死烧穿 spending limit 教训见 git-fit#98
+    timeout-minutes: 30
     permissions:
       contents: write
       actions: write
@@ -122,53 +123,6 @@ jobs:
 
       # ── DB save (git-fit db-store) ──
       # git-save-gate: 仅 job 成功时透传 restore 的 save-to-git-branch 建议，失败时 save 侧不 push。
-      - name: '[ai] Restore cache'
-        if: success()
-        uses: actions/cache/restore@v6
-        with:
-          path: site/insights.json
-          key: GitFit-ai-insights-v0-sentinel
-          restore-keys: |
-            GitFit-ai-insights-v0-
-
-      - name: '[ai] Setup opencode CLI'
-        if: ${{ (vars.AI_TRANSPORT || 'opencode') == 'opencode' }}
-        uses: ./.github/actions/setup-opencode
-
-      - name: '[ai] Export insights (digest-skip aware)'
-        id: ai-export
-        if: success()
-        continue-on-error: true
-        # continue-on-error 只防「失败」不防「挂死」：gem 侧 180s 超时失效（2026-11
-        # 挂死事故，watchdog 缺陷根因见 git-fit#98）由步骤级超时强杀，保住后续
-        # db/data save 与触发链；20min ≥ gem 修复后合法最坏 3 场景×2 重试×180s=18min
-        timeout-minutes: 20
-        env:
-          GIT_FIT_DATABASE_PATH: ${{ steps.db-paths.outputs.db-path }}
-          # transport: opencode=CLI 零凭据 free（默认）| openai=自备 endpoint+key（保留回退）
-          GIT_FIT_AI_ENABLED: 'true'
-          GIT_FIT_AI_TRANSPORT: ${{ vars.AI_TRANSPORT || 'opencode' }}
-          # AI_MODEL 语义 = 当前 transport 的 model id；openai transport 时需同时设置 AI_ENDPOINT
-          GIT_FIT_AI_MODEL: ${{ vars.AI_MODEL || 'opencode/big-pickle' }}
-          GIT_FIT_AI_ENDPOINT: ${{ vars.AI_ENDPOINT }}
-          GIT_FIT_AI_API_KEY_ENV: AI_API_KEY
-          # 免费档模型在 ~43KB stats prompt 下常见 >60s（2026-08-31 insights 场景 60s 超时实测），放宽到 180s
-          GIT_FIT_AI_TIMEOUT: '180'
-          AI_API_KEY: ${{ secrets.AI_API_KEY }}
-        run: |
-          mkdir -p site
-          before=$(sha256sum site/insights.json 2>/dev/null | cut -d' ' -f1 || echo none)
-          bundle exec git fit export ai --output site/insights.json
-          after=$(sha256sum site/insights.json 2>/dev/null | cut -d' ' -f1 || echo none)
-          if [ "$before" != "$after" ]; then echo "changed=true" >> "$GITHUB_OUTPUT"; fi
-
-      - name: '[ai] Save cache'
-        if: success() && steps.ai-export.outputs.changed == 'true'
-        uses: actions/cache/save@v6
-        with:
-          path: site/insights.json
-          key: GitFit-ai-insights-v0-${{ github.run_id }}
-
       - name: '[db] Gate git save on job success'
         id: git-save-gate
         if: success()
@@ -203,6 +157,16 @@ jobs:
         if: steps.db-save.outputs.changed == 'true' || steps.data-save.outputs.changed == 'true'
         run: |
           gh workflow run gh-pages.yml --ref master \
+            -f artifact-run-id=${{ github.run_id }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      # AI 导出独立于本 workflow（失败不影响数据同步与发布）；与 gh-pages 并行消费
+      # 同一 DB artifact，新鲜度一致。export 失败仅本 workflow 红，旧 insights 保留。
+      - name: Trigger AI insights export
+        if: steps.db-save.outputs.changed == 'true' || steps.data-save.outputs.changed == 'true'
+        run: |
+          gh workflow run ai-insights.yml --ref master \
             -f artifact-run-id=${{ github.run_id }}
         env:
           GH_TOKEN: ${{ github.token }}

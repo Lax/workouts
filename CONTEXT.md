@@ -72,7 +72,7 @@
 | Keep 用摘要数据；iGPSPORT/XOSS 用 mini_racer + @garmin/fitsdk 解析 FIT | Keep API 不提供 FIT；纯 gem 依赖无外部运行时 |
 | Per-source 独立 GH Cache | 每源独立 key（`GitFit-data-{source}-v0-{run_id}`），SHA256SUMS 检测变更仅写变动源 |
 | 多源并行队列调度 + 超时旗标 + DedupService 独立 | 均已迁移 git-fit gem |
-| AI 接入：构建期 `export ai` → insights.json + 前端 BYOK 双通道（chat + 单活动分析）；LLM client 留 git-fit（OpenAI-compatible，不单独 gem）；前端不内置厂商 key | provider 不绑死；client 消费者单一（PFC）；静态站内置 key 必泄露。设计见 wiki/AI，拆解 #41–#43 + git-fit#92/#93 + #48 |
+| AI 接入：构建期 `export ai` → insights.json + 前端 BYOK 双通道（chat + 单活动分析）；LLM client 留 git-fit（OpenAI-compatible，不单独 gem）；前端不内置厂商 key；**AI 导出独立 `ai-insights.yml`**（2026-11-27 拆分：sync/发布零 LLM 依赖，AI 失败不影响数据同步与发布；步骤 20min ≥ gem 修复后合法包络 3×2×180s=18min、job 30min 双保险丝，export 后 jq 校验防半截文件进 cache/发布，concurrency 取消式串行防排队放大额度消耗） | provider 不绑死；client 消费者单一（PFC）；静态站内置 key 必泄露；2026-11 AI export 挂死烧穿 spending limit 教训（git-fit#98）。设计见 wiki/AI，拆解 #41–#43 + git-fit#92/#93 + #48 |
 | AI 能力基线：`ability.json` 两层（`fitness` 基础体能 + `sports` 分项），纯距离-时间派生 + 因果窗口（`--as-of`），复用 export ai digest-skip；命名锁定 `ability`（勿用 fitness/profile umbrella） | 评价需基于「当时」能力且不泄露未来；防发明性指标（VDOT/FTP 已否决）；不开新 workflow。设计见 wiki/Ability，拆解 #49–#53 + git-fit#95/#96 |
 
 ---
@@ -248,9 +248,10 @@ f > 2N+1 → N = min(7, N+1)     减速（每周日保底）
 | workflow | 触发 | 作用 |
 |---|---|---|
 | `ci.yml` | push/PR → master | actionlint + `bundle exec rspec`（Ruby 3.4）+ `deploy-gate`：push 且站点相关路径命中（config/package/Gemfile.lock/.env/data events/gh-pages.yml 自身）才 dispatch gh-pages，spec/scripts 类推送不再全量重建 |
-| `sync.yml` | schedule `*/N` + dispatch | 同步 + 缓存 + 数据变更触发 scheduler/gh-pages |
+| `sync.yml` | schedule `*/N` + dispatch | 纯数据同步（零 LLM）+ 缓存 + 数据变更触发 scheduler/gh-pages/ai-insights |
 | `sync-scheduler.yml` | 数据变更 + 每周日保底 | 读 N → 算 f → sed 改 sync.yml cron（唯一写 workflow 的持有 PAT）|
-| `gh-pages.yml` | dispatch-only（sync 数据变更 / CI `deploy-gate` 路径命中 / backfill-device 回填后 / 手动） | export json/stats → stage races.json → `frontend-build` → deploy-pages；checkout 用默认 GITHUB_TOKEN（`contents: read`，PAT 唯一持有者仍是 sync-scheduler）|
+| `ai-insights.yml` | dispatch-only（sync 数据变更 / 手动，可传 `artifact-run-id`） | AI 洞察导出（LLM 唯一所在）：restore DB → `export ai`（digest-skip）→ jq 校验 → insights cache → 有变更才 dispatch gh-pages；失败/超时仅本 workflow 红，发布链路无感。job 30min / export 20min / setup 5min 限制 |
+| `gh-pages.yml` | dispatch-only（sync 数据变更 / ai-insights 有变更 / CI `deploy-gate` 路径命中 / backfill-device 回填后 / 手动） | export json/stats/ability → 只读 restore insights cache（不跑 LLM）→ stage races.json → `frontend-build` → deploy-pages；checkout 用默认 GITHUB_TOKEN（`contents: read`，PAT 唯一持有者仍是 sync-scheduler）|
 | `git-fit-archive.yml` | 每周日 | cache → `GitFit/data/<source>` + `GitFit/db` orphan 分支（LRU 兜底）|
 | `danger-backfill-elevation.yml` | dispatch | `git fit elevation backfill` 写 raw `elevation_*`（7 源 L2 含 keep，cache-only save）|
 | `danger-correct-elevation.yml` | dispatch（source/force/dem） | `git fit elevation correct [--dem]` 写 `elevation_*_terrain`；DEM 缓存独立 key `GitFit-dem-v0-*`（仅 actions/cache，不入 git 归档）|

@@ -1,0 +1,124 @@
+name: AI Insights
+
+# AI 洞察生成——独立于 sync（纯数据）与 gh-pages（发布）的单一职责 workflow。
+# 失败不影响发布：export 失败/挂死时本 workflow 红、cache 不写、不 dispatch
+# gh-pages，站点沿用缓存中的旧 insights.json（optional 数据源，AI 页降级显示）。
+# digest-skip + completeness gate 使重复运行幂等且能自愈缺失 sections（gem 内建）。
+on:
+  workflow_dispatch:
+    inputs:
+      artifact-run-id:
+        description: 'Sync run ID to download DB artifact'
+        required: false
+
+jobs:
+  ai-insights:
+    concurrency:
+      # 新 dispatch 取消在跑的旧导出——排队串行会在挂死期放大额度消耗（每次 20min），
+      # digest-skip 语义下新 DB 状态是旧任务的超集，取消无损；jq 内容闸保证被杀的
+      # 半截文件永不进 cache
+      group: ai-insights
+      cancel-in-progress: true
+    runs-on: ${{ vars.RUNNER_LABEL || 'ubuntu-latest' }}
+    # 账单保险丝：AI 步骤自身 20min 封顶（gem 修复后合法最坏 3 场景×2 重试×180s=18min）
+    # 加 restore/setup/save ~5min，30min 留余量；本 workflow 失败不影响任何下游发布
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      actions: write
+    env:
+      GIT_FIT_DATABASE_PATH: ${{ vars.GIT_FIT_DATABASE_PATH || 'data/db/workouts.db' }}
+      # secrets 不可用于 step 级 if（actionlint 验证）——经 job env 间接传递
+      AI_API_KEY_PRESENT: ${{ secrets.AI_API_KEY != '' }}
+      AI_TRANSPORT: ${{ vars.AI_TRANSPORT || 'opencode' }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.4'
+          bundler-cache: true
+
+      # ── DB：cache 恢复 + 可选 fresh artifact（与 gh-pages 同级新鲜度）──
+      - uses: git-fit-actions/db-store/paths@v1
+        id: db-paths
+        with:
+          database-path: ${{ env.GIT_FIT_DATABASE_PATH }}
+
+      - uses: git-fit-actions/db-store/cache/restore@v1
+        with:
+          db-dir: ${{ steps.db-paths.outputs.dir }}
+          db-name: ${{ steps.db-paths.outputs.name }}
+
+      - name: Download fresh DB artifact
+        if: inputs.artifact-run-id != ''
+        continue-on-error: true
+        uses: actions/download-artifact@v8
+        with:
+          name: workouts-db
+          path: ${{ steps.db-paths.outputs.dir }}
+          run-id: ${{ inputs.artifact-run-id }}
+          github-token: ${{ github.token }}
+
+      - name: '[ai] Restore cache'
+        uses: actions/cache/restore@v6
+        with:
+          path: site/insights.json
+          key: GitFit-ai-insights-v0-sentinel
+          restore-keys: |
+            GitFit-ai-insights-v0-
+
+      - name: '[ai] Setup opencode CLI'
+        if: env.AI_TRANSPORT == 'opencode'
+        # curl 安装是远程网络调用——5min 步骤闸防挂死吃满 job 预算（严格限制）
+        timeout-minutes: 5
+        uses: ./.github/actions/setup-opencode
+
+      - name: '[ai] Export insights (digest-skip aware)'
+        id: ai-export
+        # opencode transport 零凭据必跑；openai transport 才要求 key 存在
+        if: env.AI_TRANSPORT != 'openai' || env.AI_API_KEY_PRESENT == 'true'
+        # gem 侧 watchdog 修复前（git-fit#98）opencode 可能挂死——本步骤无
+        # continue-on-error：失败/超时直接红本 workflow，旧 insights 原样保留
+        timeout-minutes: 20
+        env:
+          GIT_FIT_DATABASE_PATH: ${{ steps.db-paths.outputs.db-path }}
+          # transport: opencode=CLI 零凭据 free（默认）| openai=自备 endpoint+key（保留回退）
+          GIT_FIT_AI_ENABLED: 'true'
+          GIT_FIT_AI_TRANSPORT: ${{ env.AI_TRANSPORT }}
+          # AI_MODEL 语义 = 当前 transport 的 model id；openai transport 时需同时设置 AI_ENDPOINT
+          GIT_FIT_AI_MODEL: ${{ vars.AI_MODEL || 'opencode/big-pickle' }}
+          GIT_FIT_AI_ENDPOINT: ${{ vars.AI_ENDPOINT }}
+          GIT_FIT_AI_API_KEY_ENV: AI_API_KEY
+          # 免费档模型在 ~43KB stats prompt 下常见 >60s（2026-08-31 insights 场景 60s 超时实测），放宽到 180s
+          GIT_FIT_AI_TIMEOUT: '180'
+          AI_API_KEY: ${{ secrets.AI_API_KEY }}
+        run: |
+          mkdir -p site
+          before=$(sha256sum site/insights.json 2>/dev/null | cut -d' ' -f1 || echo none)
+          bundle exec git fit export ai --output site/insights.json
+          after=$(sha256sum site/insights.json 2>/dev/null | cut -d' ' -f1 || echo none)
+          # 内容不被破坏闸：gem 写入暂非原子（半截文件风险，git-fit issue 待修），
+          # 截断/非 JSON 的产物不进 cache、不触发发布——校验失败即失败，旧 insights 保留
+          if ! jq -e . site/insights.json > /dev/null 2>&1; then
+            echo "::warning::insights.json invalid JSON after export — skip save & dispatch (stale insights kept)"
+            exit 1
+          fi
+          if [ "$before" != "$after" ]; then echo "changed=true" >> "$GITHUB_OUTPUT"; fi
+
+      - name: '[ai] Save cache'
+        if: steps.ai-export.outputs.changed == 'true'
+        uses: actions/cache/save@v6
+        with:
+          path: site/insights.json
+          key: GitFit-ai-insights-v0-${{ github.run_id }}
+
+      # digest-skip 无变化时不动发布；changed 才二次 dispatch——deploy-gh-pages
+      # concurrency 会取消还在跑的首轮数据部署，但第二轮是其超集（全量导出+insights），取消无害
+      - name: Trigger pages deploy (fresh insights)
+        if: steps.ai-export.outputs.changed == 'true'
+        run: |
+          gh workflow run gh-pages.yml --ref master \
+            -f artifact-run-id=${{ inputs.artifact-run-id }}
+        env:
+          GH_TOKEN: ${{ github.token }}

@@ -32,13 +32,23 @@ RSpec.describe "gh-pages.yml" do
 
   describe "timeouts" do
     it "bounds the job runtime so a hung step cannot burn the default 6h billing budget" do
-      expect(job["timeout-minutes"]).to eq(40)
+      expect(job["timeout-minutes"]).to eq(20)
+    end
+  end
+
+  describe "AI insights separation" do
+    it "does not run LLM export — publish must not depend on AI availability (ai-insights.yml owns it)" do
+      names = steps.map { |s| s["name"] }
+      expect(names).not_to include("Export AI insights")
+      expect(names.grep(/Setup opencode/)).to be_empty
+      expect(File.read(workflow_path("gh-pages.yml"))).not_to include("GIT_FIT_AI")
     end
 
-    it "bounds the AI export step so continue-on-error stays effective against a hang" do
-      ai = steps.find { |s| s["name"] == "Export AI insights" }
-      expect(ai["timeout-minutes"]).to eq(20)
-      expect(ai["continue-on-error"]).to be(true)
+    it "still restores the cached insights.json as optional read-only site data" do
+      restore = steps.find { |s| s["name"] == "[ai] Restore cache" }
+      expect(restore).not_to be_nil
+      expect(restore.dig("with", "key")).to eq("GitFit-ai-insights-v0-sentinel")
+      expect(restore.dig("with", "restore-keys")).to include("GitFit-ai-insights-v0-")
     end
   end
 

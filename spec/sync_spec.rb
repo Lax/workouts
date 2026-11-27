@@ -46,13 +46,26 @@ RSpec.describe "sync.yml" do
 
   describe "timeouts" do
     it "bounds the job runtime so a hung step cannot burn the default 6h billing budget" do
-      expect(yaml.dig("jobs", "sync", "timeout-minutes")).to eq(45)
+      expect(yaml.dig("jobs", "sync", "timeout-minutes")).to eq(30)
+    end
+  end
+
+  describe "AI separation" do
+    it "is data-only — no AI steps live here (ai-insights.yml owns the LLM path)" do
+      names = steps.map { |s| s["name"] }
+      expect(names.grep(/\[ai\]/)).to be_empty
+      expect(content).not_to include("setup-opencode")
+      expect(content).not_to include("GIT_FIT_AI")
+      # 裸调用兜底：命名启发式拦不住不带 AI env 的 export ai run 步骤
+      expect(content).not_to include("export ai")
     end
 
-    it "bounds the AI export step so continue-on-error stays effective against a hang" do
-      ai = steps.find { |s| s["name"] == "[ai] Export insights (digest-skip aware)" }
-      expect(ai["timeout-minutes"]).to eq(20)
-      expect(ai["continue-on-error"]).to be(true)
+    it "dispatches ai-insights.yml with the sync run id on data/DB change" do
+      trigger = steps.find { |s| s["name"] == "Trigger AI insights export" }
+      expect(trigger).not_to be_nil
+      expect(trigger["run"]).to include("gh workflow run ai-insights.yml")
+      expect(trigger["run"]).to include("-f artifact-run-id=${{ github.run_id }}")
+      expect(trigger["if"]).to eq("steps.db-save.outputs.changed == 'true' || steps.data-save.outputs.changed == 'true'")
     end
   end
 
